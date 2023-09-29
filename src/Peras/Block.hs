@@ -9,6 +9,7 @@ import Data.ByteString (ByteString)
 
 data Block = Block
   { slotNumber :: Word64
+  , blockHeight :: Word64
   , creatorId :: PartyId
   , parentBlock :: Hash
   , includedVotes :: Set Hash
@@ -23,3 +24,6 @@ newtype Tx = Tx { tx :: ByteString }
 
 newtype PartyId = PartyId {vkey :: VerificationKey}
   deriving newtype (Eq, Show, Ord)
+
+isValidBlock :: Block -> Bool
+isValidBlock = undefined

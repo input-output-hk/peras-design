@@ -10,6 +10,7 @@ import qualified Data.Set as Set
 import Data.Word (Word16, Word64)
 import Peras.Block (PartyId)
 import Peras.Chain (RoundNumber (..), Vote (..), isValid, makeVote)
+import Peras.Message (Message(..))
 
 data VoterConfig = VoterConfig
   { partyId :: PartyId
@@ -22,30 +23,18 @@ data VoterConfig = VoterConfig
   }
   deriving stock (Eq, Show)
 
-data Message msg
-  = VoteFor {round :: RoundNumber, message :: msg}
-  | NewVote {vote :: Vote msg}
-  deriving stock (Eq, Show)
-
-data Decision msg
-  = CastVote {vote :: Vote msg}
-  | AcceptVote {vote :: Vote msg}
-  | Noop
-  deriving stock (Eq, Show)
-
 data VoterState msg = VoterState
   { slot :: Word64
   , currentRound :: RoundNumber
   , votesReceived :: Map.Map RoundNumber (Set (Vote msg))
   -- ^ The votes received in each round for each particular chain.
-  , seenQuorum :: RoundNumber
-  -- ^ The last round at which we saw a quorum
   }
+ deriving stock (Eq, Show)
 
 votingLayer :: VoterConfig -> VoterState msg -> Message msg -> Decision msg
-votingLayer VoterConfig{partyId, cooldownPeriod} VoterState{slot, seenQuorum = RoundNumber lastSeenQuorum} = \case
+votingLayer VoterConfig{partyId, roundLength, cooldownPeriod, quorum} VoterState{slot, votesReceived} = \case
   VoteFor{round, message}
-    | (slot `isBeginningOf` round)
+    | isBeginningOfRound
         && shouldVoteNow round
         && (partyId `isCommitteeMemberAt` round) ->
         let newVote = makeVote round partyId message
@@ -54,8 +43,8 @@ votingLayer VoterConfig{partyId, cooldownPeriod} VoterState{slot, seenQuorum = R
     | isValid vote -> AcceptVote vote
   _ -> Noop
  where
-  isBeginningOf :: Word64 -> RoundNumber -> Bool
-  isBeginningOf = undefined
+  isBeginningOfRound :: Bool
+  isBeginningOfRound = slot `mod` fromIntegral roundLength == 0
 
   shouldVoteNow :: RoundNumber -> Bool
   shouldVoteNow (RoundNumber round) =
@@ -63,8 +52,16 @@ votingLayer VoterConfig{partyId, cooldownPeriod} VoterState{slot, seenQuorum = R
     (round > 0 && lastSeenQuorum == round - 1)
       || (lastSeenQuorum `mod` cooldownPeriod == 0 && lastSeenQuorum `div` cooldownPeriod >= 1)
 
+  lastSeenQuorum =
+    snd $ foldr hasQuorum (False, 0) $ Map.toList votesReceived
+
   isCommitteeMemberAt :: PartyId -> RoundNumber -> Bool
   isCommitteeMemberAt = undefined
+
+  hasQuorum :: (RoundNumber, Set (Vote msg)) -> (Bool, Word64) -> (Bool, Word64)
+  hasQuorum (RoundNumber round, votes) = \case
+    (False, _) -> (fromIntegral (length votes) >= quorum, round)
+    (True, round') -> (True, round')
 
 class Monad m => VotingLayer m msg where
   -- | Diffuse given message across the network.
@@ -72,6 +69,12 @@ class Monad m => VotingLayer m msg where
 
   -- | Output message to upper layer.
   output :: msg -> m ()
+
+data Decision msg
+  = CastVote {vote :: Vote msg}
+  | AcceptVote {vote :: Vote msg}
+  | Noop
+  deriving stock (Eq, Show)
 
 decide :: (Ord msg, VotingLayer m (Message msg)) => VoterConfig -> VoterState msg -> Decision msg -> m (VoterState msg)
 decide _ state@VoterState{votesReceived} = \case
@@ -83,3 +86,4 @@ decide _ state@VoterState{votesReceived} = \case
     let newState = state{votesReceived = Map.update (Just . Set.insert newVote) roundNumber votesReceived}
     output (NewVote newVote)
     pure newState
+  Noop -> pure state
