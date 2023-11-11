@@ -16,7 +16,11 @@ import Peras.Message (Message (..))
 -}
 
 open import Agda.Builtin.Word
+open import Level
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
+open import Data.Tree.AVL.Map
+open import Relation.Binary
+
 open import Peras.Block
 open import Peras.Chain
 
@@ -43,11 +47,23 @@ chainWeight ConsensusConfig{roundLength} Block{blockHeight, slotNumber} pendingV
    in undefined
 -}
 
+postulate wEq : Relation.Binary.Rel Word64 zero
+          wLt : Relation.Binary.Rel Word64 zero
+          wIs : Relation.Binary.IsStrictTotalOrder wEq wLt
+
+WordO : StrictTotalOrder zero zero zero
+WordO = record {
+  Carrier            = Word64 ;
+  _≈_                = wEq ;
+  _<_                = wLt ;
+  isStrictTotalOrder = wIs }
+
+
 record ConsensusState : Set where
   constructor consensusState
   field currentChain  : Block
         seenChains    : set BlockO
-        votesReceived : {!!} -- Map Word64 (Map Block (Set (Vote Block)))
+        votesReceived : Map WordO (Map BlockO (set VoteBlockO))
   -- deriving stock (Eq, Show)
 
 data Decision : Set where
