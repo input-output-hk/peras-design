@@ -25,17 +25,6 @@ open Hash public
 {-# COMPILE AGDA2HS Hash newtype deriving (Eq, Show) #-}
 -- newtype stragegy not supported
 
-postulate hsEq : Relation.Binary.Rel Hash zero
-postulate hsLt : Relation.Binary.Rel Hash zero
-postulate hsIs : Relation.Binary.IsStrictTotalOrder hsEq hsLt
-
-HashO : StrictTotalOrder zero zero zero
-HashO = record {
-  Carrier            = Hash ;
-  _≈_                = hsEq ;
-  _<_                = hsLt ;
-  isStrictTotalOrder = hsIs }
-
 -- should use normal VRF algorithm like leadership membership
 record MembershipProof : Set where
   field proof : ByteString

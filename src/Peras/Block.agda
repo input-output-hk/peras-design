@@ -1,55 +1,48 @@
 module Peras.Block where
-{-
+{-# FOREIGN AGDA2HS
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Peras.Block where
-
+#-}
+{-# FOREIGN AGDA2HS
 import Data.Word (Word64)
-import Peras.Crypto (Hash, LeadershipProof, Signature, VerificationKey)
-import Data.Set (Set)
+import qualified Data.Set as S (Set)
 import Data.ByteString (ByteString)
--}
+type SET = S.Set
+#-}
 
-open import Level
+postulate SET : Set → Set
+
 open import Agda.Builtin.Word
 open import Data.Bool
 open import Data.List
-open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
-open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto
+-- import Peras.Crypto (Hash, LeadershipProof, Signature, VerificationKey)
 
 record PartyId : Set where
-  constructor mkPartyId
   field vkey : VerificationKey
---   deriving newtype (Eq, Show, Ord)
+open PartyId public
+{-# COMPILE AGDA2HS PartyId newtype deriving (Eq, Show, Ord) #-}
+-- newtype strategy not supported
 
 record Tx : Set where
   field tx : ByteString
---  deriving newtype (Eq, Show)
-
+open Tx public
+{-# COMPILE AGDA2HS Tx newtype deriving (Eq, Show) #-}
+-- newtype strategy not supported
 
 record Block : Set where
   field slotNumber : Word64
         blockHeight : Word64
         creatorId : PartyId
         parentBlock : Hash
-        includedVotes : set HashO
+        includedVotes : SET Hash
         leadershipProof : LeadershipProof
         payload : List Tx
-        signature : Signature  
--- deriving stock (Eq, Show)
-
-postulate blEq : Relation.Binary.Rel Block zero
-          blLt : Relation.Binary.Rel Block zero
-          blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
-
-BlockO : StrictTotalOrder zero zero zero
-BlockO = record {
-  Carrier            = Block ;
-  _≈_                = blEq ;
-  _<_                = blLt ;
-  isStrictTotalOrder = blIs }
+        signature : Signature
+open Block public      
+{-# COMPILE AGDA2HS Block deriving (Eq, Show) #-}
+-- stock strategy not supported
 
 postulate isValidBlock : Block -> Bool
-
+{-# COMPILE AGDA2HS isValidBlock #-}
