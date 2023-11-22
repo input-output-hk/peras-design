@@ -1,6 +1,8 @@
 # Model and Simulations for Ouroboros Peras
 
-![Agda Typechecks](https://github.com/input-output-hk/peras-design/actions/workflows/ci.yaml/badge.svg)
+<div align="center">
+  <a href="https://github.com/input-output-hk/peras-design/actions/workflows/ci.yaml"><img src="https://github.com/input-output-hk/peras-design/actions/workflows/ci.yaml/badge.svg" /></a>
+</div>
 
 This repository is intended to host more or less formal specifications, experiments, models for the Ouroboros Peras protocol.
 
