@@ -10,7 +10,22 @@ This repository is intended to host more or less formal specifications, experime
 
 ### Agda
 
+#### With nix
+
+The repository provides a nix flake from which one can enter a development shell suitable for Agda using the following command:
+
+```
+nix develop
+```
+
+#### Without nix
+
 Please check instructions for [Installing Agda](https://agda.readthedocs.io/en/latest/getting-started/installation.html) on the official website.
+
+Peras code requires agda-stdlib, check out instructions for [installing libraries](https://agda.readthedocs.io/en/latest/tools/package-system.html) and do not forget to:
+
+* Add `standard-library` to your `~/.agda/defaults` file
+* Add `<path to>/standard-library.agda-lib` to `~/.agda/libraries` file
 
 ### Checking
 
