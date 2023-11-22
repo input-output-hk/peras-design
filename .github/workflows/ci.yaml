@@ -1,0 +1,23 @@
+name: CI
+on:
+  push:
+    branches: '*'
+jobs:
+  check:
+    name: Typecheck Agda
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    # Setup Agda 2.6.3 with its recommended version of agda-stdlib:
+    - name: ❄ Setup Agda
+      uses: wenkokke/setup-agda@v2
+      with:
+        agda-version: '2.6.3'
+        agda-stdlib-version: 'recommended'
+
+      # Check hello-world-dep.agda, which you can find in tests/agda-stdlib:
+    - name: ❓ Typecheck
+      run: |
+        make typecheck
