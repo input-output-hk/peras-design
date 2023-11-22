@@ -1,5 +1,7 @@
 # Model and Simulations for Ouroboros Peras
 
+![](https://github.com/github/input-output-hk/peras-design/actions/workflows/ci.yaml/badge.svg)
+
 This repository is intended to host more or less formal specifications, experiments, models for the Ouroboros Peras protocol.
 
 ## Hacking
