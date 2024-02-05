@@ -1,0 +1,43 @@
+cabal-version:      3.0
+name:               random-forks
+version:            0.1.0.0
+synopsis:           Experiments with peras voting.
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Brian W Bush <brian.bush@iohk.io>
+maintainer:         Brian W Bush <brian.bush@iohk.io>
+category:           Network
+build-type:         Simple
+extra-source-files: ReadMe.md
+
+library
+  exposed-modules:
+    Peras.RandomForks
+    Peras.RandomForks.Peer
+    Peras.RandomForks.Protocol
+    Peras.RandomForks.Types
+
+  hs-source-dirs:   src
+  build-depends:
+    , base >=4.9 && <5
+    , containers
+    , data-default
+    , language-dot
+    , random
+
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wunused-packages
+
+executable random-forks
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  other-modules:    Paths_random_forks
+  build-depends:
+    , base >=4.9 && <5
+    , data-default
+    , filepath
+    , random-forks
+
+  --, optparse-applicative
+  ghc-options:      -Wall -Wunused-packages
+  default-language: Haskell2010
