@@ -1,0 +1,3 @@
+[submodule "PoS-NSB"]
+	path = PoS-NSB
+	url = git@github.com:AU-COBRA/PoS-NSB.git
