@@ -2,7 +2,8 @@
 
 ### YH
 
-Reading the PoS-NSB paper (and Coq code)
+Reading the PoS-NSB paper and Coq code
+  * Use of `math-comp` library in Coq takes getting used to
   * Sketched the relation on what states are reachable, i.e. the small steps semantics and the transitive closure in Agda
     https://github.com/input-output-hk/peras-design/blob/d90f164d5b5d1ac15bc6c8126d8180addb872681/src/Peras/Chain.agda#L131-L151
 
