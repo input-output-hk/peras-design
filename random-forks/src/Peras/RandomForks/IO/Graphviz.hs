@@ -8,9 +8,9 @@ module Peras.RandomForks.IO.Graphviz (
 ) where
 
 import Data.List (nub)
-import Peras.RandomForks.Chain
-import Peras.RandomForks.Peer
-import Peras.RandomForks.Types
+import Peras.RandomForks.Chain (Chain, Block(Block, blockId, slot, creator), blocks)
+import Peras.RandomForks.Peer (PeerState(PeerState, downstream, currency, vrfOutput, slotLeader, committeeMember), Peers(..))
+import Peras.RandomForks.Types (PeerName(getPeerName))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S

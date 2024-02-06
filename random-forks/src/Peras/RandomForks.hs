@@ -5,6 +5,7 @@ module Peras.RandomForks (
 , advance
 ) where
 
+import Control.Monad.IO.Class (MonadIO(..))
 import Data.Bifunctor (bimap)
 import Data.Foldable (foldlM)
 import Peras.RandomForks.Chain (Message(Message, messageDestination))
@@ -13,25 +14,32 @@ import Peras.RandomForks.Peer (PeerState(pendingMessages, preferredChain), Peers
 import Peras.RandomForks.Protocol (Protocol)
 import Peras.RandomForks.Types (Slot) 
 import System.FilePath ((<.>))
+import System.Random.Stateful (StatefulGen)
 
 import qualified Data.Map.Strict as M
 
 run
-  :: Protocol
+  :: MonadIO m
+  => StatefulGen g m
+  => g
+  -> Protocol
   -> Maybe FilePath
   -> Peers
   -> Int
-  -> IO Peers
-run protocol baseName peers duration =
-  foldlM (advance protocol baseName) peers [0..duration]
+  -> m Peers
+run gen protocol baseName peers duration =
+  foldlM (advance gen protocol baseName) peers [0..duration]
   
 advance
-  :: Protocol
+  :: MonadIO m
+  => StatefulGen g m
+  => g
+  -> Protocol
   -> Maybe FilePath
   -> Peers
   -> Slot
-  -> IO Peers
-advance protocol baseName (Peers peers) slot =
+  -> m Peers
+advance gen protocol baseName (Peers peers) slot =
   do
     -- Advance one slot.
     (peers', messages) <-
@@ -39,7 +47,7 @@ advance protocol baseName (Peers peers) slot =
         <$> sequence
         [
           do
-            (state', messages) <- nextSlot protocol slot name state
+            (state', messages) <- nextSlot gen protocol slot name state
             pure ((name, state'), messages)
         |
           (name, state) <- M.toList peers  -- FIXME: Rewrite as map.
@@ -49,5 +57,5 @@ advance protocol baseName (Peers peers) slot =
       deliverMessage ps message@Message{messageDestination} =
         M.adjust (\state -> state {pendingMessages = pendingMessages state <> pure message}) messageDestination ps
       peers'' = foldl deliverMessage peers' messages
-    maybe (pure ()) (flip writeGraph (chainGraph $ preferredChain <$> M.elems peers'') . (<.> "dot") . (<> show slot)) baseName
+    liftIO $ maybe (pure ()) (flip writeGraph (chainGraph $ preferredChain <$> M.elems peers'') . (<.> "dot") . (<> show slot)) baseName
     pure $ Peers peers''

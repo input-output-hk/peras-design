@@ -5,9 +5,9 @@ module Peras.RandomForks.Types (
 , Slot
 ) where
 
-import Data.UUID (UUID)
+import Data.ByteString.Short  (ShortByteString)
 
-type BlockId = UUID
+type BlockId = ShortByteString
 
 type Currency = Int
 

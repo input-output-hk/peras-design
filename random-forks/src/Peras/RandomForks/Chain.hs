@@ -1,6 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
@@ -14,8 +12,8 @@ module Peras.RandomForks.Chain (
 , mkBlock
 ) where
 
-import Data.UUID.V4 (nextRandom)
 import Peras.RandomForks.Types (BlockId, PeerName, Slot)
+import System.Random.Stateful (StatefulGen(uniformShortByteString))
 
 data Block =
   Block
@@ -27,10 +25,12 @@ data Block =
     deriving (Eq, Ord, Read, Show)
 
 mkBlock
-  :: PeerName
+  :: StatefulGen g m
+  => g
+  -> PeerName
   -> Slot
-  -> IO Block
-mkBlock name slot = Block name slot <$> nextRandom
+  -> m Block
+mkBlock gen name slot = Block name slot <$> uniformShortByteString 8 gen
 
 data Chain =
   Chain

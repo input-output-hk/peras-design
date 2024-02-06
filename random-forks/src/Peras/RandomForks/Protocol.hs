@@ -12,7 +12,7 @@ module Peras.RandomForks.Protocol (
 
 import Data.Default (Default(..))
 import Peras.RandomForks.Types (Currency, Slot)
-import System.Random (randomRIO)
+import System.Random.Stateful (StatefulGen, UniformRange(uniformRM))
 
 data Parameters =
   Parameters
@@ -62,25 +62,29 @@ mkProtocol Parameters{..} =
     Protocol{..}
 
 isSlotLeader
-  :: Protocol
+  :: StatefulGen g m
+  => g
+  -> Protocol
   -> Currency
-  -> IO Bool
-isSlotLeader Protocol{pSlotLottery} currency =
+  -> m Bool
+isSlotLeader gen Protocol{pSlotLottery} currency =
   -- FIXME: This is just a crude approximation to the actual Praos leader-selection algorithm.
   let
      p = 1 - (1 - pSlotLottery)^currency
   in
-    (<= p) <$> randomRIO (0, 1)
+    (<= p) <$> uniformRM (0, 1) gen
 
 isCommitteeMember
-  :: Protocol
+  :: StatefulGen g m
+  => g
+  -> Protocol
   -> Currency
-  -> IO Bool
-isCommitteeMember Protocol{pCommitteeLottery} currency =
+  -> m Bool
+isCommitteeMember gen Protocol{pCommitteeLottery} currency =
   let
      p = 1 - (1 - pCommitteeLottery)^currency
   in
-    (<= p) <$> randomRIO (0, 1)
+    (<= p) <$> uniformRM (0, 1) gen
 
 isFirstSlotInRound
   :: Protocol
