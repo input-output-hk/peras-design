@@ -1,18 +1,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Peras.RandomForks where
+module Peras.RandomForks (
+  run
+, advance
+) where
 
 import Data.Bifunctor (bimap)
 import Data.Foldable (foldlM)
-import Peras.RandomForks.Chain (Message(Message, messageDestination), chainGraph)
+import Peras.RandomForks.Chain (Message(Message, messageDestination))
+import Peras.RandomForks.IO.Graphviz (chainGraph, writeGraph)
 import Peras.RandomForks.Peer (PeerState(pendingMessages, preferredChain), Peers(..), nextSlot)
 import Peras.RandomForks.Protocol (Protocol)
 import Peras.RandomForks.Types (Slot) 
 import System.FilePath ((<.>))
 
 import qualified Data.Map.Strict as M
-import qualified Language.Dot.Pretty as G
-import qualified Language.Dot.Syntax as G
 
 run
   :: Protocol
@@ -49,9 +51,3 @@ advance protocol baseName (Peers peers) slot =
       peers'' = foldl deliverMessage peers' messages
     maybe (pure ()) (flip writeGraph (chainGraph $ preferredChain <$> M.elems peers'') . (<.> "dot") . (<> show slot)) baseName
     pure $ Peers peers''
-
-writeGraph
-  :: FilePath
-  -> G.Graph
-  -> IO ()
-writeGraph = (. G.renderDot) . writeFile

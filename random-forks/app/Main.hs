@@ -4,8 +4,9 @@ module Main (
 
 import Control.Monad (void)
 import Data.Default (def)
-import Peras.RandomForks (writeGraph, run) 
-import Peras.RandomForks.Peer (randomPeers, peerGraph)
+import Peras.RandomForks (run) 
+import Peras.RandomForks.IO.Graphviz 
+import Peras.RandomForks.Peer (randomPeers)
 import Peras.RandomForks.Protocol (mkProtocol)
 import System.Environment (getArgs)
 import System.FilePath ((<.>))
@@ -20,7 +21,7 @@ main =
     print parameters
     print protocol
     peers <- randomPeers parameters protocol
-    writeGraph (peerFile <.> "dot") $ peerGraph peers
+    writeGraph (peerFile <.> "dot") $ peersGraph peers
     putStrLn $ "Run `circo -Tpng -o '" <> peerFile <> ".png' '" <> peerFile <> ".dot'` to generate the diagram of peers."
     case args of
       ["peers"] -> pure ()
