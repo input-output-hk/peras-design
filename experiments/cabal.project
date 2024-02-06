@@ -14,9 +14,12 @@ index-state:
   , hackage.haskell.org      2023-12-15T16:32:49Z
   , cardano-haskell-packages 2023-12-15T14:50:31Z
 
-packages: .
+packages:
+  random-forks
+  quickcheck-model
+  sketch
 
-tests: False
+tests: True
 
 package strict-containers
   ghc-options: -Wno-noncanonical-monad-instances -Wno-error=noncanonical-monad-instances
@@ -28,11 +31,10 @@ package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
-tests: False
+
 benchmarks: False
 optimization: False
 
 flags: +defer-plugin-errors
 
 write-ghc-environment-files: never
-

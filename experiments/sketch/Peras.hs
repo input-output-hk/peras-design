@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Peras where
 
 import qualified Data.Set as Set
@@ -32,7 +33,7 @@ data BlockBody = BlockBody
 newtype Hash content = Hash Int
 
 newtype VoteRoundNo = VoteRoundNo Int
-  deriving Show
+  deriving (Show, Num)
 
 data Vote = Vote {
        vRoundNo  :: VoteRoundNo,
@@ -105,7 +106,7 @@ consensusNode us peers =
 shouldVote :: Chain payload -> Set Vote -> VoteRoundNo -> Bool
 shouldVote c d r =
      quorumOnChainInRound c d (r-1)
-  || {-   exists c. quorumOnChainInRound c Set.empty (r-c*cooldownRounds)
+    {-   exists c. quorumOnChainInRound c Set.empty (r-c*cooldownRounds)
        && no quorum on c since round (r-c*cooldownRounds) -}
      -- equivalently: most recent quorum is at round (r-c*cooldownRounds)
 
@@ -118,4 +119,3 @@ cooldownRounds = undefined
 --
 quorumOnChainInRound :: Chain payload -> Set Vote -> VoteRoundNo -> Bool
 quorumOnChainInRound _c _d _r = undefined
-
