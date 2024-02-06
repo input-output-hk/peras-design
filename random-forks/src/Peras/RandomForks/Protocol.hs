@@ -30,12 +30,12 @@ instance Default Parameters where
   def =
     Parameters
     {
-      peerCount = 10
+      peerCount = 30
     , downstreamCount = 3
     , maximumCurrency = 1000
-    , activeSlotCoefficient = 1 / 5
-    , meanCommitteeSize = 6
-    , roundLength = 3
+    , activeSlotCoefficient = 1 / 20
+    , meanCommitteeSize = 10
+    , roundLength = 5
     }
 
 data Protocol =

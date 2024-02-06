@@ -57,7 +57,7 @@ extendChain
   :: Block
   -> Chain
   -> Chain
-extendChain block = Chain block
+extendChain = Chain
 
 data Message =
   Message

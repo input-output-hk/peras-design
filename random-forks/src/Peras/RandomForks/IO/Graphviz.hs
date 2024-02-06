@@ -12,6 +12,9 @@ import Peras.RandomForks.Chain (Chain, Block(Block, blockId, slot, creator), blo
 import Peras.RandomForks.Peer (PeerState(PeerState, downstream, currency, vrfOutput, slotLeader, committeeMember), Peers(..))
 import Peras.RandomForks.Types (PeerName(getPeerName))
 
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Language.Dot.Pretty as G
@@ -61,13 +64,13 @@ chainGraph chains =
           G.AttributeSetValue (G.NameId "shape") (G.StringId "oval")
         , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
         ]
-    nodeId bid = G.NodeId (G.StringId $ show bid) Nothing
+    nodeId bid = G.NodeId (G.StringId . BS8.unpack . B16.encode $ SBS.fromShort bid) Nothing
     mkNode Block{..} =
       G.NodeStatement (nodeId blockId)
         [
           G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
         , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText
-            $ "<b>" <> take 8 (show blockId) <> "</b>"
+            $ "<b>" <> BS8.unpack (B16.encode $ SBS.fromShort blockId) <> "</b>"
             <> "|slot=" <> show slot
             <> "|creator=" <> getPeerName creator
         ]
@@ -76,8 +79,8 @@ chainGraph chains =
     mkEdges [] = []
     mkEdges bs = zipWith mkEdge (init bs) (tail bs)
     edges = nub $ concatMap (mkEdges . fmap blockId . blocks) chains
-    mkEdge' bid' = G.EdgeStatement [G.ENodeId G.NoEdge genesisId, G.ENodeId G.DirectedEdge $ nodeId bid'] mempty
-    edges' = nub $ mkEdge' . blockId . head <$> filter (not . null) (blocks <$> chains)
+    mkEdge' bid' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeId bid', G.ENodeId G.DirectedEdge genesisId] mempty
+    edges' = nub $ mkEdge' . blockId . last <$> filter (not . null) (blocks <$> chains)
   in
     G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains")
-      $ [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "LR")] <> pure genesis <> nodes <> edges <> edges'
+      $ [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges <> edges'

@@ -1,61 +1,32 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Peras.RandomForks (
-  run
-, advance
+  execute
 ) where
 
-import Control.Monad.IO.Class (MonadIO(..))
-import Data.Bifunctor (bimap)
-import Data.Foldable (foldlM)
-import Peras.RandomForks.Chain (Message(Message, messageDestination))
-import Peras.RandomForks.IO.Graphviz (chainGraph, writeGraph)
-import Peras.RandomForks.Peer (PeerState(pendingMessages, preferredChain), Peers(..), nextSlot)
-import Peras.RandomForks.Protocol (Protocol)
-import Peras.RandomForks.Types (Slot) 
-import System.FilePath ((<.>))
-import System.Random.Stateful (StatefulGen)
+import Control.Monad.State (execStateT)
+import Peras.RandomForks.Simulation (History(..), initialHistory, run)
+import Peras.RandomForks.IO.Graphviz (chainGraph, peersGraph, writeGraph)
+import Peras.RandomForks.Peer (PeerState(preferredChain), Peers(getPeers), randomPeers)
+import Peras.RandomForks.Protocol (Parameters, mkProtocol)
+import System.Random (StdGen)
+import System.Random.Stateful (newIOGenM)
 
 import qualified Data.Map.Strict as M
 
-run
-  :: MonadIO m
-  => StatefulGen g m
-  => g
-  -> Protocol
-  -> Maybe FilePath
-  -> Peers
+execute
+  :: StdGen
+  -> Parameters
   -> Int
-  -> m Peers
-run gen protocol baseName peers duration =
-  foldlM (advance gen protocol baseName) peers [0..duration]
-  
-advance
-  :: MonadIO m
-  => StatefulGen g m
-  => g
-  -> Protocol
-  -> Maybe FilePath
-  -> Peers
-  -> Slot
-  -> m Peers
-advance gen protocol baseName (Peers peers) slot =
+  -> FilePath
+  -> FilePath
+  -> IO ()
+execute stdGen parameters duration peerFilename chainFilename =
   do
-    -- Advance one slot.
-    (peers', messages) <-
-      bimap M.fromList mconcat . unzip
-        <$> sequence
-        [
-          do
-            (state', messages) <- nextSlot gen protocol slot name state
-            pure ((name, state'), messages)
-        |
-          (name, state) <- M.toList peers  -- FIXME: Rewrite as map.
-        ]
-    -- Deliver any new messages.
-    let
-      deliverMessage ps message@Message{messageDestination} =
-        M.adjust (\state -> state {pendingMessages = pendingMessages state <> pure message}) messageDestination ps
-      peers'' = foldl deliverMessage peers' messages
-    liftIO $ maybe (pure ()) (flip writeGraph (chainGraph $ preferredChain <$> M.elems peers'') . (<.> "dot") . (<> show slot)) baseName
-    pure $ Peers peers''
+    gen <- newIOGenM stdGen
+    let protocol = mkProtocol parameters
+    peers <- randomPeers gen parameters protocol
+    history <- run gen duration `execStateT` initialHistory protocol peers
+    writeGraph peerFilename $ peersGraph peers
+    let chains = preferredChain <$> M.elems (getPeers . snd . M.findMax $ _peerHistory history)
+    writeGraph chainFilename $ chainGraph chains
