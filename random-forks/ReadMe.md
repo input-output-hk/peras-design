@@ -15,6 +15,6 @@ $ circo -Tpng -o 'peers.png' 'peers.dot'
 $ for i in chain-*.dot; do j=${i%%.dot}.png; dot -Tpng -o $j $i; done
 ```
 
-![chain-100.png](chain-100.png)
+![chain-100.png](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/chain-100.png)
 
-![peers.png](peers.png)
+![peers.png](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/peers.png)

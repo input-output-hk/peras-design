@@ -1,5 +1,24 @@
 ## 2024-02-05
 
+### BB
+
+[Initial work in progress on a crude simulation of peers, chains, and forks](https://github.com/input-output-hk/peras-design/blob/main/random-forks/ReadMe.md):
+
+- Generates a reasonable but random topology of peers.
+- Simplified election of slot leaders.
+- Simplified lottery of voting committee.
+- Forking of chain and message passing to downstream neighbors.
+- The chaining is a work in progress, with several glaring but easily remedied deficiencies.
+- The code is unpolished and hacky.
+- The next step would be to add an approximation of the Peras protocol.
+
+This is a disposable model, just  for exploration and building intuition. 
+
+| Example chain                                                                                                         | Example topology                                                                                                     |
+|-----------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| ![chain](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/chain-100.png) | ![topology](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/peers.png) |
+
+
 #### AB
 
 Trying to assess what would be most useful to start working on for Peras.
@@ -99,22 +118,6 @@ Some values for the parameters
 * $n$: committee size: order of security parameter to avoid
   adversarially dominated committees; we're also hoping to make it
   work for smaller committee sizes at some point
-
-#### BB
-
-[Initial work in progreass on a crude simulation of peers, chains, and forks](https://github.com/input-output-hk/peras-design/blob/main/random-forks/ReadMe.md):
-- Generates a reasonable but random topology of peers.
-- Simplified election of slot leaders.
-- Simplified lottery of voting committee.
-- Forking of chain and message passing to downstream neighbors.
-- The chaining is a work in progress, with several glaring but easily remedied deficiencies.
-- The code is unpolished and hacky.
-- The next step would be to add an approximation of the Peras protocol.
-This is a disposable model, just  for exploration and building intuition. 
-
-| Example chain | Example topology |
-|---------------|------------------|
-| ![chain](https://github.com/input-output-hk/peras-design/blob/main/random-forks/chain-100.png) | ![topology](https://github.com/input-output-hk/peras-design/blob/main/random-forks/peers.png) |
 
 ## 2024-01-31
 
