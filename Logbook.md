@@ -2,7 +2,7 @@
 
 ### BB
 
-[Initial work in progress on a crude simulation of peers, chains, and forks](https://github.com/input-output-hk/peras-design/blob/main/random-forks/ReadMe.md):
+[Initial work in progress on a crude simulation of peers, chains, and forks](random-forks/ReadMe.md):
 
 - Generates a reasonable but random topology of peers.
 - Simplified election of slot leaders.
