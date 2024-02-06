@@ -2,50 +2,14 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.RandomForks.Protocol (
-  Parameters(..)
-, Protocol(..)
-, isCommitteeMember
+  isCommitteeMember
 , isFirstSlotInRound
 , isSlotLeader
 , mkProtocol
 ) where
 
-import Data.Default (Default(..))
-import Peras.RandomForks.Types (Currency, Slot)
+import Peras.RandomForks.Types (Currency, Parameters(..), Protocol(..), Slot)
 import System.Random.Stateful (StatefulGen, UniformRange(uniformRM))
-
-data Parameters =
-  Parameters
-  {
-    peerCount :: Int
-  , downstreamCount :: Int
-  , maximumCurrency :: Currency
-  , activeSlotCoefficient :: Double
-  , meanCommitteeSize :: Int
-  , roundLength :: Int
-  }
-    deriving (Eq, Ord, Read, Show)
-
-instance Default Parameters where
-  def =
-    Parameters
-    {
-      peerCount = 30
-    , downstreamCount = 3
-    , maximumCurrency = 1000
-    , activeSlotCoefficient = 1 / 20
-    , meanCommitteeSize = 10
-    , roundLength = 5
-    }
-
-data Protocol =
-  Protocol
-  {
-    pSlotLottery :: Double
-  , pCommitteeLottery :: Double
-  , roundDuration :: Int
-  }
-    deriving (Eq, Ord, Read, Show)
 
 mkProtocol
   :: Parameters

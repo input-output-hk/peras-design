@@ -2,38 +2,19 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.RandomForks.Peer (
-  Peers(..)
-, PeerState(..)
-, nextSlot
+  nextSlot
 , randomPeers
 ) where
 
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.RandomForks.Chain (Chain (Genesis), Message(..), chainLength, extendChain, mkBlock)
-import Peras.RandomForks.Protocol (Protocol(..), Parameters(..), isCommitteeMember, isFirstSlotInRound, isSlotLeader)
-import Peras.RandomForks.Types (Currency, PeerName(..), Slot)
+import Peras.RandomForks.Chain (chainLength, extendChain, mkBlock)
+import Peras.RandomForks.Protocol (isCommitteeMember, isFirstSlotInRound, isSlotLeader)
+import Peras.RandomForks.Types (Chain (Genesis), Message(..), Parameters(..), PeerName(..), PeerState(..), Peers(..), Protocol(..), Slot)
 import System.Random.Stateful (StatefulGen, UniformRange(uniformRM))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-
-newtype Peers = Peers {getPeers :: M.Map PeerName PeerState}
-  deriving (Eq, Ord, Read, Show)
-
-data PeerState =
-  PeerState
-  {
-    currency :: Currency
-  , vrfOutput :: Double
-  , slotLeader :: Bool
-  , committeeMember :: Bool
-  , upstream :: S.Set PeerName
-  , downstream :: S.Set PeerName
-  , preferredChain :: Chain
-  , pendingMessages :: [Message]
-  }
-    deriving (Eq, Ord, Read, Show)
 
 randomPeers
   :: StatefulGen g m

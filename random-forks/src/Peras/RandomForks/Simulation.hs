@@ -11,21 +11,11 @@ module Peras.RandomForks.Simulation (
 import Control.Monad (replicateM_)
 import Control.Monad.State (MonadState, gets, modify)
 import Data.Bifunctor (bimap)
-import Peras.RandomForks.Chain (Message(Message, messageDestination))
-import Peras.RandomForks.Peer (PeerState(pendingMessages), Peers(..), nextSlot)
-import Peras.RandomForks.Protocol (Protocol)
-import Peras.RandomForks.Types (Slot)
+import Peras.RandomForks.Peer (nextSlot)
+import Peras.RandomForks.Types (History(..), Message(Message, messageDestination), PeerState(pendingMessages), Peers(..), Protocol)
 import System.Random.Stateful (StatefulGen)
 
 import qualified Data.Map.Strict as M
-
-data History =
-  History
-  {
-    _protocol :: Protocol
-  , _peerHistory :: M.Map Slot Peers
-  }
-    deriving (Eq, Ord, Read, Show)
 
 initialHistory
   :: Protocol

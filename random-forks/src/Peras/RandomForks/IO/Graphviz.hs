@@ -8,9 +8,8 @@ module Peras.RandomForks.IO.Graphviz (
 ) where
 
 import Data.List (nub)
-import Peras.RandomForks.Chain (Chain, Block(Block, blockId, slot, creator), blocks)
-import Peras.RandomForks.Peer (PeerState(PeerState, downstream, currency, vrfOutput, slotLeader, committeeMember), Peers(..))
-import Peras.RandomForks.Types (PeerName(getPeerName))
+import Peras.RandomForks.Chain (blocks)
+import Peras.RandomForks.Types (Block(..), Chain, PeerName(getPeerName), PeerState(..), Peers(..))
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS8

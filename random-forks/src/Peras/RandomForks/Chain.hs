@@ -3,26 +3,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Peras.RandomForks.Chain (
-  Block(..)
-, Chain(..)
-, Message(..)
-, blocks
+  blocks
 , chainLength
 , extendChain
 , mkBlock
 ) where
 
-import Peras.RandomForks.Types (BlockId, PeerName, Slot)
+import Peras.RandomForks.Types (Block(..), Chain(..), PeerName, Slot)
 import System.Random.Stateful (StatefulGen(uniformShortByteString))
-
-data Block =
-  Block
-  {
-    creator :: PeerName
-  , slot :: Slot
-  , blockId :: BlockId
-  }
-    deriving (Eq, Ord, Read, Show)
 
 mkBlock
   :: StatefulGen g m
@@ -31,15 +19,6 @@ mkBlock
   -> Slot
   -> m Block
 mkBlock gen name slot = Block name slot <$> uniformShortByteString 8 gen
-
-data Chain =
-  Chain
-  {
-    block :: Block,
-    prev :: Chain
-  }
-  | Genesis
-  deriving stock (Eq, Ord, Read, Show)
 
 blocks :: Chain -> [Block]
 blocks = \case
@@ -59,11 +38,3 @@ extendChain
   -> Chain
 extendChain = Chain
 
-data Message =
-  Message
-  {
-    messageSlot :: Slot
-  , messageChain :: Chain
-  , messageDestination :: PeerName
-  }
-    deriving (Eq, Ord, Read, Show)

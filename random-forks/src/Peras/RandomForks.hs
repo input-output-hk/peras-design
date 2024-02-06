@@ -7,8 +7,9 @@ module Peras.RandomForks (
 import Control.Monad.State (execStateT)
 import Peras.RandomForks.Simulation (History(..), initialHistory, run)
 import Peras.RandomForks.IO.Graphviz (chainGraph, peersGraph, writeGraph)
-import Peras.RandomForks.Peer (PeerState(preferredChain), Peers(getPeers), randomPeers)
-import Peras.RandomForks.Protocol (Parameters, mkProtocol)
+import Peras.RandomForks.Peer (randomPeers)
+import Peras.RandomForks.Protocol (mkProtocol)
+import Peras.RandomForks.Types (Parameters, PeerState(preferredChain), Peers(getPeers))
 import System.Random (StdGen)
 import System.Random.Stateful (newIOGenM)
 

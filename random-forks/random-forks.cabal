@@ -19,6 +19,7 @@ library
     Peras.RandomForks.Protocol
     Peras.RandomForks.Simulation
     Peras.RandomForks.Types
+    Peras.RandomForks.Vote
   hs-source-dirs:   src
   build-depends:
     , base >=4.9 && <5
@@ -26,6 +27,7 @@ library
     , bytestring
     , containers
     , data-default
+--  , io-classes
 --  , io-sim
     , language-dot
     , mtl
