@@ -68,9 +68,13 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.1.0,
+    build-depends:    QuickCheck,
+                      base ^>=4.18.1.0,
                       bytestring,
-                      quickcheck-dynamic
+                      containers,
+                      mtl,
+                      quickcheck-dynamic,
+                      random
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -102,7 +106,8 @@ test-suite quickcheck-model-test
 
     -- Test dependencies.
     build-depends:
-                      base ^>=4.18.1.0
+                        base ^>=4.18.1.0
+                  , QuickCheck
                   , QuickCheck
                   , hspec
                   , io-sim
