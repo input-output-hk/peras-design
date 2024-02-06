@@ -7,6 +7,61 @@ Reading the PoS-NSB paper and Coq code
   * Sketched the relation on what states are reachable, i.e. the small steps semantics and the transitive closure in Agda
     https://github.com/input-output-hk/peras-design/blob/d90f164d5b5d1ac15bc6c8126d8180addb872681/src/Peras/Chain.agda#L131-L151
 
+#### AB - Test Model
+
+Reading PoS-NSB paper let me think about how to generate meaningful tests:
+* The Model could generate a valid sequence of transactions, inject
+  them in arbitrary nodes, and verify all nodes converge to a valid
+  maximal chain
+* This requires modelling txs which is annoying
+* We could instead have the Model just play the role of the
+  network/diffusion layer for blocks (And later votes) and select
+  block to broadcast from whatever each node has made available some
+  blocks, possibly injecting also rogue blocks. This removes the need
+  to forge transactions and put the model in the shoes of the
+  adversary, interposing itself between otherwise honest nodes
+
+Trying to get a working environment (Again) but I have issues with
+HLS/LSP: Code action for filling missing variables did not work, so I
+upgraded to latest available `lsp-haskell` but now I get another
+error:
+
+```
+Symbol’s value as variable is void: lsp-haskell-plugin-cabal-code-actions-on
+```
+
+Managed to propertly configure auto formatting for Haskell on local
+environment for Peras, such that it picks up the right configuration
+file.  I ditched use of lsp-format-code action because it's borked as
+per https://github.com/haskell/haskell-language-server/issues/411
+
+
+Pushed a first version of a test model, along the lines sketched above.
+The model's actions are very simple:
+* `Tick` to advance the slot for all nodes,
+* `ObserveChain` to retrieve the current best chain from a node.
+
+Then when `perform`ing `Tick` on the real nodes, they will produce
+some `Block`s which will be broadcast to other nodes, possibly later
+with some delays or loss...
+
+A basic property that could be interesting to state as our first test
+would be the _Common Prefix_ property:
+
+```
+do
+  anyActions_
+  getState >>= \ nodes -> do
+      chains <- mapM (action . ObserveBestChain) nodes
+      assert $ all ((< k) . lengthDivergingSuffix) chains
+```
+
+eg. all nodes' potential forks are not deeper than the security parameter `k` or equivalently all nodes have a common prefixs.
+
+When we express properties for Peras, we could have this property
+provide a tighter bound than `k` in the "steady state", or fallback to
+`k` when confronted with adversarial behaviour.
+
 ## 2024-02-05
 
 ### BB
@@ -21,7 +76,7 @@ Reading the PoS-NSB paper and Coq code
 - The code is unpolished and hacky.
 - The next step would be to add an approximation of the Peras protocol.
 
-This is a disposable model, just  for exploration and building intuition. 
+This is a disposable model, just  for exploration and building intuition.
 
 | Example chain                                                                                                         | Example topology                                                                                                     |
 |-----------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
