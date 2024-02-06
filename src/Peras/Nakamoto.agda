@@ -1,19 +1,5 @@
-{-
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
--}
-
 -- | The Nakamoto layer of the Peras protocol.
 module Peras.Nakamoto where
-
-{-
-import Data.Map (Map)
-import Data.Set (Set)
-import Data.Word (Word64)
-import Peras.Block (Block (..), PartyId, isValidBlock)
-import Peras.Chain (Vote)
-import Peras.Message (Message (..))
--}
 
 open import Agda.Builtin.Word
 open import Level
@@ -29,7 +15,6 @@ record ConsensusConfig : Set where
   field partyId : PartyId
         roundLength : Word64
         cooldownPeriod : Word64
-  --  deriving stock (Eq, Show)
 
 -- | Compute the weight of a (tip of) a chain w.r.t to a set of
 -- pending votes.
@@ -47,9 +32,10 @@ chainWeight ConsensusConfig{roundLength} Block{blockHeight, slotNumber} pendingV
    in undefined
 -}
 
-postulate wEq : Relation.Binary.Rel Word64 zero
-          wLt : Relation.Binary.Rel Word64 zero
-          wIs : Relation.Binary.IsStrictTotalOrder wEq wLt
+postulate
+  wEq : Relation.Binary.Rel Word64 zero
+  wLt : Relation.Binary.Rel Word64 zero
+  wIs : Relation.Binary.IsStrictTotalOrder wEq wLt
 
 WordO : StrictTotalOrder zero zero zero
 WordO = record {
@@ -64,12 +50,10 @@ record ConsensusState : Set where
   field currentChain  : Block
         seenChains    : set BlockO
         votesReceived : Map WordO (Map BlockO (set VoteBlockO))
-  -- deriving stock (Eq, Show)
 
 data Decision : Set where
   Tally : Vote Block → Decision
   Seen  : Block → Decision
-  -- deriving stock (Eq, Show)
 
 {-
 nakamotoLayer :: ConsensusConfig -> ConsensusState -> Message Block -> Decision
