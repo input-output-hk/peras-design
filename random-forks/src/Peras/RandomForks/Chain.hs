@@ -1,4 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Peras.RandomForks.Chain (
   Block(..)
@@ -30,30 +34,33 @@ mkBlock
   -> Slot
   -> IO Block
 mkBlock name slot = Block name slot <$> nextRandom
-    
-newtype Chain =
+
+data Chain =
   Chain
   {
-    blocks :: [Block]
+    block :: Block,
+    prev :: Chain
   }
-    deriving (Eq, Ord, Read, Show)
+  | Genesis
+  deriving stock (Eq, Ord, Read, Show)
 
-instance Semigroup Chain where
-  Chain x <> Chain y = Chain $ x <> y
-
-instance Monoid Chain where
-  mempty = Chain mempty
+blocks :: Chain -> [Block]
+blocks = \case
+  Genesis -> []
+  Chain {block, prev} -> block : blocks prev
 
 chainLength
   :: Chain
   -> Int
-chainLength = length . blocks
+chainLength = \case
+  Genesis -> 0
+  Chain{prev} -> 1 + chainLength prev
 
 extendChain
-  :: Chain
-  -> Block
+  :: Block
   -> Chain
-extendChain = (. (Chain . pure)) . (<>)
+  -> Chain
+extendChain block = Chain block
 
 data Message =
   Message

@@ -12,7 +12,7 @@ module Peras.RandomForks.Peer (
 
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.RandomForks.Chain (Chain, Message(..), chainLength, extendChain, mkBlock)
+import Peras.RandomForks.Chain (Chain (Genesis), Message(..), chainLength, extendChain, mkBlock)
 import Peras.RandomForks.Protocol (Protocol(..), Parameters(..), isCommitteeMember, isFirstSlotInRound, isSlotLeader)
 import Peras.RandomForks.Types (Currency, PeerName(..), Slot)
 import System.Random (randomRIO)
@@ -56,13 +56,13 @@ randomPeers Parameters{..} protocol =
       upstreams = M.fromListWith (<>) . concatMap (\(name, names) -> (, S.singleton name) <$> S.toList names) $ M.toList downstreams
       randomPeer name =
         do
-          currency <- randomRIO (1, maximumCurrency)       
+          currency <- randomRIO (1, maximumCurrency)
           vrfOutput <- randomRIO (0, 1)
           slotLeader <- isSlotLeader protocol currency
           committeeMember <- isCommitteeMember protocol currency
           let upstream = fromMaybe mempty $ M.lookup name upstreams
               downstream = fromMaybe mempty $ M.lookup name downstreams
-              preferredChain = mempty
+              preferredChain = Genesis
               pendingMessages = mempty
           pure PeerState{..}
     Peers . M.fromList <$> mapM (\name -> (name, ) <$> randomPeer name) peerNames
@@ -83,7 +83,7 @@ nextSlot protocol slot name state@PeerState{..} =
     preferredChainBeforeNow <- (longest !!) <$> randomRIO (0, length longest - 1)
     preferredChain' <-
       if slotLeader'
-        then extendChain preferredChainBeforeNow <$> mkBlock name slot
+        then (`extendChain` preferredChainBeforeNow) <$> mkBlock name slot
         else pure preferredChainBeforeNow
     let
       newMessages =
@@ -105,7 +105,7 @@ nextSlot protocol slot name state@PeerState{..} =
         , preferredChain = preferredChain'
         , pendingMessages = mempty
         }
-    pure (newState, newMessages)    
+    pure (newState, newMessages)
 
 peerGraph
   :: Peers

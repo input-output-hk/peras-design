@@ -1,4 +1,3 @@
--- Custom repository for cardano haskell packages, see CONTRIBUTING.md
 repository cardano-haskell-packages
   url: https://input-output-hk.github.io/cardano-haskell-packages
   secure: True
@@ -10,13 +9,32 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
--- See CONTRIBUTING.md for information about when and how to update these.
+index-state: 2024-01-05T13:49:07Z
 index-state:
-  , hackage.haskell.org 2023-09-14T06:54:18Z
-  , cardano-haskell-packages 2023-09-14T16:16:59Z
+  , hackage.haskell.org      2023-12-15T16:32:49Z
+  , cardano-haskell-packages 2023-12-15T14:50:31Z
 
-packages: .
+packages:
+  random-forks
+  quickcheck-model
+  sketch
 
--- Always show detailed output for tests
 tests: True
-test-show-details: direct
+
+package strict-containers
+  ghc-options: -Wno-noncanonical-monad-instances -Wno-error=noncanonical-monad-instances
+
+package comonad
+  flags: -test-doctests
+
+package cryptonite
+  -- Using RDRAND instead of /dev/urandom as an entropy source for key
+  -- generation is dubious. Set the flag so we use /dev/urandom by default.
+  flags: -support_rdrand
+
+benchmarks: False
+optimization: False
+
+flags: +defer-plugin-errors
+
+write-ghc-environment-files: never
