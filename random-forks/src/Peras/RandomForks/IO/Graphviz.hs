@@ -7,9 +7,9 @@ module Peras.RandomForks.IO.Graphviz (
 , writeGraph
 ) where
 
-import Data.List (nub)
+import Data.List (intercalate, nub)
 import Peras.RandomForks.Chain (blocks)
-import Peras.RandomForks.Types (Block(..), Chain, PeerName(getPeerName), PeerState(..), Peers(..))
+import Peras.RandomForks.Types (Block(..), Chain, PeerName(getPeerName), PeerState(..), Peers(..), Vote(..))
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS8
@@ -72,6 +72,7 @@ chainGraph chains =
             $ "<b>" <> BS8.unpack (B16.encode $ SBS.fromShort blockId) <> "</b>"
             <> "|slot=" <> show slot
             <> "|creator=" <> getPeerName creator
+            <> "|votes=" <> intercalate "," (map (\Vote{..} -> getPeerName voter <> "@" <> show votingRound) $ S.toList votes)
         ]
     nodes = mkNode <$> nub (concatMap blocks chains)
     mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeId bid, G.ENodeId G.DirectedEdge $ nodeId bid'] mempty

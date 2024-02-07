@@ -21,7 +21,6 @@ mkProtocol Parameters{..} =
     -- FIXME: These formulae are approximate--the real one is lengthy.
     fractionInCommittee = fromIntegral meanCommitteeSize / fromIntegral peerCount
     pCommitteeLottery = 1 - (1 - fractionInCommittee) ** (2 / fromIntegral maximumCurrency)
-    roundDuration = roundLength
   in
     Protocol{..}
 

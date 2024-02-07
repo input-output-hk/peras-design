@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Peras.RandomForks.Types (
   Block(..)
@@ -12,7 +13,9 @@ module Peras.RandomForks.Types (
 , PeerState(..)
 , Peers(..)
 , Protocol(..)
+, Round
 , Slot
+, Vote(..)
 ) where
 
 import Data.Default (Default(def))
@@ -27,15 +30,20 @@ type Currency = Int
 
 type Slot = Int
 
+type Round = Int
+
 data Parameters =
   Parameters
   {
     peerCount :: Int
   , downstreamCount :: Int
   , maximumCurrency :: Currency
-  , activeSlotCoefficient :: Double
   , meanCommitteeSize :: Int
-  , roundLength :: Int
+  , activeSlotCoefficient :: Double
+  , roundDuration :: Int
+  , votingBoost :: Double
+  , votingWindow :: (Int, Int)
+  , votingQuorum :: Double
   }
     deriving stock (Eq, Ord, Read, Show)
 
@@ -48,7 +56,10 @@ instance Default Parameters where
     , maximumCurrency = 1000
     , activeSlotCoefficient = 1 / 20
     , meanCommitteeSize = 10
-    , roundLength = 5
+    , roundDuration = 10
+    , votingBoost = 0.25
+    , votingWindow = (5, 20)
+    , votingQuorum = 8
     }
 
 data Protocol =
@@ -57,6 +68,9 @@ data Protocol =
     pSlotLottery :: Double
   , pCommitteeLottery :: Double
   , roundDuration :: Int
+  , votingBoost :: Double
+  , votingWindow :: (Int, Int)
+  , votingQuorum :: Double
   }
     deriving stock (Eq, Ord, Read, Show)
 
@@ -66,12 +80,22 @@ newtype Peers = Peers {getPeers :: M.Map PeerName PeerState}
 newtype PeerName = PeerName {getPeerName :: String}
   deriving stock (Eq, Ord, Read, Show)
 
+data Vote =
+  Vote
+  {
+    votingRound :: Round
+  , voter :: PeerName    
+  , votedBlock :: BlockId
+  }
+  deriving stock (Eq, Ord, Read, Show)
+
 data Block =
   Block
   {
     creator :: PeerName
   , slot :: Slot
   , blockId :: BlockId
+  , votes :: S.Set Vote
   }
     deriving stock (Eq, Ord, Read, Show)
 
@@ -88,8 +112,9 @@ data Message =
   Message
   {
     messageSlot :: Slot
-  , messageChain :: Chain
   , messageDestination :: PeerName
+  , messageChain :: Chain
+  , messageVotes :: S.Set Vote
   }
     deriving stock (Eq, Ord, Read, Show)
 
@@ -103,6 +128,7 @@ data PeerState =
   , upstream :: S.Set PeerName
   , downstream :: S.Set PeerName
   , preferredChain :: Chain
+  , danglingVotes :: S.Set Vote
   , pendingMessages :: [Message]
   }
     deriving stock (Eq, Ord, Read, Show)
@@ -110,7 +136,7 @@ data PeerState =
 data History =
   History
   {
-    _protocol :: Protocol
-  , _peerHistory :: M.Map Slot Peers
+    protocol :: Protocol
+  , peerHistory :: M.Map Slot Peers
   }
     deriving stock (Eq, Ord, Read, Show)

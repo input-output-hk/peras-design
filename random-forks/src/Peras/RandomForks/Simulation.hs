@@ -24,8 +24,8 @@ initialHistory
 initialHistory protocol peers =
   History
   {
-    _protocol = protocol
-  , _peerHistory = M.singleton 0 peers
+    protocol = protocol
+  , peerHistory = M.singleton 0 peers
   }
 
 run
@@ -43,8 +43,8 @@ advance
   -> m ()
 advance gen =
   do
-    protocol <- gets _protocol
-    (slot', Peers peers) <- gets $ M.findMax . _peerHistory
+    protocol <- gets protocol
+    (slot', Peers peers) <- gets $ M.findMax . peerHistory
     let slot = slot' + 1
     -- Advance one slot.
     (peers', messages) <-
@@ -62,4 +62,4 @@ advance gen =
       deliverMessage ps message@Message{messageDestination} =
         M.adjust (\state -> state {pendingMessages = pendingMessages state <> pure message}) messageDestination ps
       peers'' = foldl deliverMessage peers' messages
-    modify $ \history -> history { _peerHistory = M.insert slot (Peers peers'') (_peerHistory history) }
+    modify $ \history -> history {peerHistory = M.insert slot (Peers peers'') (peerHistory history) }

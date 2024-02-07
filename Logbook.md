@@ -80,7 +80,7 @@ This is a disposable model, just  for exploration and building intuition.
 
 | Example chain                                                                                                         | Example topology                                                                                                     |
 |-----------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| ![chain](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/chain-100.png) | ![topology](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/peers.png) |
+| ![chain](https://ipfs.io/ipfs/QmNNgoTeefUGrsHL8zpVy1BvaFzmce2WNm1yj4yWDjvGkF) | ![topology](https://ipfs.io/ipfs/QmVao93ZHzn7BXQyLjZ3Km2m7tfstu1cAzWDG19Va5oxGp) |
 
 
 #### AB

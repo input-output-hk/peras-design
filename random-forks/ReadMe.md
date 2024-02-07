@@ -3,18 +3,17 @@
 ```console
 $ nix develop
 
-$ cabal run exe:random-forks -- run 100
+$ cabal run exe:random-forks
 
-Parameters {peerCount = 10, downstreamCount = 3, maximumCurrency = 1000, activeSlotCoefficient = 0.2, meanCommitteeSize = 6, roundLength = 3}
-Protocol {pSlotLottery = 4.462771441671176e-5, pCommitteeLottery = 1.8309033116110651e-3, roundDuration = 3}
-Run `circo -Tpng -o 'peers.png' 'peers.dot'` to generate the diagram of peers.
-Run `for i in chain-*.dot; do j=${i%%.dot}.png; dot -Tpng -o $j $i; done` to generate diagrams of chains.
+USAGE: random-forks DURATION PEER_FILENAME CHAIN_FILENAME
 
-$ circo -Tpng -o 'peers.png' 'peers.dot'
+$ cabal run exe:random-forks -- 500 peers.dot chain.dot
 
-$ for i in chain-*.dot; do j=${i%%.dot}.png; dot -Tpng -o $j $i; done
+$ circo -Tpng -o peers.png peers.dot
+
+$ dot -Tpng -o chain.png chain.dot
 ```
 
-![chain-100.png](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/chain-100.png)
+![chain.png](https://ipfs.io/ipfs/Qme5KFUoNg7iDEQX84X6rU67YdYtMerp6Ywh574FKCTTCA)
 
-![peers.png](https://ipfs.functionally.io/ipfs/QmSczjj3K4qxGZLnGtTBPvSfFNN8xgCfJBUBPjMDvt66QZ/random-forks/peers.png)
+![peers.png](https://ipfs.io/ipfs/QmTXidVC4bqUVc8mnvJbbFda8itBYuKNBhWahzWBN7zPQ3)
