@@ -1,0 +1,27 @@
+{ repoRoot, inputs, pkgs, lib, system }:
+
+let
+
+  cabalProject = pkgs.haskell-nix.cabalProject' ({ config, pkgs, ... }: {
+    name = "peras-iosim";
+    src = ../.;
+    compiler-nix-name = "ghc928";
+    shell.withHoogle = false;
+    inputMap = {
+      "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.iogx.inputs.CHaP;
+    };
+    modules = [{
+      packages = {
+        peras-iosim.ghcOptions = [ "-Werror" ];
+      };
+    }];
+  });
+
+  project = lib.iogx.mkHaskellProject {
+    inherit cabalProject;
+    shellArgs = repoRoot.nix.shell;
+  };
+
+in
+
+project
