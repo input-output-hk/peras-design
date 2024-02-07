@@ -1,5 +1,30 @@
 ## 2024-02-06
 
+### BB - Simplfied Praos/Peras Simulation/Visualization
+
+- Changes
+    - Removed use of `IO`, in order to accommodate `IOSim`.
+    - Refactored random-number generation.
+    - Refactored types into separate module.
+    - Refactored graph visualization into separate module.
+    - Added rounds and voting.
+- Not yet implemented
+    - Cooling-off period.
+    - The code is still hacky and disposable.
+    - Vertical alignment of blocks by slot in visualization.
+    - Display of voting-round boundaries in visualization.
+- Observations
+    - `StatefulGen` and `IOSim` don't easily coexist.
+    - Visualization the block production, voting, and forking is practical for many nodes and slots.
+    - The Peras procotol can equally well be simulated via a centrally managed or a distributed simulation, but a distributed simulation seems cleanest and closest to the protocol.
+- Next steps
+    - Consider whether it is worthwhile further developing the model, or whether it would be better to re-architect the model in Agda or in a simulation framework.
+    - Document visualization lessons-learned and next-generation design.
+
+| Example chain                                                                 | Example topology                                                                  |
+|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| ![chain](https://ipfs.io/ipfs/Qme5KFUoNg7iDEQX84X6rU67YdYtMerp6Ywh574FKCTTCA) | ![topology](https://ipfs.io/ipfs/QmTXidVC4bqUVc8mnvJbbFda8itBYuKNBhWahzWBN7zPQ3) |
+
 ### YH
 
 Reading the PoS-NSB paper and Coq code
