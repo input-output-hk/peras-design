@@ -1,3 +1,28 @@
+## 2024-02-07
+
+### BB - Peras simulation using `IOSim`
+
+- Began work on `IOSim`-based Peras simulator.
+    - A couple of days from now, this will replace the `random-forks` model.
+    - Based on ideas from Hydra simulator.
+    - Initially use a simple centralized barrier for synchronizing clocks.
+        - A more sophisticated barrier algorithm can be implemented later, if needed.
+    - Status
+        - Foundational types for Praos.
+        - Partial implementation of network.
+    - Next steps
+        - Basic Praos-like protocol.
+        - Visualization of output.
+        - Integrate with Agda-generated types.
+- Notes and ideas
+    - Study other network simulators (6+ candidates already)
+    - Review design document for Cardano network.
+    - Consider how $\Delta$Q-analysis can be used with the simulation.
+    - The `random-forks` simulator runs 3000 nodes for one hour of simulated time in two seconds of wall-clock time.
+    - Statistical design of experiments will be needed (OAT sensitivities, then LHS or OA designs).
+    - Talk to Karl Knutson of CF about network statistics
+    - Eventually, publish a web-based version of the simulator.
+
 ## 2024-02-06
 
 ### BB - Simplfied Praos/Peras Simulation/Visualization
