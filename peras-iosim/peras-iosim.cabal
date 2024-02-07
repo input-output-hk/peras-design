@@ -1,0 +1,42 @@
+cabal-version:      3.0
+name:               peras-iosim
+version:            0.1.0.0
+synopsis:           Experiments with peras voting.
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Brian W Bush <brian.bush@iohk.io>
+maintainer:         Brian W Bush <brian.bush@iohk.io>
+category:           Network
+build-type:         Simple
+extra-source-files: ReadMe.md
+
+library
+  exposed-modules:
+    Peras.IOSim
+    Peras.IOSim.Message
+    Peras.IOSim.Message.Types
+    Peras.IOSim.Network
+    Peras.IOSim.Network.Types
+    Peras.IOSim.Node
+    Peras.IOSim.Node.Types
+    Peras.IOSim.Simulate
+    Peras.IOSim.Types
+  hs-source-dirs:   src
+  build-depends:
+    , base >=4.9 && <5
+    , containers
+    , io-classes
+    , io-sim
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wunused-packages
+
+executable peras-iosim
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  other-modules:    Paths_peras_iosim
+  build-depends:
+    , base >=4.9 && <5
+    , peras-iosim
+--  , optparse-applicative
+  ghc-options:      -Wall -Wunused-packages
+  default-language: Haskell2010
