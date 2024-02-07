@@ -3,10 +3,12 @@ module Peras.Chain where
 open import Agda.Builtin.Word
 open import Data.Bool
 open import Data.List as List using (List; all; foldr)
+open import Data.Maybe
 open import Level
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
 open import Relation.Unary using (Pred)
 open import Relation.Binary using (StrictTotalOrder)
+
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
@@ -78,7 +80,7 @@ record Chain : Set where
 
 postulate
   verifyLeadershipProof : Block → Bool
-  
+
   properlyLinked : Chain → Bool
   decreasingSlots : Chain → Bool
 
@@ -96,84 +98,131 @@ postulate
   Søren Eller Thomsen and Bas Spitters
 -}
 
--- progress
 
-data Progress : Set where
 
-  Ready : Progress
-  Delivered : Progress
-  Baked : Progress
+module _ {T : Set} where
 
-record Message : Set where
-  constructor mkMessage
-  field
-    msg : ByteString
+  open import Data.List.Relation.Binary.Sublist.Propositional
 
--- global state
+  record TreeType : Set where
 
-record GlobalState : Set where
-  constructor ⟪_,_,_,_⟫ 
-  field
-    slot : Slot
-    progress : Progress
-    messages : List Message
-    execution-order : List PartyId
+    field
+      tree0 : T
+      extendTree : T → Block → T
+      allBlocks : T → List Block
+      bestChain : Slot → T → Chain
 
-open GlobalState
+  open TreeType
 
-postulate
-  party_bake_step_world : PartyId → GlobalState → GlobalState
-  party_rcv_step_world : PartyId → GlobalState → GlobalState
-  incrementSlot : Slot → Slot
-  permParties : List PartyId → List PartyId
-  permMessages : List Message → List Message
+  record LocalState : Set where
+    constructor ⟨_,_⟩
+    field
+      id : PartyId
+      tt : T
 
-data _↝_ : GlobalState → GlobalState → Set where
+  -- progress
 
-  Deliver : ∀ {s ms ps}
-    → ⟪ s , Ready , ms , ps ⟫ ↝
-      let gs = List.foldr party_rcv_step_world ⟪ s , Ready , ms , ps ⟫ ps
-       in record gs { progress = Delivered }
+  data Progress : Set where
 
-  Bake : ∀ {s ms ps}
-    → ⟪ s , Delivered , ms , ps ⟫ ↝
-      let gs = List.foldr party_bake_step_world ⟪ s , Delivered , ms , ps ⟫ ps
-       in record gs { progress = Delivered }
+    Ready : Progress
+    Delivered : Progress
+    Baked : Progress
 
-  NextRound : ∀ {s ms ps}
-    → ⟪ s , Baked , ms , ps ⟫ ↝ ⟪ incrementSlot s , Ready , ms , ps ⟫
-    
-  PermParties : ∀ {s p ms ps}
-    → ⟪ s , p , ms , ps ⟫ ↝ ⟪ s , p , ms , permParties ps ⟫
-    
-  PermMsgs : ∀ {s p ms ps}
-    → ⟪ s , p , ms , ps ⟫ ↝ ⟪ s , p , permMessages ms , ps ⟫
+  record Message : Set where
+    constructor mkMessage
+    field
+      msg : ByteString
 
--- reflexive, transitive closure (which is big-step in the paper)
+  -- global state
 
-infix  2 _↝⋆_
-infixr 2 _↝⟨_⟩_
-infix  3 _∎
+  record GlobalState : Set where
+    constructor ⟪_,_,_,_,_⟫
+    field
+      slot : Slot
+      progress : Progress
+      stateMap : PartyId → Maybe LocalState
+      messages : List Message
+      execution-order : List PartyId
 
-data _↝⋆_ : GlobalState → GlobalState → Set where
+  open GlobalState
 
-  _∎ : ∀ M
-      -------
-    → M ↝⋆ M
+  postulate
+    N₀ : GlobalState
 
-  _↝⟨_⟩_ : ∀ L {M N}
-    → L ↝ M
-    → M ↝⋆ N
-      ------
-    → L ↝⋆ N
+    party_bake_step_world : PartyId → GlobalState → GlobalState
+    party_rcv_step_world : PartyId → GlobalState → GlobalState
+    incrementSlot : Slot → Slot
+    permParties : List PartyId → List PartyId
+    permMessages : List Message → List Message
 
-{-
--- knowledge propagation
-lemma_1 : ∀ (N₀ N₁ N₂ : GlobalState)
-  → (p₁ p₂ : PartyId)
-  → Nₒ ↝⋆ N₁
-  → N₁ ↝⋆ N₂
-  → progress N₁ ≡ Ready
-  → progress N₂ ≡ Delivered
-  → allBlocks t₁ ⊂ allBlocks t₂
--}
+  data _↝_ : GlobalState → GlobalState → Set where
+
+    Deliver : ∀ {s sm ms ps}
+      → ⟪ s , Ready , sm , ms , ps ⟫ ↝
+        let gs = List.foldr party_rcv_step_world ⟪ s , Ready , sm , ms , ps ⟫ ps
+         in record gs { progress = Delivered }
+
+    Bake : ∀ {s sm ms ps}
+      → ⟪ s , Delivered , sm , ms , ps ⟫ ↝
+        let gs = List.foldr party_bake_step_world ⟪ s , Delivered , sm , ms , ps ⟫ ps
+         in record gs { progress = Delivered }
+
+    NextRound : ∀ {s sm ms ps}
+      → ⟪ s , Baked , sm , ms , ps ⟫ ↝ ⟪ incrementSlot s , Ready , sm , ms , ps ⟫
+
+    PermParties : ∀ {s p sm ms ps}
+      → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , ms , permParties ps ⟫
+
+    PermMsgs : ∀ {s p sm ms ps}
+      → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , permMessages ms , ps ⟫
+
+  -- reflexive, transitive closure (which is big-step in the paper)
+
+  infix  2 _↝⋆_
+  infixr 2 _↝⟨_⟩_
+  infix  3 _∎
+
+  data _↝⋆_ : GlobalState → GlobalState → Set where
+
+    _∎ : ∀ M
+        -------
+      → M ↝⋆ M
+
+    _↝⟨_⟩_ : ∀ L {M N}
+      → L ↝ M
+      → M ↝⋆ N
+        ------
+      → L ↝⋆ N
+
+  -- knowledge propagation
+  lemma1 : ∀ {N₁ N₂ : GlobalState}
+    → {p₁ p₂ : PartyId}
+    → {tt₁ tt₂ : TreeType}
+    → {t₁ t₂ : T}
+    → N₀ ↝⋆ N₁
+    → N₁ ↝⋆ N₂
+    → progress N₁ ≡ Ready
+    → progress N₂ ≡ Delivered
+    → stateMap N₁ p₁ ≡ just ⟨ p₁ , t₁ ⟩
+    → stateMap N₂ p₂ ≡ just ⟨ p₂ , t₂ ⟩
+    → slot N₁ ≡ slot N₂
+    → allBlocks tt₁ t₁ ⊆ allBlocks tt₁ t₂
+
+  {- From the paper:
+
+  Proof sketch. Our main observation is that at any point in time a block is in the tree of p1, it is
+  either also already in p2’s tree or to be delivered at the next delivery transition.
+
+  Blocks can be added when an honest party wins the right to bake a block, in which case they will immediately
+  send the block to all other parties and thus fulfill the invariant, or they can be added by an
+  adversary and thereby delivered to an honest party by a delivery event, in which case it will be
+  delivered to all other honest parties in the following delivery slot (by our network assumption).
+
+  This is in particular true when p1 and p2 is at Ready, which means that after the delivery
+  transition p2 will know all the blocks that p1 knew before.
+
+  -}
+
+  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ Deliver ⟩ x₂) refl refl x₃ x₄ refl = {!!}
+  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermParties ⟩ x₂) refl refl x₃ x₄ refl = {!!}
+  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermMsgs ⟩ x₂) refl refl x₃ x₄ refl = {!!}
