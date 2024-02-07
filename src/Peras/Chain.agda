@@ -195,18 +195,19 @@ module _ {T : Set} where
       → L ↝⋆ N
 
   -- knowledge propagation
-  lemma1 : ∀ {N₁ N₂ : GlobalState}
-    → {p₁ p₂ : PartyId}
-    → {tt₁ tt₂ : TreeType}
-    → {t₁ t₂ : T}
-    → N₀ ↝⋆ N₁
-    → N₁ ↝⋆ N₂
-    → progress N₁ ≡ Ready
-    → progress N₂ ≡ Delivered
-    → stateMap N₁ p₁ ≡ just ⟨ p₁ , t₁ ⟩
-    → stateMap N₂ p₂ ≡ just ⟨ p₂ , t₂ ⟩
-    → slot N₁ ≡ slot N₂
-    → allBlocks tt₁ t₁ ⊆ allBlocks tt₁ t₂
+  postulate
+    lemma1 : ∀ {N₁ N₂ : GlobalState}
+      → {p₁ p₂ : PartyId}
+      → {tt₁ tt₂ : TreeType}
+      → {t₁ t₂ : T}
+      → N₀ ↝⋆ N₁
+      → N₁ ↝⋆ N₂
+      → progress N₁ ≡ Ready
+      → progress N₂ ≡ Delivered
+      → stateMap N₁ p₁ ≡ just ⟨ p₁ , t₁ ⟩
+      → stateMap N₂ p₂ ≡ just ⟨ p₂ , t₂ ⟩
+      → slot N₁ ≡ slot N₂
+      → allBlocks tt₁ t₁ ⊆ allBlocks tt₁ t₂
 
   {- From the paper:
 
@@ -221,8 +222,8 @@ module _ {T : Set} where
   This is in particular true when p1 and p2 is at Ready, which means that after the delivery
   transition p2 will know all the blocks that p1 knew before.
 
-  -}
 
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ Deliver ⟩ x₂) refl refl x₃ x₄ refl = {!!}
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermParties ⟩ x₂) refl refl x₃ x₄ refl = {!!}
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermMsgs ⟩ x₂) refl refl x₃ x₄ refl = {!!}
+  -}
