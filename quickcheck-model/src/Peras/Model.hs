@@ -13,15 +13,18 @@
 
 module Peras.Model where
 
+import Control.Monad (replicateM)
 import Control.Monad.Reader (MonadReader, MonadTrans (..), ReaderT, asks)
 import Data.ByteString (ByteString, unfoldr)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import System.Random (Random (random), RandomGen, mkStdGen, split)
-import Test.QuickCheck (elements, frequency)
+import Test.QuickCheck (choose, elements, frequency)
 import Test.QuickCheck.StateModel (Any (..), HasVariables, Realized, RunModel (..), StateModel (..))
 import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
@@ -36,10 +39,10 @@ data Network = Network
   deriving (Show, Generic)
 
 newtype BlockId = BlockId {unBlockId :: ByteString}
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Ord, Generic)
 
 newtype NodeId = NodeId {unNodeId :: ByteString}
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Ord, Generic)
 
 baseNodes :: (RandomGen g) => g -> [NodeId]
 baseNodes g =
@@ -52,8 +55,9 @@ baseNodes g =
 data Block = Block
   { blockId :: BlockId
   , producer :: NodeId
+  , previousBlock :: BlockId
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Ord, Generic)
 
 data Chain
   = Genesis
@@ -62,14 +66,14 @@ data Chain
 
 instance StateModel Network where
   data Action Network a where
-    -- Advance the time one slot possibly producing blocks to broadcast to the network.
-    Tick :: Action Network [Block]
+    -- Advance the time one or more slots possibly producing blocks.
+    Tick :: Natural -> Action Network (Set Block)
     -- Observe a node's best chain
     ObserveBestChain :: NodeId -> Action Network Chain
 
   arbitraryAction _ Network{nodeIds} =
     frequency
-      [ (10, pure (Some Tick))
+      [ (10, Some . Tick . fromInteger <$> choose (1, 100))
       , (1, observeNode)
       ]
    where
@@ -83,7 +87,7 @@ instance StateModel Network where
 
   nextState currentState@Network{slot} action _var =
     case action of
-      Tick -> currentState{slot = slot + 1}
+      Tick n -> currentState{slot = slot + 1}
       ObserveBestChain{} -> currentState
 
 deriving instance Eq (Action Network a)
@@ -97,12 +101,16 @@ instance HasVariables (Action Network a) where
 
 -- | Messages sent to the node.
 data Input
-  = NextSlot Slot
-  | NewBlock Block
+  = -- | New slot occurs (represents the passage of time)
+    NextSlot Slot
+  | -- | Some `NodeId` has sent a requested `Block` to this node.
+    SomeBlock NodeId Block
+  | -- | Some `NodeId` is notifying us their best chain has changed.
+    UpdatedChain NodeId Chain
 
 data Output
-  = -- | Node forged a block.
-    BlockForged Block
+  = -- | Node needs some block from given `NodeId`.
+    FetchBlock NodeId Block
   | -- | Node changed its best chain
     NewChain Chain
 
@@ -110,12 +118,16 @@ data Output
 data Node m = Node
   { nodeId :: NodeId
   , step :: Input -> m [Output]
-  -- ^ Nodes are assumed to work in step
+  -- ^ Nodes are assumed to progress in steps
+  , inbox :: [(Slot, Input)]
+  -- ^ New inputs to be delivered to the node at some `Slot`
   }
 
 -- | All known nodes in the network.
 -- FIXME: Atm we assume fully connected topology, this will evolve as we refine the model.
-data Nodes m = Nodes {nodes :: Map.Map NodeId (Node m)}
+data Nodes m = Nodes
+  { nodes :: Map.Map NodeId (Node m)
+  }
 
 newtype RunMonad m a = RunMonad {runMonad :: ReaderT (Nodes m) m a}
   deriving newtype (Functor, Applicative, Monad, MonadReader (Nodes m))
@@ -128,8 +140,10 @@ type instance Realized (RunMonad m) a = a
 instance (Monad m) => RunModel Network (RunMonad m) where
   perform network@Network{slot} action _context =
     case action of
-      Tick -> performTick
-      ObserveBestChain nodeId -> currentChain nodeId
+      Tick n ->
+        Set.fromList . mconcat <$> replicateM (fromIntegral n) performTick
+      ObserveBestChain nodeId ->
+        currentChain nodeId
    where
     performTick :: RunMonad m [Block]
     performTick = do
@@ -145,5 +159,4 @@ selectBlocks = Data.Maybe.mapMaybe isBlockForged
 
 isBlockForged :: Output -> Maybe Block
 isBlockForged = \case
-  BlockForged block -> Just block
   NewChain{} -> Nothing
