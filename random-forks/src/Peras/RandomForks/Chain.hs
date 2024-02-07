@@ -1,53 +1,42 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Peras.RandomForks.Chain (
-  Block(..)
-, Chain(..)
-, Message(..)
-, chainGraph
+  blocks
 , chainLength
+, chainWeight
 , extendChain
+, filterSlotRange
 , mkBlock
 ) where
 
-import Data.List (nub)
-import Data.UUID.V4 (nextRandom)
-import Peras.RandomForks.Types (BlockId, PeerName(getPeerName), Slot)
+import Peras.RandomForks.Types (Block(..), Chain(..), PeerName, Slot)
+import System.Random.Stateful (StatefulGen(uniformShortByteString))
 
-import qualified Language.Dot.Syntax as G
-
-data Block =
-  Block
-  {
-    creator :: PeerName
-  , slot :: Slot
-  , blockId :: BlockId
-  }
-    deriving (Eq, Ord, Read, Show)
+import qualified Data.Set as S
 
 mkBlock
-  :: PeerName
+  :: StatefulGen g m
+  => g
+  -> PeerName
   -> Slot
-  -> IO Block
-mkBlock name slot = Block name slot <$> nextRandom
+  -> m Block
+mkBlock gen name slot = flip (Block name slot) mempty <$> uniformShortByteString 4 gen
 
-data Chain =
-  Chain
-  {
-    block :: Block,
-    prev :: Chain
-  }
-  | Genesis
-  deriving stock (Eq, Ord, Read, Show)
-
-blocks :: Chain -> [Block]
+blocks
+  :: Chain
+  -> [Block]
 blocks = \case
   Genesis -> []
   Chain {block, prev} -> block : blocks prev
+
+filterSlotRange 
+  :: (Slot, Slot)
+  -> Chain
+  -> [Block]
+filterSlotRange (minSlot, maxSlot) chain =
+  filter (\Block{slot} -> minSlot <= slot && slot <= maxSlot) $ blocks chain
 
 chainLength
   :: Chain
@@ -56,51 +45,15 @@ chainLength = \case
   Genesis -> 0
   Chain{prev} -> 1 + chainLength prev
 
+chainWeight
+  :: Double
+  -> Chain
+  -> Double
+chainWeight _ Genesis = 0
+chainWeight boost Chain{..} = 1 + boost * (fromIntegral . S.size $ votes block) + chainWeight boost prev
+
 extendChain
   :: Block
   -> Chain
   -> Chain
-extendChain block = Chain block
-
-data Message =
-  Message
-  {
-    messageSlot :: Slot
-  , messageChain :: Chain
-  , messageDestination :: PeerName
-  }
-    deriving (Eq, Ord, Read, Show)
-
-
-chainGraph
-  :: [Chain]
-  -> G.Graph
-chainGraph chains =
-  let
-    genesisId = G.NodeId (G.StringId "genesis") Nothing
-    genesis =
-      G.NodeStatement genesisId
-        [
-          G.AttributeSetValue (G.NameId "shape") (G.StringId "oval")
-        , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
-        ]
-    nodeId bid = G.NodeId (G.StringId $ show bid) Nothing
-    mkNode Block{..} =
-      G.NodeStatement (nodeId blockId)
-        [
-          G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
-        , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText
-            $ "<b>" <> take 8 (show blockId) <> "</b>"
-            <> "|slot=" <> show slot
-            <> "|creator=" <> getPeerName creator
-        ]
-    nodes = mkNode <$> nub (concatMap blocks chains)
-    mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeId bid, G.ENodeId G.DirectedEdge $ nodeId bid'] mempty
-    mkEdges [] = []
-    mkEdges bs = zipWith mkEdge (init bs) (tail bs)
-    edges = nub $ concatMap (mkEdges . fmap blockId . blocks) chains
-    mkEdge' bid' = G.EdgeStatement [G.ENodeId G.NoEdge genesisId, G.ENodeId G.DirectedEdge $ nodeId bid'] mempty
-    edges' = nub $ mkEdge' . blockId . head <$> filter (not . null) (blocks <$> chains)
-  in
-    G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains")
-      $ [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "LR")] <> pure genesis <> nodes <> edges <> edges'
+extendChain = Chain

@@ -3,97 +3,86 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.RandomForks.Peer (
-  Peers(..)
-, PeerState(..)
-, nextSlot
-, peerGraph
+  nextSlot
 , randomPeers
 ) where
 
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.RandomForks.Chain (Chain (Genesis), Message(..), chainLength, extendChain, mkBlock)
-import Peras.RandomForks.Protocol (Protocol(..), Parameters(..), isCommitteeMember, isFirstSlotInRound, isSlotLeader)
-import Peras.RandomForks.Types (Currency, PeerName(..), Slot)
-import System.Random (randomRIO)
+import Peras.RandomForks.Chain (chainWeight, extendChain, mkBlock)
+import Peras.RandomForks.Protocol (isCommitteeMember, isFirstSlotInRound, isSlotLeader)
+import Peras.RandomForks.Types (Chain (Genesis), Message(..), Parameters(..), PeerName(..), PeerState(..), Peers(..), Protocol(..), Slot)
+import Peras.RandomForks.Vote (allVotes, recordVote, refreshVotes)
+import System.Random.Stateful (StatefulGen, UniformRange(uniformRM))
 
+import qualified Peras.RandomForks.Types as Protocol (Protocol(votingBoost))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import qualified Language.Dot.Syntax as G
-
-newtype Peers = Peers {getPeers :: M.Map PeerName PeerState}
-  deriving (Eq, Ord, Read, Show)
-
-data PeerState =
-  PeerState
-  {
-    currency :: Currency
-  , vrfOutput :: Double
-  , slotLeader :: Bool
-  , committeeMember :: Bool
-  , upstream :: S.Set PeerName
-  , downstream :: S.Set PeerName
-  , preferredChain :: Chain
-  , pendingMessages :: [Message]
-  }
-    deriving (Eq, Ord, Read, Show)
 
 randomPeers
-  :: Parameters
+  :: StatefulGen g m
+  => g
+  -> Parameters
   -> Protocol
-  -> IO Peers
-randomPeers Parameters{..} protocol =
+  -> m Peers
+randomPeers gen Parameters{..} protocol =
   do
     let
-      peerNames = PeerName . ("Peer " <>) . show <$> [1..peerCount]
+      peerNames = PeerName . ("P" <>) . show <$> [1..peerCount]
       randomSubset 0 _ = pure mempty
       randomSubset n items =
         do
-          item <- (items !!) <$> randomRIO (0, length items - 1)
+          item <- (items !!) <$> uniformRM (0, length items - 1) gen
           S.insert item <$> randomSubset (n - 1) (delete item items)
     downstreams <- M.fromList <$> mapM (\name -> (name, ) <$> randomSubset downstreamCount (delete name peerNames)) peerNames
     let
       upstreams = M.fromListWith (<>) . concatMap (\(name, names) -> (, S.singleton name) <$> S.toList names) $ M.toList downstreams
       randomPeer name =
         do
-          currency <- randomRIO (1, maximumCurrency)
-          vrfOutput <- randomRIO (0, 1)
-          slotLeader <- isSlotLeader protocol currency
-          committeeMember <- isCommitteeMember protocol currency
+          currency <- uniformRM (1, maximumCurrency) gen
+          vrfOutput <- uniformRM (0, 1) gen
+          slotLeader <- isSlotLeader gen protocol currency
+          committeeMember <- isCommitteeMember gen protocol currency
           let upstream = fromMaybe mempty $ M.lookup name upstreams
               downstream = fromMaybe mempty $ M.lookup name downstreams
               preferredChain = Genesis
               pendingMessages = mempty
+              danglingVotes = mempty
           pure PeerState{..}
     Peers . M.fromList <$> mapM (\name -> (name, ) <$> randomPeer name) peerNames
 
 nextSlot
-  :: Protocol
+  :: StatefulGen g m
+  => g
+  -> Protocol
   -> Slot
   -> PeerName
   -> PeerState
-  -> IO (PeerState, [Message])
-nextSlot protocol slot name state@PeerState{..} =
+  -> m (PeerState, [Message])
+nextSlot gen protocol@Protocol{roundDuration, votingWindow} slot name state@PeerState{..} =
   do
-    vrfOutput' <- randomRIO (0, 1)
-    slotLeader' <- isSlotLeader protocol currency
-    let
-      chains = preferredChain : (messageChain <$> pendingMessages)
-      longest = filter ((>= maximum (chainLength <$> chains)) . chainLength) chains
-    preferredChainBeforeNow <- (longest !!) <$> randomRIO (0, length longest - 1)
-    preferredChain' <-
-      if slotLeader'
-        then (`extendChain` preferredChainBeforeNow) <$> mkBlock name slot
-        else pure preferredChainBeforeNow
-    let
-      newMessages =
-        if slotLeader'
-          then Message slot preferredChain' <$> S.toList downstream
-          else mempty
+    vrfOutput' <- uniformRM (0, 1) gen
+    slotLeader' <- isSlotLeader gen protocol currency
     committeeMember' <-
       if isFirstSlotInRound protocol slot
-        then isCommitteeMember protocol currency
+        then isCommitteeMember gen protocol currency
         else pure committeeMember
+    let
+      chainWeight' = chainWeight $ Protocol.votingBoost protocol
+      chains = preferredChain : fmap messageChain pendingMessages
+      votes' = allVotes chains danglingVotes
+      longest = filter ((>= maximum (chainWeight' <$> chains)) . chainWeight') chains
+    preferredChainBeforeNow <- (longest !!) <$> uniformRM (0, length longest - 1) gen
+    preferredChain' <-
+      if slotLeader'
+        then (`extendChain` preferredChainBeforeNow) <$> mkBlock gen name slot
+        else pure preferredChainBeforeNow
+    let
+      (danglingVotes', preferredChain'') = refreshVotes votes' preferredChain'
+      newMessages =
+        if slotLeader'
+          then (\destination -> Message slot destination preferredChain' danglingVotes) <$> S.toList downstream
+          else mempty
     let
       -- FIXME: Use lenses.
       newState =
@@ -102,32 +91,10 @@ nextSlot protocol slot name state@PeerState{..} =
           vrfOutput = vrfOutput'
         , slotLeader = slotLeader'
         , committeeMember = committeeMember'
-        , preferredChain = preferredChain'
+        , preferredChain = if committeeMember' && slot `mod` roundDuration == 0
+                             then recordVote (slot `div` roundDuration) name (slot - snd votingWindow, slot - fst votingWindow) preferredChain''
+                             else preferredChain''
+        , danglingVotes = danglingVotes'
         , pendingMessages = mempty
         }
     pure (newState, newMessages)
-
-peerGraph
-  :: Peers
-  -> G.Graph
-peerGraph Peers{getPeers = peers} =
-  let
-    nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId $ getPeerName name) Nothing) peers
-    mkNode name PeerState{currency,vrfOutput,slotLeader,committeeMember} =
-      G.NodeStatement (nodeIds M.! name)
-        [
-          G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
-        , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText
-           $ "<b>" <> getPeerName name <> "</b>"
-           <> "|currency=" <> show currency
-           <> "|vrfOutput=" <> take 6 (show vrfOutput)
-           <> "|slotLeader=" <> show slotLeader
-           <> "|committeeMember=" <> show committeeMember
-        ]
-    mkEdge name name' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeIds M.! name, G.ENodeId G.DirectedEdge $ nodeIds M.! name'] mempty
-    mkEdges name PeerState{downstream} = mkEdge name <$> S.toList downstream
-    nodes = uncurry mkNode <$> M.toList peers
-    edges = concatMap (uncurry mkEdges) $ M.toList peers
-  in
-    G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Peers")
-      $ [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "LR")] <> nodes <> edges
