@@ -10,8 +10,12 @@ open import Relation.Binary using (StrictTotalOrder)
 open import Peras.Crypto
 
 record PartyId : Set where
-  constructor mkPartyId
+  constructor MkPartyId
   field vkey : VerificationKey
+
+open PartyId public
+
+{-# COMPILE AGDA2HS PartyId #-}
 
 record Tx : Set where
   field tx : ByteString
@@ -28,12 +32,16 @@ record Block : Set where
         payload : List Tx
         signature : Signature  
 
+open Block public
+
+{-# COMPILE AGDA2HS Block #-}
+
 postulate
-  blEq : Relation.Binary.Rel Block zero
-  blLt : Relation.Binary.Rel Block zero
+  blEq : Relation.Binary.Rel Block 0ℓ
+  blLt : Relation.Binary.Rel Block 0ℓ
   blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
 
-BlockO : StrictTotalOrder zero zero zero
+BlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 BlockO = record {
   Carrier            = Block ;
   _≈_                = blEq ;

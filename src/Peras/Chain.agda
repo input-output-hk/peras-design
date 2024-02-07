@@ -28,11 +28,11 @@ record Vote msg : Set where
         signature                : Signature
 
 postulate
-  vblEq : Relation.Binary.Rel (Vote Block) zero
-  vblLt : Relation.Binary.Rel (Vote Block) zero
+  vblEq : Relation.Binary.Rel (Vote Block) 0ℓ
+  vblLt : Relation.Binary.Rel (Vote Block) 0ℓ
   vblIs : Relation.Binary.IsStrictTotalOrder vblEq vblLt
 
-VoteBlockO : StrictTotalOrder zero zero zero
+VoteBlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 VoteBlockO = record {
   Carrier            = (Vote Block) ;
   _≈_                = vblEq ;
@@ -48,18 +48,19 @@ postulate
 -- | A vote is valid if the committee-membership proof and the signature are valid.
 
 isValid : ∀{msg} → Vote msg -> Bool
-isValid v@(vote _ (mkPartyId vkey) committeeMembershipProof _ signature) =
+isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
   isCommitteeMember vkey committeeMembershipProof
     ∧ verify vkey signature (toSignable v)
 
 record Chain : Set where
-  constructor chain
+  constructor MkChain
   field blocks : set BlockO
         tip : Block -- The tip of this chain, must be a member of `blocks`
         votes : set VoteBlockO -- The set of "pending" votes, eg. which have not been included in a `Block`.
 
+open Chain public
 
-
+{-# COMPILE AGDA2HS Chain #-}
 
 -- | Chain validity
 --
@@ -84,10 +85,12 @@ postulate
   properlyLinked : Chain → Bool
   decreasingSlots : Chain → Bool
 
+{-
 correctBlocks : Chain → Bool
-correctBlocks (chain blocks _ _) =
+correctBlocks (MkChain blocks _ _) =
   let bs = toList BlockO blocks
   in all verifyLeadershipProof bs
+-}
 
 postulate
   isValidChain : Chain -> Bool
@@ -117,8 +120,8 @@ module _ {T : Set} where
   record LocalState : Set where
     constructor ⟨_,_⟩
     field
-      id : PartyId
-      tt : T
+      partyId : PartyId
+      tT : T
 
   -- progress
 
@@ -132,6 +135,10 @@ module _ {T : Set} where
     constructor mkMessage
     field
       msg : ByteString
+
+  data Honesty : Set where
+    Honest : Honesty
+    Corrupt : Honesty
 
   -- global state
 
@@ -222,8 +229,8 @@ module _ {T : Set} where
   This is in particular true when p1 and p2 is at Ready, which means that after the delivery
   transition p2 will know all the blocks that p1 knew before.
 
-
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ Deliver ⟩ x₂) refl refl x₃ x₄ refl = {!!}
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermParties ⟩ x₂) refl refl x₃ x₄ refl = {!!}
   lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermMsgs ⟩ x₂) refl refl x₃ x₄ refl = {!!}
   -}
+
