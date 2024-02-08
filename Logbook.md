@@ -1,6 +1,12 @@
 ## 2024-02-08
 
-### YH
+### Pairing session - Agda modelling of messages
+
+Some resources on agda2hs:
+  * What's  the best practice for generating code from Agda?
+  * Haskell.Prelude contains Agda exports suitable for Haskell
+  * agda2hs tutorial: https://agda.github.io/agda2hs/tutorials.html and [paper](https://dl.acm.org/doi/pdf/10.1145/3546189.3549920)
+  * The most elaborate project so far is [agda-core](https://github.com/jespercockx/agda-core/), which itself relies on a Agda/Haskell library for well-scoped syntax (https://github.com/jespercockx/scope).
 
 Together with AB we started to work on the extraction of the model from Agda to Haskell using `agda2hs`
 * The tool requires to put the `AGDA2HS` pragma for all data types that are exported
@@ -19,12 +25,39 @@ record Block (t : Set) : Set where
         includedVotes : t
         leadershipProof : LeadershipProof
         payload : List Tx
-        signature : Signature  
+        signature : Signature
 
 Block⁺ = Block (set HashO)
 ```
 * The import of `Data.ByteString` in Haskell is possible using the `FOREIGN` pragma
-  
+
+We then try to parameterise the `Block` type on the agda side to be able to inject whatever we want as concrete type, but agda2hs does not like our kind for the parameter -> needs to be a `Set`, or a simple type-level expression.
+There should be a way to map types/imports from Agda to HS?
+
+We have some kind of strategy to go from Agda, sticking to "simple" types wherever we need it but it's not entirely satisfactory as we are losing information in the process
+Then got an interesting discussion with some other agda2hs user:
+
+> I found that if I had something in Agda that couldn't turn into
+> Haskell then I was going to wrong way - you need to figure out what
+> it looks like in Haskell and then try to handle that in Agda, rather
+> than fitting the Haskell to the Agda, if you see what I mean?
+>
+> At least you are doing proofs over the Haskell code, not an abstract
+> model that may or may not relate to the real implementation. Agda2hs
+> seems to come with a bunch of Haskell.Prelude related modules that
+> mirror the Haskell modules. For anything bespoke I just used
+> postulate (and, if I had kept going, would have re-implemented them
+> as "Haskell in Agda")
+>
+> I would suggest that agda2hs should be renamed to hsInAgda
+> :slightly_smiling_face: I found like that agda2hs keeps almost
+> exactly what I wrote in the .agda file when it converts. I also
+> found that you could do nice things with syntax declarations if you
+> want to use unicode in the agda file though. So I defined functions
+> with long Haskell names but could give them unicode
+> symbols. Wherever I used the unicode symbol subsequently agda2hs
+> dropped in the long name.
+
 ## 2024-02-07
 
 ### Team session
@@ -139,9 +172,8 @@ HLS/LSP: Code action for filling missing variables did not work, so I
 upgraded to latest available `lsp-haskell` but now I get another
 error:
 
-```
-Symbol’s value as variable is void: lsp-haskell-plugin-cabal-code-actions-on
-```
+``` Symbol’s value as variable is void:
+lsp-haskell-plugin-cabal-code-actions-on ```
 
 Managed to propertly configure auto formatting for Haskell on local
 environment for Peras, such that it picks up the right configuration
@@ -161,13 +193,9 @@ with some delays or loss...
 A basic property that could be interesting to state as our first test
 would be the _Common Prefix_ property:
 
-```
-do
-  anyActions_
-  getState >>= \ nodes -> do
-      chains <- mapM (action . ObserveBestChain) nodes
-      assert $ all ((< k) . lengthDivergingSuffix) chains
-```
+``` do anyActions_ getState >>= \ nodes -> do chains <- mapM (action
+. ObserveBestChain) nodes assert $ all ((< k) . lengthDivergingSuffix)
+chains ```
 
 eg. all nodes' potential forks are not deeper than the security parameter `k` or equivalently all nodes have a common prefixs.
 
