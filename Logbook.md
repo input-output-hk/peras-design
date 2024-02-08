@@ -1,5 +1,14 @@
 ## 2024-02-08
 
+### BB - Nix, Agda, and Haskell housekeeping
+
+1. Reconciled Haskell package dependencies.
+2. Included pre-built Agda standard library.
+3. Added `nix build .#peras` for building the Peras library in Agda and Haskell.
+4. Nix-based CI.
+
+*Issue:* the Nix-based CI test takes ~28 minutes, but this will be far faster when caching is enabled.
+
 ### Pairing session - Agda modelling of messages
 
 Some resources on agda2hs:

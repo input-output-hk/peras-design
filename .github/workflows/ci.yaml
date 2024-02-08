@@ -10,7 +10,29 @@ on:
     - main
 jobs:
   check:
+    if: false  # FIXME: The `agda2hs` step fails.
     name: Typecheck Agda
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    # Setup Agda 2.6.3 with recommended version of agda-stdlib and
+    # uses standard-library as default
+    - name: ❄ Setup Agda
+      uses: wenkokke/setup-agda@v2
+      with:
+        agda-version: '2.6.3'
+        agda-stdlib-version: 'recommended'
+        agda-defaults: |
+          standard-library
+        agda-libraries: |
+          https://github.com/agda/agda2hs.git#v1.2
+    - name: ❓ Typecheck
+      run: |
+        make typecheck
+  typecheck:
+    if: true  # FIXME: Consider disabling until caching is set up.
+    name: Typecheck Agda and generate Haskell
     runs-on: ubuntu-latest
     steps:
     - name: 📥 Checkout repository
@@ -25,6 +47,6 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🧪 Evaluate test derivation
+    - name: 🧪 Evaluate typecheck derivation
       run: |
         nix build --show-trace .#peras
