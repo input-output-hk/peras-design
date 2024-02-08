@@ -14,7 +14,7 @@ cabalProject:
     pkgs.graphviz
   ];
 
-  env.AGDA_STDLIB = "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib"
+  env.AGDA_STDLIB = "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib";
 
   shellHook = ''
     echo "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib" > .libraries
