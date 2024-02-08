@@ -91,7 +91,7 @@ nextSlot gen protocol@Protocol{roundDuration, votingWindow} slot name state@Peer
           vrfOutput = vrfOutput'
         , slotLeader = slotLeader'
         , committeeMember = committeeMember'
-        , preferredChain = if committeeMember' && slot `mod` roundDuration == 0
+        , preferredChain = if committeeMember' && slot `mod` roundDuration == 0  -- FIXME: Not faithful to the Peras voting rules.
                              then recordVote (slot `div` roundDuration) name (slot - snd votingWindow, slot - fst votingWindow) preferredChain''
                              else preferredChain''
         , danglingVotes = danglingVotes'
