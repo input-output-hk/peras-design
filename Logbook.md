@@ -1,5 +1,41 @@
 ## 2024-02-07
 
+### Team session
+
+Q: How does Praos Security model relates to PoS-NB paper's model? Seems like the latter is simpler, has stronger assumptions thus leading to weaker guarantees
+
+Some high-level questions being discussed:
+* What are the next steps on simulations?
+* Could be good to have "foundation" code in Agda and then evaluates simulation tools using always the same code in order to ensure interoperability
+* JSON serialisation is hard in Agda, need to be done at generated code level
+* Write down the types together?
+
+What is a good property to express?
+* How to express finality?
+* What are block diffusion properties and their impact on the finality => impact on nr. of peers on speed of finality
+
+Exploring simulation tools:
+* discrete event simulators?
+* not too much concerned about scale?
+* could leverage https://github.com/input-output-hk/hydra-sim
+
+Some hypothesis about Peras protocol itself:
+* if $A$ is too low, cooldown periods happen to often
+* Later discussion w/ researchers tell us $A$ is not so important because the protocol is geared towards optimistic cases, so it can be small
+
+Cool idea we played a bit with: Have a visualisation up and running as a demo so that people can tweak the parameters to see how the protocol is behaving. Then we can gamify it, asking people to share their favorite parameters set and run more thorough simulations with those parameters. It will also be a nice way to engage with the community and have apeople understand the benefits and tradeoffs of this new protocol extension.
+
+Code generation:
+* Trying to write a simple model of the message types in Agda and generate HS code
+* Default generator yields unreadable and encoded haskell -> not super
+  useful for embedding in QC, so we'd rather want [agda2hs](https://github.com/agda/agda2hs) which generates pretty readable code
+
+Possible experiment:
+* build a slurp node
+* Run the node in various datacenters connected to other peers
+* store the chain following data -> reconstruct the progress of the chain at vartious point in time
+* Is this not what the CF is doing with their Cardano network monitoring project? => ask for more information
+
 ### BB - Peras simulation using `IOSim`
 
 - Began work on `IOSim`-based Peras simulator.
