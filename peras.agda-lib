@@ -1,0 +1,3 @@
+name: peras
+depend: standard-library
+include: src
