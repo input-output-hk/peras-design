@@ -14,7 +14,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 
 open import Peras.Crypto
-open import Peras.Block
+open import Peras.Block hiding (ByteString; emptyBS)
 
 record RoundNumber : Set where
   field roundNumber : Word64
