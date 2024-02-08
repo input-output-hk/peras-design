@@ -1,18 +1,32 @@
 {
+  description = "peras-design";
+
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
-    flake-parts.url = "github:hercules-ci/flake-parts";
-  };
-  outputs = inputs:
-    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux" "aarch64-darwin"];
-      perSystem = {pkgs, ...}: let
-        agda = pkgs.agda.withPackages (p: [p.standard-library]);
-        agda2hs = pkgs.haskellPackages.agda2hs;
-      in {
-        devShells.default = pkgs.mkShell {
-          buildInputs = [agda agda2hs];
-        };
-      };
+    iogx = {
+      url = "github:input-output-hk/iogx";
+      inputs.hackage.follows = "hackage";
     };
+    hackage = {
+      url = "github:input-output-hk/hackage.nix";
+      flake = false;
+    };
+  };
+
+  outputs = inputs: inputs.iogx.lib.mkFlake {
+    inherit inputs;
+    repoRoot = ./.;
+    outputs = import ./nix/outputs.nix;
+    systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    # debug = false;
+  };
+
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.iog.io"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+    ];
+    allow-import-from-derivation = true;
+  };
 }

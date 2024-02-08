@@ -9,3 +9,5 @@ node_modules
 *.csv
 *.agdai
 src/MAlonzo/
+.pre-commit-config.yaml
+.libraries

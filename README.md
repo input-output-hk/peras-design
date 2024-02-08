@@ -14,9 +14,12 @@ This repository is intended to host more or less formal specifications, experime
 
 The repository provides a nix flake from which one can enter a development shell suitable for Agda using the following command:
 
-```
+```bash
 nix develop
+make
 ```
+
+The Peras library for Agda can be built with `nix build .#peras`.
 
 #### Without nix
 

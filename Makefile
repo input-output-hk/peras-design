@@ -5,6 +5,7 @@ HSFILES := $(patsubst %.agda,%.hs,$(AGDAFILES))
 AGDAFLAGS := -i src
 AGDA ?= agda
 AGDA2HS ?= agda2hs
+AGDA_LIBS ?=
 
 .PHONY: typecheck
 
@@ -15,9 +16,13 @@ $(AGDAIFILES): %.agdai: %.agda
 	@$(AGDA) $(AGDAFLAGS) $^
 
 $(HSFILES): %.hs: %.agda
-	@$(AGDA2HS) $^
+	@$(AGDA2HS) $(AGDA_LIBS) $^
 
-.PHONY : clean
+.PHONY : clean veryclean
 clean:
 	@echo "Removing .agdai files"
-	@find src -name \*.agdai -exec rm {} \;
+	@find src -name \*.agdai -delete;
+
+veryclean: clean
+	@echo "Removing .hs files"
+	@find src -name \*.hs -delete;
