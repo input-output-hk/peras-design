@@ -1,3 +1,30 @@
+## 2024-02-08
+
+### YH
+
+Together with AB we started to work on the extraction of the model from Agda to Haskell using `agda2hs`
+* The tool requires to put the `AGDA2HS` pragma for all data types that are exported
+* We renamed constructors to be upper case and type parameters to be lower case as required in Haskell
+* Data types that used the standard library had to be adjusted. For example we changed the `Block` data type that used `set` to a parameterized data type:
+```agda
+open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
+
+...
+
+record Block (t : Set) : Set where
+  field slotNumber : Slot
+        blockHeight : Word64
+        creatorId : PartyId
+        parentBlock : Hash
+        includedVotes : t
+        leadershipProof : LeadershipProof
+        payload : List Tx
+        signature : Signature  
+
+Block⁺ = Block (set HashO)
+```
+* The import of `Data.ByteString` in Haskell is possible using the `FOREIGN` pragma
+  
 ## 2024-02-07
 
 ### Team session
