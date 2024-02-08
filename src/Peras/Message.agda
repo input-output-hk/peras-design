@@ -11,30 +11,34 @@ data Message msg : Set where
   NewChain : msg → Message msg
 
 record NodeId : Set where
-  constructor mkNodeId
+  constructor MkNodeId
   field
     nodeId : String
 
+open NodeId public
+
+{-# COMPILE AGDA2HS NodeId #-}
+
 -- | Messages sent to the node.
-data Input : Set where
+data Input t : Set where
 
   -- | New slot occurs (represents the passage of time)
-  NextSlot : Slot → Input
+  NextSlot : Slot → Input t
 
   -- | Some `NodeId` has sent a requested `Block` to this node.
-  SomeBlock : NodeId → Block → Input
+  SomeBlock : NodeId → Block t → Input t
 
   -- | Some `NodeId` is notifying us their best chain has changed.
-  UpdatedChain : NodeId → Chain → Input
+  UpdatedChain : NodeId → Chain t → Input t
 
-{-# COMPILE AGDA2HS Input deriving ( Show, Eq ) #-}
+{-# COMPILE AGDA2HS Input #-}
 
-data Output : Set where
+data Output t : Set where
 
   -- | Node needs some block from given `NodeId`.
-  FetchBlock : NodeId → Block → Output
+  FetchBlock : NodeId → Block t → Output t
 
   -- | Node changed its best chain
-  NewChain : Chain → Output
+  NewChain : Chain t → Output t
 
-{-# COMPILE AGDA2HS Output deriving ( Show, Eq ) #-}
+{-# COMPILE AGDA2HS Output #-}

@@ -8,9 +8,10 @@
       systems = ["x86_64-linux" "aarch64-darwin"];
       perSystem = {pkgs, ...}: let
         agda = pkgs.agda.withPackages (p: [p.standard-library]);
+        agda2hs = pkgs.haskellPackages.agda2hs;
       in {
         devShells.default = pkgs.mkShell {
-          buildInputs = [agda];
+          buildInputs = [agda agda2hs];
         };
       };
     };

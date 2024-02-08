@@ -7,7 +7,17 @@ open import Data.List
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
 open import Relation.Binary using (StrictTotalOrder)
 
-open import Peras.Crypto
+open import Peras.Crypto hiding (ByteString; emptyBS; _isInfixOf_)
+
+-- TODO: ByteString is not exported from Peras.Crypto in Haskell
+postulate
+  ByteString : Set
+  emptyBS : ByteString
+  _isInfixOf_ : ByteString → ByteString → Bool
+
+{-# FOREIGN AGDA2HS import Data.ByteString as BS #-}
+{-# FOREIGN GHC import qualified Data.ByteString as BS #-}
+{-# COMPILE GHC ByteString = type BS.ByteString #-}
 
 record PartyId : Set where
   constructor MkPartyId
@@ -20,14 +30,20 @@ open PartyId public
 record Tx : Set where
   field tx : ByteString
 
+open Tx public
+
+{-# COMPILE AGDA2HS Tx #-}
+
 Slot = Word64
 
-record Block : Set where
+{-# COMPILE AGDA2HS Slot #-}
+
+record Block (t : Set) : Set where
   field slotNumber : Slot
         -- blockHeight : Word64
         creatorId : PartyId
         parentBlock : Hash
-        includedVotes : set HashO
+        includedVotes : t -- set HashO
         leadershipProof : LeadershipProof
         payload : List Tx
         signature : Signature  
@@ -36,18 +52,19 @@ open Block public
 
 {-# COMPILE AGDA2HS Block #-}
 
+Block⁺ = Block (set HashO)
+
 postulate
-  blEq : Relation.Binary.Rel Block 0ℓ
-  blLt : Relation.Binary.Rel Block 0ℓ
+  blEq : Relation.Binary.Rel Block⁺ 0ℓ
+  blLt : Relation.Binary.Rel Block⁺ 0ℓ
   blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
 
 BlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 BlockO = record {
-  Carrier            = Block ;
+  Carrier            = Block⁺ ;
   _≈_                = blEq ;
   _<_                = blLt ;
   isStrictTotalOrder = blIs }
 
 postulate
-  isValidBlock : Block -> Bool
-
+  isValidBlock : Block⁺ -> Bool
