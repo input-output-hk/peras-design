@@ -1,30 +1,30 @@
 name: CI
+env:
+  ALLOWED_URIS: "https://github.com https://api.github.com"
+  TRUSTED_PUBLIC_KEYS: "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+  SUBSTITUTERS: "https://cache.nixos.org/ https://cache.iog.io"
 on:
   pull_request:
   push:
     branches:
     - main
-
 jobs:
   check:
     name: Typecheck Agda
-    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    runs-on: ubuntu-latest
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
-
-    # Setup Agda 2.6.3 with recommended version of agda-stdlib and
-    # uses standard-library as default
-    - name: ❄ Setup Agda
-      uses: wenkokke/setup-agda@v2
+    - name: 🛠️ Install Nix
+      uses: cachix/install-nix-action@v21
       with:
-        agda-version: '2.6.3'
-        agda-stdlib-version: 'recommended'
-        agda-defaults: |
-          standard-library
-        agda-libraries: |
-          https://github.com/agda/agda2hs.git#v1.2
-
-    - name: ❓ Typecheck
+        nix_path: nixpkgs=channel:nixos-unstable
+        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+        extra_nix_config: |
+          allowed-uris = ${{ env.ALLOWED_URIS }}
+          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+          substituters = ${{ env.SUBSTITUTERS }}
+          experimental-features = nix-command flakes
+    - name: 🧪 Evaluate test derivation
       run: |
-        make typecheck
+        nix build --show-trace .#peras
