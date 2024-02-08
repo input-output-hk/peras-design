@@ -2,6 +2,7 @@
 
 let
   project = repoRoot.nix.project;
+  peras-agda = repoRoot.nix.peras-agda;
 in
   [
     ( 
@@ -9,5 +10,6 @@ in
     )
     {
       inherit repoRoot;
+      packages.peras = peras-agda;
     }
   ]
