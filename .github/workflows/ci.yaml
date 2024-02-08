@@ -13,15 +13,17 @@ jobs:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
 
-    # Setup Agda 2.6.3 with its recommended version of agda-stdlib and
+    # Setup Agda 2.6.4.1 with version 2.0 of agda-stdlib and
     # uses standard-library as default
     - name: ❄ Setup Agda
       uses: wenkokke/setup-agda@v2
       with:
-        agda-version: '2.6.3'
-        agda-stdlib-version: 'recommended'
+        agda-version: '2.6.4.1'
+        agda-stdlib-version: '2.0'
         agda-defaults: |
           standard-library
+        agda-libraries: |
+          https://github.com/agda/agda2hs.git#v1.2
 
     - name: ❓ Typecheck
       run: |
