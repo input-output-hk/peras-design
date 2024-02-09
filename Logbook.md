@@ -1,3 +1,11 @@
+## 2024-02-09
+
+### YH - Model in Agda
+
+* Moved the initial implementation of the semantics into a separate module: [SmallStep.agda](src/Peras/SmallStep.agda)
+* Similar for the proofs: [SmallStep/Propeties.agda](src/Peras/SmallStep/Propeties.agda)
+* The small-step semantics implement closely the semantics proposed in the PoS-NSB paper
+
 ## 2024-02-08
 
 ### BB - Nix, Agda, and Haskell housekeeping
