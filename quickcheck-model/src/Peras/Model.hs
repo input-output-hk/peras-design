@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -27,6 +28,7 @@ import Peras.Block (Block, Slot)
 import Peras.Message (Message (..), NodeId (..), selectBlocks)
 import System.Random (Random (random), RandomGen, mkStdGen, split)
 import Test.QuickCheck (choose, elements, frequency)
+import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (..), HasVariables, Realized, RunModel (..), StateModel (..))
 import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
@@ -37,18 +39,25 @@ data Network = Network
   }
   deriving (Show, Generic)
 
+instance DynLogicModel Network
+
 baseNodes :: (RandomGen g) => g -> [NodeId]
 baseNodes g =
   take 10 $ NodeId <$> List.unfoldr (Just . genNodeId) g
- where
-  genNodeId seed =
-    let (g1, g2) = split seed
-     in (unfoldr (Just . random) g1, g2)
+  where
+    genNodeId seed =
+      let (g1, g2) = split seed
+       in (unfoldr (Just . random) g1, g2)
 
 data Chain
   = Genesis
   | Chain (Block ()) Chain
   deriving (Eq, Show, Generic)
+
+asList :: Chain -> [Block ()]
+asList = List.unfoldr $ \case
+  Genesis -> Nothing
+  Chain b c -> Just (b, c)
 
 instance StateModel Network where
   data Action Network a where
@@ -62,8 +71,8 @@ instance StateModel Network where
       [ (10, Some . Tick . fromInteger <$> choose (1, 100))
       , (1, observeNode)
       ]
-   where
-    observeNode = Some . ObserveBestChain <$> elements nodeIds
+    where
+      observeNode = Some . ObserveBestChain <$> elements nodeIds
 
   initialState =
     Network
@@ -89,11 +98,13 @@ instance HasVariables (Action Network a) where
 data Node m = Node
   { nodeId :: NodeId
   , deliver :: Message () -> m ()
+  -- ^ Deliver some messages to this node
   , step :: m [Message ()]
   -- ^ Nodes are assumed to progress in steps
   , inbox :: [(Slot, Message ())]
   -- ^ New inputs to be delivered to the node at some `Slot`
   , bestChain :: m Chain
+  -- ^ What's this node current best chain?
   }
 
 -- | All known nodes in the network.
@@ -117,26 +128,26 @@ instance (Monad m) => RunModel Network (RunMonad m) where
         Set.fromList . mconcat <$> replicateM (fromIntegral n) performTick
       ObserveBestChain nodeId ->
         currentChain nodeId
-   where
-    performTick :: RunMonad m [Block ()]
-    performTick = do
-      allNodes <- gets (Map.elems . nodes)
-      selectBlocks . mconcat <$> traverse tick allNodes
+    where
+      performTick :: RunMonad m [Block ()]
+      performTick = do
+        allNodes <- gets (Map.elems . nodes)
+        selectBlocks . mconcat <$> traverse tick allNodes
 
-    tick :: Node m -> RunMonad m [Message ()]
-    tick node@Node{nodeId, step, deliver, inbox} = do
-      let (pending, deliverables) = partitionEithers $ map (deliverableAt slot) inbox
-      -- deliver all messages in inbox
-      mapM_ (lift . deliver) deliverables
-      -- update the node's state
-      modify $ Nodes . Map.insert nodeId (node{inbox = pending}) . nodes
-      -- then let the node advance one slot and return the messages it sends
-      lift step
+      tick :: Node m -> RunMonad m [Message ()]
+      tick node@Node{nodeId, step, deliver, inbox} = do
+        let (pending, deliverables) = partitionEithers $ map (deliverableAt slot) inbox
+        -- deliver all messages in inbox
+        mapM_ (lift . deliver) deliverables
+        -- update the node's state
+        modify $ Nodes . Map.insert nodeId (node{inbox = pending}) . nodes
+        -- then let the node advance one slot and return the messages it sends
+        lift step
 
-    currentChain :: NodeId -> RunMonad m Chain
-    currentChain nodeId =
-      gets (Map.lookup nodeId . nodes)
-        >>= maybe (error $ "Invalid node id:" <> show nodeId) (lift . bestChain)
+      currentChain :: NodeId -> RunMonad m Chain
+      currentChain nodeId =
+        gets (Map.lookup nodeId . nodes)
+          >>= maybe (error $ "Invalid node id:" <> show nodeId) (lift . bestChain)
 
 deliverableAt :: Slot -> (Slot, a) -> Either (Slot, a) a
 deliverableAt at m@(delay, msg) =

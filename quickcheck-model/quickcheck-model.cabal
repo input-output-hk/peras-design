@@ -62,7 +62,9 @@ library
     exposed-modules:  Peras.Model
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules: Peras.Block
+                   Peras.Message
+
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -106,11 +108,12 @@ test-suite quickcheck-model-test
 
     -- Test dependencies.
     build-depends:
-                        base ^>=4.18.1.0
+                          base ^>=4.18.1.0
                   , QuickCheck
                   , QuickCheck
                   , hspec
                   , io-sim
+                  , mtl
                   , quickcheck-dynamic
                   , quickcheck-model
                   , si-timers
