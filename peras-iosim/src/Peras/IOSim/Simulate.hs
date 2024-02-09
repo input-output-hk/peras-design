@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Peras.IOSim.Simulate where
 
 import Control.Monad.Class.MonadSay (MonadSay(say))

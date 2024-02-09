@@ -15,11 +15,12 @@ import Control.Monad.Class.MonadFork (MonadFork(forkIO))
 import Control.Monad.Class.MonadSay (MonadSay)
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay(..))
-import Peras.IOSim.Message.Types (InEnvelope(NewSlot))
+import Peras.Block (Slot)
+import Peras.IOSim.Message.Types (InEnvelope(..))
 import Peras.IOSim.Network.Types (Network(..), Topology(..))
 import Peras.IOSim.Node (runNode)
 import Peras.IOSim.Node.Types (NodeProcess(NodeProcess), NodeState)
-import Peras.IOSim.Types (NodeId, SlotNo)
+import Peras.Message (Message(NextSlot), NodeId)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -37,7 +38,7 @@ connectNode upstream downstream = Topology . M.insertWith (<>) upstream (S.singl
 createNetwork
   :: MonadSTM m
   => Topology
-  -> m (Network m)
+  -> m (Network t m)
 createNetwork Topology{connections} =
   do
     nodesIn <- mapM (const newTQueueIO) connections
@@ -50,9 +51,9 @@ runNetwork
   => MonadSay m
   => MonadSTM m
   => MonadTime m
-  => M.Map NodeId NodeState
-  -> Network m
-  -> SlotNo
+  => M.Map NodeId (NodeState t)
+  -> Network t m
+  -> Slot
   -> m ()
 runNetwork states Network{..} endSlot =
   do
@@ -64,17 +65,17 @@ runNetwork states Network{..} endSlot =
       |
         (nodeId, nodeIn) <- M.toList nodesIn
       ]
-    let go slotNo =
+    let go slot =
           do
-            let slotNo' = slotNo + 1
+            let slot' = slot + 1
             threadDelay 1000000
             sequence_
               [
-                atomically $ writeTQueue nodeIn $ NewSlot slotNo'
+                atomically . writeTQueue nodeIn . InEnvelope Nothing $ NextSlot slot'
               |
                 (_, nodeIn) <- M.toList nodesIn
               ]
             void . atomically $ flushTQueue nodesOut
-            when (slotNo' < endSlot)
-              $ go slotNo'
+            when (slot' < endSlot)
+              $ go slot'
     go 0
