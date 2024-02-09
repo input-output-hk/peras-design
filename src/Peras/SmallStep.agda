@@ -1,11 +1,9 @@
 module Peras.SmallStep where
 
-open import Agda.Builtin.Word
-open import Agda.Builtin.Nat
 open import Data.Bool
 open import Data.List using (List; all; foldr; _∷_; []; _++_)
 open import Data.Maybe
-open import Data.Nat using (zero; suc)
+open import Data.Nat using (suc; pred)
 open import Data.Product using (_,_; _×_)
 open import Function.Base using (_∘_; id)
 open import Level using (0ℓ)
@@ -93,7 +91,7 @@ module _ {T : Set} (honest? : PartyId → Honesty) where
 
   honestCreate : Slot → List Tx → Stateₗ → List Message × Stateₗ
   honestCreate sl txs ⟨ p , tT , tree ⟩ with lottery p sl
-  ... | true = let best = (bestChain tT) sl tree -- FIXME: sl-1, use ℕ for Slot?
+  ... | true = let best = (bestChain tT) (pred sl) tree
                    parent = record { hash = emptyBS } -- FIXME
                    newBlock = record {
                        slotNumber = sl ;
@@ -129,10 +127,10 @@ module _ {T : Set} (honest? : PartyId → Honesty) where
   -- initial state
 
   N₀ : GlobalState
-  N₀ = ⟪ primWord64FromNat zero , Ready , empty , [] , [] ⟫ -- TODO: initial parties
+  N₀ = ⟪ 0 , Ready , empty , [] , [] ⟫ -- TODO: initial parties
 
   incrementSlot : Slot → Slot
-  incrementSlot = primWord64FromNat ∘ suc ∘ primWord64ToNat
+  incrementSlot = suc
 
   permParties : List PartyId → List PartyId
   permParties = id -- FIXME: permute
