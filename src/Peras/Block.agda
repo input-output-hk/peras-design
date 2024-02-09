@@ -1,7 +1,7 @@
 module Peras.Block where
 
 open import Level
-open import Agda.Builtin.Word
+open import Agda.Builtin.Nat
 open import Data.Bool
 open import Data.List
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
@@ -34,7 +34,7 @@ open Tx public
 
 {-# COMPILE AGDA2HS Tx #-}
 
-Slot = Word64
+Slot = Nat
 
 {-# COMPILE AGDA2HS Slot #-}
 
@@ -46,7 +46,7 @@ record Block (t : Set) : Set where
         includedVotes : t -- set HashO
         leadershipProof : LeadershipProof
         payload : List Tx
-        signature : Signature  
+        signature : Signature
 
 open Block public
 

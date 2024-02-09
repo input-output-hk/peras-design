@@ -5,11 +5,6 @@ open import Data.String using (String)
 open import Peras.Block using (Block; Slot)
 open import Peras.Chain using (Chain; RoundNumber; Vote)
 
-data Message msg : Set where
-  VoteFor : RoundNumber → msg → Message msg
-  NewVote : Vote msg → Message msg
-  NewChain : msg → Message msg
-
 record NodeId : Set where
   constructor MkNodeId
   field
@@ -19,26 +14,22 @@ open NodeId public
 
 {-# COMPILE AGDA2HS NodeId #-}
 
--- | Messages sent to the node.
-data Input t : Set where
+-- | Message exchanged between nodes.
+--
+-- We do not separate messages between inputs and outputs as, by
+-- definition, a message /output/ by one node is an /input/ to some
+-- other node.  The routing should be handled by the networking layer
+-- interposed between all the nodes.
+data Message votes : Set where
 
   -- | New slot occurs (represents the passage of time)
-  NextSlot : Slot → Input t
+  NextSlot : Slot → Message votes
 
-  -- | Some `NodeId` has sent a requested `Block` to this node.
-  SomeBlock : NodeId → Block t → Input t
+  -- | Some `Block t` is received from upstream or broadcast
+  -- downstream.
+  SomeBlock : Block votes → Message votes
 
-  -- | Some `NodeId` is notifying us their best chain has changed.
-  UpdatedChain : NodeId → Chain t → Input t
+  -- | Best chain has changed.
+  NewChain : Chain votes → Message votes
 
-{-# COMPILE AGDA2HS Input #-}
-
-data Output t : Set where
-
-  -- | Node needs some block from given `NodeId`.
-  FetchBlock : NodeId → Block t → Output t
-
-  -- | Node changed its best chain
-  NewChain : Chain t → Output t
-
-{-# COMPILE AGDA2HS Output #-}
+{-# COMPILE AGDA2HS Message #-}
