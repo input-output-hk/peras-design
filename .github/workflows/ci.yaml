@@ -10,7 +10,6 @@ on:
     - main
 jobs:
   typecheck:
-    if: true  # FIXME: Consider disabling until caching is set up.
     name: Typecheck Agda and generate Haskell
     runs-on: self-hosted
     steps:
