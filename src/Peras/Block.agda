@@ -27,6 +27,18 @@ open PartyId public
 
 {-# COMPILE AGDA2HS PartyId #-}
 
+postulate
+  paEq : Relation.Binary.Rel PartyId 0ℓ
+  paLt : Relation.Binary.Rel PartyId 0ℓ
+  paIs : Relation.Binary.IsStrictTotalOrder paEq paLt
+
+PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
+PartyIdO = record {
+  Carrier            = PartyId ;
+  _≈_                = paEq ;
+  _<_                = paLt ;
+  isStrictTotalOrder = paIs }
+
 record Tx : Set where
   field tx : ByteString
 

@@ -2,16 +2,9 @@ module Peras.Chain where
 
 open import Agda.Builtin.Word
 open import Data.Bool
-open import Data.List as List using (List; all; foldr)
-open import Data.Maybe
 open import Level
-open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
-open import Relation.Unary using (Pred)
+open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
 open import Relation.Binary using (StrictTotalOrder)
-
-
-import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym)
 
 open import Peras.Crypto
 open import Peras.Block hiding (ByteString; emptyBS)
@@ -52,13 +45,11 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
   isCommitteeMember vkey committeeMembershipProof
     ∧ verify vkey signature (toSignable v)
 
-{-
-record Chain : Set where
+record Chain⁺ : Set where
   constructor MkChain
   field blocks : set BlockO
-        tip : Block -- The tip of this chain, must be a member of `blocks`
+        tip : Block⁺ -- The tip of this chain, must be a member of `blocks`
         votes : set VoteBlockO -- The set of "pending" votes, eg. which have not been included in a `Block`.
--}
 
 data Chain t : Set where
   Genesis : Chain t
@@ -68,7 +59,7 @@ open Chain public
 
 {-# COMPILE AGDA2HS Chain #-}
 
-Chain⁺ = Chain (set BlockO)
+-- Chain⁺ = Chain (set BlockO)
 
 -- | Chain validity
 --
@@ -102,143 +93,3 @@ correctBlocks (MkChain blocks _ _) =
 
 postulate
   isValidChain : Chain⁺ -> Bool
-
-
-{-
-  Formalizing Nakamoto-Style Proof of Stake
-  Søren Eller Thomsen and Bas Spitters
--}
-
-
-
-module _ {T : Set} where
-
-  open import Data.List.Relation.Binary.Sublist.Propositional
-
-  record TreeType : Set where
-
-    field
-      tree0 : T
-      extendTree : T → Block⁺ → T
-      allBlocks : T → List Block⁺
-      bestChain : Slot → T → Chain⁺
-
-  open TreeType
-
-  record LocalState : Set where
-    constructor ⟨_,_⟩
-    field
-      partyId : PartyId
-      tT : T
-
-  -- progress
-
-  data Progress : Set where
-
-    Ready : Progress
-    Delivered : Progress
-    Baked : Progress
-
-  record Message : Set where
-    constructor mkMessage
-    field
-      msg : ByteString
-
-  data Honesty : Set where
-    Honest : Honesty
-    Corrupt : Honesty
-
-  -- global state
-
-  record GlobalState : Set where
-    constructor ⟪_,_,_,_,_⟫
-    field
-      slot : Slot
-      progress : Progress
-      stateMap : PartyId → Maybe LocalState
-      messages : List Message
-      execution-order : List PartyId
-
-  open GlobalState
-
-  postulate
-    N₀ : GlobalState
-
-    party_bake_step_world : PartyId → GlobalState → GlobalState
-    party_rcv_step_world : PartyId → GlobalState → GlobalState
-    incrementSlot : Slot → Slot
-    permParties : List PartyId → List PartyId
-    permMessages : List Message → List Message
-
-  data _↝_ : GlobalState → GlobalState → Set where
-
-    Deliver : ∀ {s sm ms ps}
-      → ⟪ s , Ready , sm , ms , ps ⟫ ↝
-        let gs = List.foldr party_rcv_step_world ⟪ s , Ready , sm , ms , ps ⟫ ps
-         in record gs { progress = Delivered }
-
-    Bake : ∀ {s sm ms ps}
-      → ⟪ s , Delivered , sm , ms , ps ⟫ ↝
-        let gs = List.foldr party_bake_step_world ⟪ s , Delivered , sm , ms , ps ⟫ ps
-         in record gs { progress = Delivered }
-
-    NextRound : ∀ {s sm ms ps}
-      → ⟪ s , Baked , sm , ms , ps ⟫ ↝ ⟪ incrementSlot s , Ready , sm , ms , ps ⟫
-
-    PermParties : ∀ {s p sm ms ps}
-      → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , ms , permParties ps ⟫
-
-    PermMsgs : ∀ {s p sm ms ps}
-      → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , permMessages ms , ps ⟫
-
-  -- reflexive, transitive closure (which is big-step in the paper)
-
-  infix  2 _↝⋆_
-  infixr 2 _↝⟨_⟩_
-  infix  3 _∎
-
-  data _↝⋆_ : GlobalState → GlobalState → Set where
-
-    _∎ : ∀ M
-        -------
-      → M ↝⋆ M
-
-    _↝⟨_⟩_ : ∀ L {M N}
-      → L ↝ M
-      → M ↝⋆ N
-        ------
-      → L ↝⋆ N
-
-  -- knowledge propagation
-  postulate
-    lemma1 : ∀ {N₁ N₂ : GlobalState}
-      → {p₁ p₂ : PartyId}
-      → {tt₁ tt₂ : TreeType}
-      → {t₁ t₂ : T}
-      → N₀ ↝⋆ N₁
-      → N₁ ↝⋆ N₂
-      → progress N₁ ≡ Ready
-      → progress N₂ ≡ Delivered
-      → stateMap N₁ p₁ ≡ just ⟨ p₁ , t₁ ⟩
-      → stateMap N₂ p₂ ≡ just ⟨ p₂ , t₂ ⟩
-      → slot N₁ ≡ slot N₂
-      → allBlocks tt₁ t₁ ⊆ allBlocks tt₁ t₂
-
-  {- From the paper:
-
-  Proof sketch. Our main observation is that at any point in time a block is in the tree of p1, it is
-  either also already in p2’s tree or to be delivered at the next delivery transition.
-
-  Blocks can be added when an honest party wins the right to bake a block, in which case they will immediately
-  send the block to all other parties and thus fulfill the invariant, or they can be added by an
-  adversary and thereby delivered to an honest party by a delivery event, in which case it will be
-  delivered to all other honest parties in the following delivery slot (by our network assumption).
-
-  This is in particular true when p1 and p2 is at Ready, which means that after the delivery
-  transition p2 will know all the blocks that p1 knew before.
-
-  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ Deliver ⟩ x₂) refl refl x₃ x₄ refl = {!!}
-  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermParties ⟩ x₂) refl refl x₃ x₄ refl = {!!}
-  lemma1 x (⟪ _ , Ready , _ , _ , _ ⟫ ↝⟨ PermMsgs ⟩ x₂) refl refl x₃ x₄ refl = {!!}
-  -}
-
