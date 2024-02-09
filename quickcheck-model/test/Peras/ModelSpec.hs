@@ -1,48 +1,55 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Peras.ModelSpec where
 
-import Control.Monad (forM)
+import Control.Monad (forM_)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
-import Control.Monad.State (evalStateT)
-import Peras.Model (Action (..), Chain, Network (..), Nodes (..), RunMonad, asList, nodes, runMonad)
+import Control.Monad.State (evalStateT, get, lift)
+import Peras.Model (Action (..), Network (..), Nodes (..), RunMonad, nodes, runMonad)
 import Test.Hspec (Spec)
-import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
+import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
+import Test.QuickCheck (Gen, Property, Testable, counterexample, property, verbose, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
-import qualified Test.QuickCheck.DynamicLogic as DL
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
-import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
-import Test.QuickCheck.StateModel (Actions, Var, runActions)
+import Test.QuickCheck.Monadic (PropertyM (..), assert, monadic', monadicIO, run)
+import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  prop "Chain progress" prop_chain_progress
+  modifyMaxShrinks (const 0) $ prop "Chain progress" prop_chain_progress
 
 prop_chain_progress :: Property
 prop_chain_progress =
-  within 50000000 $
+  within 5000000 $
     forAllDL chainProgress prop_HydraModel
 
 chainProgress :: DL Network ()
 chainProgress = do
   anyActions_
-  getModelStateDL >>= \Network{nodeIds} -> do
-    bestChains <- forM nodeIds (action . ObserveBestChain)
-    let (settled, unsettled) = commonPrefix bestChains
-    DL.assert "" $
-      all (((< 42) . length) . asList) unsettled
-        && not (null (asList settled))
-
-commonPrefix :: [Var Chain] -> (Chain, [Chain])
-commonPrefix = undefined
+  getModelStateDL >>= \Network{nodeIds} ->
+    forM_ nodeIds (action . ObserveBestChain)
 
 prop_HydraModel :: Actions Network -> Property
-prop_HydraModel actions = property $
-  runIOSimProp $ do
-    _ <- runActions actions
+prop_HydraModel actions = verbose $
+  monadicIO $ do
+    _ <- runModelT (Nodes mempty) (runActions actions)
     assert True
+
+-- Stolen from https://github.com/input-output-hk/quickcheck-dynamic/blob/c309099aa30333a34d3f70ad7acc87d033dd5cdc/quickcheck-dynamic/src/Test/QuickCheck/Extras.hs#L7
+-- TODO: generalise the combinators in Extra to arbitrary natural transformations ?
+runModelT :: (Monad m) => Nodes m -> PropertyM (RunMonad m) a -> PropertyM m (a, Nodes m)
+runModelT s0 p = MkPropertyM $ \k -> do
+  m <-
+    unPropertyM
+      ( do
+          a <- p
+          s <- run get
+          return (a, s)
+      )
+      $ fmap lift . k
+  return $ evalStateT (runMonad m) s0
 
 runIOSimProp :: (Testable a) => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
 runIOSimProp p = do

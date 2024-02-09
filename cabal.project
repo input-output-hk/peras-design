@@ -22,6 +22,7 @@ packages:
   sketch
 
 tests: True
+test-show-details: direct
 
 package strict-containers
   ghc-options: -Wno-noncanonical-monad-instances -Wno-error=noncanonical-monad-instances

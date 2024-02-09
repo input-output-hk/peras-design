@@ -74,9 +74,11 @@ library
                       base ^>=4.18.1.0,
                       bytestring,
                       containers,
+                      data-default,
                       mtl,
                       quickcheck-dynamic,
-                      random
+                      random,
+                      random-forks
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -108,9 +110,10 @@ test-suite quickcheck-model-test
 
     -- Test dependencies.
     build-depends:
-                          base ^>=4.18.1.0
+                            base ^>=4.18.1.0
                   , QuickCheck
                   , QuickCheck
+                  , data-default
                   , hspec
                   , io-sim
                   , mtl
@@ -120,3 +123,5 @@ test-suite quickcheck-model-test
 
     build-tool-depends:
        hspec-discover:hspec-discover
+
+    ghc-options: -rtsopts -threaded -prof

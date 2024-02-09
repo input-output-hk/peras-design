@@ -12,7 +12,7 @@ newtype BlockId = BlockId {unBlockId :: ByteString}
   deriving (Eq, Show, Ord)
 
 newtype Slot = Slot Natural
-  deriving (Eq, Show, Num, Ord)
+  deriving (Eq, Show, Num, Enum, Real, Ord, Integral)
 
 data Block t = Block
   { blockId :: BlockId
