@@ -72,13 +72,15 @@ library
     -- Other library packages from which modules are imported.
     build-depends:    QuickCheck,
                       base ^>=4.18.1.0,
+                      base16-bytestring,
                       bytestring,
                       containers,
                       data-default,
                       mtl,
                       quickcheck-dynamic,
                       random,
-                      random-forks
+                      random-forks,
+                      text
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -124,4 +126,4 @@ test-suite quickcheck-model-test
     build-tool-depends:
        hspec-discover:hspec-discover
 
-    ghc-options: -rtsopts -threaded -prof
+    ghc-options: -rtsopts -threaded

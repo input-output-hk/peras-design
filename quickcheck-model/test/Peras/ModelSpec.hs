@@ -32,15 +32,16 @@ chainProgress = do
     forM_ nodeIds (action . ObserveBestChain)
 
 prop_HydraModel :: Actions Network -> Property
-prop_HydraModel actions = verbose $
-  monadicIO $ do
-    _ <- runModelT (Nodes mempty) (runActions actions)
-    assert True
+prop_HydraModel actions =
+  property $
+    runPropInIOSim $ do
+      _ <- runActions actions
+      assert True
 
 -- Stolen from https://github.com/input-output-hk/quickcheck-dynamic/blob/c309099aa30333a34d3f70ad7acc87d033dd5cdc/quickcheck-dynamic/src/Test/QuickCheck/Extras.hs#L7
 -- TODO: generalise the combinators in Extra to arbitrary natural transformations ?
-runModelT :: (Monad m) => Nodes m -> PropertyM (RunMonad m) a -> PropertyM m (a, Nodes m)
-runModelT s0 p = MkPropertyM $ \k -> do
+runPropInIO :: (Monad m) => Nodes m -> PropertyM (RunMonad m) a -> PropertyM m (a, Nodes m)
+runPropInIO s0 p = MkPropertyM $ \k -> do
   m <-
     unPropertyM
       ( do
@@ -51,8 +52,8 @@ runModelT s0 p = MkPropertyM $ \k -> do
       $ fmap lift . k
   return $ evalStateT (runMonad m) s0
 
-runIOSimProp :: (Testable a) => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
-runIOSimProp p = do
+runPropInIOSim :: (Testable a) => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
+runPropInIOSim p = do
   Capture eval <- capture
   let simTrace =
         runSimTrace $
