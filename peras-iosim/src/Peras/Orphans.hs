@@ -17,7 +17,7 @@ import GHC.Generics (Generic)
 import Peras.Block (Block(..), PartyId(..), Tx(..))
 import Peras.Chain (Chain(..))
 import Peras.Crypto (Hash(..), LeadershipProof(..), MembershipProof(..), Signature(..), VerificationKey(..))
-import Peras.Message (NodeId(..), Message(..), Output(..))
+import Peras.Message (NodeId(..), Message(..))
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
@@ -130,8 +130,8 @@ instance A.FromJSON t => A.FromJSON (Message t) where
           input <- o A..: "input"
           case input of
             "NextSlot" -> NextSlot <$> o A..: "slot"
-            "SomeBlock" -> SomeBlock <$> o A..: "nodeId" <*> o A..: "block"
-            "UpdatedChain" -> UpdatedChain <$> o A..: "nodeId" <*> o A..: "chain"
+            "SomeBlock" -> SomeBlock <$> o A..: "block"
+            "NewChain" -> NewChain <$> o A..: "chain"
             _ -> fail $ "Illegal input: " <> input
 
 instance A.ToJSON t => A.ToJSON (Message t) where
@@ -141,18 +141,16 @@ instance A.ToJSON t => A.ToJSON (Message t) where
         "input" A..= ("NextSlot" :: String)
       , "slot" A..= slot
       ]
-  toJSON (SomeBlock nodeId block) =
+  toJSON (SomeBlock block) =
     A.object
       [
         "input" A..= ("SomeBlock" :: String)
-      , "nodeId" A..= nodeId
       , "block" A..= block
       ]
-  toJSON (UpdatedChain nodeId chain) =
+  toJSON (NewChain chain) =
     A.object
       [
-        "input" A..= ("UpdatedChain" :: String)
-      , "nodeId" A..= nodeId
+        "input" A..= ("NewChain" :: String)
       , "chain" A..= chain
       ]
 
@@ -198,38 +196,6 @@ instance A.FromJSONKey NodeId where
 
 instance A.ToJSONKey NodeId where
   toJSONKey = A.toJSONKeyText $ T.pack . nodeId
-
-deriving stock instance Eq t => Eq (Output t)
-deriving stock instance Generic t => Generic (Output t)
-deriving stock instance Ord t => Ord (Output t)
-deriving stock instance Read t => Read (Output t)
-deriving stock instance Show t => Show (Output t)
-
-instance A.FromJSON t => A.FromJSON (Output t) where
-  parseJSON =
-    A.withObject "Output"
-      $ \o ->
-        do
-          output <- o A..: "output"
-          case output of
-            "NextSlot" -> FetchBlock <$> o A..: "nodeId" <*> o A..: "block"
-            "NewChain" -> NewChain <$> o A..: "chain"
-            _ -> fail $ "Illegal output: " <> output
-
-instance A.ToJSON t => A.ToJSON (Output t) where
-  toJSON (FetchBlock nodeId block) =
-    A.object
-      [
-        "output" A..= ("FetchBlock" :: String)
-      , "nodeId" A..= nodeId
-      , "block" A..= block
-      ]
-  toJSON (NewChain chain) =
-    A.object
-      [
-        "output" A..= ("NewChain" :: String)
-      , "chain" A..= chain
-      ]
 
 deriving stock instance Eq PartyId
 deriving stock instance Generic PartyId

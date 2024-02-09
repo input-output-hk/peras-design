@@ -12,10 +12,11 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (readTQueue, writeTQueue)
 import Control.Monad.Class.MonadSay (MonadSay(say))
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
-import Peras.IOSim.Message.Types (OutEnvelope(Idle), InEnvelope(Stop, InEnvelope, NewSlot))
+import Peras.Chain (Chain(Genesis))
+import Peras.IOSim.Message.Types (InEnvelope(inMessage), OutEnvelope(Idle))
 import Peras.IOSim.Network.Types (Topology(..))
 import Peras.IOSim.Node.Types (NodeProcess(..), NodeState(..))
-import Peras.IOSim.Types (Chain(Genesis), NodeId)
+import Peras.Message (Message(..), NodeId)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -23,17 +24,17 @@ import qualified Data.Set as S
 initializeNodes
   :: UTCTime
   -> Topology
-  -> M.Map NodeId NodeState
+  -> M.Map NodeId (NodeState t)
 initializeNodes now Topology{connections} = initializeNode now `M.mapWithKey` connections
   
 initializeNode
   :: UTCTime
   -> NodeId
   -> S.Set NodeId
-  -> NodeState
+  -> NodeState t
 initializeNode clock nodeId downstreams =
   let
-    slotNo = 0
+    slot = 0
     vrfOutput = 0
     preferredChain = Genesis
   in
@@ -43,25 +44,19 @@ runNode
   :: MonadSay m
   => MonadSTM m
   => MonadTime m
-  => NodeState
-  -> NodeProcess m
+  => NodeState t
+  -> NodeProcess t m
   -> m ()
 runNode initial NodeProcess{..} =
   let
     go state =
       do
         now <- getCurrentTime
-        atomically (readTQueue incoming) >>= \case
-          InEnvelope message ->
-            do
-              say $ show message
-              atomically $ writeTQueue outgoing $ Idle now
-              go state
-          NewSlot slot ->
-            do
-              say $ "New slot: " <> show slot
-              atomically $ writeTQueue outgoing $ Idle now
-              go state
-          Stop -> say "Stopping"
+        atomically (inMessage <$> readTQueue incoming) >>= \case
+          NextSlot slot -> say $ "New slot: " <> show slot
+          SomeBlock _ -> say "Some block."
+          NewChain _ -> say "New chain."
+        atomically $ writeTQueue outgoing $ Idle now
+        go state
   in
     go initial  
