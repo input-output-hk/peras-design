@@ -56,7 +56,7 @@ runNode initial NodeProcess{..} =
           NextSlot slot -> say $ "New slot: " <> show slot
           SomeBlock _ -> say "Some block."
           NewChain _ -> say "New chain."
-        atomically $ writeTQueue outgoing $ Idle now
+        atomically $ writeTQueue outgoing $ Idle now (nodeId initial)
         go state
   in
     go initial  

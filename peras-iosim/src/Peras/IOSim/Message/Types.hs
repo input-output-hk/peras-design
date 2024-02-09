@@ -15,7 +15,6 @@ import GHC.Generics (Generic)
 import Peras.IOSim.Types (ByteSize)
 import Peras.Message (Message, NodeId)
 import Peras.Block (Block)
-import Peras.Chain (Chain)
 import Peras.Orphans ()
 
 import qualified Data.Aeson as A
@@ -23,7 +22,7 @@ import qualified Data.Aeson as A
 data InEnvelope t =
   InEnvelope
   {
-    source :: Maybe NodeId
+    origin :: Maybe NodeId
   , inMessage :: Message t
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
@@ -33,7 +32,7 @@ instance A.FromJSON t => A.FromJSON (InEnvelope t) where
     A.withObject "InEnvelope"
       $ \o ->
         do
-          source <- o A..: "source"
+          origin <- o A..: "origin"
           inMessage <-o A..: "inMessage"
           pure InEnvelope{..}
 
@@ -41,12 +40,14 @@ instance A.ToJSON t => A.ToJSON (InEnvelope t) where
   toJSON InEnvelope{..} =
     A.object 
       [
-        "source" A..= source
+        "origin" A..= origin
       , "inMessage" A..= inMessage
       ]
 
-data OutMessage t = FetchBlock (Block t)
-              | NewChain (Chain t)
+-- TODO: Refactor (or eliminate) when the Agda and QuickCheck code stabilizes.
+data OutMessage t =
+    FetchBlock (Block t)
+  | SendMessage (Message t)
   deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance A.FromJSON t => A.FromJSON (OutMessage t) where
@@ -57,7 +58,7 @@ instance A.FromJSON t => A.FromJSON (OutMessage t) where
           output <- o A..: "output"
           case output of
             "NextSlot" -> FetchBlock <$> o A..: "block"
-            "NewChain" -> NewChain <$> o A..: "chain"
+            "SendMessage" -> SendMessage <$> o A..: "message"
             _ -> fail $ "Illegal output: " <> output
 
 instance A.ToJSON t => A.ToJSON (OutMessage t) where
@@ -67,13 +68,12 @@ instance A.ToJSON t => A.ToJSON (OutMessage t) where
         "output" A..= ("FetchBlock" :: String)
       , "block" A..= block
       ]
-  toJSON (NewChain chain) =
+  toJSON (SendMessage message) =
     A.object
       [
-        "output" A..= ("NewChain" :: String)
-      , "chain" A..= chain
+        "output" A..= ("SendMessage" :: String)
+      , "message" A..= message
       ]
-
 
 data OutEnvelope t =
     OutEnvelope
@@ -82,10 +82,12 @@ data OutEnvelope t =
     , outMessage :: OutMessage t
     , bytes :: ByteSize
     , destination :: NodeId
+    , source :: NodeId
     }
   | Idle
     {
       timestamp :: UTCTime
+    , source :: NodeId
     }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -94,8 +96,8 @@ instance A.FromJSON t => A.FromJSON (OutEnvelope t) where
     A.withObject "OutEnvelope"
       $ \o ->
         let
-          parseMessage = OutEnvelope <$> o A..: "timestamp" <*> o A..: "outMessage" <*> o A..: "bytes" <*> o A..: "destination"
-          parseIdle = Idle <$> o A..: "timestamp"
+          parseMessage = OutEnvelope <$> o A..: "timestamp" <*> o A..: "outMessage" <*> o A..: "bytes" <*> o A..: "destination" <*> o A..: "source"
+          parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source"
         in
           parseMessage <|> parseIdle
   
@@ -107,9 +109,11 @@ instance A.ToJSON t => A.ToJSON (OutEnvelope t) where
       , "outMessage" A..= outMessage
       , "bytes" A..= bytes
       , "destination" A..= destination
+      , "source" A..= source
       ]
   toJSON Idle{..} =
     A.object
       [
         "timestamp" A..= timestamp
+      , "source" A..= source
       ]

@@ -2,14 +2,23 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Peras.IOSim.Network.Types (
   Network(..)
+, NetworkState
 , Topology(..)
+, activeNodes
+, lastSlot
+, lastTime
 ) where
 
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue)
+import Control.Lens (makeLenses)
+import Control.Monad.Class.MonadTime (UTCTime)
+import Data.Default (Default(..))
 import GHC.Generics (Generic)
+import Peras.Block (Slot)
 import Peras.IOSim.Message.Types (OutEnvelope, InEnvelope)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
@@ -34,3 +43,26 @@ data Network t m =
   , nodesOut :: TQueue m (OutEnvelope t)
   }
   deriving stock (Generic)
+
+data NetworkState =
+  NetworkState
+  {
+    _lastSlot :: Slot
+  , _lastTime :: UTCTime
+  , _activeNodes :: S.Set NodeId
+  }
+    deriving stock (Eq, Generic, Ord, Read, Show)
+
+instance Default NetworkState where
+  def = NetworkState 0 (read "2000-01-01 00:00:00.0 UTC") mempty
+
+instance ToJSON NetworkState where
+  toJSON NetworkState{..} =
+    A.object
+      [
+        "lastSlot" A..= _lastSlot
+      , "lastTime" A..= _lastTime
+      , "activeNodes" A..= _activeNodes
+      ]
+
+makeLenses ''NetworkState
