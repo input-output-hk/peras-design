@@ -2,11 +2,20 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Peras.IOSim.Node.Types (
-  NodeState(..)
+  NodeState(NodeState)
+, clock
+, downstreams
+, nodeId
+, preferredChain
+, slot
+, stake
+, vrfOutput
 ) where
 
+import Control.Lens (makeLenses)
 import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (Slot)
@@ -21,13 +30,13 @@ import qualified Data.Set as S
 data NodeState v =
   NodeState
   {
-    nodeId :: NodeId
-  , clock :: UTCTime
-  , slot :: Slot
-  , stake :: Currency
-  , vrfOutput :: Double
-  , preferredChain :: Chain v
-  , downstreams :: S.Set NodeId
+    _nodeId :: NodeId
+  , _clock :: UTCTime
+  , _slot :: Slot
+  , _stake :: Currency
+  , _vrfOutput :: Double
+  , _preferredChain :: Chain v
+  , _downstreams :: S.Set NodeId
   }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -36,24 +45,26 @@ instance A.FromJSON v => A.FromJSON (NodeState v) where
     A.withObject "NodeState"
       $ \o ->
         do
-          nodeId <- o A..: "nodeId"
-          clock <- o A..: "clock"
-          slot <- o A..: "slot"
-          stake <- o A..: "stake"
-          vrfOutput <- o A..: "vrfOutput"
-          preferredChain <- o A..: "preferredChain"
-          downstreams <- o A..: "downstreams"
+          _nodeId <- o A..: "nodeId"
+          _clock <- o A..: "clock"
+          _slot <- o A..: "slot"
+          _stake <- o A..: "stake"
+          _vrfOutput <- o A..: "vrfOutput"
+          _preferredChain <- o A..: "preferredChain"
+          _downstreams <- o A..: "downstreams"
           pure NodeState{..}
 
 instance A.ToJSON v => A.ToJSON (NodeState v) where
   toJSON NodeState{..} =
     A.object
       [
-        "nodeId" A..= nodeId
-      , "clock" A..= clock
-      , "slot" A..= slot
-      , "stake" A..= stake
-      , "vrfOutput" A..= vrfOutput
-      , "preferredChain" A..= preferredChain
-      , "downstreams" A..= downstreams
+        "nodeId" A..= _nodeId
+      , "clock" A..= _clock
+      , "slot" A..= _slot
+      , "stake" A..= _stake
+      , "vrfOutput" A..= _vrfOutput
+      , "preferredChain" A..= _preferredChain
+      , "downstreams" A..= _downstreams
       ]
+
+makeLenses ''NodeState

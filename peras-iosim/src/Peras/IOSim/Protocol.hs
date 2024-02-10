@@ -1,0 +1,69 @@
+{-# LANGUAGE RecordWildCards #-}
+
+module Peras.IOSim.Protocol (
+  nextSlot
+) where
+
+import Control.Lens ((&), (.~), (^.))
+import Data.Bifunctor (first)
+import Data.Default (Default(def))
+import Peras.Block (Block(Block), PartyId(MkPartyId), Slot)
+import Peras.Chain (Chain(..))
+import Peras.Crypto
+import Peras.IOSim.Node.Types (NodeState, preferredChain, slot, stake)
+import Peras.IOSim.Protocol.Types (Protocol(..))
+import Peras.IOSim.Simulate.Types (Parameters(..))
+import Peras.IOSim.Types (Currency)
+import Peras.Message (Message(NewChain))
+import System.Random (RandomGen (..), genByteString, uniformR)
+
+-- FIXME: We need an implementation of `MonadRandom` within `IOSim`.
+
+nextSlot
+  :: Default v
+  => RandomGen g
+  => g
+  -> Parameters
+  -> Protocol
+  -> Slot
+  -> NodeState v
+  -> ((NodeState v, Maybe (Message v)), g)
+nextSlot gen parameters PseudoPraos{..} slot' state =
+  let
+    (leader, gen') = isSlotLeader gen parameters activeSlotCoefficient $ state ^. stake
+  in
+    if leader
+      then let
+             (signature, gen'') = Signature `first` genByteString 6 gen'
+             block = Block slot' (MkPartyId $ VerificationKey mempty) (Hash mempty) def (LeadershipProof mempty) mempty signature
+             chain = Cons block $ state ^. preferredChain
+           in
+             (
+               (
+                 state & slot .~ slot'
+                       & preferredChain .~ chain
+               , Just $ NewChain chain
+               )
+             , gen''
+             )
+      else ((state & slot .~ slot', Nothing), gen')
+nextSlot _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
+nextSlot _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
+nextSlot _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
+nextSlot _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
+
+isSlotLeader
+  :: RandomGen g
+  => g
+  -> Parameters
+  -> Double
+  -> Currency
+  -> (Bool, g)
+isSlotLeader gen Parameters{..} activeSlotCoefficient' currency =
+  -- FIXME: This is just a crude approximation to the actual Praos leader-selection algorithm.
+  let
+    expectedStake = fromIntegral $ peerCount * maximumStake `div` 2
+    pSlotLottery = 1 - (1 - activeSlotCoefficient') ** (1 / expectedStake)
+    p = 1 - (1 - pSlotLottery)^currency
+  in
+    (<= p) `first` uniformR (0, 1) gen

@@ -18,6 +18,7 @@ library
     Peras.IOSim.Network.Types
     Peras.IOSim.Node
     Peras.IOSim.Node.Types
+    Peras.IOSim.Protocol
     Peras.IOSim.Protocol.Types
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types

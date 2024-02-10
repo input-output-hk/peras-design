@@ -2,4 +2,4 @@ randomSeed: 12345
 peerCount: 30
 downstreamCount: 5
 maximumStake: 1000
-endSlot: 100
+endSlot: 1000

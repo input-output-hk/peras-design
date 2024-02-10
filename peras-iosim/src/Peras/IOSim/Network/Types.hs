@@ -57,7 +57,7 @@ data NetworkState v =
     deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance Default (NetworkState v) where
-  def = NetworkState 0 (read "2000-01-01 00:00:00.0 UTC") mempty M.empty
+  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty M.empty
 
 instance ToJSON v => ToJSON (NetworkState v) where
   toJSON NetworkState{..} =

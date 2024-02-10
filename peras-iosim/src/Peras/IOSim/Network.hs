@@ -21,7 +21,7 @@ import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay(..))
 import Control.Monad.Random (Rand, getRandomR)
 import Control.Monad.State (StateT, evalStateT, get, lift)
-import Data.Default (def)
+import Data.Default (Default(def))
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Peras.Block (Slot)
@@ -80,7 +80,8 @@ createNetwork Topology{connections} =
 -- TODO: Rewrite as a state machine.
 runNetwork
   :: forall m g v
-  .  MonadDelay m
+  .  Default v
+  => MonadDelay m
   => MonadFork m
   => MonadSay m
   => MonadSTM m
@@ -138,7 +139,7 @@ runNetwork gen parameters protocol states Network{..} endSlot =
           mapM_ route received
           unless allIdle waitForExits
       -- Receive and send messages.
-      loop :: MonadSay m => StateT (NetworkState v) m (NetworkState v)
+      loop :: MonadDelay m => MonadSay m => StateT (NetworkState v) m (NetworkState v)
       loop =
         do
           -- Advance the slot counter and notify the nodes, if all nodes are idle.
@@ -149,6 +150,7 @@ runNetwork gen parameters protocol states Network{..} endSlot =
               -- FIXME: This is unsafe because a node might take more than one slot to do its computations.
               lastSlot %= (+ 1)
               uncurry notifySlot `mapM_` M.toList nodesIn
+              lift $ threadDelay 1000000
           -- Receive and route messages.
           received <- lift . atomically $ flushTQueue nodesOut
           mapM_ route received

@@ -13,14 +13,17 @@ module Peras.IOSim.Node (
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
-import Control.Monad.Class.MonadSay (MonadSay(say))
+import Control.Lens ((&), (.~), (^.))
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
+import Control.Monad.Class.MonadTimer (MonadDelay(..))
 import Control.Monad.Random (Rand, getRandomR)
+import Data.Default (Default(def))
 import GHC.Generics (Generic)
 import Peras.Chain (Chain(Genesis))
 import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..))
 import Peras.IOSim.Network.Types (Topology(..))
-import Peras.IOSim.Node.Types (NodeState(..))
+import Peras.IOSim.Node.Types (NodeState(NodeState), clock, nodeId)
+import Peras.IOSim.Protocol (nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId)
@@ -53,17 +56,16 @@ initializeNode
   -> NodeId
   -> S.Set NodeId
   -> Rand g (NodeState v)
-initializeNode Parameters{maximumStake} clock nodeId downstreams =
-  do
-    let
-      slot = 0
-      preferredChain = Genesis
-    stake <- getRandomR (1, maximumStake)
-    vrfOutput <- getRandomR (0, 1)
-    pure NodeState{..}
+initializeNode Parameters{maximumStake} clock' nodeId' downstreams =
+  NodeState nodeId' clock' 0
+    <$> getRandomR (1, maximumStake)
+    <*> getRandomR (0, 1)
+    <*> pure Genesis
+    <*> pure downstreams
 
 runNode
-  :: MonadSay m
+  :: Default v
+  => MonadDelay m
   => MonadSTM m
   => MonadTime m
   => RandomGen g
@@ -73,21 +75,26 @@ runNode
   -> NodeState v
   -> NodeProcess v m
   -> m ()
-runNode _gen _parameters _protocol initial@NodeState{nodeId} NodeProcess{..} =
+runNode gen0 parameters protocol state0 NodeProcess{..} =
   let
-    go state =
+    go gen state =
       do
         now <- getCurrentTime
         atomically (readTQueue incoming) >>= \case
           InEnvelope{..} ->
             do
-              case inMessage of
-                NextSlot slot -> say $ "New slot: " <> show slot
-                SomeBlock _ -> say "Some block."
-                NewChain _ -> say "New chain."
-              atomically . writeTQueue outgoing $ Idle now nodeId
-              go state
+              ((state', _message'), gen') <-
+                case inMessage of
+                  NextSlot slot ->
+                    do
+                      threadDelay 1000000
+                      pure $ nextSlot gen parameters protocol slot state
+                  SomeBlock _ -> pure ((state, Nothing), gen)
+                  NewChain _ -> pure ((state, Nothing), gen)
+              atomically . writeTQueue outgoing . Idle now $ state ^. nodeId
+              go gen' $ state' & clock .~ now
           Stop ->
-            atomically . writeTQueue outgoing $ Exit now nodeId initial
+            atomically . writeTQueue outgoing $ Exit now (state ^. nodeId) state
   in
-    go initial  
+    do
+      go gen0 state0
