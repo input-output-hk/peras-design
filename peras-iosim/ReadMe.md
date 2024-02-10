@@ -2,6 +2,7 @@
 
 This is a work in progress. 
 
+
 ## Usage
 
 ```console
@@ -30,6 +31,7 @@ Available options:
   --chain-png-file FILE    Path to output PNG file of chain visualizaton.
                            Requires `GraphViz` executable.
 ```
+
 
 ## Example
 

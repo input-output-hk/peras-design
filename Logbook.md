@@ -1,3 +1,20 @@
+## 2024-02-10
+
+### BB - Peras IOSim
+
+Mostly finished refactoring of `peras-iosim` to incorporate functionality of `random-forks`.
+
+- Additions and changes
+    1. Various refactorings.
+    2. Implemented a Praos-like protocol.
+    3. Command-line options.
+    4. YAML input and JSON output.
+    5. Visualization.
+- Next steps
+    - Diagnose and fix memory leak.
+    - Migrate Peras algorithm from `random-forks`.
+    - Implement logging via a suitable logging monad.
+
 ## 2024-02-09
 
 ### BB - Peras IOSim
