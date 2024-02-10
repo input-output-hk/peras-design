@@ -17,8 +17,8 @@ import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import System.Random (mkStdGen)
 
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.Yaml as Y
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy.Char8 as LBS8
 
 simulate
   :: Parameters
@@ -49,11 +49,11 @@ writeTrace
 writeTrace filename trace = writeFile filename $ ppTrace trace
 
 writeReport
-  :: Y.ToJSON v
+  :: A.ToJSON v
   => FilePath
   -> SimTrace (NetworkState v)
   -> IO ()
 writeReport filename trace =
   case traceResult True trace of
-    Right result -> BS8.writeFile filename $ Y.encode result
+    Right result -> LBS8.writeFile filename $ A.encode result
     Left failure -> print failure
