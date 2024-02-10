@@ -14,6 +14,8 @@ import GHC.Generics (Generic)
 import Peras.Block (Slot)
 import Peras.Chain (Chain)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
+import Peras.IOSim.Protocol.Types (Protocol)
+import Peras.IOSim.Types (Currency)
 import Peras.Message(NodeId)
 
 import qualified Data.Aeson as A
@@ -23,8 +25,10 @@ data NodeState t =
   NodeState
   {
     nodeId :: NodeId
+  , protocol :: Protocol
   , clock :: UTCTime
   , slot :: Slot
+  , stake :: Currency
   , vrfOutput :: Double
   , preferredChain :: Chain t
   , downstreams :: S.Set NodeId
@@ -37,8 +41,10 @@ instance A.FromJSON t => A.FromJSON (NodeState t) where
       $ \o ->
         do
           nodeId <- o A..: "nodeId"
+          protocol <- o A..: "protocol"
           clock <- o A..: "clock"
           slot <- o A..: "slot"
+          stake <- o A..: "stake"
           vrfOutput <- o A..: "vrfOutput"
           preferredChain <- o A..: "preferredChain"
           downstreams <- o A..: "downstreams"
@@ -49,8 +55,10 @@ instance A.ToJSON t => A.ToJSON (NodeState t) where
     A.object
       [
         "nodeId" A..= nodeId
+      , "protocol" A..= protocol
       , "clock" A..= clock
       , "slot" A..= slot
+      , "stake" A..= stake
       , "vrfOutput" A..= vrfOutput
       , "preferredChain" A..= preferredChain
       , "downstreams" A..= downstreams

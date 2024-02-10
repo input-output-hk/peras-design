@@ -12,42 +12,56 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (readTQueue, writeTQueue)
 import Control.Monad.Class.MonadSay (MonadSay(say))
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
+import Control.Monad.Random (Rand, getRandomR)
 import Peras.Chain (Chain(Genesis))
 import Peras.IOSim.Message.Types (InEnvelope(inMessage), OutEnvelope(Idle))
 import Peras.IOSim.Network.Types (Topology(..))
 import Peras.IOSim.Node.Types (NodeProcess(..), NodeState(..))
+import Peras.IOSim.Protocol.Types (Protocol)
+import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId)
+import System.Random (RandomGen (..))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
 initializeNodes
-  :: UTCTime
+  :: RandomGen g
+  => Parameters
+  -> Protocol
+  -> UTCTime
   -> Topology
-  -> M.Map NodeId (NodeState t)
-initializeNodes now Topology{connections} = initializeNode now `M.mapWithKey` connections
+  -> Rand g (M.Map NodeId (NodeState t))
+initializeNodes parameters protocol now Topology{connections} =
+  sequence $ initializeNode parameters protocol now `M.mapWithKey` connections
   
 initializeNode
-  :: UTCTime
+  :: RandomGen g
+  => Parameters
+  -> Protocol
+  -> UTCTime
   -> NodeId
   -> S.Set NodeId
-  -> NodeState t
-initializeNode clock nodeId downstreams =
-  let
-    slot = 0
-    vrfOutput = 0
-    preferredChain = Genesis
-  in
-    NodeState{..}
+  -> Rand g (NodeState t)
+initializeNode Parameters{maximumStake} protocol clock nodeId downstreams =
+  do
+    let
+      slot = 0
+      preferredChain = Genesis
+    stake <- getRandomR (1, maximumStake)
+    vrfOutput <- getRandomR (0, 1)
+    pure NodeState{..}
 
 runNode
   :: MonadSay m
   => MonadSTM m
   => MonadTime m
-  => NodeState t
+  => RandomGen g
+  => g
+  -> NodeState t
   -> NodeProcess t m
   -> m ()
-runNode initial NodeProcess{..} =
+runNode _gen initial NodeProcess{..} =
   let
     go state =
       do
@@ -56,7 +70,7 @@ runNode initial NodeProcess{..} =
           NextSlot slot -> say $ "New slot: " <> show slot
           SomeBlock _ -> say "Some block."
           NewChain _ -> say "New chain."
-        atomically $ writeTQueue outgoing $ Idle now
+        atomically $ writeTQueue outgoing $ Idle now (nodeId initial)
         go state
   in
     go initial  

@@ -1,5 +1,23 @@
 ## 2024-02-09
 
+### BB - Peras IOSim
+
+Continued refactoring of `peras-iosim` to incorporate functionality of `random-forks`.
+
+- Additions and changes
+    1. Integrated `peras-iosim` with Agda-derived types.
+    2. Implemented orphan instances.
+    3. Implemented JSON serialization.
+    4. Aligned usage of Agda types.
+    5. Implemented network routing.
+    6. Implemented random-network generation.
+- Next steps
+    - Read YAML files as input.
+    - Migrate Praos algorithm from `random-forks`.
+    - Migrate Peras algorithm from `random-forks`.
+    - Implement logging via a suitable logging monad.
+    - Migrate visualization from `random-forks`.
+
 ### YH - Model in Agda
 
 * Moved the initial implementation of the semantics into a separate module: [SmallStep.agda](src/Peras/SmallStep.agda)
