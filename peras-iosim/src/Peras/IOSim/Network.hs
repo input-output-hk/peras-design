@@ -29,6 +29,7 @@ import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..), OutMessage(..
 import Peras.IOSim.Network.Types (Network(..), Topology(..), NetworkState, activeNodes, exitStates, lastSlot, lastTime)
 import Peras.IOSim.Node (NodeProcess(NodeProcess), runNode)
 import Peras.IOSim.Node.Types (NodeState)
+import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId(..))
 import System.Random (RandomGen(..))
@@ -86,11 +87,13 @@ runNetwork
   => MonadTime m
   => RandomGen g
   => g
+  -> Parameters
+  -> Protocol
   -> M.Map NodeId (NodeState v)
   -> Network v m
   -> Slot
   -> m (NetworkState v)
-runNetwork gen states Network{..} endSlot =
+runNetwork gen parameters protocol states Network{..} endSlot =
   do
     let
       -- Split the random number generator.
@@ -98,7 +101,7 @@ runNetwork gen states Network{..} endSlot =
       -- Start a node process.
       forkNode nodeId nodeIn =
         forkIO
-          . runNode (gens M.! nodeId) (states M.! nodeId)
+          . runNode (gens M.! nodeId) parameters protocol (states M.! nodeId)
           $ NodeProcess nodeIn nodesOut
       -- Send a message and mark the destination as active.
       output destination inChannel inEnvelope =

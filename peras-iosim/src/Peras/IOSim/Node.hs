@@ -40,22 +40,20 @@ data NodeProcess v m =
 initializeNodes
   :: RandomGen g
   => Parameters
-  -> Protocol
   -> UTCTime
   -> Topology
   -> Rand g (M.Map NodeId (NodeState v))
-initializeNodes parameters protocol now Topology{connections} =
-  sequence $ initializeNode parameters protocol now `M.mapWithKey` connections
+initializeNodes parameters now Topology{connections} =
+  sequence $ initializeNode parameters now `M.mapWithKey` connections
   
 initializeNode
   :: RandomGen g
   => Parameters
-  -> Protocol
   -> UTCTime
   -> NodeId
   -> S.Set NodeId
   -> Rand g (NodeState v)
-initializeNode parameters@Parameters{maximumStake} protocol clock nodeId downstreams =
+initializeNode Parameters{maximumStake} clock nodeId downstreams =
   do
     let
       slot = 0
@@ -70,10 +68,12 @@ runNode
   => MonadTime m
   => RandomGen g
   => g
+  -> Parameters
+  -> Protocol
   -> NodeState v
   -> NodeProcess v m
   -> m ()
-runNode _gen initial@NodeState{nodeId} NodeProcess{..} =
+runNode _gen _parameters _protocol initial@NodeState{nodeId} NodeProcess{..} =
   let
     go state =
       do

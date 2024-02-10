@@ -36,10 +36,10 @@ simulate parameters@Parameters{..} protocol =
             flip runRand gen
               $ do
                 topology' <- randomTopology parameters
-                states' <- initializeNodes parameters protocol now topology'
+                states' <- initializeNodes parameters now topology'
                 pure (states', topology')
         network <- createNetwork topology
-        runNetwork gen' states network endSlot
+        runNetwork gen' parameters protocol states network endSlot
 
 writeTrace
   :: Show v

@@ -11,8 +11,6 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Protocol.Types (Protocol)
-import Peras.IOSim.Simulate.Types (Parameters)
 import Peras.IOSim.Types (Currency)
 import Peras.Message(NodeId)
 import Peras.Orphans ()
@@ -24,8 +22,6 @@ data NodeState v =
   NodeState
   {
     nodeId :: NodeId
-  , parameters :: Parameters
-  , protocol :: Protocol
   , clock :: UTCTime
   , slot :: Slot
   , stake :: Currency
@@ -41,8 +37,6 @@ instance A.FromJSON v => A.FromJSON (NodeState v) where
       $ \o ->
         do
           nodeId <- o A..: "nodeId"
-          protocol <- o A..: "protocol"
-          parameters <- o A..: "parameters"
           clock <- o A..: "clock"
           slot <- o A..: "slot"
           stake <- o A..: "stake"
@@ -56,8 +50,6 @@ instance A.ToJSON v => A.ToJSON (NodeState v) where
     A.object
       [
         "nodeId" A..= nodeId
-      , "protocol" A..= protocol
-      , "parameters" A..= parameters
       , "clock" A..= clock
       , "slot" A..= slot
       , "stake" A..= stake
