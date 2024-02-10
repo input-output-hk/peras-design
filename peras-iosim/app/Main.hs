@@ -6,6 +6,7 @@ module Main (
 ) where
 
 import Data.Version (showVersion)
+import Data.Maybe (fromJust, isJust)
 import Paths_peras_iosim (version)
 import Peras.IOSim.Simulate (simulate, writeReport, writeTrace)
 
@@ -18,11 +19,12 @@ main =
     Command{..} <- O.execParser commandParser
     parameters <- either (error . show) id <$> Y.decodeFileEither parameterFile
     protocol <- either (error . show) id <$> Y.decodeFileEither protocolFile
-    let trace = simulate parameters protocol
+    let (result, trace) = simulate parameters protocol $ isJust traceFile
     whenJust traceFile
-      $ flip writeTrace trace
-    whenJust resultFile
-      $ flip writeReport trace
+      $ flip writeTrace $ fromJust trace
+    case result of
+      Right state -> whenJust resultFile $ flip writeReport state
+      Left failure -> error $ show failure
 
 whenJust
   :: Applicative m
