@@ -1,76 +1,116 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Node (
-  initializeNode
+  NodeProcess(..)
+, initializeNode
 , initializeNodes
 , runNode
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
-import Control.Concurrent.Class.MonadSTM.TQueue (readTQueue, writeTQueue)
-import Control.Monad.Class.MonadSay (MonadSay(say))
+import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
+import Control.Lens ((&), (.~), (^.))
+import Control.Monad (replicateM)
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
-import Control.Monad.Random (Rand, getRandomR)
+import Control.Monad.Class.MonadTimer (MonadDelay(..))
+import Control.Monad.Random (Rand, getRandom, getRandomR)
+import Data.Default (Default)
+import GHC.Generics (Generic)
+import Peras.Block (PartyId(MkPartyId))
 import Peras.Chain (Chain(Genesis))
-import Peras.IOSim.Message.Types (InEnvelope(inMessage), OutEnvelope(Idle))
+import Peras.Crypto (VerificationKey(VerificationKey))
+import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..), OutMessage(..))
 import Peras.IOSim.Network.Types (Topology(..))
-import Peras.IOSim.Node.Types (NodeProcess(..), NodeState(..))
+import Peras.IOSim.Node.Types (NodeState(NodeState), clock, nodeId, downstreams)
+import Peras.IOSim.Protocol (nextSlot, newChain)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId)
 import System.Random (RandomGen (..))
 
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+
+data NodeProcess v m =
+  NodeProcess
+  {
+    incoming :: TQueue m (InEnvelope v)
+  , outgoing :: TQueue m (OutEnvelope v)
+  }
+    deriving stock (Generic)
 
 initializeNodes
   :: RandomGen g
   => Parameters
-  -> Protocol
   -> UTCTime
   -> Topology
-  -> Rand g (M.Map NodeId (NodeState t))
-initializeNodes parameters protocol now Topology{connections} =
-  sequence $ initializeNode parameters protocol now `M.mapWithKey` connections
+  -> Rand g (M.Map NodeId (NodeState v))
+initializeNodes parameters now Topology{connections} =
+  sequence $ initializeNode parameters now `M.mapWithKey` connections
   
 initializeNode
   :: RandomGen g
   => Parameters
-  -> Protocol
   -> UTCTime
   -> NodeId
   -> S.Set NodeId
-  -> Rand g (NodeState t)
-initializeNode Parameters{maximumStake} protocol clock nodeId downstreams =
-  do
-    let
-      slot = 0
-      preferredChain = Genesis
-    stake <- getRandomR (1, maximumStake)
-    vrfOutput <- getRandomR (0, 1)
-    pure NodeState{..}
+  -> Rand g (NodeState v)
+initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
+  NodeState nodeId'
+    <$> (MkPartyId . VerificationKey . BS.pack <$> replicateM 6 getRandom)
+    <*> pure clock'
+    <*> pure 0
+    <*> getRandomR (1, maximumStake)
+    <*> getRandomR (0, 1)
+    <*> pure Genesis
+    <*> pure downstreams'
+    <*> pure False
+    <*> pure False
 
 runNode
-  :: MonadSay m
+  :: Default v
+  => MonadDelay m
   => MonadSTM m
   => MonadTime m
   => RandomGen g
   => g
-  -> NodeState t
-  -> NodeProcess t m
+  -> Parameters
+  -> Protocol
+  -> NodeState v
+  -> NodeProcess v m
   -> m ()
-runNode _gen initial NodeProcess{..} =
+runNode gen0 parameters protocol state0 NodeProcess{..} =
   let
-    go state =
+    go gen state =
       do
         now <- getCurrentTime
-        atomically (inMessage <$> readTQueue incoming) >>= \case
-          NextSlot slot -> say $ "New slot: " <> show slot
-          SomeBlock _ -> say "Some block."
-          NewChain _ -> say "New chain."
-        atomically $ writeTQueue outgoing $ Idle now (nodeId initial)
-        go state
+        atomically (readTQueue incoming) >>= \case
+          InEnvelope{..} ->
+            do
+              ((state', message), gen') <-
+                case inMessage of
+                  NextSlot slot ->
+                    do
+                      threadDelay 1000000
+                      pure $ nextSlot gen parameters protocol slot state
+                  SomeBlock _ -> error "Block transfer not implemented."
+                  NewChain chain -> pure $ newChain gen parameters protocol chain state
+              atomically
+                $ do
+                  case message of
+                    Nothing -> pure ()
+                    Just message' ->
+                      mapM_ (writeTQueue outgoing . OutEnvelope now (state ^. nodeId) (SendMessage message') 0)
+                        $ S.toList $ state ^. downstreams
+                  writeTQueue outgoing . Idle now $ state ^. nodeId
+              go gen' $ state' & clock .~ now
+          Stop ->
+            atomically . writeTQueue outgoing $ Exit now (state ^. nodeId) state
   in
-    go initial  
+    do
+      go gen0 state0

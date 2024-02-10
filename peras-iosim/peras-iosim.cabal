@@ -12,13 +12,13 @@ extra-source-files: ReadMe.md
 
 library
   exposed-modules:
-    Peras.IOSim
-    Peras.IOSim.Message
+    Peras.IOSim.GraphViz
     Peras.IOSim.Message.Types
     Peras.IOSim.Network
     Peras.IOSim.Network.Types
     Peras.IOSim.Node
     Peras.IOSim.Node.Types
+    Peras.IOSim.Protocol
     Peras.IOSim.Protocol.Types
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
@@ -34,6 +34,7 @@ library
     , data-default
     , io-classes
     , io-sim
+    , language-dot
     , lens
     , MonadRandom
     , mtl
@@ -49,8 +50,11 @@ executable peras-iosim
   other-modules:    Paths_peras_iosim
   build-depends:
     , base >=4.9 && <5
+    , directory
+    , optparse-applicative
     , peras-iosim
---  , optparse-applicative
+    , process 
+    , temporary
     , yaml
   ghc-options:      -Wall -Wunused-packages
   default-language: Haskell2010

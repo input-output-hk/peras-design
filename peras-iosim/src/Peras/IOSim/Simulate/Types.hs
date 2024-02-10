@@ -21,7 +21,6 @@ data Parameters =
   , peerCount :: Int
   , downstreamCount :: Int
   , maximumStake :: Currency
-  , meanCommitteeSize :: Int
   }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -35,7 +34,6 @@ instance A.FromJSON Parameters where
           peerCount <- o A..: "peerCount"
           downstreamCount <- o A..: "downstreamCount"
           maximumStake <- o A..: "maximumStake"
-          meanCommitteeSize <- o A..: "meanCommitteeSize"
           pure Parameters{..}
 
 instance A.ToJSON Parameters where
@@ -47,5 +45,4 @@ instance A.ToJSON Parameters where
       , "peerCount" A..= peerCount
       , "downstreamCount" A..= downstreamCount
       , "maximumStake" A..= maximumStake
-      , "meanCommitteeSize" A..= meanCommitteeSize
       ]

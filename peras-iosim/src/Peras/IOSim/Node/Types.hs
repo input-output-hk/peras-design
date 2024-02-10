@@ -2,72 +2,81 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Peras.IOSim.Node.Types (
-  NodeProcess(..)
-, NodeState(..)
+  NodeState(NodeState)
+, clock
+, committeeMember
+, downstreams
+, nodeId
+, owner
+, preferredChain
+, slot
+, slotLeader
+, stake
+, vrfOutput
 ) where
 
-import Control.Concurrent.Class.MonadSTM.TQueue (TQueue)
+import Control.Lens (makeLenses)
 import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
-import Peras.Block (Slot)
+import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
-import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Types (Currency)
 import Peras.Message(NodeId)
+import Peras.Orphans ()
 
 import qualified Data.Aeson as A
 import qualified Data.Set as S
 
-data NodeState t =
+data NodeState v =
   NodeState
   {
-    nodeId :: NodeId
-  , protocol :: Protocol
-  , clock :: UTCTime
-  , slot :: Slot
-  , stake :: Currency
-  , vrfOutput :: Double
-  , preferredChain :: Chain t
-  , downstreams :: S.Set NodeId
+    _nodeId :: NodeId
+  , _owner :: PartyId
+  , _clock :: UTCTime
+  , _slot :: Slot
+  , _stake :: Currency
+  , _vrfOutput :: Double
+  , _preferredChain :: Chain v
+  , _downstreams :: S.Set NodeId
+  , _slotLeader :: Bool
+  , _committeeMember :: Bool
   }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON t => A.FromJSON (NodeState t) where
+instance A.FromJSON v => A.FromJSON (NodeState v) where
   parseJSON =
     A.withObject "NodeState"
       $ \o ->
         do
-          nodeId <- o A..: "nodeId"
-          protocol <- o A..: "protocol"
-          clock <- o A..: "clock"
-          slot <- o A..: "slot"
-          stake <- o A..: "stake"
-          vrfOutput <- o A..: "vrfOutput"
-          preferredChain <- o A..: "preferredChain"
-          downstreams <- o A..: "downstreams"
+          _nodeId <- o A..: "nodeId"
+          _owner <- o A..: "owner"
+          _clock <- o A..: "clock"
+          _slot <- o A..: "slot"
+          _stake <- o A..: "stake"
+          _vrfOutput <- o A..: "vrfOutput"
+          _preferredChain <- o A..: "preferredChain"
+          _downstreams <- o A..: "downstreams"
+          _slotLeader <- o A..: "slotLeader"
+          _committeeMember <- o A..: "committeeMember"
           pure NodeState{..}
 
-instance A.ToJSON t => A.ToJSON (NodeState t) where
+instance A.ToJSON v => A.ToJSON (NodeState v) where
   toJSON NodeState{..} =
     A.object
       [
-        "nodeId" A..= nodeId
-      , "protocol" A..= protocol
-      , "clock" A..= clock
-      , "slot" A..= slot
-      , "stake" A..= stake
-      , "vrfOutput" A..= vrfOutput
-      , "preferredChain" A..= preferredChain
-      , "downstreams" A..= downstreams
+        "nodeId" A..= _nodeId
+      , "owner" A..= _owner
+      , "clock" A..= _clock
+      , "slot" A..= _slot
+      , "stake" A..= _stake
+      , "vrfOutput" A..= _vrfOutput
+      , "preferredChain" A..= _preferredChain
+      , "downstreams" A..= _downstreams
+      , "slotLeader" A..= _slotLeader
+      , "committeeMember" A..= _committeeMember
       ]
 
-data NodeProcess t m =
-  NodeProcess
-  {
-    incoming :: TQueue m (InEnvelope t)
-  , outgoing :: TQueue m (OutEnvelope t)
-  }
-    deriving stock (Generic)
+makeLenses ''NodeState

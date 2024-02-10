@@ -9,6 +9,7 @@ module Peras.IOSim.Network.Types (
 , NetworkState
 , Topology(..)
 , activeNodes
+, exitStates
 , lastSlot
 , lastTime
 ) where
@@ -20,6 +21,7 @@ import Data.Default (Default(..))
 import GHC.Generics (Generic)
 import Peras.Block (Slot)
 import Peras.IOSim.Message.Types (OutEnvelope, InEnvelope)
+import Peras.IOSim.Node.Types (NodeState)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
@@ -36,33 +38,35 @@ instance FromJSON Topology where
 instance ToJSON Topology where
   toJSON Topology{..} = A.object ["connections" A..= connections]
 
-data Network t m =
+data Network v m =
   Network
   {
-    nodesIn :: M.Map NodeId (TQueue m (InEnvelope t))
-  , nodesOut :: TQueue m (OutEnvelope t)
+    nodesIn :: M.Map NodeId (TQueue m (InEnvelope v))
+  , nodesOut :: TQueue m (OutEnvelope v)
   }
   deriving stock (Generic)
 
-data NetworkState =
+data NetworkState v =
   NetworkState
   {
     _lastSlot :: Slot
   , _lastTime :: UTCTime
   , _activeNodes :: S.Set NodeId
+  , _exitStates :: M.Map NodeId (NodeState v)
   }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance Default NetworkState where
-  def = NetworkState 0 (read "2000-01-01 00:00:00.0 UTC") mempty
+instance Default (NetworkState v) where
+  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty M.empty
 
-instance ToJSON NetworkState where
+instance ToJSON v => ToJSON (NetworkState v) where
   toJSON NetworkState{..} =
     A.object
       [
         "lastSlot" A..= _lastSlot
       , "lastTime" A..= _lastTime
       , "activeNodes" A..= _activeNodes
+      , "exitStates" A..= _exitStates
       ]
 
 makeLenses ''NetworkState

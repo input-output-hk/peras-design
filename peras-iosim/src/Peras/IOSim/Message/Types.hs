@@ -12,45 +12,63 @@ module Peras.IOSim.Message.Types (
 import Control.Applicative ((<|>))
 import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
+import Peras.Block (Block)
+import Peras.IOSim.Node.Types (NodeState)
 import Peras.IOSim.Types (ByteSize)
 import Peras.Message (Message, NodeId)
-import Peras.Block (Block)
 import Peras.Orphans ()
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
 
-data InEnvelope t =
-  InEnvelope
-  {
-    origin :: Maybe NodeId
-  , inMessage :: Message t
-  }
+data InEnvelope v =
+    InEnvelope
+    {
+      origin :: Maybe NodeId
+    , inMessage :: Message v
+    }
+  | Stop
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON t => A.FromJSON (InEnvelope t) where
+instance A.FromJSON v => A.FromJSON (InEnvelope v) where
   parseJSON =
     A.withObject "InEnvelope"
       $ \o ->
-        do
-          origin <- o A..: "origin"
-          inMessage <-o A..: "inMessage"
-          pure InEnvelope{..}
+        let
+          parseInEnvelope =
+            do
+              origin <- o A..: "origin"
+              inMessage <-o A..: "inMessage"
+              pure InEnvelope{..}
+          parseStop =
+            do
+              action <- o A..: "action"
+              if action == "Stop"
+                then pure Stop
+                else A.parseFail $ "Illegal action: " <> action
+         in
+           parseInEnvelope <|> parseStop
 
-instance A.ToJSON t => A.ToJSON (InEnvelope t) where
+instance A.ToJSON v => A.ToJSON (InEnvelope v) where
   toJSON InEnvelope{..} =
     A.object 
       [
         "origin" A..= origin
       , "inMessage" A..= inMessage
       ]
+  toJSON Stop =
+    A.object
+      [
+        "action" A..= ("Stop" :: String)
+      ]
 
 -- TODO: Refactor (or eliminate) when the Agda and QuickCheck code stabilizes.
-data OutMessage t =
-    FetchBlock (Block t)
-  | SendMessage (Message t)
+data OutMessage v =
+    FetchBlock (Block v)
+  | SendMessage (Message v)
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON t => A.FromJSON (OutMessage t) where
+instance A.FromJSON v => A.FromJSON (OutMessage v) where
   parseJSON =
     A.withObject "OutMessage"
       $ \o ->
@@ -59,9 +77,9 @@ instance A.FromJSON t => A.FromJSON (OutMessage t) where
           case output of
             "NextSlot" -> FetchBlock <$> o A..: "block"
             "SendMessage" -> SendMessage <$> o A..: "message"
-            _ -> fail $ "Illegal output: " <> output
+            _ -> A.parseFail $ "Illegal output: " <> output
 
-instance A.ToJSON t => A.ToJSON (OutMessage t) where
+instance A.ToJSON v => A.ToJSON (OutMessage v) where
   toJSON (FetchBlock block) =
     A.object
       [
@@ -75,45 +93,59 @@ instance A.ToJSON t => A.ToJSON (OutMessage t) where
       , "message" A..= message
       ]
 
-data OutEnvelope t =
+data OutEnvelope v =
     OutEnvelope
     {
       timestamp :: UTCTime
-    , outMessage :: OutMessage t
+    , source :: NodeId
+    , outMessage :: OutMessage v
     , bytes :: ByteSize
     , destination :: NodeId
-    , source :: NodeId
     }
   | Idle
     {
       timestamp :: UTCTime
     , source :: NodeId
     }
+  | Exit
+    {
+      timestamp :: UTCTime
+    , source :: NodeId
+    , nodeState :: NodeState v
+    }
     deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON t => A.FromJSON (OutEnvelope t) where
+instance A.FromJSON v => A.FromJSON (OutEnvelope v) where
   parseJSON =
     A.withObject "OutEnvelope"
       $ \o ->
         let
-          parseMessage = OutEnvelope <$> o A..: "timestamp" <*> o A..: "outMessage" <*> o A..: "bytes" <*> o A..: "destination" <*> o A..: "source"
+          parseMessage = OutEnvelope <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "outMessage" <*> o A..: "bytes" <*> o A..: "destination"
           parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source"
+          parseExit = Exit <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "nodeState"
         in
-          parseMessage <|> parseIdle
+          parseMessage <|> parseIdle <|> parseExit
   
-instance A.ToJSON t => A.ToJSON (OutEnvelope t) where
+instance A.ToJSON v => A.ToJSON (OutEnvelope v) where
   toJSON OutEnvelope{..} =
     A.object
       [
         "timestamp" A..= timestamp
+      , "source" A..= source
       , "outMessage" A..= outMessage
       , "bytes" A..= bytes
       , "destination" A..= destination
-      , "source" A..= source
       ]
   toJSON Idle{..} =
     A.object
       [
         "timestamp" A..= timestamp
       , "source" A..= source
+      ]
+  toJSON Exit{..} =
+    A.object
+      [
+        "timestamp" A..= timestamp
+      , "source" A..= source
+      , "nodeState" A..= nodeState
       ]
