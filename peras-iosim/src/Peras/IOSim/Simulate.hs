@@ -1,30 +1,38 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
-module Peras.IOSim.Simulate where
+module Peras.IOSim.Simulate (
+  simulate
+) where
 
-import Control.Monad.Class.MonadSay (MonadSay(say))
 import Control.Monad.Class.MonadTime (MonadTime(getCurrentTime))
 import Control.Monad.IOSim (ppTrace, runSimTrace)
-import Peras.IOSim.Network (emptyTopology, connectNode, createNetwork, runNetwork)
+import Control.Monad.Random (runRand)
+import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
 import Peras.IOSim.Node (initializeNodes)
+import Peras.IOSim.Protocol.Types (Protocol)
+import Peras.IOSim.Simulate.Types (Parameters(..))
+import System.Random (mkStdGen)
 
-example :: IO ()
-example =
+simulate
+  :: Parameters
+  -> Protocol
+  -> IO ()
+simulate parameters@Parameters{..} protocol =
   let
-    nodeId1 = "Party 1"
-    nodeId2 = "Party 2"
-    topology =
-      connectNode nodeId1 nodeId2
-        $ connectNode nodeId2 nodeId1
-          emptyTopology 
+    gen = mkStdGen randomSeed
     result =
       runSimTrace
         $ do
           now <- getCurrentTime
-          let states = initializeNodes now topology
-          say "Hello"
+          let
+            ((states, topology), gen') =
+              flip runRand gen
+                $ do
+                  topology' <- randomTopology parameters
+                  states' <- initializeNodes parameters protocol now topology'
+                  pure (states', topology')
           network <- createNetwork topology
-          runNetwork states network 100
+          runNetwork gen' states network endSlot
   in
     mapM_ putStrLn . lines
       $ ppTrace result

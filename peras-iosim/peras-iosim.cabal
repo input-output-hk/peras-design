@@ -19,7 +19,9 @@ library
     Peras.IOSim.Network.Types
     Peras.IOSim.Node
     Peras.IOSim.Node.Types
+    Peras.IOSim.Protocol.Types
     Peras.IOSim.Simulate
+    Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
     Peras.Orphans
   hs-source-dirs:   src
@@ -33,8 +35,10 @@ library
     , io-classes
     , io-sim
     , lens
+    , MonadRandom
     , mtl
     , peras-design
+    , random
     , text
   default-language: Haskell2010
   ghc-options:      -Wall -Wunused-packages
@@ -47,5 +51,6 @@ executable peras-iosim
     , base >=4.9 && <5
     , peras-iosim
 --  , optparse-applicative
+    , yaml
   ghc-options:      -Wall -Wunused-packages
   default-language: Haskell2010
