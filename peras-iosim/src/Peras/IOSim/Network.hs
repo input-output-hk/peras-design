@@ -153,7 +153,7 @@ runNetwork gen parameters protocol states Network{..} endSlot =
               lift $ threadDelay 1000000
           -- Receive and route messages.
           received <- lift . atomically $ flushTQueue nodesOut
-          mapM_ route received
+          mapM_ route received  -- FIXME: Propagation is too fast, so we need network delays.
           -- Check on whether the simulation is ending.
           doExit <- lastSlot `uses` (>= endSlot)
           if doExit

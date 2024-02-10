@@ -14,12 +14,15 @@ module Peras.IOSim.Node (
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Lens ((&), (.~), (^.))
+import Control.Monad (replicateM)
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay(..))
-import Control.Monad.Random (Rand, getRandomR)
+import Control.Monad.Random (Rand, getRandom, getRandomR)
 import Data.Default (Default)
 import GHC.Generics (Generic)
+import Peras.Block (PartyId(MkPartyId))
 import Peras.Chain (Chain(Genesis))
+import Peras.Crypto (VerificationKey(VerificationKey))
 import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..), OutMessage(..))
 import Peras.IOSim.Network.Types (Topology(..))
 import Peras.IOSim.Node.Types (NodeState(NodeState), clock, nodeId, downstreams)
@@ -29,6 +32,7 @@ import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId)
 import System.Random (RandomGen (..))
 
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
@@ -57,11 +61,16 @@ initializeNode
   -> S.Set NodeId
   -> Rand g (NodeState v)
 initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
-  NodeState nodeId' clock' 0
-    <$> getRandomR (1, maximumStake)
+  NodeState nodeId'
+    <$> (MkPartyId . VerificationKey . BS.pack <$> replicateM 6 getRandom)
+    <*> pure clock'
+    <*> pure 0
+    <*> getRandomR (1, maximumStake)
     <*> getRandomR (0, 1)
     <*> pure Genesis
     <*> pure downstreams'
+    <*> pure False
+    <*> pure False
 
 runNode
   :: Default v

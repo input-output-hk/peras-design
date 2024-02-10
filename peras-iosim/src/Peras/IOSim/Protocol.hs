@@ -8,10 +8,10 @@ module Peras.IOSim.Protocol (
 import Control.Lens ((&), (.~), (^.))
 import Data.Bifunctor (first)
 import Data.Default (Default(def))
-import Peras.Block (Block(Block), PartyId(MkPartyId), Slot)
+import Peras.Block (Block(Block), Slot)
 import Peras.Chain (Chain(..))
-import Peras.Crypto
-import Peras.IOSim.Node.Types (NodeState, preferredChain, slot, stake)
+import Peras.Crypto (Hash(Hash), LeadershipProof(LeadershipProof), Signature(Signature))
+import Peras.IOSim.Node.Types (NodeState, owner, preferredChain, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol(..))
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.IOSim.Types (Currency)
@@ -36,18 +36,26 @@ nextSlot gen parameters PseudoPraos{..} slot' state =
     if leader
       then let
              (signature, gen'') = Signature `first` genByteString 6 gen'
-             block = Block slot' (MkPartyId $ VerificationKey mempty) (Hash mempty) def (LeadershipProof mempty) mempty signature
+             block = Block slot' (state ^. owner) (Hash mempty) def (LeadershipProof mempty) mempty signature
              chain = Cons block $ state ^. preferredChain
            in
              (
                (
                  state & slot .~ slot'
                        & preferredChain .~ chain
+                       & slotLeader .~ leader
                , Just $ NewChain chain
                )
              , gen''
              )
-      else ((state & slot .~ slot', Nothing), gen')
+      else (
+             (
+               state & slot .~ slot'
+                     & slotLeader .~ leader
+             , Nothing
+             )
+           , gen'
+           )
 nextSlot _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
 nextSlot _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
 nextSlot _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
@@ -71,7 +79,9 @@ newChain gen _ PseudoPraos{} chain state =
         (
           (
             state & preferredChain .~ chain
-          , Just $ NewChain chain
+          , if False
+              then Just $ NewChain chain  -- FIXME: The chain propagates too quickly if we don't delay messages.
+              else Nothing                -- FIXME: The chain doesn't propagate quickly enough if we don't forward new chains.
           )
         , gen
         )

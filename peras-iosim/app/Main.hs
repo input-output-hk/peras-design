@@ -5,10 +5,15 @@ module Main (
   main
 ) where
 
+import Control.Monad (void)
 import Data.Version (showVersion)
 import Data.Maybe (fromJust, isJust)
 import Paths_peras_iosim (version)
+import Peras.IOSim.GraphViz (chainGraph, peersGraph, writeGraph)
 import Peras.IOSim.Simulate (simulate, writeReport, writeTrace)
+import System.Directory (removeFile)
+import System.IO.Temp (emptySystemTempFile)
+import System.Process (system)
 
 import qualified Data.Yaml as Y
 import qualified Options.Applicative as O
@@ -23,7 +28,30 @@ main =
     whenJust traceFile
       $ flip writeTrace $ fromJust trace
     case result of
-      Right state -> whenJust resultFile $ flip writeReport state
+      Right state ->
+        do
+          whenJust resultFile
+            $ flip writeReport state
+          let peers = peersGraph state
+          whenJust networkDotFile
+            $ flip writeGraph peers
+          whenJust networkPngFile
+            $ \pngFile ->
+              do
+                dotFile <- emptySystemTempFile "network.dot"
+                writeGraph dotFile peers  -- FIXME: Potentially duplicative.
+                void . system $ "circo -Tpng -o " <> pngFile <> " " <> dotFile
+                removeFile dotFile
+          let chains = chainGraph state
+          whenJust chainDotFile
+            $ flip writeGraph chains
+          whenJust chainPngFile
+            $ \pngFile ->
+              do
+                dotFile <- emptySystemTempFile "chain.dot"
+                writeGraph dotFile chains  -- FIXME: Potentially duplicative.
+                void . system $ "dot -Tpng -o " <> pngFile <> " " <> dotFile
+                removeFile dotFile
       Left failure -> error $ show failure
 
 whenJust
