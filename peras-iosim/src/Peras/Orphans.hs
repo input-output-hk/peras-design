@@ -39,18 +39,18 @@ instance IsString Bytes where
   fromString = read
 
 instance A.FromJSON Bytes where
-  parseJSON = A.withText "Base 16 Bytes" $ either fail (pure . Bytes) . B16.decode . BS8.pack . T.unpack
+  parseJSON = A.withText "Base 16 Bytes" $ either A.parseFail (pure . Bytes) . B16.decode . BS8.pack . T.unpack
 
 instance A.ToJSON Bytes where
   toJSON = A.String . T.pack . show
 
-deriving stock instance Eq t => Eq (Block t)
-deriving stock instance Generic t => Generic (Block t)
-deriving stock instance Ord t => Ord (Block t)
-deriving stock instance Read t => Read (Block t)
-deriving stock instance Show t => Show (Block t)
+deriving stock instance Eq v => Eq (Block v)
+deriving stock instance Generic v => Generic (Block v)
+deriving stock instance Ord v => Ord (Block v)
+deriving stock instance Read v => Read (Block v)
+deriving stock instance Show v => Show (Block v)
 
-instance A.FromJSON t => A.FromJSON (Block t) where
+instance A.FromJSON v => A.FromJSON (Block v) where
   parseJSON =
     A.withObject "Block"
       $ \o ->
@@ -64,7 +64,7 @@ instance A.FromJSON t => A.FromJSON (Block t) where
           signature <- o A..: "signature"
           pure Block{..}
 
-instance A.ToJSON t => A.ToJSON (Block t) where
+instance A.ToJSON v => A.ToJSON (Block v) where
   toJSON Block{..} =
     A.object
       [
@@ -77,13 +77,13 @@ instance A.ToJSON t => A.ToJSON (Block t) where
       , "signature" A..= signature
       ]
 
-deriving stock instance Eq t => Eq (Chain t)
-deriving stock instance Generic t => Generic (Chain t)
-deriving stock instance Ord t => Ord (Chain t)
-deriving stock instance Read t => Read (Chain t)
-deriving stock instance Show t => Show (Chain t)
+deriving stock instance Eq v => Eq (Chain v)
+deriving stock instance Generic v => Generic (Chain v)
+deriving stock instance Ord v => Ord (Chain v)
+deriving stock instance Read v => Read (Chain v)
+deriving stock instance Show v => Show (Chain v)
 
-instance A.FromJSON t => A.FromJSON (Chain t) where
+instance A.FromJSON v => A.FromJSON (Chain v) where
   parseJSON =
     A.withObject "Chain"
       $ \o ->
@@ -94,7 +94,7 @@ instance A.FromJSON t => A.FromJSON (Chain t) where
             (\tip' -> Cons tip' <$> o A..: "previous")
             tip
 
-instance A.ToJSON t => A.ToJSON (Chain t) where
+instance A.ToJSON v => A.ToJSON (Chain v) where
   toJSON Genesis =
     A.object
       [
@@ -116,13 +116,13 @@ deriving via Bytes instance IsString Hash
 deriving via Bytes instance A.FromJSON Hash
 deriving via Bytes instance A.ToJSON Hash
 
-deriving stock instance Eq t => Eq (Message t)
-deriving stock instance Generic t => Generic (Message t)
-deriving stock instance Ord t => Ord (Message t)
-deriving stock instance Read t => Read (Message t)
-deriving stock instance Show t => Show (Message t)
+deriving stock instance Eq v => Eq (Message v)
+deriving stock instance Generic v => Generic (Message v)
+deriving stock instance Ord v => Ord (Message v)
+deriving stock instance Read v => Read (Message v)
+deriving stock instance Show v => Show (Message v)
 
-instance A.FromJSON t => A.FromJSON (Message t) where
+instance A.FromJSON v => A.FromJSON (Message v) where
   parseJSON =
     A.withObject "Message"
       $ \o ->
@@ -132,9 +132,9 @@ instance A.FromJSON t => A.FromJSON (Message t) where
             "NextSlot" -> NextSlot <$> o A..: "slot"
             "SomeBlock" -> SomeBlock <$> o A..: "block"
             "NewChain" -> NewChain <$> o A..: "chain"
-            _ -> fail $ "Illegal input: " <> input
+            _ -> A.parseFail $ "Illegal input: " <> input
 
-instance A.ToJSON t => A.ToJSON (Message t) where
+instance A.ToJSON v => A.ToJSON (Message v) where
   toJSON (NextSlot slot) =
     A.object
       [
@@ -214,7 +214,7 @@ instance A.ToJSON PartyId where
   toJSON = A.toJSON . vkey
 
 instance A.FromJSONKey PartyId where
-  fromJSONKey = A.FromJSONKeyTextParser $ either fail (pure . MkPartyId . VerificationKey) . B16.decode . BS8.pack . T.unpack
+  fromJSONKey = A.FromJSONKeyTextParser $ either A.parseFail (pure . MkPartyId . VerificationKey) . B16.decode . BS8.pack . T.unpack
 
 instance A.ToJSONKey PartyId where
   toJSONKey = A.toJSONKeyText $ T.pack . BS8.unpack . B16.encode . verificationKey . vkey
@@ -242,7 +242,7 @@ instance IsString Tx where
   fromString = read
 
 instance A.FromJSON Tx where
-  parseJSON = A.withText "Base 16 Bytes" $ either fail (pure . Tx) . B16.decode . BS8.pack . T.unpack
+  parseJSON = A.withText "Base 16 Bytes" $ either A.parseFail (pure . Tx) . B16.decode . BS8.pack . T.unpack
 
 instance A.ToJSON Tx where
   toJSON = A.String . T.pack . show

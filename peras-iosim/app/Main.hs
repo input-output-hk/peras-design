@@ -3,11 +3,15 @@ module Main (
 ) where
 
 import Peras.IOSim.Protocol.Types (Protocol(..))
-import Peras.IOSim.Simulate (simulate)
+import Peras.IOSim.Simulate (simulate, writeReport, writeTrace)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 
 main :: IO ()
-main = simulate exampleParameters examplePraos
+main =
+  do
+    let trace = simulate exampleParameters examplePraos
+    writeTrace "trace.txt" trace
+    writeReport "report.yaml" trace
 
 exampleParameters :: Parameters
 exampleParameters =

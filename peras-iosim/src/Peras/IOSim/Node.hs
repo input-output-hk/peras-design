@@ -1,22 +1,26 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Node (
-  initializeNode
+  NodeProcess(..)
+, initializeNode
 , initializeNodes
 , runNode
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
-import Control.Concurrent.Class.MonadSTM.TQueue (readTQueue, writeTQueue)
+import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Monad.Class.MonadSay (MonadSay(say))
 import Control.Monad.Class.MonadTime (MonadTime(..), UTCTime)
 import Control.Monad.Random (Rand, getRandomR)
+import GHC.Generics (Generic)
 import Peras.Chain (Chain(Genesis))
-import Peras.IOSim.Message.Types (InEnvelope(inMessage), OutEnvelope(Idle))
+import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..))
 import Peras.IOSim.Network.Types (Topology(..))
-import Peras.IOSim.Node.Types (NodeProcess(..), NodeState(..))
+import Peras.IOSim.Node.Types (NodeState(..))
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import Peras.Message (Message(..), NodeId)
@@ -25,13 +29,21 @@ import System.Random (RandomGen (..))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
+data NodeProcess v m =
+  NodeProcess
+  {
+    incoming :: TQueue m (InEnvelope v)
+  , outgoing :: TQueue m (OutEnvelope v)
+  }
+    deriving stock (Generic)
+
 initializeNodes
   :: RandomGen g
   => Parameters
   -> Protocol
   -> UTCTime
   -> Topology
-  -> Rand g (M.Map NodeId (NodeState t))
+  -> Rand g (M.Map NodeId (NodeState v))
 initializeNodes parameters protocol now Topology{connections} =
   sequence $ initializeNode parameters protocol now `M.mapWithKey` connections
   
@@ -42,8 +54,8 @@ initializeNode
   -> UTCTime
   -> NodeId
   -> S.Set NodeId
-  -> Rand g (NodeState t)
-initializeNode Parameters{maximumStake} protocol clock nodeId downstreams =
+  -> Rand g (NodeState v)
+initializeNode parameters@Parameters{maximumStake} protocol clock nodeId downstreams =
   do
     let
       slot = 0
@@ -58,19 +70,24 @@ runNode
   => MonadTime m
   => RandomGen g
   => g
-  -> NodeState t
-  -> NodeProcess t m
+  -> NodeState v
+  -> NodeProcess v m
   -> m ()
-runNode _gen initial NodeProcess{..} =
+runNode _gen initial@NodeState{nodeId} NodeProcess{..} =
   let
     go state =
       do
         now <- getCurrentTime
-        atomically (inMessage <$> readTQueue incoming) >>= \case
-          NextSlot slot -> say $ "New slot: " <> show slot
-          SomeBlock _ -> say "Some block."
-          NewChain _ -> say "New chain."
-        atomically $ writeTQueue outgoing $ Idle now (nodeId initial)
-        go state
+        atomically (readTQueue incoming) >>= \case
+          InEnvelope{..} ->
+            do
+              case inMessage of
+                NextSlot slot -> say $ "New slot: " <> show slot
+                SomeBlock _ -> say "Some block."
+                NewChain _ -> say "New chain."
+              atomically . writeTQueue outgoing $ Idle now nodeId
+              go state
+          Stop ->
+            atomically . writeTQueue outgoing $ Exit now nodeId initial
   in
     go initial  

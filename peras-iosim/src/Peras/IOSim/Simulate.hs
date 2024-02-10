@@ -1,38 +1,59 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Simulate (
   simulate
+, writeReport
+, writeTrace
 ) where
 
 import Control.Monad.Class.MonadTime (MonadTime(getCurrentTime))
-import Control.Monad.IOSim (ppTrace, runSimTrace)
+import Control.Monad.IOSim (SimTrace, ppTrace, runSimTrace, traceResult)
 import Control.Monad.Random (runRand)
 import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
+import Peras.IOSim.Network.Types (NetworkState)
 import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters(..))
 import System.Random (mkStdGen)
 
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Yaml as Y
+
 simulate
   :: Parameters
   -> Protocol
-  -> IO ()
+  -> SimTrace (NetworkState ())
 simulate parameters@Parameters{..} protocol =
   let
     gen = mkStdGen randomSeed
-    result =
-      runSimTrace
-        $ do
-          now <- getCurrentTime
-          let
-            ((states, topology), gen') =
-              flip runRand gen
-                $ do
-                  topology' <- randomTopology parameters
-                  states' <- initializeNodes parameters protocol now topology'
-                  pure (states', topology')
-          network <- createNetwork topology
-          runNetwork gen' states network endSlot
   in
-    mapM_ putStrLn . lines
-      $ ppTrace result
+    runSimTrace
+      $ do
+        now <- getCurrentTime
+        let
+          ((states, topology), gen') =
+            flip runRand gen
+              $ do
+                topology' <- randomTopology parameters
+                states' <- initializeNodes parameters protocol now topology'
+                pure (states', topology')
+        network <- createNetwork topology
+        runNetwork gen' states network endSlot
+
+writeTrace
+  :: Show v
+  => FilePath
+  -> SimTrace (NetworkState v)
+  -> IO ()
+writeTrace filename trace = writeFile filename $ ppTrace trace
+
+writeReport
+  :: Y.ToJSON v
+  => FilePath
+  -> SimTrace (NetworkState v)
+  -> IO ()
+writeReport filename trace =
+  case traceResult True trace of
+    Right result -> BS8.writeFile filename $ Y.encode result
+    Left failure -> print failure

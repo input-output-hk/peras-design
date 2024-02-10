@@ -10,6 +10,7 @@ module Peras.IOSim.Protocol.Types (
 import GHC.Generics (Generic)
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
 
 data Protocol =
     PseudoPraos  -- | Low-fidelity version of OuroborosPraos.
@@ -54,7 +55,7 @@ instance A.FromJSON Protocol where
               pure OuroborosGenesis
             "OuroborosPeras" ->
               pure OuroborosPeras
-            _ -> fail protocol
+            _ -> A.parseFail protocol
 
 instance A.ToJSON Protocol where
   toJSON PseudoPraos{..} =
