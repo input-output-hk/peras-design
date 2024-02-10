@@ -11,7 +11,7 @@ cabal-version:      3.4
 --   http://haskell.org/cabal/users-guide/
 --
 -- The name of the package.
-name:               quickcheck-model
+name:               peras-quickcheck
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -120,7 +120,7 @@ test-suite quickcheck-model-test
                   , io-sim
                   , mtl
                   , quickcheck-dynamic
-                  , quickcheck-model
+                  , peras-quickcheck
                   , si-timers
 
     build-tool-depends:

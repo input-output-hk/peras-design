@@ -17,7 +17,7 @@ index-state:
 packages:
   .
   peras-iosim
-  quickcheck-model
+  peras-quickcheck
   random-forks
   sketch
 
