@@ -12,7 +12,6 @@ extra-source-files: ReadMe.md
 
 library
   exposed-modules:
-    Peras.IOSim.Message
     Peras.IOSim.Message.Types
     Peras.IOSim.Network
     Peras.IOSim.Network.Types

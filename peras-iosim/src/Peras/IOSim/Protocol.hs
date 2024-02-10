@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Protocol (
-  nextSlot
+  newChain
+, nextSlot
 ) where
 
 import Control.Lens ((&), (.~), (^.))
@@ -51,6 +52,34 @@ nextSlot _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet impleme
 nextSlot _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
 nextSlot _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
 nextSlot _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
+
+newChain
+  :: RandomGen g
+  => g
+  -> Parameters
+  -> Protocol
+  -> Chain v
+  -> NodeState v
+  -> ((NodeState v, Maybe (Message v)), g)
+newChain gen _ PseudoPraos{} chain state =
+  let
+    length' Genesis = (0 :: Int)
+    length' (Cons _ chain') = 1 + length' chain'
+  in
+    if length' chain > length' (state ^. preferredChain)
+      then
+        (
+          (
+            state & preferredChain .~ chain
+          , Just $ NewChain chain
+          )
+        , gen
+        )
+      else ((state, Nothing), gen)
+newChain _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
+newChain _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
+newChain _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
+newChain _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
 
 isSlotLeader
   :: RandomGen g
