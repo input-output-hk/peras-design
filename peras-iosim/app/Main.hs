@@ -17,13 +17,12 @@ exampleParameters =
   , peerCount = 30
   , downstreamCount = 5
   , maximumStake = 1000
-  , meanCommitteeSize = 10
   , endSlot = 100
   }
 
 examplePraos :: Protocol
 examplePraos =
-  PraosProtocol
+  PseudoPraos
   {
     activeSlotCoefficient = 1 / 20
   }
