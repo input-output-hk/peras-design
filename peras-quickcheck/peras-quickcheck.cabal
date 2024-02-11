@@ -59,12 +59,12 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Peras.Model
+    exposed-modules: Peras.Model
+                     Peras.Node
 
     -- Modules included in this library but not exported.
     other-modules: Peras.Block
                    Peras.Message
-
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -88,6 +88,9 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+    -- external libraries used to interact with Rust node
+    extra-libraries: netsim
+
 test-suite quickcheck-model-test
     -- Import common warning flags.
     import:           warnings
@@ -96,7 +99,8 @@ test-suite quickcheck-model-test
     default-language: Haskell2010
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: Peras.ModelSpec
+                   Peras.NodeSpec
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -112,15 +116,16 @@ test-suite quickcheck-model-test
 
     -- Test dependencies.
     build-depends:
-                            base ^>=4.18.1.0
+                              base ^>=4.18.1.0
                   , QuickCheck
                   , QuickCheck
+                  , bytestring
                   , data-default
                   , hspec
                   , io-sim
                   , mtl
-                  , quickcheck-dynamic
                   , peras-quickcheck
+                  , quickcheck-dynamic
                   , si-timers
 
     build-tool-depends:
