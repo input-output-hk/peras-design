@@ -17,6 +17,11 @@ let
       name = "my-project";
       compiler-nix-name = lib.mkDefault "ghc96";
       modules = [ ];
+      flake.variants.profiled.modules = [{
+        enableProfiling = true;
+        enableLibraryProfiling = true;
+      }];
+
     });
 
   cabalProject = cabalProject'.appendOverlays [ ];
