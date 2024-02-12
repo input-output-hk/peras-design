@@ -7,8 +7,18 @@
 module Peras.Node where
 
 import Data.ByteString (ByteString)
-import Data.Data (cast)
-import Foreign
+import qualified Data.ByteString as BS
+import Foreign (
+  Ptr,
+  Storable (alignment, peek, poke, sizeOf),
+  Word64,
+  Word8,
+  new,
+  newArray,
+  nullPtr,
+  plusPtr,
+  with,
+ )
 import Foreign.C.Types
 
 type Address = Word64
@@ -31,8 +41,14 @@ instance Storable ByteBuffer where
       <$> peek (addr `plusPtr` 0)
       <*> peek (addr `plusPtr` sizeOf @Word64 undefined)
 
-sendFfi :: Address -> ByteBuffer -> IO Bool
-sendFfi address buffer =
+sendFfi :: Address -> ByteString -> IO Bool
+sendFfi address bs = do
+  bytes <- newArray (BS.unpack bs)
+  let buffer =
+        ByteBuffer
+          { bufferSize = fromIntegral $ BS.length bs
+          , bytes
+          }
   with buffer (pure . send_ffi address)
 
 receiveFfi :: IO (Either String (ByteBuffer, Address))
