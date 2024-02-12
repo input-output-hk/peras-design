@@ -24,7 +24,7 @@ record ConsensusConfig : Set where
 -- already referenced by blocks in C, and is not an equivocation of a
 -- vote referenced by blocks in C.
 
-postulate chainWeight : ConsensusConfig -> Block⁺ -> set VoteBlockO -> Word64
+postulate chainWeight : ConsensusConfig -> Block⋆ -> set VoteBlockO -> Word64
 {-
 chainWeight ConsensusConfig{roundLength} Block{blockHeight, slotNumber} pendingVotes =
   let chainWeight = blockHeight
@@ -47,13 +47,13 @@ WordO = record {
 
 record ConsensusState : Set where
   constructor consensusState
-  field currentChain  : Block⁺
+  field currentChain  : Block⋆
         seenChains    : set BlockO
         votesReceived : Map WordO (Map BlockO (set VoteBlockO))
 
 data Decision : Set where
-  Tally : Vote Block⁺ → Decision
-  Seen  : Block⁺ → Decision
+  Tally : Vote Block⋆ → Decision
+  Seen  : Block⋆ → Decision
 
 {-
 nakamotoLayer :: ConsensusConfig -> ConsensusState -> Message Block -> Decision
