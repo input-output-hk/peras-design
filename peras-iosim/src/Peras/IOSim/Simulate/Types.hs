@@ -19,6 +19,7 @@ data Parameters = Parameters
   , peerCount :: Int
   , downstreamCount :: Int
   , maximumStake :: Currency
+  , messageDelay :: Double
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -32,6 +33,7 @@ instance A.FromJSON Parameters where
           peerCount <- o A..: "peerCount"
           downstreamCount <- o A..: "downstreamCount"
           maximumStake <- o A..: "maximumStake"
+          messageDelay <- o A..: "messageDelay"
           pure Parameters{..}
 
 instance A.ToJSON Parameters where
@@ -42,4 +44,5 @@ instance A.ToJSON Parameters where
       , "peerCount" A..= peerCount
       , "downstreamCount" A..= downstreamCount
       , "maximumStake" A..= maximumStake
+      , "messageDelay" A..= messageDelay
       ]

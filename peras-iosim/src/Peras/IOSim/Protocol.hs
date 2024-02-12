@@ -71,15 +71,7 @@ newChain gen _ PseudoPraos{} chain state =
   let length' Genesis = (0 :: Int)
       length' (Cons _ chain') = 1 + length' chain'
    in if length' chain > length' (state ^. preferredChain)
-        then
-          (
-            ( state & preferredChain .~ chain
-            , if False
-                then Just $ NewChain chain -- FIXME: The chain propagates too quickly if we don't delay messages.
-                else Nothing -- FIXME: The chain doesn't propagate quickly enough if we don't forward new chains.
-            )
-          , gen
-          )
+        then ((state & preferredChain .~ chain, Just $ NewChain chain), gen)
         else ((state, Nothing), gen)
 newChain _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
 newChain _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
