@@ -64,19 +64,22 @@ open Block public
 
 {-# COMPILE AGDA2HS Block #-}
 
-Block⁺ = Block (set HashO)
+Block⋆ = Block (set HashO)
 
 postulate
-  blEq : Relation.Binary.Rel Block⁺ 0ℓ
-  blLt : Relation.Binary.Rel Block⁺ 0ℓ
+  toHash : Block⋆ → Hash
+
+postulate
+  blEq : Relation.Binary.Rel Block⋆ 0ℓ
+  blLt : Relation.Binary.Rel Block⋆ 0ℓ
   blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
 
 BlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 BlockO = record {
-  Carrier            = Block⁺ ;
+  Carrier            = Block⋆ ;
   _≈_                = blEq ;
   _<_                = blLt ;
   isStrictTotalOrder = blIs }
 
 postulate
-  isValidBlock : Block⁺ -> Bool
+  isValidBlock : Block⋆ -> Bool

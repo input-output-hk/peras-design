@@ -2,6 +2,7 @@ module Peras.Chain where
 
 open import Agda.Builtin.Word
 open import Data.Bool
+open import Data.Nat using (ℕ)
 open import Level
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
 open import Relation.Binary using (StrictTotalOrder)
@@ -10,7 +11,7 @@ open import Peras.Crypto
 open import Peras.Block hiding (ByteString; emptyBS)
 
 record RoundNumber : Set where
-  field roundNumber : Word64
+  field roundNumber : ℕ
 
 record Vote msg : Set where
   constructor vote
@@ -21,13 +22,13 @@ record Vote msg : Set where
         signature                : Signature
 
 postulate
-  vblEq : Relation.Binary.Rel (Vote Block⁺) 0ℓ
-  vblLt : Relation.Binary.Rel (Vote Block⁺) 0ℓ
+  vblEq : Relation.Binary.Rel (Vote Block⋆) 0ℓ
+  vblLt : Relation.Binary.Rel (Vote Block⋆) 0ℓ
   vblIs : Relation.Binary.IsStrictTotalOrder vblEq vblLt
 
 VoteBlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 VoteBlockO = record {
-  Carrier            = (Vote Block⁺) ;
+  Carrier            = Vote Block⋆ ;
   _≈_                = vblEq ;
   _<_                = vblLt ;
   isStrictTotalOrder = vblIs }
@@ -45,10 +46,10 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
   isCommitteeMember vkey committeeMembershipProof
     ∧ verify vkey signature (toSignable v)
 
-record Chain⁺ : Set where
+record Chain⋆ : Set where
   constructor MkChain
   field blocks : set BlockO
-        tip : Block⁺ -- The tip of this chain, must be a member of `blocks`
+        tip : Block⋆ -- The tip of this chain, must be a member of `blocks`
         votes : set VoteBlockO -- The set of "pending" votes, eg. which have not been included in a `Block`.
 
 data Chain t : Set where
@@ -59,7 +60,7 @@ open Chain public
 
 {-# COMPILE AGDA2HS Chain #-}
 
--- Chain⁺ = Chain (set BlockO)
+-- Chain⋆ = Chain (set BlockO)
 
 -- | Chain validity
 --
@@ -79,10 +80,10 @@ open Chain public
 
 
 postulate
-  verifyLeadershipProof : Block⁺ → Bool
+  verifyLeadershipProof : Block⋆ → Bool
 
-  properlyLinked : Chain⁺ → Bool
-  decreasingSlots : Chain⁺ → Bool
+  properlyLinked : Chain⋆ → Bool
+  decreasingSlots : Chain⋆ → Bool
 
 {-
 correctBlocks : Chain → Bool
@@ -92,4 +93,4 @@ correctBlocks (MkChain blocks _ _) =
 -}
 
 postulate
-  isValidChain : Chain⁺ -> Bool
+  isValidChain : Chain⋆ -> Bool
