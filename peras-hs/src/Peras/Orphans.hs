@@ -5,19 +5,19 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.Orphans (
+
 ) where
 
 import Data.Bifunctor (first)
-import Data.String (IsString(..))
+import Data.String (IsString (..))
 import GHC.Generics (Generic)
-import Peras.Block (Block(..), PartyId(..), Tx(..))
-import Peras.Chain (Chain(..))
-import Peras.Crypto (Hash(..), LeadershipProof(..), MembershipProof(..), Signature(..), VerificationKey(..))
-import Peras.Message (NodeId(..), Message(..))
+import Peras.Block (Block (..), PartyId (..), Tx (..))
+import Peras.Chain (Chain (..))
+import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
+import Peras.Message (Message (..), NodeId (..))
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
@@ -30,7 +30,7 @@ import qualified Data.Text as T
 newtype Bytes = Bytes {getBytes :: BS.ByteString}
 
 instance Read Bytes where
-  readsPrec _ = either mempty (pure . (, "") . Bytes) . B16.decode . BS8.pack
+  readsPrec _ = either mempty (pure . (,"") . Bytes) . B16.decode . BS8.pack
 
 instance Show Bytes where
   show = BS8.unpack . B16.encode . getBytes
@@ -52,8 +52,8 @@ deriving stock instance Show v => Show (Block v)
 
 instance A.FromJSON v => A.FromJSON (Block v) where
   parseJSON =
-    A.withObject "Block"
-      $ \o ->
+    A.withObject "Block" $
+      \o ->
         do
           slotNumber <- o A..: "slotNo"
           creatorId <- o A..: "creatorId"
@@ -67,8 +67,7 @@ instance A.FromJSON v => A.FromJSON (Block v) where
 instance A.ToJSON v => A.ToJSON (Block v) where
   toJSON Block{..} =
     A.object
-      [
-        "slotNo" A..= slotNumber
+      [ "slotNo" A..= slotNumber
       , "creatorId" A..= creatorId
       , "parentBlock" A..= parentBlock
       , "includedVotes" A..= includedVotes
@@ -85,8 +84,8 @@ deriving stock instance Show v => Show (Chain v)
 
 instance A.FromJSON v => A.FromJSON (Chain v) where
   parseJSON =
-    A.withObject "Chain"
-      $ \o ->
+    A.withObject "Chain" $
+      \o ->
         do
           tip <- o A..: "tip"
           maybe
@@ -97,13 +96,11 @@ instance A.FromJSON v => A.FromJSON (Chain v) where
 instance A.ToJSON v => A.ToJSON (Chain v) where
   toJSON Genesis =
     A.object
-      [
-        "tip" A..= A.Null
+      [ "tip" A..= A.Null
       ]
   toJSON (Cons block chain) =
     A.object
-      [
-        "tip" A..= block
+      [ "tip" A..= block
       , "previous" A..= chain
       ]
 
@@ -124,8 +121,8 @@ deriving stock instance Show v => Show (Message v)
 
 instance A.FromJSON v => A.FromJSON (Message v) where
   parseJSON =
-    A.withObject "Message"
-      $ \o ->
+    A.withObject "Message" $
+      \o ->
         do
           input <- o A..: "input"
           case input of
@@ -137,20 +134,17 @@ instance A.FromJSON v => A.FromJSON (Message v) where
 instance A.ToJSON v => A.ToJSON (Message v) where
   toJSON (NextSlot slot) =
     A.object
-      [
-        "input" A..= ("NextSlot" :: String)
+      [ "input" A..= ("NextSlot" :: String)
       , "slot" A..= slot
       ]
   toJSON (SomeBlock block) =
     A.object
-      [
-        "input" A..= ("SomeBlock" :: String)
+      [ "input" A..= ("SomeBlock" :: String)
       , "block" A..= block
       ]
   toJSON (NewChain chain) =
     A.object
-      [
-        "input" A..= ("NewChain" :: String)
+      [ "input" A..= ("NewChain" :: String)
       , "chain" A..= chain
       ]
 
@@ -177,7 +171,7 @@ deriving stock instance Generic NodeId
 deriving stock instance Ord NodeId
 
 instance Read NodeId where
-  readsPrec _ = pure . (, "") . MkNodeId
+  readsPrec _ = pure . (,"") . MkNodeId
 
 instance Show NodeId where
   show = nodeId
@@ -233,7 +227,7 @@ deriving stock instance Generic Tx
 deriving stock instance Ord Tx
 
 instance Read Tx where
-  readsPrec _ = either mempty (pure . (, "") . Tx) . B16.decode . BS8.pack
+  readsPrec _ = either mempty (pure . (,"") . Tx) . B16.decode . BS8.pack
 
 instance Show Tx where
   show = BS8.unpack . B16.encode . tx

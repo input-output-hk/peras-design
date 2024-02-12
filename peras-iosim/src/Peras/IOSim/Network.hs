@@ -4,35 +4,43 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.IOSim.Network (
-  connectNode
-, createNetwork
-, emptyTopology
-, randomTopology
-, runNetwork
+  connectNode,
+  createNetwork,
+  emptyTopology,
+  randomTopology,
+  runNetwork,
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, writeTQueue)
-import Control.Lens ((%=), use, uses)
-import Control.Monad (when, unless)
-import Control.Monad.Class.MonadFork (MonadFork(forkIO))
-import Control.Monad.Class.MonadSay (MonadSay(say))
+import Control.Lens (use, uses, (%=))
+import Control.Monad (unless, when)
+import Control.Monad.Class.MonadFork (MonadFork (forkIO))
+import Control.Monad.Class.MonadSay (MonadSay (say))
 import Control.Monad.Class.MonadTime (MonadTime)
-import Control.Monad.Class.MonadTimer (MonadDelay(..))
+import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (Rand, getRandomR)
 import Control.Monad.State (StateT, evalStateT, get, lift)
-import Data.Default (Default(def))
+import Data.Default (Default (def))
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Peras.Block (Slot)
-import Peras.IOSim.Message.Types (InEnvelope(..), OutEnvelope(..), OutMessage(..))
-import Peras.IOSim.Network.Types (Network(..), Topology(..), NetworkState, activeNodes, exitStates, lastSlot, lastTime)
-import Peras.IOSim.Node (NodeProcess(NodeProcess), runNode)
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
+import Peras.IOSim.Network.Types (
+  Network (..),
+  NetworkState,
+  Topology (..),
+  activeNodes,
+  exitStates,
+  lastSlot,
+  lastTime,
+ )
+import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
 import Peras.IOSim.Node.Types (NodeState)
 import Peras.IOSim.Protocol.Types (Protocol)
-import Peras.IOSim.Simulate.Types (Parameters(..))
-import Peras.Message (Message(..), NodeId(..))
-import System.Random (RandomGen(..))
+import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.Message (Message (..), NodeId (..))
+import System.Random (RandomGen (..))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -40,35 +48,33 @@ import qualified Data.Set as S
 emptyTopology :: Topology
 emptyTopology = Topology M.empty
 
-randomTopology
-  :: RandomGen g
-  => Parameters
-  -> Rand g Topology
+randomTopology ::
+  RandomGen g =>
+  Parameters ->
+  Rand g Topology
 randomTopology Parameters{..} =
-  let
-    nodeIds = MkNodeId . ("N" <>) . show <$> [1..peerCount]
-    choose 0 _ = pure mempty
-    choose n js =
-      do
-        j <- (js !!) <$> getRandomR (0, length js - 1)
-        (j :) <$> choose (n - 1) (j `delete` js)       
-    randomConnects i topology =
-      foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
-        <$> choose downstreamCount [0..peerCount-1]
-  in
-    foldrM randomConnects emptyTopology [0..peerCount-1]
+  let nodeIds = MkNodeId . ("N" <>) . show <$> [1 .. peerCount]
+      choose 0 _ = pure mempty
+      choose n js =
+        do
+          j <- (js !!) <$> getRandomR (0, length js - 1)
+          (j :) <$> choose (n - 1) (j `delete` js)
+      randomConnects i topology =
+        foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
+          <$> choose downstreamCount [0 .. peerCount - 1]
+   in foldrM randomConnects emptyTopology [0 .. peerCount - 1]
 
-connectNode
-  :: NodeId
-  -> NodeId
-  -> Topology
-  -> Topology
+connectNode ::
+  NodeId ->
+  NodeId ->
+  Topology ->
+  Topology
 connectNode upstream downstream = Topology . M.insertWith (<>) upstream (S.singleton downstream) . connections
 
-createNetwork
-  :: MonadSTM m
-  => Topology
-  -> m (Network v m)
+createNetwork ::
+  MonadSTM m =>
+  Topology ->
+  m (Network v m)
 createNetwork Topology{connections} =
   do
     nodesIn <- mapM (const newTQueueIO) connections
@@ -76,24 +82,24 @@ createNetwork Topology{connections} =
     pure Network{..}
 
 -- TODO: Replace this centralized router with a performant decentralized
---       one like a tree barrier. 
+--       one like a tree barrier.
 -- TODO: Rewrite as a state machine.
-runNetwork
-  :: forall m g v
-  .  Default v
-  => MonadDelay m
-  => MonadFork m
-  => MonadSay m
-  => MonadSTM m
-  => MonadTime m
-  => RandomGen g
-  => g
-  -> Parameters
-  -> Protocol
-  -> M.Map NodeId (NodeState v)
-  -> Network v m
-  -> Slot
-  -> m (NetworkState v)
+runNetwork ::
+  forall m g v.
+  Default v =>
+  MonadDelay m =>
+  MonadFork m =>
+  MonadSay m =>
+  MonadSTM m =>
+  MonadTime m =>
+  RandomGen g =>
+  g ->
+  Parameters ->
+  Protocol ->
+  M.Map NodeId (NodeState v) ->
+  Network v m ->
+  Slot ->
+  m (NetworkState v)
 runNetwork gen parameters protocol states Network{..} endSlot =
   do
     let
@@ -145,36 +151,34 @@ runNetwork gen parameters protocol states Network{..} endSlot =
           -- Advance the slot counter and notify the nodes, if all nodes are idle.
           allIdle <- activeNodes `uses` null
           -- FIXME: This is unsafe because a node crashing or becoming unresponsive will block the slot advancement.
-          when allIdle
-            $ do
+          when allIdle $
+            do
               -- FIXME: This is unsafe because a node might take more than one slot to do its computations.
               lastSlot %= (+ 1)
               uncurry notifySlot `mapM_` M.toList nodesIn
               lift $ threadDelay 1000000
           -- Receive and route messages.
           received <- lift . atomically $ flushTQueue nodesOut
-          mapM_ route received  -- FIXME: Propagation is too fast, so we need network delays.
+          mapM_ route received -- FIXME: Propagation is too fast, so we need network delays.
           -- Check on whether the simulation is ending.
           doExit <- lastSlot `uses` (>= endSlot)
           if doExit
             then do
-                   uncurry notifyStop `mapM_` M.toList nodesIn
-                   waitForExits
-                   get
+              uncurry notifyStop `mapM_` M.toList nodesIn
+              waitForExits
+              get
             else loop
     -- Start the node processes.
     uncurry forkNode `mapM_` M.toList nodesIn
     -- Run the network.
     evalStateT loop def
 
-splitGen
-  :: RandomGen g
-  => g
-  -> Int
-  -> [g]
+splitGen ::
+  RandomGen g =>
+  g ->
+  Int ->
+  [g]
 splitGen gen 0 = pure gen
 splitGen gen n =
-  let
-    (gen', gen'') = split gen
-  in
-    gen' : splitGen gen'' (n - 1)
+  let (gen', gen'') = split gen
+   in gen' : splitGen gen'' (n - 1)

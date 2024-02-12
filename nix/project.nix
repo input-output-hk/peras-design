@@ -16,7 +16,7 @@ let
       };
       name = "my-project";
       compiler-nix-name = lib.mkDefault "ghc96";
-      modules = [];
+      modules = [ ];
     });
 
   cabalProject = cabalProject'.appendOverlays [ ];
@@ -28,4 +28,4 @@ let
 
 in
 
-  project
+project
