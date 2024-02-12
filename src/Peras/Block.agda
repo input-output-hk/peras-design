@@ -67,9 +67,6 @@ open Block public
 Block⋆ = Block (set HashO)
 
 postulate
-  toHash : Block⋆ → Hash
-
-postulate
   blEq : Relation.Binary.Rel Block⋆ 0ℓ
   blLt : Relation.Binary.Rel Block⋆ 0ℓ
   blIs : Relation.Binary.IsStrictTotalOrder blEq blLt

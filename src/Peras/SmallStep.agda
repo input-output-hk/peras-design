@@ -2,6 +2,7 @@ module Peras.SmallStep where
 
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ)
+open import Data.List.Membership.Propositional using (_∈_)
 open import Data.Maybe
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (_,_; _×_)
@@ -12,7 +13,7 @@ open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym)
+open Eq using (_≡_; refl; cong; sym; subst)
 
 open import Function.Base using (id)
 
@@ -137,13 +138,13 @@ module _ {block₀ : Block⋆} where
     record Stateᵍ : Set where
       constructor ⟪_,_,_,_,_⟫
       field
-        slot : Slot
+        clock : Slot
         progress : Progress
         stateMap : Map Stateˡ
         messages : List Message
         execution-order : List PartyId
 
-    open Stateᵍ
+    open Stateᵍ public
 
     -- initial global state
 
@@ -170,7 +171,7 @@ module _ {block₀ : Block⋆} where
     party↓ : PartyId → Stateᵍ → Stateᵍ
     party↓ p N with lookup (stateMap N) p | honest? p
     ... | just sₗ | Honest = let msgs , N′ = fetchMsgs p N
-                                 sₗ′       = honestRcv msgs (slot N) sₗ
+                                 sₗ′       = honestRcv msgs (clock N) sₗ
                               in updateStateˡ p sₗ′ N′
     ... | just sₗ | Corrupt = N -- FIXME: implement adversary
     ... | nothing | _ = N
@@ -179,7 +180,7 @@ module _ {block₀ : Block⋆} where
 
     party↷ : PartyId → Stateᵍ → Stateᵍ
     party↷ p N with lookup (stateMap N) p | honest? p
-    ... | just sₗ | Honest = let msgs , sₗ′ = honestCreate (slot N) [] sₗ
+    ... | just sₗ | Honest = let msgs , sₗ′ = honestCreate (clock N) [] sₗ
                              -- FIXME: gossip msgs
                               in updateStateˡ p sₗ′ N
     ... | just sₗ | Corrupt = N -- FIXME: implement adversary
@@ -231,3 +232,59 @@ module _ {block₀ : Block⋆} where
         → M ↝⋆ N
           ------
         → L ↝⋆ N
+
+
+    module _ {hashᴮ : Block⋆ → Hash} where
+
+      data CollisionFree (N : Stateᵍ) : Set where
+
+        collision-free : ∀ {b₁ b₂ : Block⋆}
+          → BlockMsg b₁ ∈ messages N
+          → BlockMsg b₂ ∈ messages N
+          → hashᴮ b₁ ≡ hashᴮ b₂
+          → b₁ ≡ b₂
+          → CollisionFree N
+
+      {-
+      party↓-does-not-change-msg : ∀ {p N₁ N₂}
+        → party↓ p N₁ ≡ N₂
+        → messages N₁ ≡ messages N₂
+      party↓-does-not-change-msg = {!!}
+
+      foldr-party↓-does-not-change-msg : ∀ {N ps}
+        → messages (foldr party↓ N ps) ≡ messages N
+      foldr-party↓-does-not-change-msg {N} {[]} = refl
+      foldr-party↓-does-not-change-msg {N} {x ∷ ps} =
+        let xx = foldr-party↓-does-not-change-msg {N} {ps}
+            yy = party↓-does-not-change-msg {x} {foldr party↓ N ps} {N}
+        in {!!}
+
+      subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
+        → x ∈ xs
+        → xs ≡ ys
+        → x ∈ ys
+      subst′ {A} {x} x₁ x₂ = subst (x ∈_) x₂ x₁
+      -}
+
+      postulate
+        ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
+          → N₁ ↝ N₂
+          → CollisionFree N₂
+          → CollisionFree N₁
+
+      {-
+      ↝-collision-free {⟪ s , Ready , sm , ms , ps ⟫} Deliver (collision-free b₁∈m b₂∈m x₂ x₃) =
+        let msg-≡ = foldr-party↓-does-not-change-msg {⟪ s , Ready , sm , ms , ps ⟫} {ps}
+        in collision-free (subst′ b₁∈m msg-≡) (subst′ b₂∈m msg-≡) x₂ x₃
+      ↝-collision-free Bake (collision-free x x₁ x₂ x₃) = collision-free {!!} {!!} x₂ x₃
+      ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free PermParties (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free PermMsgs (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      -}
+
+      ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
+        → N₁ ↝⋆ N₂
+        → CollisionFree N₂
+        → CollisionFree N₁
+      ↝⋆-collision-free (_ ∎) N = N
+      ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ = ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
