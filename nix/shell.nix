@@ -10,6 +10,8 @@ cabalProject:
     repoRoot.nix.agda-stdlib
     repoRoot.nix.agda2hs
     repoRoot.nix.emacs-with-packages
+    pkgs.haskellPackages.pointfree
+    # pkgs.haskellPackages.pointful
     pkgs.gnumake
     pkgs.graphviz
   ];
@@ -39,27 +41,21 @@ cabalProject:
     # purs-tidy = null;
   };
 
-  # preCommit = {
-  #   cabal-fmt.enable = false;
-  #   cabal-fmt.extraOptions = "";
-  #   stylish-haskell.enable = false;
-  #   stylish-haskell.extraOptions = "";
-  #   fourmolu.enable = false;
-  #   fourmolu.extraOptions = "";
-  #   hlint.enable = false;
-  #   hlint.extraOptions = "";
-  #   shellcheck.enable = false;
-  #   shellcheck.extraOptions = "";
-  #   prettier.enable = false;
-  #   prettier.extraOptions = "";
-  #   editorconfig-checker.enable = false;
-  #   editorconfig-checker.extraOptions = "";
-  #   nixpkgs-fmt.enable = false;
-  #   nixpkgs-fmt.extraOptions = "";
-  #   optipng.enable = false;
-  #   optipng.extraOptions = "";
-  #   purs-tidy.enable = false;
-  #   purs-tidy.extraOptions = "";
-  # };
+  preCommit = {
+    cabal-fmt.enable = false;
+    #   cabal-fmt.extraOptions = "";
+    fourmolu.enable = true;
+    #   fourmolu.extraOptions = "";
+    hlint.enable = false;
+    #   hlint.extraOptions = "";
+    #   shellcheck.enable = false;
+    #   shellcheck.extraOptions = "";
+    #   editorconfig-checker.enable = false;
+    #   editorconfig-checker.extraOptions = "";
+    nixpkgs-fmt.enable = true;
+    #   nixpkgs-fmt.extraOptions = "";
+    #   optipng.enable = false;
+    #   optipng.extraOptions = "";
+  };
 }
  

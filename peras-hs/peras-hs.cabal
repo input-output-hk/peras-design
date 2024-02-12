@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               peras-design
+name:               peras-hs
 version:            0.1.0.0
 synopsis:           Peras types from Agda
 license:            Apache-2.0
@@ -18,9 +18,14 @@ library
     Peras.Message
     Peras.Nakamoto
     Peras.Network
+    Peras.Orphans
   hs-source-dirs:   src
   build-depends:
     , base >=4.9 && <5
+    , aeson
+    , base16-bytestring
     , bytestring
+    , text
+  default-extensions:  StrictData
   default-language: Haskell2010
   ghc-options:      -Wall -Wunused-packages

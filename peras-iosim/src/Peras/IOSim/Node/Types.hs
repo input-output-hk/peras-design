@@ -5,17 +5,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Peras.IOSim.Node.Types (
-  NodeState(NodeState)
-, clock
-, committeeMember
-, downstreams
-, nodeId
-, owner
-, preferredChain
-, slot
-, slotLeader
-, stake
-, vrfOutput
+  NodeState (NodeState),
+  clock,
+  committeeMember,
+  downstreams,
+  nodeId,
+  owner,
+  preferredChain,
+  slot,
+  slotLeader,
+  stake,
+  vrfOutput,
 ) where
 
 import Control.Lens (makeLenses)
@@ -24,16 +24,14 @@ import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
 import Peras.IOSim.Types (Currency)
-import Peras.Message(NodeId)
+import Peras.Message (NodeId)
 import Peras.Orphans ()
 
 import qualified Data.Aeson as A
 import qualified Data.Set as S
 
-data NodeState v =
-  NodeState
-  {
-    _nodeId :: NodeId
+data NodeState v = NodeState
+  { _nodeId :: NodeId
   , _owner :: PartyId
   , _clock :: UTCTime
   , _slot :: Slot
@@ -44,12 +42,12 @@ data NodeState v =
   , _slotLeader :: Bool
   , _committeeMember :: Bool
   }
-    deriving stock (Eq, Generic, Ord, Read, Show)
+  deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance A.FromJSON v => A.FromJSON (NodeState v) where
   parseJSON =
-    A.withObject "NodeState"
-      $ \o ->
+    A.withObject "NodeState" $
+      \o ->
         do
           _nodeId <- o A..: "nodeId"
           _owner <- o A..: "owner"
@@ -66,8 +64,7 @@ instance A.FromJSON v => A.FromJSON (NodeState v) where
 instance A.ToJSON v => A.ToJSON (NodeState v) where
   toJSON NodeState{..} =
     A.object
-      [
-        "nodeId" A..= _nodeId
+      [ "nodeId" A..= _nodeId
       , "owner" A..= _owner
       , "clock" A..= _clock
       , "slot" A..= _slot

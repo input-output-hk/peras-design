@@ -1,10 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Simulate.Types (
-  Parameters(..)
+  Parameters (..),
 ) where
 
 import GHC.Generics (Generic)
@@ -13,21 +13,19 @@ import Peras.IOSim.Types (Currency)
 
 import qualified Data.Aeson as A
 
-data Parameters =
-  Parameters
-  {
-    randomSeed :: Int
+data Parameters = Parameters
+  { randomSeed :: Int
   , endSlot :: Slot
   , peerCount :: Int
   , downstreamCount :: Int
   , maximumStake :: Currency
   }
-    deriving stock (Eq, Generic, Ord, Read, Show)
+  deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance A.FromJSON Parameters where
   parseJSON =
-    A.withObject "Parameters"
-      $ \o ->
+    A.withObject "Parameters" $
+      \o ->
         do
           randomSeed <- o A..: "randomSeed"
           endSlot <- o A..: "endSlot"
@@ -39,8 +37,7 @@ instance A.FromJSON Parameters where
 instance A.ToJSON Parameters where
   toJSON Parameters{..} =
     A.object
-      [
-        "randomSeed" A..= randomSeed
+      [ "randomSeed" A..= randomSeed
       , "endSlot" A..= endSlot
       , "peerCount" A..= peerCount
       , "downstreamCount" A..= downstreamCount

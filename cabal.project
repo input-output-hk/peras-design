@@ -15,9 +15,9 @@ index-state:
   , cardano-haskell-packages 2023-12-15T14:50:31Z
 
 packages:
-  .
+  peras-hs
   peras-iosim
-  peras-quickcheck
+--peras-quickcheck
   random-forks
   sketch
 

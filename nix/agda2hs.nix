@@ -18,4 +18,4 @@ let
 
 in
 
-  project.hsPkgs.agda2hs.components.exes.agda2hs 
+project.hsPkgs.agda2hs.components.exes.agda2hs 

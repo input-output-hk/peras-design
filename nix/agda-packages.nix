@@ -39,7 +39,7 @@ let
     };
 in
 
-  pkgs.agdaPackages.override {
-    Agda = frankenAgda;
-    pkgs = frankenPkgs;
-  }
+pkgs.agdaPackages.override {
+  Agda = frankenAgda;
+  pkgs = frankenPkgs;
+}

@@ -4,12 +4,12 @@ let
   project = repoRoot.nix.project;
   peras-agda = repoRoot.nix.peras-agda;
 in
-  [
-    ( 
-      project.flake
-    )
-    {
-      inherit repoRoot;
-      packages.peras = peras-agda;
-    }
-  ]
+[
+  (
+    project.flake
+  )
+  {
+    inherit repoRoot;
+    packages.peras = peras-agda;
+  }
+]

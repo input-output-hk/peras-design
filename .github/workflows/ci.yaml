@@ -10,7 +10,7 @@ on:
     - main
 jobs:
   typecheck:
-    name: Typecheck Agda and generate Haskell
+    name: Typecheck Agda and build Haskell
     runs-on: self-hosted
     steps:
     - name: 📥 Checkout repository
@@ -25,6 +25,16 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🧪 Evaluate typecheck derivation
+    - name: 🧪 Typecheck Agda
       run: |
         nix build --show-trace .#peras
+    - name: 🧪 Build `peras-iosim`.
+      run: |
+        nix build --show-trace .#peras-iosim
+    - name: 🧪 Build `peras-quickcheck`.
+      run: |
+        echo "⏳ CURRENTLY DISABLED"
+#       nix build --show-trace .#peras-quickcheck
+    - name: 🧪 Build `random-forks`.
+      run: |
+        nix build --show-trace .#random-forks

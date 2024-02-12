@@ -1,7 +1,7 @@
 module Peras.IOSim.Types (
-  ByteSize
-, Currency
-, Round
+  ByteSize,
+  Currency,
+  Round,
 ) where
 
 type Currency = Int

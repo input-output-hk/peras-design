@@ -23,12 +23,10 @@ library
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
-    Peras.Orphans
   hs-source-dirs:   src
   build-depends:
     , aeson
     , base >=4.9 && <5
-    , base16-bytestring
     , bytestring
     , containers
     , data-default
@@ -38,9 +36,9 @@ library
     , lens
     , MonadRandom
     , mtl
-    , peras-design
+    , peras-hs
     , random
-    , text
+  default-extensions:  StrictData
   default-language: Haskell2010
   ghc-options:      -Wall -Wunused-packages
 
