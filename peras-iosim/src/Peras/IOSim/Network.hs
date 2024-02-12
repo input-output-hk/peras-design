@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,7 +14,7 @@ module Peras.IOSim.Network (
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
-import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, writeTQueue)
+import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
 import Control.Lens (use, uses, (%=))
 import Control.Monad (unless, when)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
@@ -140,11 +141,16 @@ runNetwork gen parameters protocol states Network{..} endSlot =
           lastTime %= max timestamp
           activeNodes %= S.delete source
           exitStates %= M.insert source nodeState
+      -- Read all of the pending messages.
+      flush =
+        if False -- FIXME: Is it safe to use `flushTQueue`?
+          then flushTQueue nodesOut -- As of `io-classes-1.3.1.0`, the queue isn't empty after this call!
+          else tryReadTQueue nodesOut >>= maybe (pure mempty) ((<$> flush) . (:))
       -- Wait for all nodes to exit.
       waitForExits =
         do
           allIdle <- activeNodes `uses` null
-          received <- lift . atomically $ flushTQueue nodesOut
+          received <- lift $ atomically flush
           mapM_ route received
           unless allIdle waitForExits
       -- Receive and send messages.
@@ -161,7 +167,7 @@ runNetwork gen parameters protocol states Network{..} endSlot =
               uncurry notifySlot `mapM_` M.toList nodesIn
               lift $ threadDelay 1000000
           -- Receive and route messages.
-          received <- lift . atomically $ flushTQueue nodesOut
+          received <- lift $ atomically flush
           mapM_ route received -- FIXME: Propagation is too fast, so we need network delays.
           -- Check on whether the simulation is ending.
           doExit <- lastSlot `uses` (>= endSlot)

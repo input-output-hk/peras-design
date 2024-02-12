@@ -13,7 +13,9 @@ cabalProject:
     pkgs.haskellPackages.pointfree
     # pkgs.haskellPackages.pointful
     pkgs.gnumake
-    pkgs.graphviz
+    pkgs.graphviz # For plotting network topology and chain forking.
+    pkgs.haskellPackages.threadscope # For visualizing profiles.
+    pkgs.ghostscript_headless # For visualizing profiles.
   ];
 
   env.AGDA_STDLIB = "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib";

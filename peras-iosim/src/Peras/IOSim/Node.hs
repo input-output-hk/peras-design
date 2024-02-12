@@ -109,5 +109,4 @@ runNode gen0 parameters protocol state0 NodeProcess{..} =
                 go gen' $ state' & clock .~ now
             Stop ->
               atomically . writeTQueue outgoing $ Exit now (state ^. nodeId) state
-   in do
-        go gen0 state0
+   in go gen0 state0

@@ -74,5 +74,5 @@ Furthermore, use `nix develop .#profiled` for a shell with profiled versions of 
 library-profiling: True
 profiling: True
 package *
-  ghc-options: -O2 -threaded -eventlog -fprof-auto -fprof-cafs "-with-rtsopts=-N -p -s -h -i0.1 -ls"
+  ghc-options: -O2 -threaded -fprof-auto -fprof-cafs "-with-rtsopts=-N -p -s -hc -i0.1 -ls"
 ```
