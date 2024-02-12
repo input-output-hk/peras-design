@@ -1,3 +1,17 @@
+## 2024-02-12
+
+### AB - Connecting quickcheck & Rust
+
+Having "fun" calling Rust library from Haskell through FFI.
+* Some interesting article on how to build Haskell + Rust together: https://blog.michivi.com/posts/2022-08-cabal-setup/
+* I am trying to understand how to write correct capi calls from documentation: https://wiki.haskell.org/Foreign_Function_Interface#Generalities
+* Defining additional header and library directories for cabal to find netsim stuff: https://cabal.readthedocs.io/en/3.4/cabal-project.html#foreign-function-interface-options
+* Another blog post about C++ FFI https://topikettunen.com/blog/haskell-cpp-ffi/
+
+Managed to use `dummyFFI` from `netsim` library which is just an echo,
+but it definitely works. Now need to better understand how the library
+is supposed to work, possibly implementing some very simple node.
+
 ## 2024-02-10
 
 ### BB - Peras IOSim
@@ -40,6 +54,55 @@ Continued refactoring of `peras-iosim` to incorporate functionality of `random-f
 * Moved the initial implementation of the semantics into a separate module: [SmallStep.agda](src/Peras/SmallStep.agda)
 * Similar for the proofs: [SmallStep/Propeties.agda](src/Peras/SmallStep/Propeties.agda)
 * The small-step semantics implement closely the semantics proposed in the PoS-NSB paper
+
+### AB - Quickcheck Model
+
+Adding self-hosted runner on my Mac OS machine for Peras in order to benefit from caching.
+Configuration is straightforward but unfortunately it's not possibler to share runners between repositories on a case-by-case basis: They have to be defined as organisation-level runners and then can be shared.
+
+* Initial build time is 12m57s
+* Rebuild took 1m9s :tada:
+
+Got a first stab at `ModelSpec` compiling and "running", trying to express chain progress property as:
+
+```
+chainProgress :: DL Network ()
+chainProgress = do
+  anyActions_
+  getModelStateDL >>= \Network{nodeIds} -> do
+    bestChains <- forM nodeIds (action . ObserveBestChain)
+    let (settled, unsettled) = commonPrefix bestChains
+    DL.assert "" $
+      all (((< 42) . length) . asList) unsettled
+        && not (null (asList settled))
+```
+
+Need to look at the actual definition in the Praos or PoS-NB paper perhaps...
+
+One issue is that this can't work as is: an `action SomeAction` where `SomeAction :: Action MyState a` return `Var a` which is just a symbolic reference to a value and not the value itself.
+It actually does not make sense for the Model to attempt to track all the chains produced, it's actually simpler to just track the elapsed time (slots) and compute how long the common prefix should be
+
+Modified model to check observation on the `postcondition` of the `RunModel` but now the test loops!
+* Sprinkling traces does not reveal anything of interest, seems like it's stuck somewhere between computing next state and performing the action on the run model :thinking:
+* Struggling to understand why my q-d run is hanging, trying to run it within `IO` instead of `IOSim` but the type tetris is annoying...
+
+Managed to write a function to run actions in IO, inspired by [runPropertyStateT](https://github.com/input-output-hk/quickcheck-dynamic/blob/c309099aa30333a34d3f70ad7acc87d033dd5cdc/quickcheck-dynamic/src/Test/QuickCheck/Extras.hs#L7)
+* I don't understand much of what I am doing here as it's really unclear what's going on in the `PropertyM`, but it compiles.
+* It still hangs however -> compiling with profiling to be able to dump some traces statistics
+
+Thanks to profiling I found out where my error was :facepalm: : the `baseNodes` function uses `unfoldr` to generate node ids and then `take 10`, but then it generates node ids using `unfoldr` again without any stopping condition which of course never terminates
+
+### Team sync
+
+Discussing whether or not to check-in generated code?
+* Checking in would be useful and then have some check in place in the CI
+* it's probably ok either way now
+
+What about Praos Genesis?
+* could have impact on our work as the criterion for chain extension is different
+* also has impact on the networking stuff
+
+First simulation should focus on committee size -> most important number in the system, needs intuition on what's the right value
 
 ## 2024-02-08
 
