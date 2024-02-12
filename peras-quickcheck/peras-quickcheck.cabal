@@ -59,12 +59,11 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.Model
-                     Peras.Node
+    exposed-modules: Peras.NetworkModel
+                     Peras.NodeModel
 
     -- Modules included in this library but not exported.
-    other-modules: Peras.Block
-                   Peras.Message
+    -- other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -76,7 +75,11 @@ library
                       bytestring,
                       containers,
                       data-default,
+                      io-classes,
+                      io-sim,
                       mtl,
+                      peras-hs,
+                      peras-iosim,
                       quickcheck-dynamic,
                       random,
                       random-forks,
@@ -96,8 +99,9 @@ test-suite quickcheck-model-test
     default-language: Haskell2010
 
     -- Modules included in this executable, other than Main.
-    other-modules: Peras.ModelSpec
-                   Peras.NodeSpec
+    other-modules: Peras.NetworkModelSpec
+                   Peras.NodeModelSpec
+                   Peras.Util
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -113,14 +117,16 @@ test-suite quickcheck-model-test
 
     -- Test dependencies.
     build-depends:
-                              base ^>=4.18.1.0
+                                  base ^>=4.18.1.0
                   , QuickCheck
                   , QuickCheck
                   , bytestring
                   , data-default
                   , hspec
                   , io-sim
+                  , io-sim
                   , mtl
+                  , peras-hs
                   , peras-quickcheck
                   , quickcheck-dynamic
                   , si-timers
