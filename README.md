@@ -6,6 +6,14 @@
 
 This repository is intended to host more or less formal specifications, experiments, models for the Ouroboros Peras protocol.
 
+## Documentation
+
+* [Weekly updates](docs/weekly) provide regular "heartbeat" about the
+  state of the project and what the team is working on
+* [Logbook](Logbook.md) contains a detailed account of problems,
+  successes, failures, ideas, references and is intended as a tool to
+  help the team members stay in sync
+
 ## Hacking
 
 ### Agda
