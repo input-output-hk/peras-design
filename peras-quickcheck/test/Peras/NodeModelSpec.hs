@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,7 +20,7 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  prop "Honnest node mints blocks according to stakes" propHonestNodeMintingRate
+  prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
 
 propHonestNodeMintingRate :: Property
 propHonestNodeMintingRate =
@@ -44,8 +45,8 @@ runPropInIOSim p = do
   Capture eval <- capture
   let simTrace =
         runSimTrace $
-          initialiseNodeEnv
-            >>= (runReaderT (runMonad $ eval $ monadic' p) . Node (MkNodeId "N1"))
+          withNode
+            >>= runReaderT (runMonad $ eval $ monadic' p)
       traceDump = map (\(t, s) -> show t <> " : " <> s) $ selectTraceEventsSayWithTime' simTrace
       logsOnError = counterexample ("trace:\n" <> unlines traceDump)
   case traceResult False simTrace of
@@ -53,3 +54,13 @@ runPropInIOSim p = do
       pure $ logsOnError x
     Left ex ->
       pure $ counterexample (show ex) $ logsOnError $ property False
+
+withNode :: IOSim s (Node (IOSim s))
+withNode =
+  initialiseNodeEnv >>= \(nodeThreadId, nodeProcess) ->
+    pure $
+      Node
+        { nodeId = MkNodeId "N1"
+        , nodeThreadId
+        , nodeProcess
+        }

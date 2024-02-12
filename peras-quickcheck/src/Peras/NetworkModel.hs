@@ -26,6 +26,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
+import Peras.Chain (Chain)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import System.Random (RandomGen, mkStdGen)
@@ -47,17 +48,12 @@ baseNodes :: RandomGen g => g -> [NodeId]
 baseNodes g =
   take 10 $ MkNodeId . ("N" <>) . show <$> [1 .. 10]
 
-data Chain
-  = Genesis
-  | Chain (Block ()) Chain
-  deriving (Eq, Show, Generic)
-
 instance StateModel Network where
   data Action Network a where
     -- Advance the time one or more slots possibly producing blocks.
     Tick :: Natural -> Action Network (Set (Block ()))
     -- Observe a node's best chain
-    ObserveBestChain :: NodeId -> Action Network Chain
+    ObserveBestChain :: NodeId -> Action Network (Chain ())
 
   arbitraryAction _ Network{nodeIds} =
     frequency
@@ -95,7 +91,7 @@ data Node m = Node
   -- ^ Nodes are assumed to progress in steps
   , inbox :: [(Slot, Message ())]
   -- ^ New inputs to be delivered to the node at some `Slot`
-  , bestChain :: m Chain
+  , bestChain :: m (Chain ())
   }
 
 -- | All known nodes in the network.
@@ -135,7 +131,7 @@ instance Monad m => RunModel Network (RunMonad m) where
       -- then let the node advance one slot and return the messages it sends
       lift step
 
-    currentChain :: NodeId -> RunMonad m Chain
+    currentChain :: NodeId -> RunMonad m (Chain ())
     currentChain nodeId =
       gets (Map.lookup nodeId . nodes)
         >>= maybe (error $ "Invalid node id:" <> show nodeId) (lift . bestChain)
