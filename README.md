@@ -13,6 +13,8 @@ This repository is intended to host more or less formal specifications, experime
 * [Logbook](Logbook.md) contains a detailed account of problems,
   successes, failures, ideas, references and is intended as a tool to
   help the team members stay in sync
+* We document our main design and architecture decisions along the way
+  using [Architectural Decision Records](./docs/adr).
 
 ## Hacking
 
