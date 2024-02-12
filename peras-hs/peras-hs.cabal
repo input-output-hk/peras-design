@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               peras-design
+name:               peras-hs
 version:            0.1.0.0
 synopsis:           Peras types from Agda
 license:            Apache-2.0
