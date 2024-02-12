@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Network (
   connectNode,
@@ -45,8 +46,10 @@ import System.Random (RandomGen (..))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
-emptyTopology :: Topology
-emptyTopology = Topology M.empty
+emptyTopology ::
+  [NodeId] ->
+  Topology
+emptyTopology = Topology . M.fromList . fmap (,S.empty)
 
 randomTopology ::
   RandomGen g =>
@@ -62,7 +65,7 @@ randomTopology Parameters{..} =
       randomConnects i topology =
         foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
           <$> choose downstreamCount [0 .. peerCount - 1]
-   in foldrM randomConnects emptyTopology [0 .. peerCount - 1]
+   in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
   NodeId ->

@@ -1,0 +1,5 @@
+randomSeed: 12345
+peerCount: 1
+downstreamCount: 0
+maximumStake: 1000
+endSlot: 1000

@@ -50,6 +50,8 @@ protocol: PseudoPraos
 activeSlotCoefficient: 0.05
 ```
 
+(Note that a one-node example is available in the configuration [one-node.yaml](one-node.yaml).)
+
 Run the simulation. Beware of poor performance and high memory usage: consider running with `ulimit -m`.
 
 ```bash
