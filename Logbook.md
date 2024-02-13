@@ -1,3 +1,9 @@
+## 2024-02-13
+
+### BB - ISSim enhancements
+
+- Improved faithfulness of slot-leader selection.
+
 ## 2024-02-12
 
 ### BB - IOSim enhancements

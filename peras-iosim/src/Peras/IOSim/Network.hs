@@ -14,7 +14,7 @@ module Peras.IOSim.Network (
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
-import Control.Lens (use, uses, (%=))
+import Control.Lens (use, uses, (%=), (^.))
 import Control.Monad (unless)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
 import Control.Monad.Class.MonadSay (MonadSay (say))
@@ -39,7 +39,7 @@ import Peras.IOSim.Network.Types (
   pending,
  )
 import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
-import Peras.IOSim.Node.Types (NodeState)
+import Peras.IOSim.Node.Types (NodeState, stake)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
@@ -109,6 +109,8 @@ runNetwork ::
 runNetwork gen0 parameters protocol states Network{..} endSlot =
   do
     let
+      -- Find the total stake.
+      total = sum $ (^. stake) <$> states
       -- Split the random number generator.
       (gen1, gen2) = split gen0
       -- FIXME: Needless to say, the random number generation here is messy. We need to add `MonadRandom` to a transformer stack.
@@ -116,7 +118,7 @@ runNetwork gen0 parameters protocol states Network{..} endSlot =
       -- Start a node process.
       forkNode nodeId nodeIn =
         forkIO
-          . runNode (gens M.! nodeId) parameters protocol (states M.! nodeId)
+          . runNode (gens M.! nodeId) parameters protocol total (states M.! nodeId)
           $ NodeProcess nodeIn nodesOut
       -- Send a message and mark the destination as active.
       output destination inChannel inEnvelope =
