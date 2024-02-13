@@ -4,6 +4,80 @@
 
 - Improved faithfulness of slot-leader selection.
 
+### AB - Model-Based Testing a node
+
+Trying to express block production property as a ratio of number of blocks over current slot for a single node, got a failed test:
+
+```
+  2) Peras.NodeModel Honest node mints blocks according to stakes
+       Assertion failed (after 5 tests):
+         do var0 <- action $ Tick 45
+            var1 <- action $ Tick 73
+            var2 <- action $ Tick 35
+            var3 <- action $ Tick 19
+            action $ ForgedBlocksRespectSchedule [var3,var2,var1,var0]
+            pure ()
+
+         trace:
+
+         Produced 4 blocks in 172 slots
+```
+
+* First, the good news is that the test works and we actually produce blocks and can check those
+* Second, the condition is an equality but it should be a bounde interval c
+* I like the fact the failure produces a useful trace, but in this case it does not shrink
+
+Tweaking the property checked, taking into account the actual stake of the node which is randomly generated from max stake.
+I am surprised by the discrepancy between what I compute as expected and what's actually produced:
+
+```
+ Assertion failed (after 2 tests):
+   do var0 <- action $ Tick 85
+      action $ ForgedBlocksRespectSchedule [var0]
+      pure ()
+
+   trace:
+
+   Actual: 17, Expected:  7.769
+   Stake: 457 % 500, active slots:  0.1, Slot: 85
+```
+
+Trying to scale the number of slots in each action to see if this has an impact on the difference innumber of blocks produced
+
+Looks like the discrepancy is not very surprising as the formula for slot learder ship is currently computed as:
+
+```
+  let expectedStake = fromIntegral $ peerCount * maximumStake `div` 2
+      pSlotLottery = 1 - (1 - activeSlotCoefficient') ** (1 / expectedStake)
+      p = 1 - (1 - pSlotLottery) ^ currency
+   in (<= p) `first` uniformR (0, 1) gen
+```
+
+### Ensemble discussion
+
+We need to start Experimenting with adversarial node/network behaviour, to be able to mix honest nodes + various types of malicious node in a single test run and simulation. Big question is: What it means to be adversarial? How does it impact the chain and the network? Perhaps a simple and generic answer is that dishonest nodes are the ones producing "malicious" blocks, whose content we do not really care about?
+
+:right_arrow: We want to mark blocks produced by adversarial nodes and check how much such blocks the chain ultimately contains
+
+This leads to the interesting question of whether or not the mempool should be out of scope? We think so but perhaps there are expectations we are not aware of?
+
+### Network Simulator
+
+* Tools to simulate and emulate protocols
+* 2 different multiplexers -> green vs. native threads (tokio)
+  * sockets/handles for sending/receiving messages
+  * implement policies/latencies
+  * in Cardano -> nodes come slower to each other
+
+* Alan -> working on Simplex, no imminent consumer of it
+  * Fast BFT/HotStuff/Simplex -> need some kind of network simiulator
+  * have something, but not as complete as what netsim aims
+  * Rust/Scala
+
+* easy to port and use Wasm -> native threads converted to JS
+* handling time? -> global clock
+* metrics? => latency, bandwidth
+
 ## 2024-02-12
 
 ### BB - IOSim enhancements
