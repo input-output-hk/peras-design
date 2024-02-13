@@ -1,5 +1,6 @@
-randomSeed: 12345
+randomSeed: 13234
 peerCount: 10
 downstreamCount: 3
 maximumStake: 1000
-endSlot: 1000
+messageDelay: 0.35
+endSlot: 400

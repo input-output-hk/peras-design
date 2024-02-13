@@ -114,6 +114,7 @@ parameters =
     , downstreamCount = 3
     , maximumStake = 1000
     , endSlot = 1000
+    , messageDelay = 0.35
     }
 
 newtype RunMonad m a = RunMonad {runMonad :: ReaderT (Node m) m a}

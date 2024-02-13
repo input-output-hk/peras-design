@@ -10,8 +10,8 @@ import Control.Lens ((^.))
 import Data.List (nub)
 import Peras.Block (Block (..))
 import Peras.Chain (Chain (..))
-import Peras.IOSim.Network.Types (NetworkState, exitStates)
-import Peras.IOSim.Node.Types (committeeMember, downstreams, preferredChain, slotLeader, stake, vrfOutput)
+import Peras.IOSim.Network.Types (NetworkState, chainsSeen, exitStates)
+import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -60,7 +60,7 @@ chainGraph ::
   NetworkState v ->
   G.Graph
 chainGraph networkState =
-  let chains = (^. preferredChain) <$> M.elems (networkState ^. exitStates)
+  let chains = S.toList (networkState ^. chainsSeen)
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement
