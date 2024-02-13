@@ -28,6 +28,30 @@ Managed to use `dummyFFI` from `netsim` library which is just an echo,
 but it definitely works. Now need to better understand how the library
 is supposed to work, possibly implementing some very simple node.
 
+### AB - Connecting Quickcheck & peras-iosim
+
+* Split `peras-quickcheck`'s model in 2, one `NetworkModel` and one `NodeModel` which should respectively assert properties of a whole network, and of a single node
+* Run model test against a single [Peras.IOSim.Node](https://github.com/input-output-hk/peras-design/blob/52a6b882d2363148f6fd1cc430d6054a5f5215eb/peras-iosim/src/Peras/IOSim/Node.hs#L73) with the goal of checking the node respects leader's schedule which is a very basic property but not so simple to express and useful to check
+  * Property is not implemented, I would like to express it as some expected number of blocks produced during a time interfval
+  * Had some discussoing with John Hughes on how to express that in DL: The number of blocks is not directly accessible as it's an _output_ of the SUT and only accessible to the DL as `Var`iables
+  * Currently needs to be done as an `action` with a `postcondition` that can resolve the variables, but it might be possible and useful to extend DL to be able to resolve variables as an expression in order to avoid having to modify the model only for the purpose of observing some computation result
+
+### Team Discussion
+
+The quality of the Network simulation is important
+* We want both an idealised network, statistical regularities, and a faitful model of the actual network -> realistically inferred from existing network
+* Network modelling is a big risk area for the project as its quality and the ability to run simulations and experiments will be critical to produce meaningful and useful results
+* => meet netsim implementation team to better align on goals and where we want to go
+
+* Take the Agda types as is + incorporate in the simulation
+  * How faithful is the traduction?
+
+* **Goal of the week**:
+  * Express _knowledge propagation_ property in Agda?
+  * Perhaps leader schedule respect would be an even simpler property to state and test?
+  * Translate to Haskell
+  * Run q-d over implementation in both Haskell and Rust
+
 ## 2024-02-10
 
 ### BB - Peras IOSim
