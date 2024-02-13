@@ -15,7 +15,7 @@
 module Peras.NodeModel where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, newTQueueIO, readTQueue, writeTQueue)
-import Control.Monad (forM, replicateM)
+import Control.Monad (forM)
 import Control.Monad.Class.MonadFork (MonadFork, ThreadId, forkIO)
 import Control.Monad.Class.MonadTime (MonadTime, getCurrentTime)
 import Control.Monad.Class.MonadTimer (MonadDelay)
@@ -33,9 +33,9 @@ import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
 import System.Random (mkStdGen)
-import Test.QuickCheck (choose)
+import Test.QuickCheck (choose, tabulate)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.StateModel (Any (..), HasVariables, Realized, RunModel (..), StateModel (..), Var)
+import Test.QuickCheck.StateModel (Any (..), HasVariables, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost)
 import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
 -- | A simple model of time passing and forged blocks
@@ -79,7 +79,9 @@ instance HasVariables NodeModel where
   getAllVariables NodeModel{forgedBlocks} = Set.fromList $ Some <$> forgedBlocks
 
 instance HasVariables (Action NodeModel a) where
-  getAllVariables = const mempty
+  getAllVariables = \case
+    ForgedBlocksRespectSchedule blockVars -> Set.fromList $ Some <$> blockVars
+    _other -> mempty
 
 -- | Basic interface to a `Peras.IOSim.Node` instance.
 data Node m = Node
@@ -104,13 +106,16 @@ initialiseNodeEnv = do
   pure (nodeThread, nodeProcess)
 
 protocol :: Protocol
-protocol = PseudoPraos 0.1
+protocol = PseudoPraos defaultActiveSlotCoefficient
+
+defaultActiveSlotCoefficient :: Double
+defaultActiveSlotCoefficient = 0.1
 
 parameters :: Parameters
 parameters =
   Parameters
     { randomSeed = 12345
-    , peerCount = 10
+    , peerCount = 1
     , downstreamCount = 3
     , maximumStake = 1000
     , endSlot = 1000
@@ -152,3 +157,25 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
           , destination
           } -> waitForIdle q (b : acc)
         other -> waitForIdle q acc
+
+  -- postcondition ::
+  --   MonadSTM m =>
+  --   (NodeModel, NodeModel) ->
+  --   Action NodeModel a ->
+  --   LookUp (RunMonad m) ->
+  --   Realized (RunMonad m) a ->
+  --   PostconditionM (RunMonad m) Bool
+  postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env ()
+    | slot > 0 =
+        let blocks = length $ foldMap env blockVars
+         in produceExpectedNumberOfBlocks blocks slot
+  postcondition _ _ _ _ = pure True
+
+produceExpectedNumberOfBlocks :: Monad m => Int -> Slot -> PostconditionM m Bool
+produceExpectedNumberOfBlocks blocks slot = do
+  let expectedBP :: Double = fromIntegral slot * defaultActiveSlotCoefficient
+  counterexamplePost $ "Actual: " <> show blocks <> ", Expected:  " <> show expectedBP
+  monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
+  pure $
+    fromIntegral blocks >= expectedBP
+      && fromIntegral blocks < 10 * expectedBP -- FIXME: this property does not make much sense
