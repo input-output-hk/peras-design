@@ -87,7 +87,7 @@ isSlotLeader ::
   (Bool, g)
 isSlotLeader gen Parameters{..} activeSlotCoefficient' currency =
   -- FIXME: This is just a crude approximation to the actual Praos leader-selection algorithm.
-  let expectedStake = fromIntegral $ peerCount * maximumStake `div` 2
+  let expectedStake = fromIntegral $ peerCount * maximumStake
       pSlotLottery = 1 - (1 - activeSlotCoefficient') ** (1 / expectedStake)
       p = 1 - (1 - pSlotLottery) ^ currency
    in (<= p) `first` uniformR (0, 1) gen

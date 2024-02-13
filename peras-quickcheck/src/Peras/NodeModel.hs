@@ -15,13 +15,15 @@
 module Peras.NodeModel where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, newTQueueIO, readTQueue, writeTQueue)
+import Control.Lens ((^.))
 import Control.Monad (forM)
 import Control.Monad.Class.MonadFork (MonadFork, ThreadId, forkIO)
 import Control.Monad.Class.MonadTime (MonadTime, getCurrentTime)
 import Control.Monad.Class.MonadTimer (MonadDelay)
 import Control.Monad.Random (runRand)
-import Control.Monad.Reader (MonadReader, ReaderT, ask)
+import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
+import Data.Ratio (Ratio, (%))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
@@ -29,6 +31,7 @@ import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Node (NodeProcess (..), initializeNode, runNode)
+import Peras.IOSim.Node.Types (stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
@@ -52,10 +55,10 @@ instance StateModel NodeModel where
   data Action NodeModel a where
     -- Advance the time one or more slots possibly producing blocks.
     Tick :: Natural -> Action NodeModel [Block ()]
-    ForgedBlocksRespectSchedule :: [Var [Block ()]] -> Action NodeModel ()
+    ForgedBlocksRespectSchedule :: [Var [Block ()]] -> Action NodeModel Rational
 
   arbitraryAction _ NodeModel{} =
-    Some . Tick . fromInteger <$> choose (1, 100)
+    Some . Tick . fromInteger <$> choose (500, 2000)
 
   initialState =
     NodeModel
@@ -88,6 +91,7 @@ data Node m = Node
   { nodeId :: NodeId
   , nodeThreadId :: ThreadId m
   , nodeProcess :: NodeProcess () m
+  , nodeStake :: Rational
   }
 
 initialiseNodeEnv ::
@@ -96,14 +100,14 @@ initialiseNodeEnv ::
   , MonadTime m
   , MonadFork m
   ) =>
-  m (ThreadId m, NodeProcess () m)
+  m (ThreadId m, NodeProcess () m, Rational)
 initialiseNodeEnv = do
   let gen = mkStdGen 42
   now <- getCurrentTime
   nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
   let (nodeState, gen') = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
   nodeThread <- forkIO $ runNode gen' parameters protocol nodeState nodeProcess
-  pure (nodeThread, nodeProcess)
+  pure (nodeThread, nodeProcess, toInteger (nodeState ^. stake) % toInteger (maximumStake parameters))
 
 protocol :: Protocol
 protocol = PseudoPraos defaultActiveSlotCoefficient
@@ -135,7 +139,7 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
     case action of
       Tick n ->
         mconcat <$> forM [1 .. n] tick
-      ForgedBlocksRespectSchedule{} -> pure ()
+      ForgedBlocksRespectSchedule{} -> asks nodeStake
    where
     tick :: Slot -> RunMonad m [Block ()]
     tick k = do
@@ -165,17 +169,24 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
   --   LookUp (RunMonad m) ->
   --   Realized (RunMonad m) a ->
   --   PostconditionM (RunMonad m) Bool
-  postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env ()
-    | slot > 0 =
-        let blocks = length $ foldMap env blockVars
-         in produceExpectedNumberOfBlocks blocks slot
+  postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do
+    let blocks = length $ foldMap env blockVars
+    produceExpectedNumberOfBlocks stakeRatio blocks slot
   postcondition _ _ _ _ = pure True
 
-produceExpectedNumberOfBlocks :: Monad m => Int -> Slot -> PostconditionM m Bool
-produceExpectedNumberOfBlocks blocks slot = do
-  let expectedBP :: Double = fromIntegral slot * defaultActiveSlotCoefficient
-  counterexamplePost $ "Actual: " <> show blocks <> ", Expected:  " <> show expectedBP
-  monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
-  pure $
-    fromIntegral blocks >= expectedBP
-      && fromIntegral blocks < 10 * expectedBP -- FIXME: this property does not make much sense
+produceExpectedNumberOfBlocks :: Monad m => Rational -> Int -> Slot -> PostconditionM m Bool
+produceExpectedNumberOfBlocks stakeRatio blocks slot =
+  do
+    let expectedBP :: Double = fromRational $ stakeRatio * toRational (fromIntegral slot * defaultActiveSlotCoefficient)
+    counterexamplePost $ "Actual: " <> show blocks <> ", Expected:  " <> show expectedBP
+    counterexamplePost $
+      "Stake: "
+        <> show stakeRatio
+        <> ", active slots: "
+        <> show defaultActiveSlotCoefficient
+        <> ", Slot: "
+        <> show slot
+    monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
+    pure $
+      fromIntegral blocks > 0.8 * expectedBP
+        && fromIntegral blocks <= 1.2 * expectedBP

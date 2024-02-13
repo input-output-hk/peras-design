@@ -11,7 +11,7 @@ import Data.Functor (void)
 import Peras.Message (NodeId (..))
 import Peras.NodeModel (Action (..), Node (..), NodeModel (..), RunMonad, initialiseNodeEnv, runMonad)
 import Test.Hspec (Spec)
-import Test.Hspec.QuickCheck (prop)
+import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
@@ -20,11 +20,11 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
+  modifyMaxShrinks (const 0) $ prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
 
 propHonestNodeMintingRate :: Property
 propHonestNodeMintingRate =
-  within 5000000 $
+  within 50000000 $
     forAllDL chainProgress propNodeModel
 
 chainProgress :: DL NodeModel ()
@@ -57,10 +57,11 @@ runPropInIOSim p = do
 
 withNode :: IOSim s (Node (IOSim s))
 withNode =
-  initialiseNodeEnv >>= \(nodeThreadId, nodeProcess) ->
+  initialiseNodeEnv >>= \(nodeThreadId, nodeProcess, nodeStake) ->
     pure $
       Node
         { nodeId = MkNodeId "N1"
         , nodeThreadId
         , nodeProcess
+        , nodeStake
         }
