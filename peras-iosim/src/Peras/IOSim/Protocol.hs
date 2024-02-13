@@ -24,13 +24,13 @@ nextSlot ::
   Default v =>
   RandomGen g =>
   g ->
-  Parameters ->
   Protocol ->
   Slot ->
+  Currency ->
   NodeState v ->
   ((NodeState v, Maybe (Message v)), g)
-nextSlot gen parameters PseudoPraos{..} slot' state =
-  let (leader, gen') = isSlotLeader gen parameters activeSlotCoefficient $ state ^. stake
+nextSlot gen PseudoPraos{..} slot' total state =
+  let (leader, gen') = isSlotLeader gen activeSlotCoefficient total $ state ^. stake
    in if leader
         then
           let (signature, gen'') = Signature `first` genByteString 6 gen'
@@ -54,10 +54,10 @@ nextSlot gen parameters PseudoPraos{..} slot' state =
             )
           , gen'
           )
-nextSlot _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
-nextSlot _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
-nextSlot _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
-nextSlot _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
+nextSlot _ PseudoPeras{} _ _ _ = error "Pseudo-Peras protocol is not yet implemented."
+nextSlot _ OuroborosPraos{} _ _ _ = error "Ouroboros-Praos protocol is not yet implemented."
+nextSlot _ OuroborosGenesis{} _ _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
+nextSlot _ OuroborosPeras{} _ _ _ = error "Ouroboros-Peras protocol is not yet implemented."
 
 newChain ::
   RandomGen g =>
@@ -81,13 +81,10 @@ newChain _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet i
 isSlotLeader ::
   RandomGen g =>
   g ->
-  Parameters ->
   Double ->
   Currency ->
+  Currency ->
   (Bool, g)
-isSlotLeader gen Parameters{..} activeSlotCoefficient' currency =
-  -- FIXME: This is just a crude approximation to the actual Praos leader-selection algorithm.
-  let expectedStake = fromIntegral $ peerCount * maximumStake
-      pSlotLottery = 1 - (1 - activeSlotCoefficient') ** (1 / expectedStake)
-      p = 1 - (1 - pSlotLottery) ^ currency
+isSlotLeader gen activeSlotCoefficient' total staked =
+  let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
    in (<= p) `first` uniformR (0, 1) gen

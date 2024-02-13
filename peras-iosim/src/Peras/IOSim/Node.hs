@@ -29,6 +29,7 @@ import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, nodeId
 import Peras.IOSim.Protocol (newChain, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.IOSim.Types (Currency)
 import Peras.Message (Message (..), NodeId)
 import System.Random (RandomGen (..))
 
@@ -79,10 +80,11 @@ runNode ::
   g ->
   Parameters ->
   Protocol ->
+  Currency ->
   NodeState v ->
   NodeProcess v m ->
   m ()
-runNode gen0 parameters protocol state0 NodeProcess{..} =
+runNode gen0 parameters protocol total state0 NodeProcess{..} =
   let go gen state =
         do
           now <- getCurrentTime
@@ -94,7 +96,7 @@ runNode gen0 parameters protocol state0 NodeProcess{..} =
                     NextSlot slot ->
                       do
                         threadDelay 1000000
-                        pure $ nextSlot gen parameters protocol slot state
+                        pure $ nextSlot gen protocol slot total state
                     SomeBlock _ -> error "Block transfer not implemented."
                     NewChain chain -> pure $ newChain gen parameters protocol chain state
                 atomically $
