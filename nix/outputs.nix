@@ -12,6 +12,6 @@ in
     inherit repoRoot;
     packages.peras = peras-agda;
     devShells.profiled = project.variants.profiled.devShell;
-
+    z = project.flake;
   }
 ]

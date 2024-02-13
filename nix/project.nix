@@ -14,7 +14,7 @@ let
       inputMap = {
         "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.iogx.inputs.CHaP;
       };
-      name = "my-project";
+      name = "peras-design";
       compiler-nix-name = lib.mkDefault "ghc96";
       modules = [ ];
       flake.variants.profiled.modules = [{
@@ -28,6 +28,7 @@ let
 
   project = lib.iogx.mkHaskellProject {
     inherit cabalProject;
+    readTheDocs.enable = false;
     shellArgs = repoRoot.nix.shell;
   };
 
