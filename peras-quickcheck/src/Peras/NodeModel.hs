@@ -162,13 +162,6 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
           } -> waitForIdle q (b : acc)
         other -> waitForIdle q acc
 
-  -- postcondition ::
-  --   MonadSTM m =>
-  --   (NodeModel, NodeModel) ->
-  --   Action NodeModel a ->
-  --   LookUp (RunMonad m) ->
-  --   Realized (RunMonad m) a ->
-  --   PostconditionM (RunMonad m) Bool
   postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do
     let blocks = length $ foldMap env blockVars
     produceExpectedNumberOfBlocks stakeRatio blocks slot
@@ -178,6 +171,7 @@ produceExpectedNumberOfBlocks :: Monad m => Rational -> Int -> Slot -> Postcondi
 produceExpectedNumberOfBlocks stakeRatio blocks slot =
   do
     let expectedBP :: Double = fromRational $ stakeRatio * toRational (fromIntegral slot * defaultActiveSlotCoefficient)
+        actualBP = fromIntegral blocks
     counterexamplePost $ "Actual: " <> show blocks <> ", Expected:  " <> show expectedBP
     counterexamplePost $
       "Stake: "
@@ -188,5 +182,5 @@ produceExpectedNumberOfBlocks stakeRatio blocks slot =
         <> show slot
     monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
     pure $
-      fromIntegral blocks > 0.8 * expectedBP
-        && fromIntegral blocks <= 1.2 * expectedBP
+      actualBP > 0.9 * expectedBP
+        && actualBP <= 1.1 * expectedBP
