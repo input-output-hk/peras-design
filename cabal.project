@@ -19,7 +19,6 @@ packages:
   peras-iosim
   peras-quickcheck
   random-forks
-  sketch
 
 tests: True
 test-show-details: direct
