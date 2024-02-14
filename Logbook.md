@@ -1,5 +1,11 @@
 ## 2024-02-13
 
+### YH - Formal specification
+
+- Introduced `CollisionFree` predicate
+- Refactored relation on global state
+- Proofing property that when there is collision-free state all previous states have been collision-free as well
+
 ### BB - ISSim enhancements
 
 - Improved faithfulness of slot-leader selection.

@@ -1,25 +1,26 @@
 module Peras.SmallStep where
 
 open import Data.Bool using (Bool; true; false)
-open import Data.List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.Maybe
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
-open import Data.Product using (_,_; _×_)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) using ()
 
 open import Function.Base using (_∘_; id)
 open import Level using (0ℓ)
-open import Relation.Binary using (StrictTotalOrder)
+open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
+open import Relation.Nullary using (Dec; yes; no)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym; subst)
+open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 open import Function.Base using (id)
 
 open import Peras.Chain using (Chain⋆; isValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
-open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Slot; slotNumber; Tx)
+open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Slot; slotNumber; Tx; Honesty)
 
 open import Data.Tree.AVL.Sets as S using ()
 open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
@@ -31,13 +32,10 @@ open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using 
   Søren Eller Thomsen and Bas Spitters
 -}
 
-data Honesty : Set where
-  Honest : Honesty
-  Corrupt : Honesty
-
 Blocks⋆ = B.⟨Set⟩
 
 open Chain⋆ public
+open Honesty public
 
 -- parameterized with genesis block
 
@@ -91,7 +89,7 @@ module _ {block₀ : Block⋆} where
       tT : TreeType T
       tree : T
 
-  module _ {T : Set} (honest? : PartyId → Honesty) where
+  module _ {T : Set} (honest? : (p : PartyId) → Honesty p) where
 
     -- local state
 
@@ -104,6 +102,9 @@ module _ {block₀ : Block⋆} where
 
     data Message : Set where
       BlockMsg : Block⋆ → Message
+
+    postulate
+      _≟-Message_ : DecidableEquality Message
 
     extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
     extendTreeₗ ⟨ partyId , tT , tree ⟩ b = ⟨ partyId , tT , (extendTree tT) tree b ⟩
@@ -142,7 +143,7 @@ module _ {block₀ : Block⋆} where
         progress : Progress
         stateMap : Map Stateˡ
         messages : List Message
-        execution-order : List PartyId
+        execution-order : List PartyId -- TODO: List (Honesty p)
 
     open Stateᵍ public
 
@@ -168,42 +169,116 @@ module _ {block₀ : Block⋆} where
 
     -- receive
 
-    party↓ : PartyId → Stateᵍ → Stateᵍ
-    party↓ p N with lookup (stateMap N) p | honest? p
-    ... | just sₗ | Honest = let msgs , N′ = fetchMsgs p N
-                                 sₗ′       = honestRcv msgs (clock N) sₗ
-                              in updateStateˡ p sₗ′ N′
-    ... | just sₗ | Corrupt = N -- FIXME: implement adversary
-    ... | nothing | _ = N
+    data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+
+      honestNoState : ∀ {p N}
+        → lookup (stateMap N) p ≡ nothing
+          -------------------------------
+        → N [ Honest {p} ]⇀ N
+
+      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs}
+        → lookup (stateMap N) p ≡ just sₗ
+        → msgs ≡ proj₁ (fetchMsgs p N)
+        → sₗ′ ≡ honestRcv msgs (clock N) sₗ
+          --------------------------------
+        → N [ Honest {p} ]⇀
+          record N {
+              stateMap = M.insert p sₗ′ (stateMap N)
+            }
+
+      corrupt : ∀ {p N}
+          ---------------------
+        → N [ Corrupt {p} ]⇀ N
+
+    []⇀-does-not-modify-messages : ∀ {M N p} {h : Honesty p}
+      → M [ h ]⇀ N
+      → messages M ≡ messages N
+    []⇀-does-not-modify-messages (honestNoState _) = refl
+    []⇀-does-not-modify-messages (honest _ _ _) = refl -- why?
+    []⇀-does-not-modify-messages corrupt = refl
+
+    data _⇀_ : Stateᵍ → Stateᵍ → Set where
+
+      Empty : ∀ {M}
+        → execution-order M ≡ []
+          ----------------------
+        → M ⇀ M
+
+      Cons : ∀ {M p ps} {N} {O}
+        → execution-order M ≡ p ∷ ps
+        → (record M { execution-order = ps }) [ honest? p ]⇀ N
+        → N ⇀ O
+          ------
+        → M ⇀ O
+
+    ⇀-does-not-modify-messages : ∀ {M N}
+      → M ⇀ N
+      → messages M ≡ messages N
+    ⇀-does-not-modify-messages (Empty _) = refl
+    ⇀-does-not-modify-messages (Cons _ x₁ x₂) =
+      trans
+        ([]⇀-does-not-modify-messages x₁)
+        (⇀-does-not-modify-messages x₂)
 
     -- create
 
-    party↷ : PartyId → Stateᵍ → Stateᵍ
-    party↷ p N with lookup (stateMap N) p | honest? p
-    ... | just sₗ | Honest = let msgs , sₗ′ = honestCreate (clock N) [] sₗ
-                             -- FIXME: gossip msgs
-                              in updateStateˡ p sₗ′ N
-    ... | just sₗ | Corrupt = N -- FIXME: implement adversary
-    ... | nothing | _ = N
+    data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
+      honestNoState : ∀ {p N}
+        → lookup (stateMap N) p ≡ nothing
+          -------------------------------
+        → N [ Honest {p} ]↷ N
+
+      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs}
+        → (msgs , sₗ′) ≡ honestCreate (clock N) [] sₗ
+          --------------------------------
+        → N [ Honest {p} ]↷
+          record N {
+              stateMap = M.insert p sₗ′ (stateMap N);
+              messages = msgs ++ messages N
+            }
+
+      corrupt : ∀ {p N}
+          ---------------------
+        → N [ Corrupt {p} ]↷ N
+
+    open import Data.List.Relation.Binary.Subset.Propositional {A = Message} renaming (_⊆_ to _⊆ᴹ_) using ()
+    open import Data.List.Relation.Binary.Subset.Propositional.Properties using (⊆-trans)
+    open import Data.List.Membership.DecPropositional _≟-Message_ using (_∈?_)
+
+    data _↷_ : Stateᵍ → Stateᵍ → Set where
+
+      Empty : ∀ {M}
+        → execution-order M ≡ []
+          ----------------------
+        → M ↷ M
+
+      Cons : ∀ {M p ps} {N} {O}
+        → execution-order M ≡ p ∷ ps
+        → (record M { execution-order = ps }) [ honest? p ]↷ N
+        → N ↷ O
+          ------
+        → M ↷ O
 
     -- small-step semantics for global state evolution
 
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {s sm ms ps}
-        → let
-            M = ⟪ s , Ready , sm , ms , ps ⟫
-            N = record (foldr party↓ M ps) { progress = Delivered }
-          in
-            M ↝ N
+      Deliver : ∀ {s sm ms ps} {N}
+        → let M = ⟪ s , Ready , sm , ms , ps ⟫
+           in M ⇀ N
+              ---------------------------
+            → M ↝ record N {
+                     progress = Delivered
+                   }
 
-      Bake : ∀ {s sm ms ps}
-        → let
-            M = ⟪ s , Delivered , sm , ms , ps ⟫
-            N = record (foldr party↷ M ps) { progress = Baked }
-          in
-            M ↝ N
+      Bake : ∀ {s sm ms ps} {N}
+        → let M = ⟪ s , Delivered , sm , ms , ps ⟫
+           in M ↷ N
+              -----------------------
+            → M ↝ record N {
+                     progress = Baked
+                   }
 
       NextRound : ∀ {s sm ms ps}
         → ⟪ s , Baked , sm , ms , ps ⟫ ↝ ⟪ suc s , Ready , sm , ms , ps ⟫
@@ -233,6 +308,7 @@ module _ {block₀ : Block⋆} where
           ------
         → L ↝⋆ N
 
+    -- hash function, collision free predicate
 
     module _ {hashᴮ : Block⋆ → Hash} where
 
@@ -245,46 +321,54 @@ module _ {block₀ : Block⋆} where
           → b₁ ≡ b₂
           → CollisionFree N
 
-      {-
-      party↓-does-not-change-msg : ∀ {p N₁ N₂}
-        → party↓ p N₁ ≡ N₂
-        → messages N₁ ≡ messages N₂
-      party↓-does-not-change-msg = {!!}
-
-      foldr-party↓-does-not-change-msg : ∀ {N ps}
-        → messages (foldr party↓ N ps) ≡ messages N
-      foldr-party↓-does-not-change-msg {N} {[]} = refl
-      foldr-party↓-does-not-change-msg {N} {x ∷ ps} =
-        let xx = foldr-party↓-does-not-change-msg {N} {ps}
-            yy = party↓-does-not-change-msg {x} {foldr party↓ N ps} {N}
-        in {!!}
-
       subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
         → x ∈ xs
         → xs ≡ ys
         → x ∈ ys
       subst′ {A} {x} x₁ x₂ = subst (x ∈_) x₂ x₁
-      -}
+
+      -- When the current state is collision free, the pervious state was so too
 
       postulate
+        []↷-collision-free : ∀ {M N p} {h : Honesty p}
+          → CollisionFree N
+          → M [ h ]↷ N
+          → CollisionFree M
+
+        ↷-collision-free : ∀ {M N}
+          → CollisionFree N
+          → M ↷ N
+          → CollisionFree M
+
         ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
           → N₁ ↝ N₂
           → CollisionFree N₂
+            ----------------
           → CollisionFree N₁
 
       {-
-      ↝-collision-free {⟪ s , Ready , sm , ms , ps ⟫} Deliver (collision-free b₁∈m b₂∈m x₂ x₃) =
-        let msg-≡ = foldr-party↓-does-not-change-msg {⟪ s , Ready , sm , ms , ps ⟫} {ps}
-        in collision-free (subst′ b₁∈m msg-≡) (subst′ b₂∈m msg-≡) x₂ x₃
-      ↝-collision-free Bake (collision-free x x₁ x₂ x₃) = collision-free {!!} {!!} x₂ x₃
+      ↝-collision-free (Deliver (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free (Deliver (Cons refl x₅ y)) (collision-free x x₁ x₂ x₃) =
+        let xx = trans ([]⇀-does-not-modify-messages x₅) (⇀-does-not-modify-messages2 y)
+        in collision-free (subst′ x (sym xx)) (subst′ x₁ (sym xx)) x₂ x₃
+      ↝-collision-free (Bake (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free (Bake (Cons refl x₅ y)) a =
+        let aa = ↷-collision-free2 {!!} y
+            bb = ↷-collision-free aa x₅
+        in {!!} -- collision-free {!!} {!!} x₂ x₃
+
       ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free PermParties (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free PermMsgs (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       -}
 
+      -- When the current state is collision free, pervious states were so too
+
       ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
         → N₁ ↝⋆ N₂
         → CollisionFree N₂
+          ----------------
         → CollisionFree N₁
       ↝⋆-collision-free (_ ∎) N = N
-      ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ = ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+      ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
+        ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)

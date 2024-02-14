@@ -39,6 +39,17 @@ PartyIdO = record {
   _<_                = paLt ;
   isStrictTotalOrder = paIs }
 
+data Honesty : PartyId → Set where
+
+  Honest : ∀ {p : PartyId}
+    → Honesty p
+
+  Corrupt : ∀ {p : PartyId} -- FIXME
+    → Honesty p
+
+
+-- Transactions
+
 record Tx : Set where
   field tx : ByteString
 
