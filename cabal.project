@@ -39,4 +39,7 @@ optimization: False
 
 flags: +defer-plugin-errors
 
+allow-older:
+  io-classes-mtl
+
 write-ghc-environment-files: never

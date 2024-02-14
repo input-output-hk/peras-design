@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Protocol (
@@ -5,86 +6,78 @@ module Peras.IOSim.Protocol (
   nextSlot,
 ) where
 
-import Control.Lens ((&), (.~), (^.))
-import Data.Bifunctor (first)
+import Control.Lens (use, uses, (.=))
+import Control.Monad (replicateM)
+import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
+import Control.Monad.State (MonadState)
 import Data.Default (Default (def))
+import Data.Function (on)
 import Peras.Block (Block (Block), Slot)
 import Peras.Chain (Chain (..))
 import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
 import Peras.IOSim.Node.Types (NodeState, owner, preferredChain, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Currency)
 import Peras.Message (Message (NewChain))
-import System.Random (RandomGen (..), genByteString, uniformR)
 
--- FIXME: We need an implementation of `MonadRandom` within `IOSim`.
+import qualified Data.ByteString as BS
 
 nextSlot ::
   Default v =>
-  RandomGen g =>
-  g ->
+  MonadRandom m =>
+  MonadState (NodeState v) m =>
   Protocol ->
   Slot ->
   Currency ->
-  NodeState v ->
-  ((NodeState v, Maybe (Message v)), g)
-nextSlot gen PseudoPraos{..} slot' total state =
-  let (leader, gen') = isSlotLeader gen activeSlotCoefficient total $ state ^. stake
-   in if leader
-        then
-          let (signature, gen'') = Signature `first` genByteString 6 gen'
-              block = Block slot' (state ^. owner) (Hash mempty) def (LeadershipProof mempty) mempty signature
-              chain = Cons block $ state ^. preferredChain
-           in (
-                ( state
-                    & slot .~ slot'
-                    & preferredChain .~ chain
-                    & slotLeader .~ leader
-                , Just $ NewChain chain
-                )
-              , gen''
-              )
-        else
-          (
-            ( state
-                & slot .~ slot'
-                & slotLeader .~ leader
-            , Nothing
-            )
-          , gen'
-          )
-nextSlot _ PseudoPeras{} _ _ _ = error "Pseudo-Peras protocol is not yet implemented."
-nextSlot _ OuroborosPraos{} _ _ _ = error "Ouroboros-Praos protocol is not yet implemented."
-nextSlot _ OuroborosGenesis{} _ _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
-nextSlot _ OuroborosPeras{} _ _ _ = error "Ouroboros-Peras protocol is not yet implemented."
+  m (Maybe (Message v))
+nextSlot PseudoPraos{..} slotNumber total =
+  do
+    leader <- isSlotLeader activeSlotCoefficient total =<< use stake
+    slot .= slotNumber
+    slotLeader .= leader
+    if leader
+      then do
+        creatorId <- use owner
+        let parentBlock = Hash mempty -- FIXME: The Agda types don't yet have a structure for tracking block hashes.
+            includedVotes = def
+            payload = mempty
+        leadershipProof <- LeadershipProof . BS.pack <$> replicateM 6 getRandom
+        signature <- Signature . BS.pack <$> replicateM 6 getRandom
+        chain <- preferredChain `uses` Cons (Block slotNumber creatorId parentBlock includedVotes leadershipProof payload signature)
+        preferredChain .= chain
+        pure . Just $ NewChain chain
+      else pure Nothing
+nextSlot PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
+nextSlot OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
+nextSlot OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
+nextSlot OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
 
 newChain ::
-  RandomGen g =>
-  g ->
-  Parameters ->
+  MonadState (NodeState v) m =>
   Protocol ->
   Chain v ->
-  NodeState v ->
-  ((NodeState v, Maybe (Message v)), g)
-newChain gen _ PseudoPraos{} chain state =
-  let length' Genesis = (0 :: Int)
-      length' (Cons _ chain') = 1 + length' chain'
-   in if length' chain > length' (state ^. preferredChain)
-        then ((state & preferredChain .~ chain, Just $ NewChain chain), gen)
-        else ((state, Nothing), gen)
-newChain _ _ PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
-newChain _ _ OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
-newChain _ _ OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
-newChain _ _ OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
+  m (Maybe (Message v))
+newChain PseudoPraos{} chain =
+  do
+    let chainLength Genesis = (0 :: Int)
+        chainLength (Cons _ chain') = 1 + chainLength chain'
+    preferred <- use preferredChain
+    if on (>) chainLength chain preferred
+      then do
+        preferredChain .= chain
+        pure . Just $ NewChain chain
+      else pure Nothing
+newChain PseudoPeras{} _ = error "Pseudo-Peras protocol is not yet implemented."
+newChain OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
+newChain OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
+newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
 
 isSlotLeader ::
-  RandomGen g =>
-  g ->
+  MonadRandom m =>
   Double ->
   Currency ->
   Currency ->
-  (Bool, g)
-isSlotLeader gen activeSlotCoefficient' total staked =
+  m Bool
+isSlotLeader activeSlotCoefficient' total staked =
   let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
-   in (<= p) `first` uniformR (0, 1) gen
+   in (<= p) <$> getRandomR (0, 1)
