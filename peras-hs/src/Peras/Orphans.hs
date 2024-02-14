@@ -8,7 +8,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.Orphans (
-
+  fromBlocks,
+  toBlocks,
 ) where
 
 import Data.Bifunctor (first)
@@ -82,26 +83,26 @@ deriving stock instance Ord v => Ord (Chain v)
 deriving stock instance Read v => Read (Chain v)
 deriving stock instance Show v => Show (Chain v)
 
+fromBlocks ::
+  [Block v] ->
+  Chain v
+fromBlocks = foldr Cons Genesis
+
+toBlocks ::
+  Chain v ->
+  [Block v]
+toBlocks Genesis = []
+toBlocks (Cons block chain) = toBlocks chain <> pure block
+
 instance A.FromJSON v => A.FromJSON (Chain v) where
   parseJSON =
     A.withObject "Chain" $
-      \o ->
-        do
-          tip <- o A..: "tip"
-          maybe
-            (pure Genesis)
-            (\tip' -> Cons tip' <$> o A..: "previous")
-            tip
+      \o -> fromBlocks <$> o A..: "blocks"
 
 instance A.ToJSON v => A.ToJSON (Chain v) where
-  toJSON Genesis =
+  toJSON chain =
     A.object
-      [ "tip" A..= A.Null
-      ]
-  toJSON (Cons block chain) =
-    A.object
-      [ "tip" A..= block
-      , "previous" A..= chain
+      [ "blocks" A..= toBlocks chain
       ]
 
 deriving stock instance Eq Hash
