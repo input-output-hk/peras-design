@@ -1,3 +1,92 @@
+## 2024-02-14
+
+### AB on Network Modeling
+
+Reading about Rust's FFI: https://www.michaelfbryan.com/rust-ffi-guide/setting_up.html
+* `ByteBuffer` is a type exported from `ffi_support` library which means foreign code will need to link to this library too, which is annoying.
+* There's a [PR #9](https://github.com/input-output-hk/ce-netsim/pull/9) baking to build a proper FFI library
+
+Looking at `runNetwork` code to understand how I can instrument it for inclusion in a quickcheck model. `runNetwork` is opaque, eg. it runs a predefined network until some slot is reached.
+
+### AB on ΔQ
+
+Trying to (again) understand what ΔQ is and how to use it, found [this paper](https://www.broadband-forum.org/pdfs/mr-452.2-1-0-0.pdf) on PnSOL's website that sheds some light on it: The idea is to relate SLAs to _Quantitative Timeliness Attenuation_ which is then expressed as an "improper CDF" incorporating expectations about delivery time and loss probability. For example, one can say:
+* 50% delivered under 100ms
+* 95% delivered under 200ms
+* 2% packet loss
+
+This defines a crude distribution function with steps and then ΔQ actual measurements can be done to assess whethere these are met.
+
+Also, individual components' ΔQ profiles can be composed to yield global measure.
+
+#### Original paper
+
+Going through the first sections of https://www.mdpi.com/2073-431X/11/3/45 to understand how it's been applied to Cardano block diffusion
+
+Problem is stated as:
+
+> Starting from blockchain node A, what is the probability distribution of the time taken for a block to reach a different node Z when A and Z are picked at random from the graph?
+
+Then the next paragraph says the "the graph is random with some
+limited node degree N" which seems to imply we assume a _random
+graph_. But is it really the case? Is the graph really a _random
+graph_ (with all the properties as defined by Barabasi et al.) or is
+it rather a _power law graph_? What would that change?
+
+Delay distributions can be combined either sequentially (through a convolution?):
+
+Definition on continuous domain is:
+$$
+(f*g)(t):=\int _{-\infty }^{\infty }f(t-\tau )g(\tau )\,d\tau.
+$$
+
+which translates to finite domains as:
+$$
+h(n) = (f \star g)(n) = \Sigma_{i=-\inf}^{\inf} f(n−i)g(i).
+$$
+
+Found this Algorithm in 1D (which is what's interesting for us): https://www.algorithm-archive.org/contents/convolutions/1d/1d.html
+
+#### Refinement & alternatives exploration
+
+ΔQ can be applied to refine steps in a process, but also explore alternative designs:
+* Impact of a distribution of path length on block diffusion time
+* Impact of header/body split on overall diffusion
+
+For example:
+
+> For the ‘Near’ peers shipping a 64 kB block, this means an intensity of 42.7 Mb/s (8 × 64000/(0.024 − 0.012))
+
+* 0.024 = time to ship a full block between 2 nodes in the same DC
+* 0.012 = latency between 2 nodes in same DC (RTT)
+* 8 = number of nodes from which we download full block ?
+* 64000 = size of a block
+
+Not sure what does this number means? Bandwidth lower-bound of a node?
+
+#### Comparison between ΔQ analysis and simulation
+
+Aims at showing that simulation is intractable as it would need too many samples to provide similar information
+* Feeling that the argument about the number of graphs to generate is a strawman argument. There's a huge amount of them of course, but you don't really care to cover those, you only want to ensure your sample has some variety while staying consistent with the expected characteristics of the network.
+* you can reduce the search space to _relevant_ graphs and leave pathological ones aside
+
+#### Semantics of ΔQ
+
+Δ0 is a partial CDF, eg. a CDF with some cutoff before 1 to represent failures
+
+```
+ΔQ(Δ0) = Δ0
+ΔQ(A -> B) = ΔQ(A) * ΔQ(B) -- convolution
+ΔQ(A // B) = p(A)ΔQ(A) + p(B)ΔQ(B) -- alternative w/ proba
+ΔQ(∃(A | B)) = ΔQ(A) + ΔQ(B) - ΔQ(A) x ΔQ(B) -- exclusive one outcome
+ΔQ(∀(A | B)) = ΔQ(A) x ΔQ(B) -- all outcomes
+```
+
+How can we apply ΔQ to the problem of finality in a blockchain?
+We first need to define finality and settlement: It's the time it takes for a transaction to be considered _Final_ by one node? By all nodes?
+
+A survey paper about networking in cryptocurrencies: https://arxiv.org/pdf/2008.08412.pdf
+
 ## 2024-02-13
 
 ### YH - Formal specification
