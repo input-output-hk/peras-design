@@ -188,5 +188,6 @@ produceExpectedNumberOfBlocks stakeRatio blocks slot =
       equalsBinomialWithinTails
         (fromIntegral slot) -- The sample size.
         (1 - (1 - defaultActiveSlotCoefficient) ** fromRational stakeRatio) -- Praos probability.
-        3 -- Three standard deviations corresponds to the confidence interval from 0.3% to 97.3%.
+        3 -- Three standard deviations corresponds to the confidence interval from 0.3% to 99.7%.
+        -- That means that the test will fail after a few batches of 100 tests.
         actualBP

@@ -1,5 +1,17 @@
 ## 2024-02-14
 
+### BB on testing statistical properties
+
+1. Ran and statistically analyzed an experiment [using this Jupyter notebook](peras-iosim/analyses/block-production/ReadMe.ipynb) to verify the correctness of slot leadership and block production for the `PseudoPraos` protocol.
+2. Research QuickCheck-based approaches for handling approximate equality and statistical properties.
+    - There don't seem to be special-purpose libraries of this.
+    - QuickCheck and its extension provide some control over coverage and sampling, but this doesn't address the fundamental problem of determining when a failure is a valid statistical outlier vs an error.
+3. Revised QuickCheck test for block production to use a three-sigma confidence interval. Eventually, we'll need to make the sigma level tunable.
+
+Other revisions to `peras-iosim`:
+- Added an explicit parameter for total stake to `Peras.IOSim.Simulate.Types.Parameters`.
+- Changed serialization of `Peras.Chain` so that it doesn't keeply next JSON, since that causes most JSON parsers to crash for long chains.
+ 
 ### AB on Network Modeling
 
 Reading about Rust's FFI: https://www.michaelfbryan.com/rust-ffi-guide/setting_up.html
