@@ -1,8 +1,9 @@
 module Peras.SmallStep where
 
 open import Data.Bool using (Bool; true; false)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct)
 open import Data.List.Membership.Propositional using (_∈_)
+open import Data.List.Relation.Unary.All using (All)
 open import Data.Maybe
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -255,10 +256,10 @@ module _ {block₀ : Block⋆} where
 
       Cons : ∀ {M p ps} {N} {O}
         → execution-order M ≡ p ∷ ps
-        → (record M { execution-order = ps }) [ honest? p ]↷ N
+        → M [ honest? p ]↷ N
         → N ↷ O
           ------
-        → M ↷ O
+        → (record M { execution-order = ps }) ↷ O
 
     -- small-step semantics for global state evolution
 
@@ -314,6 +315,15 @@ module _ {block₀ : Block⋆} where
 
       data CollisionFree (N : Stateᵍ) : Set where
 
+{-
+        collision-free : ∀ {b₁ b₂ : Block⋆}
+          → All
+            (λ { (BlockMsg b₁ , BlockMsg b₂) →
+                 (hashᴮ b₁ ≡ hashᴮ b₂ → b₁ ≡ b₂) })
+            (cartesianProduct (messages N) (messages N))
+          → CollisionFree N
+-}
+
         collision-free : ∀ {b₁ b₂ : Block⋆}
           → BlockMsg b₁ ∈ messages N
           → BlockMsg b₂ ∈ messages N
@@ -329,38 +339,52 @@ module _ {block₀ : Block⋆} where
 
       -- When the current state is collision free, the pervious state was so too
 
-      postulate
-        []↷-collision-free : ∀ {M N p} {h : Honesty p}
-          → CollisionFree N
-          → M [ h ]↷ N
-          → CollisionFree M
+      []↷-collision-free : ∀ {M N p} {h : Honesty p}
+        → CollisionFree N
+        → M [ h ]↷ N
+        → CollisionFree M
+      []↷-collision-free x (honestNoState _) = x
+      []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} refl) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
+      []↷-collision-free x corrupt = x
 
-        ↷-collision-free : ∀ {M N}
-          → CollisionFree N
-          → M ↷ N
-          → CollisionFree M
+      ∷-collision-free : ∀ {cl pr sm ms ps p}
+        → CollisionFree ⟪ cl , pr , sm , ms , p ∷ ps ⟫
+        → CollisionFree ⟪ cl , pr , sm , ms , ps ⟫
+      ∷-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-        ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
-          → N₁ ↝ N₂
-          → CollisionFree N₂
-            ----------------
-          → CollisionFree N₁
+      prog-collision-free : ∀ {cl pr₁ pr₂ sm ms ps}
+        → CollisionFree ⟪ cl , pr₁ , sm , ms , ps ⟫
+        → CollisionFree ⟪ cl , pr₂ , sm , ms , ps ⟫
+      prog-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-      {-
+      ↷-collision-free : ∀ {M N}
+        → CollisionFree N
+        → M ↷ N
+        → CollisionFree M
+      ↷-collision-free x (Empty _) = x
+      ↷-collision-free {M = ⟪ clock₁ , progress₁ , stateMap₁ , messages₁ , ps ⟫} {N} n@(collision-free x x₄ x₅ x₆) (Cons {M = M} {p = p} {ps} {O = N} refl x₂ x₃) =
+        let m = ↷-collision-free n x₃
+            m′ = []↷-collision-free {M = ⟪ clock₁ , progress₁ , stateMap₁ , messages₁ , p ∷ ps ⟫} m x₂
+        in ∷-collision-free m′
+
+      ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
+        → N₁ ↝ N₂
+        → CollisionFree N₂
+          ----------------
+        → CollisionFree N₁
+
       ↝-collision-free (Deliver (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free (Deliver (Cons refl x₅ y)) (collision-free x x₁ x₂ x₃) =
-        let xx = trans ([]⇀-does-not-modify-messages x₅) (⇀-does-not-modify-messages2 y)
-        in collision-free (subst′ x (sym xx)) (subst′ x₁ (sym xx)) x₂ x₃
+        let ≡-msg = trans ([]⇀-does-not-modify-messages x₅) (⇀-does-not-modify-messages y)
+        in collision-free (subst′ x (sym ≡-msg)) (subst′ x₁ (sym ≡-msg)) x₂ x₃
       ↝-collision-free (Bake (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free (Bake (Cons refl x₅ y)) a =
-        let aa = ↷-collision-free2 {!!} y
-            bb = ↷-collision-free aa x₅
-        in {!!} -- collision-free {!!} {!!} x₂ x₃
-
+      ↝-collision-free (Bake (Cons refl x₅ y)) n@(collision-free x x₁ x₂ x₃) =
+        let m = ↷-collision-free (prog-collision-free n) y
+            m′ = []↷-collision-free m x₅
+        in ∷-collision-free m′
       ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free PermParties (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free PermMsgs (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      -}
 
       -- When the current state is collision free, pervious states were so too
 
