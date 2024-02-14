@@ -3,6 +3,7 @@
 ### BB - ISSim enhancements
 
 - Improved faithfulness of slot-leader selection.
+- Refactored to use `MonadRandom` throughout.
 
 ### AB - Model-Based Testing a node
 

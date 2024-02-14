@@ -10,7 +10,8 @@ module Peras.IOSim.Simulate (
 
 import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
 import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSimStrictShutdown, runSimTrace, traceResult)
-import Control.Monad.Random (runRand)
+import Control.Monad.Random (evalRandT)
+import Control.Monad.Trans (lift)
 import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
 import Peras.IOSim.Network.Types (NetworkState)
 import Peras.IOSim.Node (initializeNodes)
@@ -27,16 +28,13 @@ simulation ::
   IOSim s (NetworkState ())
 simulation parameters@Parameters{..} protocol =
   let gen = mkStdGen randomSeed
-   in do
-        now <- getCurrentTime
-        let ((states, topology), gen') =
-              flip runRand gen $
-                do
-                  topology' <- randomTopology parameters
-                  states' <- initializeNodes parameters now topology'
-                  pure (states', topology')
-        network <- createNetwork topology
-        runNetwork gen' parameters protocol states network endSlot
+   in flip evalRandT gen $
+        do
+          now <- lift getCurrentTime
+          topology <- randomTopology parameters
+          states <- initializeNodes parameters now topology
+          network <- lift $ createNetwork topology
+          runNetwork parameters protocol states network endSlot
 
 simulate ::
   Parameters ->
