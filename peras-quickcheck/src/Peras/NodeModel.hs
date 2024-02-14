@@ -26,6 +26,7 @@ import Control.Monad.Trans (MonadTrans (..))
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio, (%))
 import qualified Data.Set as Set
+import Data.Statistics.Util (equalsBinomialWithinTails)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
@@ -184,5 +185,8 @@ produceExpectedNumberOfBlocks stakeRatio blocks slot =
         <> show slot
     monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
     pure $
-      actualBP > 0.9 * expectedBP
-        && actualBP <= 1.1 * expectedBP
+      equalsBinomialWithinTails
+        (fromIntegral slot) -- The sample size.
+        (1 - (1 - defaultActiveSlotCoefficient) ** fromRational stakeRatio) -- Praos probability.
+        3 -- Three standard deviations corresponds to the confidence interval from 0.3% to 97.3%.
+        actualBP

@@ -61,6 +61,7 @@ library
     -- Modules exported by the library.
     exposed-modules: Peras.NetworkModel
                      Peras.NodeModel
+    other-modules: Data.Statistics.Util
 
     -- Modules included in this library but not exported.
     -- other-modules:
