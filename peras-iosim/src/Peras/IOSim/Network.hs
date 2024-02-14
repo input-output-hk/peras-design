@@ -33,6 +33,7 @@ import Control.Monad.State (StateT, execStateT, gets, lift)
 import Data.Default (Default (def))
 import Data.Foldable (foldrM)
 import Data.List (delete)
+import Data.Maybe (fromMaybe)
 import Peras.Block (Slot)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
@@ -118,7 +119,7 @@ runNetwork parameters protocol states Network{..} endSlot =
     do
       let
         -- Find the total stake.
-        total = sum $ (^. stake) <$> states
+        total = fromMaybe (sum $ (^. stake) <$> states) $ totalStake parameters
         -- Start a node process.
         forkNode (nodeId, nodeIn) =
           do

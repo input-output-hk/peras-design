@@ -42,6 +42,7 @@ $ cat small-network.yaml
 randomSeed: 12345
 peerCount: 10
 downstreamCount: 3
+totalStake: 10000
 maximumStake: 1000
 endSlot: 1000
 

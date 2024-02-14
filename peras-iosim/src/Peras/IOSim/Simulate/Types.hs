@@ -18,6 +18,7 @@ data Parameters = Parameters
   , endSlot :: Slot
   , peerCount :: Int
   , downstreamCount :: Int
+  , totalStake :: Maybe Currency
   , maximumStake :: Currency
   , messageDelay :: Double
   }
@@ -32,6 +33,7 @@ instance A.FromJSON Parameters where
           endSlot <- o A..: "endSlot"
           peerCount <- o A..: "peerCount"
           downstreamCount <- o A..: "downstreamCount"
+          totalStake <- o A..: "totalStake"
           maximumStake <- o A..: "maximumStake"
           messageDelay <- o A..: "messageDelay"
           pure Parameters{..}
@@ -43,6 +45,7 @@ instance A.ToJSON Parameters where
       , "endSlot" A..= endSlot
       , "peerCount" A..= peerCount
       , "downstreamCount" A..= downstreamCount
+      , "totalStake" A..= totalStake
       , "maximumStake" A..= maximumStake
       , "messageDelay" A..= messageDelay
       ]

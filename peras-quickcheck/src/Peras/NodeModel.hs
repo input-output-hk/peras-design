@@ -23,6 +23,7 @@ import Control.Monad.Class.MonadTimer (MonadDelay)
 import Control.Monad.Random (runRand)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
+import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio, (%))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -106,8 +107,8 @@ initialiseNodeEnv = do
   now <- getCurrentTime
   nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
   let (nodeState, gen') = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
-  nodeThread <- forkIO $ runNode gen' protocol (maximumStake parameters) nodeState nodeProcess
-  pure (nodeThread, nodeProcess, toInteger (nodeState ^. stake) % toInteger (maximumStake parameters))
+  nodeThread <- forkIO $ runNode gen' protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
+  pure (nodeThread, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol
 protocol = PseudoPraos defaultActiveSlotCoefficient
@@ -121,6 +122,7 @@ parameters =
     { randomSeed = 12345
     , peerCount = 1
     , downstreamCount = 3
+    , totalStake = Just 1000
     , maximumStake = 1000
     , endSlot = 1000
     , messageDelay = 0.35
