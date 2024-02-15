@@ -92,5 +92,11 @@ correctBlocks (MkChain blocks _ _) =
   in all verifyLeadershipProof bs
 -}
 
+data ValidChain : Chain⋆ → Set where
+
+  -- FIXME: constructors
+
+{-
 postulate
   isValidChain : Chain⋆ -> Bool
+-}

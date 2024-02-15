@@ -19,7 +19,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 open import Function.Base using (id)
 
-open import Peras.Chain using (Chain⋆; isValidChain)
+open import Peras.Chain using (Chain⋆; ValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
 open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Slot; slotNumber; Tx; Honesty)
 
@@ -59,10 +59,10 @@ module _ {block₀ : Block⋆} where
         → allBlocks (extendTree t b) ≡ B.insert b (allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot)
-        → isValidChain (bestChain sl t) ≡ true
+        → ValidChain (bestChain sl t)
 
       optimal : ∀ (c : Chain⋆) (t : T) (sl : Slot)
-        → isValidChain c ≡ true
+        → ValidChain c
         → toList (blocks c) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
         → size (blocks c) ≤ size (blocks (bestChain sl t))
 
