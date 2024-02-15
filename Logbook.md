@@ -1,5 +1,11 @@
 ## 2024-02-15
 
+### YH working on code extraction using agda2hs
+
+* In the agda2hs documentaion there are good examples guiding on how to extract properties (i.e. equality) from Agda to Haskell: https://github.com/agda/agda2hs/blob/02f495cdbc45874749665917f8a3f0bd7db5a158/docs/source/features.md?plain=1#L353-L410
+* In agda2hs there is the module `Haskell.Law` providing helpers for that
+* Currently I'm using a simple toy chain for experimenting with code extraction
+
 ### ΔQ library
 
 Did some brushing up of PNSol's
