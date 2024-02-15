@@ -6,21 +6,20 @@
 
 module Peras.NetworkModelSpec where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar, modifyTVar', newTVarIO, readTVarIO, writeTVar)
-import Control.Lens (Field1 (_1), use, uses, (^.))
-import Control.Monad (forM, forM_)
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVarIO, writeTVar)
+import Control.Lens (Field1 (_1), uses, (^.))
+import Control.Monad (forM)
 import Control.Monad.Class.MonadTime.SI (getCurrentTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
-import Control.Monad.Random (evalRand, mkStdGen, runRand, runRandT)
+import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (..))
-import Control.Monad.State (StateT (..), gets)
-import Data.Bifunctor (second)
+import Control.Monad.State (StateT (..))
 import Data.Default (def)
 import Data.Functor (void)
 import qualified Data.Map as Map
 import Peras.Chain (Chain (Genesis))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
-import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
+import Peras.IOSim.Network.Types (NetworkState, currentStates)
 import Peras.IOSim.Node (initializeNodes)
 import qualified Peras.IOSim.Node.Types as Node
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
@@ -28,7 +27,7 @@ import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
-import Test.Hspec.QuickCheck (modifyMaxShrinks, modifyMaxSuccess, prop)
+import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
@@ -37,7 +36,8 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  modifyMaxSuccess (const 10) $ prop "Chain progress" prop_chain_progress
+  -- those tests are a bit slow...
+  modifyMaxSuccess (const 30) $ prop "Chain progress" prop_chain_progress
 
 prop_chain_progress :: Property
 prop_chain_progress =

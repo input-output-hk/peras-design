@@ -1,5 +1,13 @@
 ## 2024-02-15
 
+### ΔQ library
+
+Did some brushing up of PNSol's
+[DeltaQ](https://github.com/DeltaQ-SD/pnsol-deltaq-clone) library as
+it's easier for me to understand things once they are written down as
+code. Would be interesting to have a look at how they manage the
+probability distributions and integrate that in our network modelling.
+
 ### AB on `NetworkModel`ing
 
 Shaving some yaks while trying to implement "common prefix"  property for the `NetworkModel`.
