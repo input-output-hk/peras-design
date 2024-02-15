@@ -115,12 +115,13 @@ runNode gen0 protocol total state NodeProcess{..} =
                           runRand $ nextSlot protocol slot total
                       SomeBlock _ -> error "Block transfer not implemented."
                       NewChain chain -> runRand $ newChain protocol chain
+                  currentState <- get
                   atomically' $
                     do
                       case message of
                         Nothing -> pure ()
                         Just message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams'
-                      writeTQueue outgoing $ Idle now nodeId'
+                      writeTQueue outgoing $ Idle now nodeId' currentState
                   clock .= now
                   go gen'
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get

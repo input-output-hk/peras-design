@@ -10,7 +10,7 @@ module Peras.IOSim.Network.Types (
   Topology (..),
   activeNodes,
   chainsSeen,
-  exitStates,
+  currentStates,
   lastSlot,
   lastTime,
   pending,
@@ -52,7 +52,7 @@ data NetworkState v = NetworkState
   , _lastTime :: UTCTime
   , _activeNodes :: S.Set NodeId
   , _chainsSeen :: S.Set (Chain v)
-  , _exitStates :: M.Map NodeId (NodeState v)
+  , _currentStates :: M.Map NodeId (NodeState v)
   , _pending :: [OutEnvelope v]
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
@@ -67,7 +67,7 @@ instance ToJSON v => ToJSON (NetworkState v) where
       , "lastTime" A..= _lastTime
       , "activeNodes" A..= _activeNodes
       , "chainsSeen" A..= _chainsSeen
-      , "exitStates" A..= _exitStates
+      , "currentStates" A..= _currentStates
       , "pending" A..= _pending
       ]
 

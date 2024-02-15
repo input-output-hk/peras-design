@@ -1,7 +1,9 @@
 module Peras.Chain where
 
+open import Agda.Builtin.List
 open import Agda.Builtin.Word
 open import Data.Bool
+open import Data.List
 open import Data.Nat using (ℕ)
 open import Level
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
@@ -59,6 +61,20 @@ data Chain t : Set where
 open Chain public
 
 {-# COMPILE AGDA2HS Chain #-}
+
+-- | View of a `Chain` as a mere `List` of blocks.
+asList : {t : Set} -> (c : Chain t) -> List (Block t)
+asList Genesis = []
+asList (Cons x c) = x ∷ (asList c)
+
+{-# COMPILE AGDA2HS asList #-}
+
+-- | View of a `List` of blocks as a `Chain` anchored in `Genesis`.
+asChain : {t : Set} -> (blocks : List (Block t)) -> Chain t
+asChain [] = Genesis
+asChain (x ∷ bs) = Cons x (asChain bs)
+
+{-# COMPILE AGDA2HS asChain #-}
 
 -- Chain⋆ = Chain (set BlockO)
 
