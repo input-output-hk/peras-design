@@ -1,5 +1,19 @@
 ## 2024-02-15
 
+### BB - Rust-based generator of randomized network topologies
+
+The [peras\_topology](peras_topology/ReadMe.md) Rust crate contains a rudimentary implementation of a randomized network generator, like that in the `peras-iosim` Haskell package.
+- Reads YAML-formatted `Parameters` describing the network.
+- Outputs a JSON file with the `Topology`.
+- The serialization formats are compatible with `peras-iosim`.
+
+This raises several issues related to Rust:
+1. How do we want to organize our Rust crate structure?
+2. Should we try to generate the Rust types directly from Agda?
+    - How mature is IOG's work on `agda2rust`?
+3. Which tools do we want to code in Rust vs Haskell?
+4. Is the default `rustfmt` sufficient as a code-style standard, for the time being?
+
 ### YH working on code extraction using agda2hs
 
 * In the agda2hs documentaion there are good examples guiding on how to extract properties (i.e. equality) from Agda to Haskell: https://github.com/agda/agda2hs/blob/02f495cdbc45874749665917f8a3f0bd7db5a158/docs/source/features.md?plain=1#L353-L410
