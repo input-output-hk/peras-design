@@ -48,7 +48,7 @@ module _ {block₀ : Block⋆} where
                     (extendTree : T → Block⋆ → T)
                     (allBlocks : T → Blocks⋆)
                     (bestChain : Slot → T → Chain⋆)
-         : Set where
+         : Set₁ where
 
     field
 
@@ -69,7 +69,7 @@ module _ {block₀ : Block⋆} where
       self-contained : ∀ (t : T) (sl : Slot)
         → toList (blocks (bestChain sl t)) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
 
-  record TreeType (T : Set) : Set where
+  record TreeType (T : Set) : Set₁ where
 
     field
       tree₀ : T
@@ -81,20 +81,19 @@ module _ {block₀ : Block⋆} where
 
   open TreeType
 
-  record LocalState {T : Set} : Set where
+  record LocalState {T : Set} (blockTree : TreeType T) : Set where
 
-    constructor ⟨_,_,_⟩
+    constructor ⟨_,_⟩
 
     field
       partyId : PartyId
-      tT : TreeType T
       tree : T
 
-  module _ {T : Set} (honest? : (p : PartyId) → Honesty p) where
+  module _ {T : Set} (blockTree : TreeType T) (honest? : (p : PartyId) → Honesty p) where
 
     -- local state
 
-    Stateˡ = LocalState {T}
+    Stateˡ = LocalState {T} blockTree
 
     data Progress : Set where
       Ready : Progress
@@ -108,7 +107,7 @@ module _ {block₀ : Block⋆} where
       _≟-Message_ : DecidableEquality Message
 
     extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
-    extendTreeₗ ⟨ partyId , tT , tree ⟩ b = ⟨ partyId , tT , (extendTree tT) tree b ⟩
+    extendTreeₗ ⟨ partyId , tree ⟩ b = ⟨ partyId , (extendTree blockTree) tree b ⟩
 
     processMsg : Message → Stateˡ → Stateˡ
     processMsg (BlockMsg b) sₗ = extendTreeₗ sₗ b
@@ -120,8 +119,8 @@ module _ {block₀ : Block⋆} where
     lottery _ _ = false -- FIXME
 
     honestCreate : Slot → List Tx → Stateˡ → List Message × Stateˡ
-    honestCreate sl txs ⟨ p , tT , tree ⟩ with lottery p sl
-    ... | true = let best = (bestChain tT) (pred sl) tree
+    honestCreate sl txs ⟨ p , tree ⟩ with lottery p sl
+    ... | true = let best = (bestChain blockTree) (pred sl) tree
                      parent = record { hash = emptyBS } -- FIXME
                      newBlock = record {
                          slotNumber = sl ;
@@ -132,8 +131,8 @@ module _ {block₀ : Block⋆} where
                          payload = txs ;
                          signature = record { signature = emptyBS } -- FIXME
                        }
-                  in BlockMsg newBlock ∷ [] , ⟨ p , tT , (extendTree tT) tree newBlock ⟩
-    ... | false = [] , ⟨ p , tT , tree ⟩
+                  in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
+    ... | false = [] , ⟨ p , tree ⟩
 
     -- global state
 
@@ -386,7 +385,7 @@ module _ {block₀ : Block⋆} where
       ↝-collision-free PermParties (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
       ↝-collision-free PermMsgs (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-      -- When the current state is collision free, pervious states were so too
+      -- When the current state is collision free, previous states were so too
 
       ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
         → N₁ ↝⋆ N₂
