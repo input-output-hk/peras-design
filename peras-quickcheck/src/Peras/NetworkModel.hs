@@ -27,9 +27,9 @@ import Peras.Block (Block, Slot)
 import Peras.Chain (Chain, asChain, asList)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
-import Test.QuickCheck (choose, elements, frequency)
+import Test.QuickCheck (choose, elements, frequency, tabulate)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.StateModel (Any (..), HasVariables, LookUp, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost)
+import Test.QuickCheck.StateModel (Any (..), HasVariables, LookUp, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost)
 import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
 -- | We model a network of nodes interconnected through a diffusion layer.
@@ -56,7 +56,7 @@ instance StateModel Network where
 
   arbitraryAction _ Network{nodeIds} =
     frequency
-      [ (10, Some . Tick . fromInteger <$> choose (1, 100))
+      [ (10, Some . Tick . fromInteger <$> choose (10, 200))
       , (1, observeNode)
       ]
    where
@@ -127,11 +127,12 @@ instance Monad m => RunModel Network (RunMonad m) where
     LookUp (RunMonad m) ->
     Realized (RunMonad m) a ->
     PostconditionM (RunMonad m) Bool
-  postcondition (_, _) (ChainsHaveCommonPrefix chainVars) env () = do
+  postcondition (_, Network{slot}) (ChainsHaveCommonPrefix chainVars) env () = do
     let chains = fmap env chainVars
         prefix = commonPrefix chains
     counterexamplePost $ "Chains:  " <> show chains
     counterexamplePost $ "Common prefix:  " <> show prefix
+    monitorPost $ tabulate "Prefix length" ["<= " <> show ((length (asList prefix) `div` 100 + 1) * 100)]
     pure $ not (null (asList prefix))
   postcondition _ _ _ _ = pure True
 

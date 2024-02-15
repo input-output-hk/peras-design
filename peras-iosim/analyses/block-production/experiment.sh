@@ -33,7 +33,7 @@ echo "$i: $SEED"
 
 "$PERAS_IOSIM" --parameter-file tmp-network.yaml --protocol-file tmp-protocol.yaml --result-file tmp-result.json
 
-jq -r '.exitStates.N1 | "'"$SEED","$ASC","$END_SLOT","$TOTAL_STAKE"',\(.stake),\(.preferredChain.blocks|length)"' tmp-result.json >> tmp-results.csv
+jq -r '.currentStates.N1 | "'"$SEED","$ASC","$END_SLOT","$TOTAL_STAKE"',\(.stake),\(.preferredChain.blocks|length)"' tmp-result.json >> tmp-results.csv
 
 done
 

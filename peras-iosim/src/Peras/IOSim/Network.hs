@@ -37,7 +37,7 @@ import Peras.IOSim.Network.Types (
   Topology (..),
   activeNodes,
   chainsSeen,
-  exitStates,
+  currentStates,
   lastSlot,
   lastTime,
   pending,
@@ -248,10 +248,11 @@ routeEnvelope parameters Network{nodesIn} = \case
   Idle{..} -> do
     _1 . lastTime %= max timestamp
     _1 . activeNodes %= S.delete source
+    _1 . currentStates %= M.insert source currentState
   Exit{..} -> do
     _1 . lastTime %= max timestamp
     _1 . activeNodes %= S.delete source
-    _1 . exitStates %= M.insert source nodeState
+    _1 . currentStates %= M.insert source nodeState
 
 -- Send a message and mark the destination as active.
 output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT (NetworkState v, g) m ()

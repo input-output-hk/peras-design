@@ -97,6 +97,7 @@ data OutEnvelope v
   | Idle
       { timestamp :: UTCTime
       , source :: NodeId
+      , currentState :: NodeState v
       }
   | Exit
       { timestamp :: UTCTime
@@ -116,7 +117,7 @@ instance A.FromJSON v => A.FromJSON (OutEnvelope v) where
                 <*> o A..: "outMessage"
                 <*> o A..: "bytes"
                 <*> o A..: "destination"
-            parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source"
+            parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "currentState"
             parseExit = Exit <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "nodeState"
          in parseMessage <|> parseIdle <|> parseExit
 
@@ -133,6 +134,7 @@ instance A.ToJSON v => A.ToJSON (OutEnvelope v) where
     A.object
       [ "timestamp" A..= timestamp
       , "source" A..= source
+      , "currentState" A..= currentState
       ]
   toJSON Exit{..} =
     A.object

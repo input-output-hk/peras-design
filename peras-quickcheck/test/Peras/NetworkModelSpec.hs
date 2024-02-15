@@ -7,21 +7,25 @@
 module Peras.NetworkModelSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar, modifyTVar', newTVarIO, readTVarIO, writeTVar)
+import Control.Lens (Field1 (_1), use, uses, (^.))
 import Control.Monad (forM, forM_)
 import Control.Monad.Class.MonadTime.SI (getCurrentTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
 import Control.Monad.Random (evalRand, mkStdGen, runRand, runRandT)
 import Control.Monad.Reader (ReaderT (..))
-import Control.Monad.State (StateT (..))
+import Control.Monad.State (StateT (..), gets)
 import Data.Bifunctor (second)
 import Data.Default (def)
 import Data.Functor (void)
+import qualified Data.Map as Map
 import Peras.Chain (Chain (Genesis))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
-import Peras.IOSim.Network.Types (NetworkState)
+import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
 import Peras.IOSim.Node (initializeNodes)
+import qualified Peras.IOSim.Node.Types as Node
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
 import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
 import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
@@ -37,7 +41,7 @@ spec =
 
 prop_chain_progress :: Property
 prop_chain_progress =
-  within 5000000 $
+  within 50000000 $
     forAllDL chainProgress propNetworkModel
 
 chainProgress :: DL Network ()
@@ -84,9 +88,14 @@ runPropInIOSim p = do
     pure $
       Simulator
         { step = runWithState networkState $ stepToIdle parameters network
-        , preferredChain = const $ pure Genesis
+        , preferredChain = runWithState networkState . getPreferredChain
         , stop = pure ()
         }
+
+getPreferredChain :: Monad m => NodeId -> StateT (NetworkState (), g) m (Chain ())
+getPreferredChain nodeId = do
+  nodeState <- (_1 . currentStates) `uses` (Map.! nodeId)
+  pure $ nodeState ^. Node.preferredChain
 
 runWithState :: (Monad m, MonadSTM m) => TVar m (NetworkState (), g) -> StateT (NetworkState (), g) m a -> m a
 runWithState stateVar act = do

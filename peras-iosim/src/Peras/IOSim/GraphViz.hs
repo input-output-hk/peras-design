@@ -10,7 +10,7 @@ import Control.Lens ((^.))
 import Data.List (nub)
 import Peras.Block (Block (..))
 import Peras.Chain (Chain (..))
-import Peras.IOSim.Network.Types (NetworkState, chainsSeen, exitStates)
+import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
 
 import qualified Data.Map.Strict as M
@@ -28,7 +28,7 @@ peersGraph ::
   NetworkState v ->
   G.Graph
 peersGraph networkState =
-  let nodeStates = networkState ^. exitStates
+  let nodeStates = networkState ^. currentStates
       nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId $ show name) Nothing) nodeStates
       mkNode name nodeState =
         G.NodeStatement
