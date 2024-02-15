@@ -130,9 +130,12 @@ instance Monad m => RunModel Network (RunMonad m) where
   postcondition (_, Network{slot}) (ChainsHaveCommonPrefix chainVars) env () = do
     let chains = fmap env chainVars
         prefix = commonPrefix chains
+        chainLength = length $ asList prefix
+        chainDensity :: Double = fromIntegral chainLength / fromIntegral slot
     counterexamplePost $ "Chains:  " <> show chains
     counterexamplePost $ "Common prefix:  " <> show prefix
-    monitorPost $ tabulate "Prefix length" ["<= " <> show ((length (asList prefix) `div` 100 + 1) * 100)]
+    monitorPost $ tabulate "Prefix length" ["<= " <> show ((chainLength `div` 100 + 1) * 100)]
+    monitorPost $ tabulate "Prefix density" [show (floor $ chainDensity * 100.0)] -- ((chainDensity `div` 100 + 1) * 100)]
     pure $ not (null (asList prefix))
   postcondition _ _ _ _ = pure True
 

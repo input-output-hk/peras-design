@@ -28,7 +28,7 @@ import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
-import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
+import Test.Hspec.QuickCheck (modifyMaxShrinks, modifyMaxSuccess, prop)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
@@ -37,7 +37,7 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  modifyMaxShrinks (const 0) $ prop "Chain progress" prop_chain_progress
+  modifyMaxSuccess (const 10) $ prop "Chain progress" prop_chain_progress
 
 prop_chain_progress :: Property
 prop_chain_progress =
