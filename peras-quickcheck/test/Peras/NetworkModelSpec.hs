@@ -108,7 +108,7 @@ protocol :: Protocol
 protocol = PseudoPraos defaultActiveSlotCoefficient
 
 defaultActiveSlotCoefficient :: Double
-defaultActiveSlotCoefficient = 0.1
+defaultActiveSlotCoefficient = 0.05
 
 parameters :: Parameters
 parameters =
