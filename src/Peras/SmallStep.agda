@@ -93,7 +93,7 @@ module _ {block₀ : Block⋆} where
 
     -- local state
 
-    Stateˡ = LocalState {T} blockTree
+    Stateˡ = LocalState blockTree
 
     data Progress : Set where
       Ready : Progress
@@ -242,9 +242,6 @@ module _ {block₀ : Block⋆} where
           ---------------------
         → N [ Corrupt {p} ]↷ N
 
-    open import Data.List.Relation.Binary.Subset.Propositional {A = Message} renaming (_⊆_ to _⊆ᴹ_) using ()
-    open import Data.List.Relation.Binary.Subset.Propositional.Properties using (⊆-trans)
-    open import Data.List.Membership.DecPropositional _≟-Message_ using (_∈?_)
 
     data _↷_ : Stateᵍ → Stateᵍ → Set where
 
