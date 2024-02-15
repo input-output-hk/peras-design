@@ -1,3 +1,62 @@
+## 2024-02-15
+
+### AB on `NetworkModel`ing
+
+Shaving some yaks while trying to implement "common prefix"  property for the `NetworkModel`.
+I implemented a couple of functions for `Chain` types in Agda, got sidetracked into looking for shortcuts to do some goal-driven development and could not find one to fill in the body of a function given its type.
+* Wrote `asChain` and `asList` functions to convert between `Chain` and `[Block]` as the two types are isomorphic.
+* I would like to implement all pure functions related to chain manipulation in Agda. Going to not waste time right now to do that but something to keep in mind
+
+There is something mind boggling with the `runNetwork` function that mesmerizes me!
+I can't find a good way to start cutting it in pieces to be able to separate the step, stop and observation functions!
+
+_(few hours later)_
+
+Managed to connect the network model to the network runner at least for the step part, now need to retrieve the preferred chain from each node.
+The problem is that nodes' state is pretty much opaque, eg. it's initialised and then updated in a separate thread, need a new kind of message ?
+
+### Pairing on NetworkModel's last mile
+
+Thinking about time, we realise that time management and messages delivery are tricky.
+The `Network` code  ransforms individual delays of messages into a statistical delivery of messages which is currently very simple, eg. 300ms delay over a 1s slot => 30% of messages got delayed to next slot.
+
+This seems to be a nicelink to ΔQ formalism because we could put a (partial) CDF as a function to manager the dealys of messages and then use q-d to check the behaviour of the model under various assumptions.
+* no need to reinvent the wheel, we could leverage their formalism for handling statistical distributions
+
+We have some nice monitoring in place to report what the chain look like after a quickcheck test run. Here is a report for 10 samples with 1/20 active slot coefficient which demonstrates the observed behaviour is consistent with what we expect from Praos chain:
+
+```
+Peras.NetworkModel
+  Chain progress [✔]
+    +++ OK, passed 10 tests.
+
+    Action polarity (360 in total):
+    100.0% +
+
+    Actions (360 in total):
+    64.7% +Tick
+    32.5% +ObserveBestChain
+     2.8% +ChainsHaveCommonPrefix
+
+    Prefix density (10 in total):
+    50% <= 6%
+    40% <= 5%
+    10% <= 10%
+
+    Prefix length (10 in total):
+    70% <= 100
+    20% <= 400
+    10% <= 300
+```
+
+Struggling again to convert the `commonPrefix` function as an Agda function, forgot that scope of implicit variables comes from pattern matching on the LHS.
+Now need to understand equality...
+
+Seems like porting my simple prefix function to Agda is a non-trivial effort:
+* Agda does not have builtin structural equality (?) nor typeclasses so one needs to define equality for specific types
+* There is a decidable equality provided by the builtins but it's not erased. According to Orestis one needs _erased decidability which is like https://github.com/agda/agda2hs/blob/master/lib/Haskell/Extra/Dec.agda
+* it's a bit sad as this function seems simple enough :(
+
 ## 2024-02-14
 
 ### BB on testing statistical properties
@@ -11,7 +70,7 @@
 Other revisions to `peras-iosim`:
 - Added an explicit parameter for total stake to `Peras.IOSim.Simulate.Types.Parameters`.
 - Changed serialization of `Peras.Chain` so that it doesn't keeply next JSON, since that causes most JSON parsers to crash for long chains.
- 
+
 ### AB on Network Modeling
 
 Reading about Rust's FFI: https://www.michaelfbryan.com/rust-ffi-guide/setting_up.html
