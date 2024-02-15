@@ -1,17 +1,34 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Peras.NetworkModelSpec where
 
-import Control.Monad (forM_)
-import Peras.NetworkModel (Action (..), Network (..), nodes, runMonad)
-import Peras.Util (runPropInIOSim)
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar, modifyTVar', newTVarIO, readTVarIO, writeTVar)
+import Control.Monad (forM, forM_)
+import Control.Monad.Class.MonadTime.SI (getCurrentTime)
+import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
+import Control.Monad.Random (evalRand, mkStdGen, runRand, runRandT)
+import Control.Monad.Reader (ReaderT (..))
+import Control.Monad.State (StateT (..))
+import Data.Bifunctor (second)
+import Data.Default (def)
+import Data.Functor (void)
+import Peras.Chain (Chain (Genesis))
+import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
+import Peras.IOSim.Network.Types (NetworkState)
+import Peras.IOSim.Node (initializeNodes)
+import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
+import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
 import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
-import Test.QuickCheck (Property, property, within)
-import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
-import Test.QuickCheck.Monadic (assert)
+import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
+import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
+import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
+import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
 import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
@@ -26,8 +43,11 @@ prop_chain_progress =
 chainProgress :: DL Network ()
 chainProgress = do
   anyActions_
-  getModelStateDL >>= \Network{nodeIds} ->
-    forM_ nodeIds (action . ObserveBestChain)
+  getModelStateDL >>= \Network{nodeIds} -> do
+    -- we need at least on run
+    anyAction
+    chains <- forM nodeIds (action . ObserveBestChain)
+    void $ action $ ChainsHaveCommonPrefix chains
 
 propNetworkModel :: Actions Network -> Property
 propNetworkModel actions =
@@ -35,3 +55,60 @@ propNetworkModel actions =
     runPropInIOSim $ do
       _ <- runActions actions
       assert True
+
+runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
+runPropInIOSim p = do
+  Capture eval <- capture
+  let simTrace =
+        runSimTrace $
+          mkPerasNetwork >>= runReaderT (runMonad $ eval $ monadic' p)
+      traceDump = map (\(t, s) -> show t <> " : " <> s) $ selectTraceEventsSayWithTime' simTrace
+      logsOnError = counterexample ("trace:\n" <> unlines traceDump)
+  case traceResult False simTrace of
+    Right x ->
+      pure $ logsOnError x
+    Left ex ->
+      pure $ counterexample (show ex) $ logsOnError $ property False
+ where
+  gen = mkStdGen 42
+
+  mkPerasNetwork :: IOSim s (Simulator (IOSim s))
+  mkPerasNetwork = do
+    let initState :: NetworkState () = def
+    let (topology, gen') = runRand (randomTopology parameters) gen
+    now <- getCurrentTime
+    let (states, gen'') = runRand (initializeNodes parameters now topology) gen'
+    network <- createNetwork topology
+    networkState <- newTVarIO (initState, gen'')
+    runWithState networkState $ startNodes parameters protocol states network
+    pure $
+      Simulator
+        { step = runWithState networkState $ stepToIdle parameters network
+        , preferredChain = const $ pure Genesis
+        , stop = pure ()
+        }
+
+runWithState :: (Monad m, MonadSTM m) => TVar m (NetworkState (), g) -> StateT (NetworkState (), g) m a -> m a
+runWithState stateVar act = do
+  st <- readTVarIO stateVar
+  (res, st') <- runStateT act st
+  atomically $ writeTVar stateVar st'
+  pure res
+
+protocol :: Protocol
+protocol = PseudoPraos defaultActiveSlotCoefficient
+
+defaultActiveSlotCoefficient :: Double
+defaultActiveSlotCoefficient = 0.1
+
+parameters :: Parameters
+parameters =
+  Parameters
+    { randomSeed = 12345
+    , peerCount = 10
+    , downstreamCount = 3
+    , totalStake = Just 5000
+    , maximumStake = 1000
+    , endSlot = 1000
+    , messageDelay = 0.35
+    }
