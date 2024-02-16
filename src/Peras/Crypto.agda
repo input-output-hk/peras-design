@@ -2,7 +2,7 @@
 --
 -- We don't use real cryptography here, just a bunch of newtypes and
 -- simple functions that represent various cryptographic operations
--- one can do when running the protocol 
+-- one can do when running the protocol
 module Peras.Crypto where
 
 open import Level
@@ -26,7 +26,7 @@ record Hash : Set where
 
 open Hash public
 
-{-# COMPILE AGDA2HS Hash newtype #-}
+{-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
 
 postulate
   hsEq : Relation.Binary.Rel Hash 0ℓ
@@ -46,14 +46,14 @@ record MembershipProof : Set where
 
 open MembershipProof public
 
-{-# COMPILE AGDA2HS MembershipProof newtype #-}
+{-# COMPILE AGDA2HS MembershipProof newtype deriving Eq #-}
 
 record LeadershipProof : Set where
   field proof : ByteString
 
 open LeadershipProof public
 
-{-# COMPILE AGDA2HS LeadershipProof newtype #-}
+{-# COMPILE AGDA2HS LeadershipProof newtype deriving Eq #-}
 
 
 {-
@@ -66,14 +66,14 @@ record Signature : Set where
 
 open Signature public
 
-{-# COMPILE AGDA2HS Signature newtype #-}
+{-# COMPILE AGDA2HS Signature newtype deriving Eq #-}
 
 record VerificationKey : Set where
   field verificationKey : ByteString
 
 open VerificationKey public
 
-{-# COMPILE AGDA2HS VerificationKey newtype #-}
+{-# COMPILE AGDA2HS VerificationKey newtype deriving Eq #-}
 
 -- | a fake membership "proof" is simply a concatenation of all the
 -- members' verification keys.
@@ -82,4 +82,3 @@ isCommitteeMember (record {verificationKey = verKey}) (record { proofM = proof }
   verKey isInfixOf proof
 
 postulate verify : VerificationKey -> Signature -> ByteString -> Bool
-

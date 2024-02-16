@@ -1,9 +1,9 @@
 module Peras.Chain where
 
-open import Agda.Builtin.List
+{-# FOREIGN AGDA2HS {-# LANGUAGE ScopedTypeVariables #-} #-}
+
 open import Agda.Builtin.Word
-open import Data.Bool
-open import Data.List
+open import Data.Bool using (_∧_)
 open import Data.Nat using (ℕ)
 open import Level
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
@@ -11,6 +11,8 @@ open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto
 open import Peras.Block hiding (ByteString; emptyBS)
+
+open import Haskell.Prelude
 
 record RoundNumber : Set where
   field roundNumber : ℕ
@@ -60,7 +62,7 @@ data Chain t : Set where
 
 open Chain public
 
-{-# COMPILE AGDA2HS Chain #-}
+{-# COMPILE AGDA2HS Chain deriving (Eq) #-}
 
 -- | View of a `Chain` as a mere `List` of blocks.
 asList : {t : Set} -> (c : Chain t) -> List (Block t)
@@ -75,6 +77,36 @@ asChain [] = Genesis
 asChain (x ∷ bs) = Cons x (asChain bs)
 
 {-# COMPILE AGDA2HS asChain #-}
+
+foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Maybe a
+foldl1Maybe f xs =
+  foldl (λ m y -> Just (case m of λ where
+                             Nothing -> y
+                             (Just x)  -> f x y))
+        Nothing xs
+
+{-# COMPILE AGDA2HS foldl1Maybe #-}
+
+prefix : ∀ {t : Set } -> ⦃ eqt : Eq t ⦄ → List (Block t) -> List (Block t) -> List (Block t)
+prefix (x ∷ xs) (y ∷ ys) =
+  if x == y
+   then x ∷ prefix xs ys
+   else []
+prefix _ _ = []
+
+{-# COMPILE AGDA2HS prefix #-}
+
+commonPrefix : ∀ {t : Set} -> ⦃ eqt : Eq t ⦄ → List (Chain t) -> Chain t
+commonPrefix chains =
+  case foldl1Maybe prefix (reverse (map asList chains)) of λ where
+     Nothing -> Genesis
+     (Just bs) -> asChain bs
+
+{-# COMPILE AGDA2HS commonPrefix #-}
+
+-- I wish I could prove that and translate it to a QC property in Haskell :)
+-- commonPrefixEq : {t : Set } -> ⦃ eqt : Eq t ⦄ -> (c₁ c₂ : Chain t) -> (c₁ ≡ c₂) -> (commonPrefix (c₁ ∷ c₂ ∷ []) ≡ c₁)
+-- commonPrefixEq = {!!}
 
 -- Chain⋆ = Chain (set BlockO)
 

@@ -24,7 +24,7 @@ import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain, asChain, asList)
+import Peras.Chain (Chain, asChain, asList, commonPrefix)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (choose, elements, frequency, tabulate)
@@ -138,17 +138,6 @@ instance Monad m => RunModel Network (RunMonad m) where
     monitorPost $ tabulate "Prefix density" ["<= " <> show (chainDensity `div` 10 + 1) <> "%"]
     pure $ not (null (asList prefix))
   postcondition _ _ _ _ = pure True
-
-commonPrefix :: [Chain ()] -> Chain ()
-commonPrefix chains =
-  asChain . reverse $ foldl1 prefix blocks
- where
-  blocks = reverse . asList <$> chains
-
-  prefix :: [Block ()] -> [Block ()] -> [Block ()]
-  prefix (a : as) (b : bs)
-    | a == b = a : prefix as bs
-  prefix _ _ = []
 
 selectBlocks :: [Message ()] -> [Block ()]
 selectBlocks = mapMaybe $ \case

@@ -1,3 +1,4 @@
 name: peras
-depend: standard-library
+depend: standard-library agda2hs
 include: src
+flags: --erasure

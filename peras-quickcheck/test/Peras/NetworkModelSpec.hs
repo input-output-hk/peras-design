@@ -17,7 +17,7 @@ import Control.Monad.State (StateT (..))
 import Data.Default (def)
 import Data.Functor (void)
 import qualified Data.Map as Map
-import Peras.Chain (Chain (Genesis))
+import Peras.Chain (Chain)
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
 import Peras.IOSim.Network.Types (NetworkState, currentStates)
 import Peras.IOSim.Node (initializeNodes)

@@ -7,6 +7,8 @@ open import Data.List
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
 open import Relation.Binary using (StrictTotalOrder)
 
+open import Haskell.Prelude using (Eq)
+
 open import Peras.Crypto hiding (ByteString; emptyBS; _isInfixOf_)
 
 -- TODO: ByteString is not exported from Peras.Crypto in Haskell
@@ -25,7 +27,7 @@ record PartyId : Set where
 
 open PartyId public
 
-{-# COMPILE AGDA2HS PartyId #-}
+{-# COMPILE AGDA2HS PartyId deriving (Eq) #-}
 
 postulate
   paEq : Relation.Binary.Rel PartyId 0ℓ
@@ -54,7 +56,7 @@ record Tx : Set where
 
 open Tx public
 
-{-# COMPILE AGDA2HS Tx #-}
+{-# COMPILE AGDA2HS Tx deriving Eq #-}
 
 Slot = Nat
 
@@ -73,6 +75,10 @@ record Block (t : Set) : Set where
 open Block public
 
 {-# COMPILE AGDA2HS Block #-}
+
+postulate instance iBlockEq : {t : Set } -> ⦃ Eq t ⦄ -> Eq (Block t)
+
+{-# COMPILE AGDA2HS iBlockEq #-}
 
 Block⋆ = Block (set HashO)
 

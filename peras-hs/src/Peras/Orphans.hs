@@ -45,7 +45,6 @@ instance A.FromJSON Bytes where
 instance A.ToJSON Bytes where
   toJSON = A.String . T.pack . show
 
-deriving stock instance Eq v => Eq (Block v)
 deriving stock instance Generic v => Generic (Block v)
 deriving stock instance Ord v => Ord (Block v)
 deriving stock instance Read v => Read (Block v)
@@ -77,7 +76,6 @@ instance A.ToJSON v => A.ToJSON (Block v) where
       , "signature" A..= signature
       ]
 
-deriving stock instance Eq v => Eq (Chain v)
 deriving stock instance Generic v => Generic (Chain v)
 deriving stock instance Ord v => Ord (Chain v)
 deriving stock instance Read v => Read (Chain v)
@@ -105,7 +103,6 @@ instance A.ToJSON v => A.ToJSON (Chain v) where
       [ "blocks" A..= toBlocks chain
       ]
 
-deriving stock instance Eq Hash
 deriving stock instance Generic Hash
 deriving stock instance Ord Hash
 deriving via Bytes instance Read Hash
@@ -149,7 +146,6 @@ instance A.ToJSON v => A.ToJSON (Message v) where
       , "chain" A..= chain
       ]
 
-deriving stock instance Eq LeadershipProof
 deriving stock instance Generic LeadershipProof
 deriving stock instance Ord LeadershipProof
 deriving via Bytes instance Read LeadershipProof
@@ -158,7 +154,6 @@ deriving via Bytes instance IsString LeadershipProof
 deriving via Bytes instance A.FromJSON LeadershipProof
 deriving via Bytes instance A.ToJSON LeadershipProof
 
-deriving stock instance Eq MembershipProof
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof
 deriving via Bytes instance Read MembershipProof
@@ -192,7 +187,6 @@ instance A.FromJSONKey NodeId where
 instance A.ToJSONKey NodeId where
   toJSONKey = A.toJSONKeyText $ T.pack . nodeId
 
-deriving stock instance Eq PartyId
 deriving stock instance Generic PartyId
 deriving stock instance Ord PartyId
 
@@ -214,7 +208,6 @@ instance A.FromJSONKey PartyId where
 instance A.ToJSONKey PartyId where
   toJSONKey = A.toJSONKeyText $ T.pack . BS8.unpack . B16.encode . verificationKey . vkey
 
-deriving stock instance Eq Signature
 deriving stock instance Generic Signature
 deriving stock instance Ord Signature
 deriving via Bytes instance Read Signature
@@ -223,7 +216,6 @@ deriving via Bytes instance IsString Signature
 deriving via Bytes instance A.FromJSON Signature
 deriving via Bytes instance A.ToJSON Signature
 
-deriving stock instance Eq Tx
 deriving stock instance Generic Tx
 deriving stock instance Ord Tx
 
@@ -242,7 +234,6 @@ instance A.FromJSON Tx where
 instance A.ToJSON Tx where
   toJSON = A.String . T.pack . show
 
-deriving stock instance Eq VerificationKey
 deriving stock instance Generic VerificationKey
 deriving stock instance Ord VerificationKey
 deriving via Bytes instance Read VerificationKey
