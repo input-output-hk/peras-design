@@ -6,6 +6,7 @@ The [peras\_topology](peras_topology/ReadMe.md) Rust crate contains a rudimentar
 - Reads YAML-formatted `Parameters` describing the network.
 - Outputs a JSON file with the `Topology`.
 - The serialization formats are compatible with `peras-iosim`.
+- Added build of `peras_topology` to the CI.
 
 This raises several issues related to Rust:
 1. How do we want to organize our Rust crate structure?
