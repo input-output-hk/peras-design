@@ -21,6 +21,7 @@ import Control.Monad (replicateM_)
 import Control.Monad.Reader (MonadReader, ReaderT, ask)
 import Control.Monad.Trans (MonadTrans (..))
 import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
@@ -56,7 +57,7 @@ instance StateModel Network where
 
   arbitraryAction _ Network{nodeIds} =
     frequency
-      [ (10, Some . Tick . fromInteger <$> choose (10, 200))
+      [ (10, Some . Tick . fromInteger <$> choose (10, 100))
       , (1, observeNode)
       ]
    where
@@ -81,7 +82,9 @@ instance HasVariables Network where
   getAllVariables = const mempty
 
 instance HasVariables (Action Network a) where
-  getAllVariables = const mempty
+  getAllVariables = \case
+    ChainsHaveCommonPrefix vars -> Set.fromList $ Some <$> vars
+    _other -> mempty
 
 -- | An interface to a  simulator for a network
 data Simulator m = Simulator
