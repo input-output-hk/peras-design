@@ -13,7 +13,7 @@ pub struct NodeId {
 
 impl std::fmt::Display for NodeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        return write!(f, "{}", self.nodeId);
+        write!(f, "{}", self.nodeId)
     }
 }
 
@@ -22,9 +22,9 @@ impl<'a> Deserialize<'a> for NodeId {
     where
         D: Deserializer<'a>,
     {
-        return Ok(NodeId {
+        Ok(NodeId {
             nodeId: String::deserialize(deserializer)?,
-        });
+        })
     }
 }
 
@@ -39,9 +39,9 @@ impl Serialize for NodeId {
 
 #[allow(non_snake_case)]
 pub fn MkNodeId(node_id: &str) -> NodeId {
-    return NodeId {
+    NodeId {
         nodeId: String::from(node_id),
-    };
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -51,26 +51,25 @@ pub struct Topology {
 
 impl Topology {
     pub fn empty() -> Topology {
-        return Topology {
+        Topology {
             connections: HashMap::new(),
-        };
+        }
     }
 }
 
 fn set_singleton<T: Eq + Hash>(item: T) -> HashSet<T> {
     let mut set = HashSet::new();
     set.insert(item);
-    return set;
+    set
 }
 
 // FIXME: Consider revising memory allocation.
-pub fn connect_node(upstream: &NodeId, downstream: &NodeId, topology: &mut Topology) -> () {
+pub fn connect_node(upstream: &NodeId, downstream: &NodeId, topology: &mut Topology) {
     topology
         .connections
         .entry(upstream.clone())
         .and_modify(|v| {
             v.insert(downstream.clone());
-            return ();
         })
         .or_insert(set_singleton(downstream.clone()));
 }
@@ -88,11 +87,11 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
         downstreams: Vec<NodeId>,
         m: usize,
         t: &mut Topology,
-    ) -> () {
+    ) {
         let mut candidates = downstreams.clone();
         candidates.retain(|x| x != upstream);
         let chosen = candidates.choose_multiple(r, m);
-        chosen.for_each(|downstream| connect_node(&upstream, &downstream, t));
+        chosen.for_each(|downstream| connect_node(upstream, downstream, t));
     }
     node_ids.iter().for_each(|upstream| {
         random_connect(
@@ -103,5 +102,5 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
             &mut topology,
         )
     });
-    return topology;
+    topology
 }
