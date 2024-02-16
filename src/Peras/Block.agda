@@ -47,7 +47,6 @@ data Honesty : PartyId → Set where
   Corrupt : ∀ {p : PartyId} -- FIXME
     → Honesty p
 
-
 -- Transactions
 
 record Tx : Set where
@@ -91,3 +90,5 @@ BlockO = record {
 
 postulate
   isValidBlock : Block⋆ -> Bool
+
+Blocks⋆ = set BlockO

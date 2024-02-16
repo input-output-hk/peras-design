@@ -8,7 +8,6 @@ open import Data.Maybe
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) using ()
-
 open import Function.Base using (_∘_; id)
 open import Level using (0ℓ)
 open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
@@ -17,26 +16,31 @@ open import Relation.Nullary using (Dec; yes; no)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Function.Base using (id)
-
 open import Peras.Chain using (Chain⋆; ValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
-open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Slot; slotNumber; Tx; Honesty)
+open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
 open import Data.Tree.AVL.Sets as S using ()
 open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using (_⊆_)
 
+open Chain⋆ public
+open Honesty public
+
 {-
   Formalizing Nakamoto-Style Proof of Stake
   Søren Eller Thomsen and Bas Spitters
 -}
 
-Blocks⋆ = B.⟨Set⟩
+data Progress : Set where
+   Ready : Progress
+   Delivered : Progress
+   Baked : Progress
 
-open Chain⋆ public
-open Honesty public
+-- TODO: use Peras.Message
+data Message : Set where
+   BlockMsg : Block⋆ → Message
 
 -- parameterized with genesis block
 
@@ -61,11 +65,13 @@ module _ {block₀ : Block⋆} where
       valid : ∀ (t : T) (sl : Slot)
         → ValidChain (bestChain sl t)
 
+      -- TODO: drop `toList`?
       optimal : ∀ (c : Chain⋆) (t : T) (sl : Slot)
         → ValidChain c
         → toList (blocks c) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
         → size (blocks c) ≤ size (blocks (bestChain sl t))
 
+      -- TODO: drop `toList`?
       self-contained : ∀ (t : T) (sl : Slot)
         → toList (blocks (bestChain sl t)) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
 
@@ -84,27 +90,16 @@ module _ {block₀ : Block⋆} where
   record LocalState {T : Set} (blockTree : TreeType T) : Set where
 
     constructor ⟨_,_⟩
-
     field
       partyId : PartyId
       tree : T
+
 
   module _ {T : Set} (blockTree : TreeType T) (honest? : (p : PartyId) → Honesty p) where
 
     -- local state
 
     Stateˡ = LocalState blockTree
-
-    data Progress : Set where
-      Ready : Progress
-      Delivered : Progress
-      Baked : Progress
-
-    data Message : Set where
-      BlockMsg : Block⋆ → Message
-
-    postulate
-      _≟-Message_ : DecidableEquality Message
 
     extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
     extendTreeₗ ⟨ partyId , tree ⟩ b = ⟨ partyId , (extendTree blockTree) tree b ⟩
@@ -306,24 +301,15 @@ module _ {block₀ : Block⋆} where
         → L ↝⋆ N
 
     -- hash function, collision free predicate
-
-    module _ {hashᴮ : Block⋆ → Hash} where
+    -- TODO: rather use record type Hashable (requires an instance of the function)
+    module _ {_♯ : Block⋆ → Hash} where
 
       data CollisionFree (N : Stateᵍ) : Set where
-
-{-
-        collision-free : ∀ {b₁ b₂ : Block⋆}
-          → All
-            (λ { (BlockMsg b₁ , BlockMsg b₂) →
-                 (hashᴮ b₁ ≡ hashᴮ b₂ → b₁ ≡ b₂) })
-            (cartesianProduct (messages N) (messages N))
-          → CollisionFree N
--}
 
         collision-free : ∀ {b₁ b₂ : Block⋆}
           → BlockMsg b₁ ∈ messages N
           → BlockMsg b₂ ∈ messages N
-          → hashᴮ b₁ ≡ hashᴮ b₂
+          → b₁ ♯ ≡ b₂ ♯
           → b₁ ≡ b₂
           → CollisionFree N
 
