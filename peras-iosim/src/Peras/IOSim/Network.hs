@@ -15,7 +15,9 @@ import Control.Lens (
   use,
   uses,
   (%=),
+  (&),
   (.=),
+  (.~),
   (^.),
  )
 import Control.Monad (unless, void)
@@ -111,12 +113,11 @@ runNetwork ::
   NetworkState v ->
   m (NetworkState v)
 runNetwork parameters protocol states network@Network{..} endSlot initialState =
-  flip execStateT initialState $
+  flip execStateT (initialState & currentStates .~ states) $
     do
       let
         -- Notify a node to stop.
         notifyStop destination nodeIn = output destination nodeIn Stop
-
         -- Receive and send messages.
         loop :: MonadDelay m => MonadSay m => StateT (NetworkState v) m ()
         loop =
