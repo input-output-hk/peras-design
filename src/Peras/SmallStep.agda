@@ -1,17 +1,14 @@
 module Peras.SmallStep where
 
 open import Data.Bool using (Bool; true; false)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.Maybe
+open import Data.Maybe using (just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) using ()
 open import Function.Base using (_∘_; id)
-open import Level using (0ℓ)
-open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
-open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Nullary using (yes; no)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
