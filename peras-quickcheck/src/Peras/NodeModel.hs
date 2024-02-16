@@ -107,8 +107,8 @@ initialiseNodeEnv = do
   let gen = mkStdGen 42
   now <- getCurrentTime
   nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
-  let (nodeState, gen') = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
-  nodeThread <- forkIO $ runNode gen' protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
+  let (nodeState, _) = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
+  nodeThread <- forkIO $ runNode protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
   pure (nodeThread, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol

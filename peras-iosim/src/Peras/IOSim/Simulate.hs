@@ -8,16 +8,17 @@ module Peras.IOSim.Simulate (
   writeTrace,
 ) where
 
+import Control.Lens ((&), (.~))
 import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
-import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSimStrictShutdown, runSimTrace, traceResult)
+import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, traceResult)
 import Control.Monad.Random (evalRandT)
-import Control.Monad.Trans (lift)
+import Data.Default (def)
 import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
-import Peras.IOSim.Network.Types (NetworkState)
+import Peras.IOSim.Network.Types (NetworkState, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
-import System.Random (mkStdGen)
+import System.Random (mkStdGen, split)
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS8
@@ -27,24 +28,29 @@ simulation ::
   Protocol ->
   IOSim s (NetworkState ())
 simulation parameters@Parameters{..} protocol =
-  let gen = mkStdGen randomSeed
-   in flip evalRandT gen $
+  do
+    let (gen, gen') = split $ mkStdGen randomSeed
+    now <- getCurrentTime
+    -- FIXME: Read the topology and node states from files.
+    (topology, states) <-
+      flip evalRandT gen $
         do
-          now <- lift getCurrentTime
-          topology <- randomTopology parameters
-          states <- initializeNodes parameters now topology
-          network <- lift $ createNetwork topology
-          runNetwork parameters protocol states network endSlot
+          topology' <- randomTopology parameters
+          states' <- initializeNodes parameters now topology'
+          pure (topology', states')
+    network <- createNetwork topology
+    runNetwork parameters protocol states network endSlot $
+      def & networkRandom .~ gen'
 
 simulate ::
   Parameters ->
   Protocol ->
   Bool ->
   (Either Failure (NetworkState ()), Maybe (SimTrace (NetworkState ())))
-simulate parameters protocol False = (runSimStrictShutdown $ simulation parameters protocol, Nothing)
+simulate parameters protocol False = (runSim $ simulation parameters protocol, Nothing)
 simulate parameters protocol True =
   let trace = runSimTrace $ simulation parameters protocol
-   in (traceResult True trace, Just trace)
+   in (traceResult False trace, Just trace)
 
 writeTrace ::
   Show v =>

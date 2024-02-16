@@ -1,13 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Peras.NetworkModelSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Lens (Field1 (_1), uses, (^.))
+import Control.Lens (uses, (&), (.~), (^.))
 import Control.Monad (forM)
 import Control.Monad.Class.MonadTime.SI (getCurrentTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
@@ -19,7 +18,7 @@ import Data.Functor (void)
 import qualified Data.Map as Map
 import Peras.Chain (Chain)
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
-import Peras.IOSim.Network.Types (NetworkState, currentStates)
+import Peras.IOSim.Network.Types (NetworkState, currentStates, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
 import qualified Peras.IOSim.Node.Types as Node
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
@@ -78,12 +77,12 @@ runPropInIOSim p = do
 
   mkPerasNetwork :: IOSim s (Simulator (IOSim s))
   mkPerasNetwork = do
-    let initState :: NetworkState () = def
     let (topology, gen') = runRand (randomTopology parameters) gen
     now <- getCurrentTime
     let (states, gen'') = runRand (initializeNodes parameters now topology) gen'
     network <- createNetwork topology
-    networkState <- newTVarIO (initState, gen'')
+    let initState :: NetworkState () = def & networkRandom .~ gen''
+    networkState <- newTVarIO initState
     runWithState networkState $ startNodes parameters protocol states network
     pure $
       Simulator
@@ -92,12 +91,12 @@ runPropInIOSim p = do
         , stop = pure ()
         }
 
-getPreferredChain :: Monad m => NodeId -> StateT (NetworkState (), g) m (Chain ())
+getPreferredChain :: Monad m => NodeId -> StateT (NetworkState ()) m (Chain ())
 getPreferredChain nodeId = do
-  nodeState <- (_1 . currentStates) `uses` (Map.! nodeId)
+  nodeState <- currentStates `uses` (Map.! nodeId)
   pure $ nodeState ^. Node.preferredChain
 
-runWithState :: (Monad m, MonadSTM m) => TVar m (NetworkState (), g) -> StateT (NetworkState (), g) m a -> m a
+runWithState :: (Monad m, MonadSTM m) => TVar m (NetworkState ()) -> StateT (NetworkState ()) m a -> m a
 runWithState stateVar act = do
   st <- readTVarIO stateVar
   (res, st') <- runStateT act st

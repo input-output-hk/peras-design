@@ -15,11 +15,11 @@ module Peras.IOSim.Node (
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
-import Control.Lens (use, uses, (.=))
+import Control.Lens (use, uses, (.=), (^.))
 import Control.Monad (replicateM)
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
-import Control.Monad.Random (RandomGen, runRandT)
+import Control.Monad.Random (RandomGen, mkStdGen, runRandT)
 import Control.Monad.Random.Class (
   MonadRandom (getRandom, getRandomR),
  )
@@ -36,7 +36,7 @@ import Peras.Chain (Chain (Genesis))
 import Peras.Crypto (VerificationKey (VerificationKey))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, nodeId)
+import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId)
 import Peras.IOSim.Protocol (newChain, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
@@ -72,6 +72,7 @@ initializeNode ::
 initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
   NodeState nodeId'
     <$> (MkPartyId . VerificationKey . BS.pack <$> replicateM 6 getRandom)
+    <*> getRandom
     <*> pure clock'
     <*> pure 0
     <*> getRandomR (1, maximumStake)
@@ -82,20 +83,18 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure False
 
 runNode ::
-  forall v g m.
+  forall v m.
   Default v =>
   MonadDelay m =>
   MonadSTM m =>
   MonadTime m =>
-  RandomGen g =>
-  g ->
   Protocol ->
   Coin ->
   NodeState v ->
   NodeProcess v m ->
   m ()
-runNode gen0 protocol total state NodeProcess{..} =
-  let go :: Default v => MonadDelay m => MonadSTM m => MonadTime m => g -> StateT (NodeState v) m ()
+runNode protocol total state NodeProcess{..} =
+  let go :: Default v => MonadDelay m => MonadSTM m => MonadTime m => RandomGen g => g -> StateT (NodeState v) m ()
       go gen =
         do
           let atomically' = lift . atomically
@@ -125,4 +124,4 @@ runNode gen0 protocol total state NodeProcess{..} =
                   clock .= now
                   go gen'
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
-   in go gen0 `evalStateT` state
+   in go (mkStdGen $ state ^. initialSeed) `evalStateT` state

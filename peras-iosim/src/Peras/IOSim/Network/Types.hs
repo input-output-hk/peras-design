@@ -10,6 +10,7 @@ module Peras.IOSim.Network.Types (
   Topology (..),
   activeNodes,
   chainsSeen,
+  networkRandom,
   currentStates,
   lastSlot,
   lastTime,
@@ -27,6 +28,7 @@ import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
+import System.Random (StdGen, mkStdGen)
 
 import Data.Aeson as A
 import Data.Map.Strict as M
@@ -54,11 +56,12 @@ data NetworkState v = NetworkState
   , _chainsSeen :: S.Set (Chain v)
   , _currentStates :: M.Map NodeId (NodeState v)
   , _pending :: [OutEnvelope v]
+  , _networkRandom :: StdGen -- FIXME: Is it okay not to serialize this?
   }
-  deriving stock (Eq, Generic, Ord, Read, Show)
+  deriving stock (Eq, Generic, Show)
 
 instance Ord v => Default (NetworkState v) where
-  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty M.empty mempty
+  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty M.empty mempty $ mkStdGen 12345
 
 instance ToJSON v => ToJSON (NetworkState v) where
   toJSON NetworkState{..} =
