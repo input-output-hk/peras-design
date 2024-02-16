@@ -1,3 +1,10 @@
+## 2024-02-16
+
+### BB - Odds & Ends
+
+- Added CLI interface to `peras_topology`.
+- Refactored and cleanly isolated random-number generation in `peras-iosim`.
+
 ## 2024-02-15
 
 ### BB - Rust-based generator of randomized network topologies
@@ -7,7 +14,6 @@ The [peras\_topology](peras_topology/ReadMe.md) Rust crate contains a rudimentar
 - Outputs a JSON file with the `Topology`.
 - The serialization formats are compatible with `peras-iosim`.
 - Added build of `peras_topology` to the CI.
-- Added CLI interface (2024-02-16).
 
 This raises several issues related to Rust:
 1. How do we want to organize our Rust crate structure?
@@ -196,7 +202,7 @@ A survey paper about networking in cryptocurrencies: https://arxiv.org/pdf/2008.
 - Refactored relation on global state
 - Proofing property that when there is collision-free state all previous states have been collision-free as well
 
-### BB - ISSim enhancements
+### BB - IOSim enhancements
 
 - Improved faithfulness of slot-leader selection.
 - Refactored to use `MonadRandom` throughout.
