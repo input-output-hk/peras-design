@@ -10,6 +10,7 @@
       url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
+    nixos-unstable.url = github:NixOS/nixpkgs/nixos-unstable;
   };
 
   outputs = inputs: inputs.iogx.lib.mkFlake {

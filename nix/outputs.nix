@@ -3,11 +3,11 @@
 let
   project = repoRoot.nix.project;
   peras-agda = repoRoot.nix.peras-agda;
-  peras-topology = pkgs.rustPlatform.buildRustPackage rec {
+  peras-topology = inputs.nixos-unstable.legacyPackages.rustPlatform.buildRustPackage rec {
     pname = "peras_topology";
     version = "11.0.2";
     src = ../peras_topology;
-    cargoSha256 = "176jr6r0d7l756vsffm3pq7zw0jxwls6iwg4h3mvz9bg5dhfmmms";
+    cargoSha256 = "1s3c6lxwicjx7mdm6jrxihcpilfghp81xzqgs7f0vpky1d7xhy71";
     meta = with pkgs.stdenv.lib; {
       description = "A topology library for Peras";
     };
