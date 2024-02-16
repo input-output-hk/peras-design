@@ -40,7 +40,7 @@ import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, nodeId
 import Peras.IOSim.Protocol (newChain, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
-import Peras.IOSim.Types (Currency)
+import Peras.IOSim.Types (Coin)
 import Peras.Message (Message (..), NodeId)
 
 import qualified Data.ByteString as BS
@@ -90,7 +90,7 @@ runNode ::
   RandomGen g =>
   g ->
   Protocol ->
-  Currency ->
+  Coin ->
   NodeState v ->
   NodeProcess v m ->
   m ()

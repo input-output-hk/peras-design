@@ -23,7 +23,7 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Currency)
+import Peras.IOSim.Types (Coin)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
@@ -35,7 +35,7 @@ data NodeState v = NodeState
   , _owner :: PartyId
   , _clock :: UTCTime
   , _slot :: Slot
-  , _stake :: Currency
+  , _stake :: Coin
   , _vrfOutput :: Double
   , _preferredChain :: Chain v
   , _downstreams :: S.Set NodeId
