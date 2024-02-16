@@ -10,8 +10,6 @@ module Peras.IOSim.Network where
 import Control.Concurrent.Class.MonadSTM (MonadSTM, STM, TQueue, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
 import Control.Lens (
-  Field1 (_1),
-  Field2 (_2),
   use,
   uses,
   (%=),
@@ -25,9 +23,9 @@ import Control.Monad.Class.MonadFork (MonadFork (forkIO))
 import Control.Monad.Class.MonadSay (MonadSay (say))
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
-import Control.Monad.Random (MonadRandom, RandT, getRandomR, liftRandT)
-import Control.Monad.State (StateT, execStateT, get, lift)
-import Data.Default (Default (def))
+import Control.Monad.Random (MonadRandom, getRandomR)
+import Control.Monad.State (StateT, execStateT, lift)
+import Data.Default (Default)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
@@ -50,7 +48,7 @@ import Peras.IOSim.Node.Types (NodeState, stake)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
-import System.Random (RandomGen (..), uniformR)
+import System.Random (uniformR)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
