@@ -17,7 +17,7 @@ import Peras.Chain (Chain (..))
 import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
 import Peras.IOSim.Node.Types (NodeState, owner, preferredChain, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Types (Currency)
+import Peras.IOSim.Types (Coin)
 import Peras.Message (Message (NewChain))
 
 import qualified Data.ByteString as BS
@@ -28,7 +28,7 @@ nextSlot ::
   MonadState (NodeState v) m =>
   Protocol ->
   Slot ->
-  Currency ->
+  Coin ->
   m (Maybe (Message v))
 nextSlot PseudoPraos{..} slotNumber total =
   do
@@ -75,8 +75,8 @@ newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet impleme
 isSlotLeader ::
   MonadRandom m =>
   Double ->
-  Currency ->
-  Currency ->
+  Coin ->
+  Coin ->
   m Bool
 isSlotLeader activeSlotCoefficient' total staked =
   let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)

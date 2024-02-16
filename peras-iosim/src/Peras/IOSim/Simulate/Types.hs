@@ -9,7 +9,7 @@ module Peras.IOSim.Simulate.Types (
 
 import GHC.Generics (Generic)
 import Peras.Block (Slot)
-import Peras.IOSim.Types (Currency)
+import Peras.IOSim.Types (Coin)
 
 import qualified Data.Aeson as A
 
@@ -18,8 +18,8 @@ data Parameters = Parameters
   , endSlot :: Slot
   , peerCount :: Int
   , downstreamCount :: Int
-  , totalStake :: Maybe Currency
-  , maximumStake :: Currency
+  , totalStake :: Maybe Coin
+  , maximumStake :: Coin
   , messageDelay :: Double
   }
   deriving stock (Eq, Generic, Ord, Read, Show)

@@ -1,10 +1,10 @@
 module Peras.IOSim.Types (
   ByteSize,
-  Currency,
+  Coin,
   Round,
 ) where
 
-type Currency = Int
+type Coin = Int
 
 type Round = Word
 

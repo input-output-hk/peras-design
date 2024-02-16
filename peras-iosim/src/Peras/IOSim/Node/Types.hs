@@ -12,6 +12,7 @@ module Peras.IOSim.Node.Types (
   nodeId,
   owner,
   preferredChain,
+  initialSeed,
   slot,
   slotLeader,
   stake,
@@ -23,7 +24,7 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Currency)
+import Peras.IOSim.Types (Coin)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
@@ -33,9 +34,10 @@ import qualified Data.Set as S
 data NodeState v = NodeState
   { _nodeId :: NodeId
   , _owner :: PartyId
+  , _initialSeed :: Int
   , _clock :: UTCTime
   , _slot :: Slot
-  , _stake :: Currency
+  , _stake :: Coin
   , _vrfOutput :: Double
   , _preferredChain :: Chain v
   , _downstreams :: S.Set NodeId
@@ -51,6 +53,7 @@ instance A.FromJSON v => A.FromJSON (NodeState v) where
         do
           _nodeId <- o A..: "nodeId"
           _owner <- o A..: "owner"
+          _initialSeed <- o A..: "randomSeed"
           _clock <- o A..: "clock"
           _slot <- o A..: "slot"
           _stake <- o A..: "stake"
@@ -66,6 +69,7 @@ instance A.ToJSON v => A.ToJSON (NodeState v) where
     A.object
       [ "nodeId" A..= _nodeId
       , "owner" A..= _owner
+      , "randomSeed" A..= _initialSeed
       , "clock" A..= _clock
       , "slot" A..= _slot
       , "stake" A..= _stake

@@ -10,12 +10,12 @@ module Peras.IOSim.Network where
 import Control.Concurrent.Class.MonadSTM (MonadSTM, STM, TQueue, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
 import Control.Lens (
-  Field1 (_1),
-  Field2 (_2),
   use,
   uses,
   (%=),
+  (&),
   (.=),
+  (.~),
   (^.),
  )
 import Control.Monad (unless, void)
@@ -23,9 +23,9 @@ import Control.Monad.Class.MonadFork (MonadFork (forkIO))
 import Control.Monad.Class.MonadSay (MonadSay (say))
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
-import Control.Monad.Random (MonadRandom, RandT, getRandomR, liftRandT)
-import Control.Monad.State (StateT, execStateT, gets, lift)
-import Data.Default (Default (def))
+import Control.Monad.Random (MonadRandom, getRandomR)
+import Control.Monad.State (StateT, execStateT, lift)
+import Data.Default (Default)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
@@ -40,6 +40,7 @@ import Peras.IOSim.Network.Types (
   currentStates,
   lastSlot,
   lastTime,
+  networkRandom,
   pending,
  )
 import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
@@ -47,7 +48,7 @@ import Peras.IOSim.Node.Types (NodeState, stake)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
-import System.Random (RandomGen (..), uniformR)
+import System.Random (uniformR)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -94,7 +95,7 @@ createNetwork Topology{connections} =
 --       one like a tree barrier.
 -- TODO: Rewrite as a state machine.
 runNetwork ::
-  forall m g v.
+  forall m v.
   Default v =>
   Ord v =>
   MonadDelay m =>
@@ -102,32 +103,30 @@ runNetwork ::
   MonadSay m =>
   MonadSTM m =>
   MonadTime m =>
-  RandomGen g =>
   Parameters ->
   Protocol ->
   M.Map NodeId (NodeState v) ->
   Network v m ->
   Slot ->
-  RandT g m (NetworkState v)
-runNetwork parameters protocol states network@Network{..} endSlot =
-  liftRandT . (. (def,)) . execStateT $
+  NetworkState v ->
+  m (NetworkState v)
+runNetwork parameters protocol states network@Network{..} endSlot initialState =
+  flip execStateT (initialState & currentStates .~ states) $
     do
       let
         -- Notify a node to stop.
         notifyStop destination nodeIn = output destination nodeIn Stop
-
         -- Receive and send messages.
-        loop :: MonadDelay m => MonadSay m => StateT (NetworkState v, g) m (NetworkState v)
+        loop :: MonadDelay m => MonadSay m => StateT (NetworkState v) m ()
         loop =
           do
             stepToIdle parameters network
             -- Check on whether the simulation is ending.
-            doExit <- (_1 . lastSlot) `uses` (>= endSlot)
+            doExit <- lastSlot `uses` (>= endSlot)
             if doExit
               then do
                 uncurry notifyStop `mapM_` M.toList nodesIn
                 waitForExits parameters network
-                gets fst
               else loop
       -- Start the node processes.
       startNodes parameters protocol states network
@@ -135,12 +134,12 @@ runNetwork parameters protocol states network@Network{..} endSlot =
       loop
 
 startNodes ::
-  (Monad m, RandomGen g, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m, Default v, MonadFork m, MonadTime m) =>
+  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m, Default v, MonadFork m, MonadTime m) =>
   Parameters ->
   Protocol ->
   M.Map NodeId (NodeState v) ->
   Network v m ->
-  StateT (NetworkState v, g) m ()
+  StateT (NetworkState v) m ()
 startNodes parameters protocol states network =
   mapM_ forkNode $ M.toList nodesIn
  where
@@ -149,25 +148,21 @@ startNodes parameters protocol states network =
   total = fromMaybe (sum $ (^. stake) <$> states) $ totalStake parameters
   -- Start a node process.
   forkNode (nodeId, nodeIn) =
-    do
-      gen <- use _2
-      let (gen', gen'') = split gen
-      _2 .= gen'
-      void
-        . lift
-        . forkIO
-        . runNode gen'' protocol total (states M.! nodeId)
-        $ NodeProcess nodeIn nodesOut
+    void
+      . lift
+      . forkIO
+      . runNode protocol total (states M.! nodeId)
+      $ NodeProcess nodeIn nodesOut
 
 -- Wait for all nodes to exit.
 waitForExits ::
-  (Monad m, RandomGen g, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
+  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
   Parameters ->
   Network v m ->
-  StateT (NetworkState v, g) m ()
+  StateT (NetworkState v) m ()
 waitForExits parameters network =
   do
-    allIdle <- (_1 . activeNodes) `uses` null
+    allIdle <- activeNodes `uses` null
     received <- lift $ atomically (flush nodesOut)
     mapM_ route received
     unless allIdle $ waitForExits parameters network
@@ -185,23 +180,23 @@ flush q =
 -- | Advance the network up to one single slot.
 -- This function loops until all nodes are idle
 stepToIdle ::
-  (Monad m, RandomGen g, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
+  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
   Parameters ->
   Network v m ->
-  StateT (NetworkState v, g) m ()
+  StateT (NetworkState v) m ()
 stepToIdle parameters network = do
   -- Advance the slot counter and notify the nodes, if all nodes are idle.
-  allIdle <- (_1 . activeNodes) `uses` null
+  allIdle <- activeNodes `uses` null
   -- FIXME: This is unsafe because a node crashing or becoming unresponsive will block the slot advancement.
   if allIdle
     then do
       -- FIXME: This is unsafe because a node might take more than one slot to do its computations.
-      _1 . lastSlot %= (+ 1)
+      lastSlot %= (+ 1)
       uncurry notifySlot `mapM_` M.toList nodesIn
       lift $ threadDelay 1000000
       -- FIXME: Assume that pending messages are received in the next slot.
-      mapM_ route =<< use (_1 . pending)
-      _1 . pending .= mempty
+      mapM_ route =<< use pending
+      pending .= mempty
     else do
       -- Receive and route messages.
       received <- lift $ atomically $ flush nodesOut
@@ -213,22 +208,22 @@ stepToIdle parameters network = do
   -- Notify a node of the next slot.
   notifySlot destination nodeIn =
     output destination nodeIn . InEnvelope Nothing . NextSlot
-      =<< use (_1 . lastSlot)
+      =<< use lastSlot
 
 -- | Dispatch a single message through the network.
 routeEnvelope ::
-  (Monad m, RandomGen g, Eq v, MonadSTM m, MonadSay m, Ord v) =>
+  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v) =>
   Parameters ->
   Network v m ->
   OutEnvelope v ->
-  StateT (NetworkState v, g) m ()
+  StateT (NetworkState v) m ()
 routeEnvelope parameters Network{nodesIn} = \case
   out@OutEnvelope{..} ->
     do
-      _1 . lastTime %= max timestamp
-      pendings <- use $ _1 . pending
-      (r, gen') <- uniformR (0, 1) <$> use _2
-      _2 .= gen'
+      lastTime %= max timestamp
+      pendings <- use pending
+      (r, gen) <- networkRandom `uses` uniformR (0, 1)
+      networkRandom .= gen
       -- Send the message if it was already pending or if it was received in the current slot.
       -- FIXME: This is an approximation.
       if out `elem` pendings || r > messageDelay parameters
@@ -240,23 +235,23 @@ routeEnvelope parameters Network{nodesIn} = \case
             do
               -- FIXME: Awkwardly peek at the chain.
               case message of
-                NewChain chain -> _1 . chainsSeen %= S.insert chain
+                NewChain chain -> chainsSeen %= S.insert chain
                 _ -> pure ()
               -- Forward the message.
               output destination (nodesIn M.! destination) $ InEnvelope (pure source) message
-        else _1 . pending %= (out :)
+        else pending %= (out :)
   Idle{..} -> do
-    _1 . lastTime %= max timestamp
-    _1 . activeNodes %= S.delete source
-    _1 . currentStates %= M.insert source currentState
+    lastTime %= max timestamp
+    activeNodes %= S.delete source
+    currentStates %= M.insert source currentState
   Exit{..} -> do
-    _1 . lastTime %= max timestamp
-    _1 . activeNodes %= S.delete source
-    _1 . currentStates %= M.insert source nodeState
+    lastTime %= max timestamp
+    activeNodes %= S.delete source
+    currentStates %= M.insert source nodeState
 
 -- Send a message and mark the destination as active.
-output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT (NetworkState v, g) m ()
+output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT (NetworkState v) m ()
 output destination inChannel inEnvelope =
   do
     lift . atomically . writeTQueue inChannel $ inEnvelope
-    _1 . activeNodes %= S.insert destination
+    activeNodes %= S.insert destination
