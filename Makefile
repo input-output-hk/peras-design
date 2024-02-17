@@ -15,10 +15,10 @@ typecheck: $(AGDAIFILES) $(HSFILES)
 
 # From https://stackoverflow.com/questions/34621364/makefile-compile-o-from-c-files
 $(AGDAIFILES): %.agdai: %.agda
-	@$(AGDA) $(AGDAFLAGS) $^
+	@$(AGDA)  --library-file=$(AGDA_LIBS) $(AGDAFLAGS) $^
 
 $(HSDIR)/%.hs: %.agda
-	@$(AGDA2HS) $(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 .PHONY : clean veryclean
 clean:
