@@ -18,6 +18,7 @@ pkgs.stdenv.mkDerivation {
   ];
   buildPhase = ''
     echo "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib" > libraries
+    echo "${repoRoot.nix.agda2hs}/agda2hs.agda-lib" >> libraries
     export AGDA_LIBS="--local-interfaces --library-file=$PWD/libraries"
     make
   '';
