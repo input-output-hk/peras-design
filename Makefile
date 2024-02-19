@@ -18,13 +18,17 @@ typecheck: $(HSFILES) $(LHSFILES)
 
 # From https://stackoverflow.com/questions/34621364/makefile-compile-o-from-c-files
 $(HSDIR)/%.hs: %.agda
-	@$(AGDA2HS) --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 # FIXME: this obviously won't scale...
 $(HSDIR)/src/Peras/SmallStep.hs: src/Peras/SmallStep.lagda.md
-	@$(AGDA2HS) --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 .PHONY : clean veryclean
 clean:
 	@echo "Removing .agdai files"
 	@find src -name \*.agdai -delete;
+
+veryclean: clean
+	@echo "Removing generated.hs files"
+	@rm $(HSFILES) $(LHSFILES)

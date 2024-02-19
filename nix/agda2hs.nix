@@ -25,26 +25,6 @@ let
     };
     everythingFile = "./lib/Everything.agda";
     preBuild = ''
-      # This won't compile without `--sized-types`.
-      sed -i '/^flags:/s/$/ --sized-types/' agda2hs.agda-lib
-      # Create the missing everything file.
-      find lib -type f -name \*.agda | sed -e 's/^lib\//import /; s/\.agda$// ; s/\//./g' > Everything.agda
-      sed -i '1imodule Everything where' Everything.agda
-      mv Everything.agda lib/
-      # Remove extraneous files.
-      rm -rf test tutorials
-    '';
-  };
-
-  altAgdaLib = repoRoot.nix.agda-packages.mkDerivation {
-    pname = "agda2hs";
-    version = "1.2";
-    src = inputs.agda2nix;
-    meta = {
-      description = "agda2hs";
-    };
-    everythingFile = "./lib/Everything.agda";
-    preBuild = ''
       # Create the missing everything file.
       find lib -type f -name \*.agda | sed -e 's/^lib\//import /; s/\.agda$// ; s/\//./g' > Everything.agda
       sed -i '1imodule Everything where' Everything.agda
@@ -60,5 +40,5 @@ in
 
 {
   exe = haskellProject.hsPkgs.agda2hs.components.exes.agda2hs;
-  lib = altAgdaLib;
+  lib = agdaLib;
 }
