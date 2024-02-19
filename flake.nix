@@ -10,6 +10,11 @@
       url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
+    agda2nix = {
+      url = "github:agda/agda2hs/b269164e15da03b74cf43b51c522f4f052b4af80";
+      flake = false;
+    };
+
     nixos-unstable.url = github:NixOS/nixpkgs/nixos-unstable;
   };
 

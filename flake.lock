@@ -33,6 +33,23 @@
         "type": "github"
       }
     },
+    "agda2nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1702307276,
+        "narHash": "sha256-19NGyK7qbsQ+EBX6lygNFOXRyDm/48KlBf8ixBU7PUw=",
+        "owner": "agda",
+        "repo": "agda2hs",
+        "rev": "b269164e15da03b74cf43b51c522f4f052b4af80",
+        "type": "github"
+      },
+      "original": {
+        "owner": "agda",
+        "repo": "agda2hs",
+        "rev": "b269164e15da03b74cf43b51c522f4f052b4af80",
+        "type": "github"
+      }
+    },
     "blst": {
       "flake": false,
       "locked": {
@@ -886,6 +903,7 @@
     },
     "root": {
       "inputs": {
+        "agda2nix": "agda2nix",
         "hackage": "hackage",
         "iogx": "iogx",
         "nixos-unstable": "nixos-unstable"
