@@ -6,7 +6,7 @@ HSFILES := $(patsubst %.agda,$(HSDIR)/%.hs,$(AGDAFILES))
 AGDAFLAGS := -i src
 AGDA ?= agda
 AGDA2HS ?= agda2hs
-AGDA_LIBS ?=
+AGDA_LIBS ?= $(HOME)/.agda/libraries
 
 .PHONY: typecheck
 
