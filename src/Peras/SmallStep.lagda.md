@@ -10,7 +10,7 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map; cartesianProduct)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.Maybe using (just; nothing)
@@ -116,10 +116,18 @@ module _ {block₀ : Block⋆} where
   ```
 
   ```agda
-  module _ {T : Set} (blockTree : TreeType T) (honest? : (p : PartyId) → Honesty p) where
+  module _ {T : Set}
+           (blockTree : TreeType T)
+           (honest? : (p : PartyId) → Honesty p) -- Predicate or bool?
+           -- (lottery : PartyId → Slot → Bool)
+           (txSelection : Slot → PartyId → List Tx)
+           where
 
-    -- local state
+    ```
 
+    # local state
+
+    ```agda
     Stateˡ = LocalState blockTree
 
     extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
@@ -149,9 +157,18 @@ module _ {block₀ : Block⋆} where
                        }
                   in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
+    ```
 
-    -- global state
+    ## Global state
 
+    * clock: Current slot of the system
+    * progress
+    * state map
+    * messages: All the messages that have been sent but not yet been delivered
+    * history: All the messages that have been sent
+    * execution order
+
+    ```agda
     record Stateᵍ : Set where
       constructor ⟪_,_,_,_,_⟫
       field
@@ -159,12 +176,15 @@ module _ {block₀ : Block⋆} where
         progress : Progress
         stateMap : Map Stateˡ
         messages : List Message
+        -- history : List Message
         execution-order : List PartyId -- TODO: List (Honesty p)
 
     open Stateᵍ public
+    ```
 
-    -- initial global state
+    ### Initial global state
 
+    ```agda
     N₀ : Stateᵍ
     N₀ = ⟪ 0 , Ready , empty , [] , [] ⟫ -- FIXME: initial parties as parameter
 
@@ -256,8 +276,8 @@ module _ {block₀ : Block⋆} where
         → N [ Honest {p} ]↷ N
 
       honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs}
-        → (msgs , sₗ′) ≡ honestCreate (clock N) [] sₗ
-          --------------------------------
+        → (msgs , sₗ′) ≡ honestCreate (clock N) (txSelection (clock N) p) sₗ
+          ------------------------------------------------------------------
         → N [ Honest {p} ]↷
           record N {
               stateMap = M.insert p sₗ′ (stateMap N);
@@ -349,9 +369,19 @@ module _ {block₀ : Block⋆} where
         collision-free : ∀ {b₁ b₂ : Block⋆}
           → BlockMsg b₁ ∈ messages N
           → BlockMsg b₂ ∈ messages N
-            → b₁ ♯ ≡ b₂ ♯
+          → b₁ ♯ ≡ b₂ ♯
           → b₁ ≡ b₂
           → CollisionFree N
+
+{- TODO: All relation might simplify proofs
+
+        collision-free : ∀ {b₁ b₂ : Block⋆}
+          → All
+            (λ { (BlockMsg b₁ , BlockMsg b₂) →
+                 (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
+            (cartesianProduct (messages N) (messages N))
+          → CollisionFree N
+-}
 
       subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
         → x ∈ xs
@@ -361,12 +391,18 @@ module _ {block₀ : Block⋆} where
 
       -- When the current state is collision free, the pervious state was so too
 
+      {-
+      open import Data.List.Membership.Propositional.Properties
+      open import Data.Sum.Base using (_⊎_)
+      open import Data.List.Relation.Binary.Subset.Propositional.Properties
+      -}
+
       []↷-collision-free : ∀ {M N p} {h : Honesty p}
         → CollisionFree N
         → M [ h ]↷ N
         → CollisionFree M
       []↷-collision-free x (honestNoState _) = x
-      []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} refl) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
+      []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} _) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
       []↷-collision-free x corrupt = x
 
       ∷-collision-free : ∀ {cl pr sm ms ps p}
@@ -418,4 +454,5 @@ module _ {block₀ : Block⋆} where
       ↝⋆-collision-free (_ ∎) N = N
       ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
         ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+
 ```
