@@ -116,6 +116,12 @@ module _ {block₀ : Block⋆} where
       partyId : PartyId
       tree : T
   ```
+  # Parmeterized module
+
+  * blockTree
+  * honest?
+  * lottery
+  * tx selection
 
   ```agda
   module _ {T : Set}
@@ -125,11 +131,11 @@ module _ {block₀ : Block⋆} where
            (txSelection : Slot → PartyId → List Tx)
            where
 
-    ```
+  ```
 
-    # local state
+  ## local state
 
-    ```agda
+  ```agda
     Stateˡ = LocalState blockTree
 
     extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
@@ -159,18 +165,18 @@ module _ {block₀ : Block⋆} where
                        }
                   in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
-    ```
+  ```
 
-    ## Global state
+  ## Global state
 
-    * clock: Current slot of the system
-    * progress
-    * state map
-    * messages: All the messages that have been sent but not yet been delivered
-    * history: All the messages that have been sent
-    * execution order
+  * clock: Current slot of the system
+  * progress
+  * state map
+  * messages: All the messages that have been sent but not yet been delivered
+  * history: All the messages that have been sent
+  * execution order
 
-    ```agda
+  ```agda
     record Stateᵍ : Set where
       constructor ⟪_,_,_,_,_⟫
       field
@@ -182,11 +188,11 @@ module _ {block₀ : Block⋆} where
         execution-order : List PartyId -- TODO: List (Honesty p)
 
     open Stateᵍ public
-    ```
+  ```
 
-    ### Initial global state
+  ### Initial global state
 
-    ```agda
+  ```agda
     N₀ : Stateᵍ
     N₀ = ⟪ 0 , Ready , empty , [] , [] ⟫ -- FIXME: initial parties as parameter
 
@@ -198,11 +204,11 @@ module _ {block₀ : Block⋆} where
     fetchMsgs : PartyId → Stateᵍ → List Message × Stateᵍ
     fetchMsgs _ N = (messages N , N) -- FIXME: * implement network model with delays
                                      --        * filter messages
-    ```
+  ```
 
-    ## Receive
+  ## Receive
 
-    ```agda
+  ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honestNoState : ∀ {p N}
@@ -223,18 +229,18 @@ module _ {block₀ : Block⋆} where
       corrupt : ∀ {p N}
           ---------------------
         → N [ Corrupt {p} ]⇀ N
-    ```
+  ```
 
-    ```agda
+  ```agda
     []⇀-does-not-modify-messages : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
       → messages M ≡ messages N
     []⇀-does-not-modify-messages (honestNoState _) = refl
     []⇀-does-not-modify-messages (honest _ _ _) = refl -- why?
     []⇀-does-not-modify-messages corrupt = refl
-    ```
+  ```
 
-    ```agda
+  ```agda
     data _⇀_ : Stateᵍ → Stateᵍ → Set where
 
       Empty : ∀ {M}
@@ -248,9 +254,9 @@ module _ {block₀ : Block⋆} where
         → N ⇀ O
           ------
         → M ⇀ O
-    ```
+  ```
 
-    ```agda
+  ```agda
     ⇀-does-not-modify-messages : ∀ {M N}
       → M ⇀ N
       → messages M ≡ messages N
@@ -259,11 +265,11 @@ module _ {block₀ : Block⋆} where
       trans
         ([]⇀-does-not-modify-messages x₁)
         (⇀-does-not-modify-messages x₂)
-    ```
+  ```
 
-    # Create
+  # Create
 
-    ```agda
+  ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honestNoState : ∀ {p N}
@@ -284,9 +290,9 @@ module _ {block₀ : Block⋆} where
           ---------------------
         → N [ Corrupt {p} ]↷ N
 
-    ```
+  ```
 
-    ```agda
+  ```agda
     data _↷_ : Stateᵍ → Stateᵍ → Set where
 
       Empty : ∀ {M}
@@ -301,11 +307,11 @@ module _ {block₀ : Block⋆} where
           ------
         → (record M { execution-order = ps }) ↷ O
 
-    ```
+  ```
 
-    ## Small-step semantics for global state evolution
+  ## Small-step semantics for global state evolution
 
-    ```agda
+  ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {s sm ms ps} {N}
@@ -340,11 +346,11 @@ module _ {block₀ : Block⋆} where
           --------------------------
         → ⟪ s , p , sm , ms , ps ⟫ ↝
           ⟪ s , p , sm , ms′ , ps ⟫
-    ```
+  ```
 
-    ## Reflexive, transitive closure (which is big-step in the paper)
+  ## Reflexive, transitive closure (which is big-step in the paper)
 
-    ```agda
+  ```agda
     infix  2 _↝⋆_
     infixr 2 _↝⟨_⟩_
     infix  3 _∎
@@ -360,12 +366,12 @@ module _ {block₀ : Block⋆} where
         → M ↝⋆ N
           ------
         → L ↝⋆ N
-    ```
+  ```
 
-    ## hash function, collision free predicate
-    -- TODO: rather use record type Hashable (requires an instance of the function)
+  ## hash function, collision free predicate
+  -- TODO: rather use record type Hashable (requires an instance of the function)
 
-    ```agda
+  ```agda
     module _ {_♯ : Block⋆ → Hash} where
 
       data CollisionFree (N : Stateᵍ) : Set where
@@ -377,7 +383,7 @@ module _ {block₀ : Block⋆} where
           → b₁ ≡ b₂
           → CollisionFree N
 
-{- TODO: All relation might simplify proofs
+  {- TODO: All relation might simplify proofs
 
         collision-free : ∀ {b₁ b₂ : Block⋆}
           → All
@@ -385,7 +391,7 @@ module _ {block₀ : Block⋆} where
                  (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
             (cartesianProduct (messages N) (messages N))
           → CollisionFree N
--}
+  -}
 
       subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
         → x ∈ xs
@@ -458,5 +464,4 @@ module _ {block₀ : Block⋆} where
       ↝⋆-collision-free (_ ∎) N = N
       ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
         ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
-
-```
+  ```
