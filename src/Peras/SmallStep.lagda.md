@@ -13,6 +13,8 @@ open import Data.Bool using (Bool; true; false)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map; cartesianProduct)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
+open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -188,12 +190,6 @@ module _ {block₀ : Block⋆} where
     N₀ : Stateᵍ
     N₀ = ⟪ 0 , Ready , empty , [] , [] ⟫ -- FIXME: initial parties as parameter
 
-    permParties : List PartyId → List PartyId
-    permParties = id -- FIXME: permute
-
-    permMessages : List Message → List Message
-    permMessages = id -- FIXME: permute
-
     updateStateˡ : PartyId → Stateˡ → Stateᵍ → Stateᵍ
     updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
 
@@ -329,13 +325,21 @@ module _ {block₀ : Block⋆} where
                    }
 
       NextRound : ∀ {s sm ms ps}
-        → ⟪ s , Baked , sm , ms , ps ⟫ ↝ ⟪ suc s , Ready , sm , ms , ps ⟫
+          --------------------------------
+        → ⟪ s , Baked , sm , ms , ps ⟫ ↝
+          ⟪ suc s , Ready , sm , ms , ps ⟫
 
-      PermParties : ∀ {s p sm ms ps}
-        → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , ms , permParties ps ⟫
+      PermParties : ∀ {s p sm ms ps ps′}
+        → ps ↭ ps′
+          --------------------------
+        → ⟪ s , p , sm , ms , ps ⟫ ↝
+          ⟪ s , p , sm , ms , ps′ ⟫
 
-      PermMsgs : ∀ {s p sm ms ps}
-        → ⟪ s , p , sm , ms , ps ⟫ ↝ ⟪ s , p , sm , permMessages ms , ps ⟫
+      PermMsgs : ∀ {s p sm ms ms′ ps}
+        → ms ↭ ms′
+          --------------------------
+        → ⟪ s , p , sm , ms , ps ⟫ ↝
+          ⟪ s , p , sm , ms′ , ps ⟫
     ```
 
     ## Reflexive, transitive closure (which is big-step in the paper)
@@ -441,8 +445,8 @@ module _ {block₀ : Block⋆} where
             m′ = []↷-collision-free m x₅
         in ∷-collision-free m′
       ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free PermParties (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free PermMsgs (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free (PermParties _) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+      ↝-collision-free (PermMsgs p) (collision-free x x₁ x₂ x₃) = collision-free (∈-resp-↭ (↭-sym p) x) (∈-resp-↭ (↭-sym p) x₁) x₂ x₃
 
       -- When the current state is collision free, previous states were so too
 
