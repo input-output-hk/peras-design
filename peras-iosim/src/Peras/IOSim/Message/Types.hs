@@ -29,7 +29,7 @@ data InEnvelope v
   | Stop
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON v => A.FromJSON (InEnvelope v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (InEnvelope v) where
   parseJSON =
     A.withObject "InEnvelope" $
       \o ->
@@ -46,7 +46,7 @@ instance A.FromJSON v => A.FromJSON (InEnvelope v) where
                   else A.parseFail $ "Illegal action: " <> action
          in parseInEnvelope <|> parseStop
 
-instance A.ToJSON v => A.ToJSON (InEnvelope v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (InEnvelope v) where
   toJSON InEnvelope{..} =
     A.object
       [ "origin" A..= origin
@@ -63,7 +63,7 @@ data OutMessage v
   | SendMessage (Message v)
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON v => A.FromJSON (OutMessage v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (OutMessage v) where
   parseJSON =
     A.withObject "OutMessage" $
       \o ->
@@ -74,7 +74,7 @@ instance A.FromJSON v => A.FromJSON (OutMessage v) where
             "SendMessage" -> SendMessage <$> o A..: "message"
             _ -> A.parseFail $ "Illegal output: " <> output
 
-instance A.ToJSON v => A.ToJSON (OutMessage v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (OutMessage v) where
   toJSON (FetchBlock block) =
     A.object
       [ "output" A..= ("FetchBlock" :: String)
@@ -106,7 +106,7 @@ data OutEnvelope v
       }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON v => A.FromJSON (OutEnvelope v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (OutEnvelope v) where
   parseJSON =
     A.withObject "OutEnvelope" $
       \o ->
@@ -121,7 +121,7 @@ instance A.FromJSON v => A.FromJSON (OutEnvelope v) where
             parseExit = Exit <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "nodeState"
          in parseMessage <|> parseIdle <|> parseExit
 
-instance A.ToJSON v => A.ToJSON (OutEnvelope v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (OutEnvelope v) where
   toJSON OutEnvelope{..} =
     A.object
       [ "timestamp" A..= timestamp

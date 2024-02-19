@@ -25,12 +25,23 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain, asChain, asList, commonPrefix)
+import Peras.Chain (Chain (..), asList, commonPrefix)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
-import Test.QuickCheck (choose, elements, frequency, tabulate)
-import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.StateModel (Any (..), HasVariables, LookUp, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost)
+import Test.QuickCheck (Gen, choose, elements, frequency, tabulate)
+import Test.QuickCheck.DynamicLogic (DynLogicModel (..))
+import Test.QuickCheck.StateModel (
+  Any (..),
+  HasVariables,
+  LookUp,
+  PostconditionM,
+  Realized,
+  RunModel (..),
+  StateModel (..),
+  Var,
+  counterexamplePost,
+  monitorPost,
+ )
 import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
 -- | We model a network of nodes interconnected through a diffusion layer.
@@ -40,7 +51,10 @@ data Network = Network
   }
   deriving (Show, Generic)
 
-instance DynLogicModel Network
+instance DynLogicModel Network where
+  restricted = \case
+    Tick{} -> False
+    _other -> True
 
 baseNodes :: Int -> [NodeId]
 baseNodes n =
@@ -57,7 +71,7 @@ instance StateModel Network where
 
   arbitraryAction _ Network{nodeIds} =
     frequency
-      [ (10, Some . Tick . fromInteger <$> choose (10, 100))
+      [ (10, Some <$> genTick)
       , (1, observeNode)
       ]
    where
@@ -77,6 +91,9 @@ instance StateModel Network where
 
 deriving instance Eq (Action Network a)
 deriving instance Show (Action Network a)
+
+genTick :: Gen (Action Network ())
+genTick = Tick . fromInteger <$> choose (10, 100)
 
 instance HasVariables Network where
   getAllVariables = const mempty
@@ -105,7 +122,7 @@ instance MonadTrans RunMonad where
 type instance Realized (RunMonad m) a = a
 
 instance Monad m => RunModel Network (RunMonad m) where
-  perform network@Network{slot} action _context =
+  perform Network{} action _context =
     case action of
       Tick n ->
         replicateM_ (fromIntegral n) performTick
@@ -133,13 +150,19 @@ instance Monad m => RunModel Network (RunMonad m) where
   postcondition (_, Network{slot}) (ChainsHaveCommonPrefix chainVars) env () = do
     let chains = fmap env chainVars
         prefix = commonPrefix chains
+        prefixes = asList prefix
         chainLength = length $ asList prefix
-        chainDensity = floor $ fromIntegral chainLength * 1000 / fromIntegral slot
+        chainDensity =
+          if slot == 0
+            then 0
+            else floor $ fromIntegral chainLength * 1000 / fromIntegral slot
     counterexamplePost $ "Chains:  " <> show chains
     counterexamplePost $ "Common prefix:  " <> show prefix
     monitorPost $ tabulate "Prefix length" ["<= " <> show ((chainLength `div` 100 + 1) * 100)]
     monitorPost $ tabulate "Prefix density" ["<= " <> show (chainDensity `div` 10 + 1) <> "%"]
-    pure $ not (null (asList prefix))
+    pure $
+      not (null prefixes)
+        || all (== Genesis) chains
   postcondition _ _ _ _ = pure True
 
 selectBlocks :: [Message ()] -> [Block ()]

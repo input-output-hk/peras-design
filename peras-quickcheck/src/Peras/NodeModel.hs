@@ -24,7 +24,7 @@ import Control.Monad.Random (runRand)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
 import Data.Maybe (fromMaybe)
-import Data.Ratio (Ratio, (%))
+import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Statistics.Util (equalsBinomialWithinTails)
 import GHC.Generics (Generic)
@@ -157,13 +157,9 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
       readTQueue q >>= \case
         Idle{} -> pure acc
         OutEnvelope
-          { timestamp
-          , source
-          , outMessage = SendMessage (NewChain (Cons b _))
-          , bytes
-          , destination
+          { outMessage = SendMessage (NewChain (Cons b _))
           } -> waitForIdle q (b : acc)
-        other -> waitForIdle q acc
+        _other -> waitForIdle q acc
 
   postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do
     let blocks = length $ foldMap env blockVars

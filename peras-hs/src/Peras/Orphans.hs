@@ -7,16 +7,13 @@
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.Orphans (
-  fromBlocks,
-  toBlocks,
-) where
+module Peras.Orphans where
 
 import Data.Bifunctor (first)
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..), PartyId (..), Tx (..))
-import Peras.Chain (Chain (..))
+import Peras.Chain (Chain (..), asChain, asList)
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
 import Peras.Message (Message (..), NodeId (..))
 
@@ -26,18 +23,21 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as T
+import Text.Read (Read (readPrec), readListDefault)
 
 -- Only used for deriving instances of similar types.
 newtype Bytes = Bytes {getBytes :: BS.ByteString}
 
 instance Read Bytes where
-  readsPrec _ = either mempty (pure . (,"") . Bytes) . B16.decode . BS8.pack
+  readPrec = do
+    Right bs <- B16.decode . BS8.pack <$> readPrec
+    pure $ Bytes bs
 
 instance Show Bytes where
-  show = BS8.unpack . B16.encode . getBytes
+  show = show . BS8.unpack . B16.encode . getBytes
 
 instance IsString Bytes where
-  fromString = read
+  fromString = either error Bytes . B16.decode . BS8.pack
 
 instance A.FromJSON Bytes where
   parseJSON = A.withText "Base 16 Bytes" $ either A.parseFail (pure . Bytes) . B16.decode . BS8.pack . T.unpack
@@ -81,26 +81,15 @@ deriving stock instance Ord v => Ord (Chain v)
 deriving stock instance Read v => Read (Chain v)
 deriving stock instance Show v => Show (Chain v)
 
-fromBlocks ::
-  [Block v] ->
-  Chain v
-fromBlocks = foldr Cons Genesis
-
-toBlocks ::
-  Chain v ->
-  [Block v]
-toBlocks Genesis = []
-toBlocks (Cons block chain) = toBlocks chain <> pure block
-
-instance A.FromJSON v => A.FromJSON (Chain v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (Chain v) where
   parseJSON =
     A.withObject "Chain" $
-      \o -> fromBlocks <$> o A..: "blocks"
+      \o -> asChain <$> o A..: "blocks"
 
-instance A.ToJSON v => A.ToJSON (Chain v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (Chain v) where
   toJSON chain =
     A.object
-      [ "blocks" A..= toBlocks chain
+      [ "blocks" A..= asList chain
       ]
 
 deriving stock instance Generic Hash
@@ -117,7 +106,7 @@ deriving stock instance Ord v => Ord (Message v)
 deriving stock instance Read v => Read (Message v)
 deriving stock instance Show v => Show (Message v)
 
-instance A.FromJSON v => A.FromJSON (Message v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (Message v) where
   parseJSON =
     A.withObject "Message" $
       \o ->
@@ -129,7 +118,7 @@ instance A.FromJSON v => A.FromJSON (Message v) where
             "NewChain" -> NewChain <$> o A..: "chain"
             _ -> A.parseFail $ "Illegal input: " <> input
 
-instance A.ToJSON v => A.ToJSON (Message v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (Message v) where
   toJSON (NextSlot slot) =
     A.object
       [ "input" A..= ("NextSlot" :: String)
@@ -173,7 +162,7 @@ instance Show NodeId where
   show = nodeId
 
 instance IsString NodeId where
-  fromString = read
+  fromString = MkNodeId
 
 instance A.FromJSON NodeId where
   parseJSON = A.withText "NodeId" $ pure . MkNodeId . T.unpack
@@ -195,6 +184,9 @@ instance Read PartyId where
 
 instance Show PartyId where
   show = show . vkey
+
+instance IsString PartyId where
+  fromString = MkPartyId . fromString
 
 instance A.FromJSON PartyId where
   parseJSON = fmap MkPartyId . A.parseJSON
@@ -218,21 +210,11 @@ deriving via Bytes instance A.ToJSON Signature
 
 deriving stock instance Generic Tx
 deriving stock instance Ord Tx
-
-instance Read Tx where
-  readsPrec _ = either mempty (pure . (,"") . Tx) . B16.decode . BS8.pack
-
-instance Show Tx where
-  show = BS8.unpack . B16.encode . tx
-
-instance IsString Tx where
-  fromString = read
-
-instance A.FromJSON Tx where
-  parseJSON = A.withText "Base 16 Bytes" $ either A.parseFail (pure . Tx) . B16.decode . BS8.pack . T.unpack
-
-instance A.ToJSON Tx where
-  toJSON = A.String . T.pack . show
+deriving via Bytes instance Read Tx
+deriving via Bytes instance Show Tx
+deriving via Bytes instance IsString Tx
+deriving via Bytes instance A.FromJSON Tx
+deriving via Bytes instance A.ToJSON Tx
 
 deriving stock instance Generic VerificationKey
 deriving stock instance Ord VerificationKey

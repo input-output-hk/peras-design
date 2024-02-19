@@ -42,9 +42,10 @@ test-suite test
     other-modules:    Peras.ChainSpec
     build-depends:
                       base >= 4.9 && <5
-                    , QuickCheck
-                    , hspec
-                    , peras-hs
+                  , QuickCheck
+                  , hspec
+                  , peras-hs
+                  , quickcheck-classes
 
     build-tool-depends:
        hspec-discover:hspec-discover

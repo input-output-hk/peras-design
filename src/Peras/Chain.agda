@@ -94,12 +94,12 @@ module ChainOps {t : Set} ⦃ isEqt : Eq t ⦄ where
 
   {-# COMPILE AGDA2HS asChain #-}
 
-  prefix : List (Block t) -> List (Block t) -> List (Block t)
-  prefix (x ∷ xs) (y ∷ ys) =
+  prefix : List (Block t) -> List (Block t) -> List (Block t) -> List (Block t)
+  prefix acc (x ∷ xs) (y ∷ ys) =
     if x == y
-     then x ∷ prefix xs ys
-     else []
-  prefix _ _ = []
+     then prefix (x ∷ acc) xs ys
+     else reverse acc
+  prefix acc _ _ = reverse acc
 
   {-# COMPILE AGDA2HS prefix #-}
 
@@ -107,10 +107,10 @@ module ChainOps {t : Set} ⦃ isEqt : Eq t ⦄ where
   commonPrefix chains =
     case listPrefix of λ where
        Nothing -> Genesis
-       (Just bs) -> asChain bs
+       (Just bs) -> asChain (reverse bs)
      where
        listPrefix : Maybe (List (Block t))
-       listPrefix = foldl1Maybe prefix (reverse (map asList chains))
+       listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (asList l)) chains)
 
   {-# COMPILE AGDA2HS commonPrefix #-}
 

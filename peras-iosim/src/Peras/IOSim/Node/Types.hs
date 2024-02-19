@@ -46,7 +46,7 @@ data NodeState v = NodeState
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance A.FromJSON v => A.FromJSON (NodeState v) where
+instance (A.FromJSON v, Eq v) => A.FromJSON (NodeState v) where
   parseJSON =
     A.withObject "NodeState" $
       \o ->
@@ -64,7 +64,7 @@ instance A.FromJSON v => A.FromJSON (NodeState v) where
           _committeeMember <- o A..: "committeeMember"
           pure NodeState{..}
 
-instance A.ToJSON v => A.ToJSON (NodeState v) where
+instance (A.ToJSON v, Eq v) => A.ToJSON (NodeState v) where
   toJSON NodeState{..} =
     A.object
       [ "nodeId" A..= _nodeId

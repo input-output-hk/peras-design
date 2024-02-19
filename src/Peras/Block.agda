@@ -56,7 +56,7 @@ record Tx : Set where
 
 open Tx public
 
-{-# COMPILE AGDA2HS Tx deriving Eq #-}
+{-# COMPILE AGDA2HS Tx newtype deriving Eq #-}
 
 Slot = Nat
 

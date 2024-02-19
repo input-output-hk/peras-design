@@ -9,8 +9,8 @@ import Data.ByteString as BS
 data PartyId = MkPartyId{vkey :: VerificationKey}
                  deriving (Eq)
 
-data Tx = Tx{tx :: ByteString}
-            deriving Eq
+newtype Tx = Tx{tx :: ByteString}
+               deriving Eq
 
 type Slot = Natural
 

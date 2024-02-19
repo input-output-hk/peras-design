@@ -63,7 +63,7 @@ data NetworkState v = NetworkState
 instance Ord v => Default (NetworkState v) where
   def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty M.empty mempty $ mkStdGen 12345
 
-instance ToJSON v => ToJSON (NetworkState v) where
+instance (ToJSON v, Eq v) => ToJSON (NetworkState v) where
   toJSON NetworkState{..} =
     A.object
       [ "lastSlot" A..= _lastSlot

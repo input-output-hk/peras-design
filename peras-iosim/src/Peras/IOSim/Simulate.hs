@@ -60,7 +60,7 @@ writeTrace ::
 writeTrace filename = writeFile filename . ppTrace
 
 writeReport ::
-  A.ToJSON v =>
+  (A.ToJSON v, Eq v) =>
   FilePath ->
   NetworkState v ->
   IO ()
