@@ -1,3 +1,66 @@
+## 2024-02-19
+
+### AB fixing Common Prefix
+
+Trying to fix error in `NetworkModelSpec`, I first struggle with shrinking problems as I end up with traces without any `Tick` which is problematic as this means there won't be anything but a `Genesis` chain in all nodes.
+* Fix it by adding a clause in the property, namely that if all nodes' chains are Genesis, this is fine as this means noone made progress. Anyhow, this is not the correct `commonPrefix` property.
+* Tried to fiddle with `DynLogicModel` instance and function `restricted` which _restricts_ which value is generated with `anyAction` (I think).
+
+Ended up with a chain that's supposed to fail the property but is apparently not, problem being that the `Show` instance yields something that's not `Read`able again:
+
+```
+err =
+  [ Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  , Cons (Block{slotNumber = 49, creatorId = 7392 b2bd2853, includedVotes = (), leadershipProof = f2a6ab5f8122, payload = [], signature = 06 f34b7da9fd}) (Cons (Block{slotNumber = 44, creatorId = ece20dec9edc, includedVotes = (), leadershipProof = 0 faf57e3c126, payload = [], signature = c63cff5266ee}) Genesis)
+  ]
+```
+
+First issue: There are missing double-quotes in the `Show` instance for `Bytes`
+
+Trying to have lawful Read/Show instance for Chain in order to
+investigate with copy/paste why the sample chains do not validate
+`commonPrefix` property, got hit by a weird error when trying to
+`derive via Bytes` TX instances:
+
+```
+src/Peras/Orphans.hs:221:1: error: [GHC-18872]
+    • Couldn't match representation of type ‘BS8.ByteString’
+                               with that of ‘Tx’
+        arising from a use of ‘ghc-prim-0.10.0:GHC.Prim.coerce’
+    • In the expression:
+        ghc-prim-0.10.0:GHC.Prim.coerce
+          @(Int -> ReadS Bytes) @(Int -> ReadS Tx) (readsPrec @Bytes)
+      In an equation for ‘readsPrec’:
+          readsPrec
+            = ghc-prim-0.10.0:GHC.Prim.coerce
+                @(Int -> ReadS Bytes) @(Int -> ReadS Tx) (readsPrec @Bytes)
+      When typechecking the code for ‘readsPrec’
+        in a derived instance for ‘Read Tx’:
+        To see the code I am typechecking, use -ddump-deriv
+      In the instance declaration for ‘Read Tx’
+    |
+221 | deriving via Bytes instance Read Tx
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+Found the issue: `Tx` was declared as `data Tx` which breaks the representation equivalence of `newtype`s.
+* Need to add an annotation on Agda code to ensure it produces a `newtype`
+
+Looks like the `IsString` instance for some types are invalid!
+* Finally got to the bottom of the problem: The `fromString` function was delegating to `read` but this is wrong as `read` for a `String` would expect double-quotes but `fromSTring` would be given directly the `String` value _without_ the double-quotes!
+
+Getting back to the main problem, there's definitely something wrong with my `commonPrefix` function as demonstrated by some unit tests I copy/pasted from the failures observed in `NetworkModelSpec`!
+
+Fixed the `commonPrefix` computation: The Agda code was not recursing when the 2 values were inequal, which was a remainder of the previous Haskell computation where the prefix was computed by first `reverse`ing the block list :facepalm:
+
 ## 2024-02-16
 
 ### BB - Odds & Ends
@@ -7,7 +70,7 @@
 
 ### YH code extraction for property based tests
 
-* For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check. 
+* For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check.
 
 ```agda
 prop-genesis-in-slot0 : ∀ {c : Chain} → (v : ValidChain c) → slot (last c) ≡ 0
@@ -17,6 +80,107 @@ propGenesisInSlot0 : ∀ (c : Chain) → (@0 v : ValidChain c) → Equal ℕ
 propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 ```
 
+### Notes on serialization
+
+Serialisation from Agda
+* serde can mimick Aeson serialisation -> configuration on the rust side
+* serialisation should be CBOR
+* should we start from the CDDL or the code? Probably want to be both, as long as we respect the specification
+
+### AB - commonPrefix in Agda
+
+Trying again to implement `commonPrefix` in Agda, this time depending on Haskell equality instances
+* need to add `--erasure` in the agda-lib as a flag to be able to import agda2hs
+
+Looks like the Agda version of `commonPrefix` does not work as expected, investigating what's wrong...
+It's an interesting exercise as I would like to write properties about that code, eg. something like:
+
+```
+commonPrefixEq : {t : Set } -> ⦃ eqt : Eq t ⦄ -> (c₁ c₂ : Chain t) ->  (c₁ ≡ c₂) -> (commonPrefix (c₁ ∷ c₂ ∷ []) ≡ c₁)
+commonPrefixEq = {!!}
+```
+
+where c1 and c2 would be `Arbitrary` on the Haskell side.
+
+Here is the property I write in QC:
+
+```
+spec :: Spec
+spec =
+  prop "(c₁ ≡ c₂) -> (commonPrefix (c₁ ∷ c₂ ∷ []) ≡ c₁)" propCommonPrefixSelf
+
+propCommonPrefixSelf :: Property
+propCommonPrefixSelf =
+  forAllShrink arbitrary shrink $ \c ->
+    commonPrefix @() [c, c] == c
+```
+
+
+I am not too far but still stuck with scope of type varilables in  `where` clause, don't know how to generate the needed `forall t. ` for nested definitinos in `where` clause. Alternatively, erasing the type ascriptions could work :thinking:
+* Found the issue after adding some property to check `asChain (asList c) == c` which would also be great to guarantee in Agda!
+* There was an additional `reverse` when returning the list of blocks prefix which did not make sense!
+
+Now I have an interesting error in the properties!
+
+```
+Test suite quickcheck-model-test: RUNNING...
+
+Peras.NetworkModel
+  Chain progress [✘]
+
+Failures:
+
+  test/Peras/NetworkModelSpec.hs:40:33:
+  1) Peras.NetworkModel Chain progress
+       Falsified (after 4 tests and 3 shrinks):
+         do action $ ChainsHaveCommonPrefix [var3,var4,var5,var6,var7,var8,var9,var10,var11,var12]
+            pure ()
+
+         FailureEvaluation Variable var12 is not bound!
+         CallStack (from HasCallStack):
+           error, called at src/Test/QuickCheck/StateModel.hs:252:14 in qckchck-dynmc-3.3.1-99b3f6b4:Test.QuickCheck.StateModel
+         Exception thrown while showing test case:
+           Variable var12 is not bound!
+           CallStack (from HasCallStack):
+             error, called at src/Test/QuickCheck/StateModel.hs:252:14 in qckchck-dynmc-3.3.1-99b3f6b4:Test.QuickCheck.StateModel
+```
+
+This error was caused by the lack `HasVariables` instance to properly shrink, now I have another error:
+```
+Peras.NetworkModel
+  Chain progress [✘]
+
+Failures:
+
+  test/Peras/NetworkModelSpec.hs:40:33:
+  1) Peras.NetworkModel Chain progress
+       Falsified (after 19 tests and 8 shrinks):
+         do var62 <- action $ ObserveBestChain N1
+            var63 <- action $ ObserveBestChain N2
+            var64 <- action $ ObserveBestChain N3
+            var65 <- action $ ObserveBestChain N4
+            var66 <- action $ ObserveBestChain N5
+            var67 <- action $ ObserveBestChain N6
+            var68 <- action $ ObserveBestChain N7
+            var69 <- action $ ObserveBestChain N8
+            var70 <- action $ ObserveBestChain N9
+            var71 <- action $ ObserveBestChain N10
+            action $ ChainsHaveCommonPrefix [var62,var63,var64,var65,var66,var67,var68,var69,var70,var71]
+            pure ()
+
+         FailureEvaluation Map.!: given key is not an element in the map
+         CallStack (from HasCallStack):
+           error, called at libraries/containers/containers/src/Data/Map/Internal.hs:617:17 in containers-0.6.7:Data.Map.Internal
+         Exception thrown while showing test case:
+           Map.!: given key is not an element in the map
+           CallStack (from HasCallStack):
+             error, called at libraries/containers/containers/src/Data/Map/Internal.hs:617:17 in containers-0.6.7:Data.Map.Internal
+
+```
+
+Which seems to mean the nodes are not available to observe. Given the number of variables involved the trace took a while to shrink!
+
+>>>>>>> ea736c0 (Updated Logbook)
 ## 2024-02-15
 
 ### BB - Rust-based generator of randomized network topologies
@@ -36,7 +200,7 @@ This raises several issues related to Rust:
 
 ### YH working on code extraction using agda2hs
 
-* In the agda2hs documentaion there are good examples guiding on how to extract properties (i.e. equality) from Agda to Haskell: https://github.com/agda/agda2hs/blob/02f495cdbc45874749665917f8a3f0bd7db5a158/docs/source/features.md?plain=1#L353-L410
+* In the agda2hs documentation there are good examples guiding on how to extract properties (i.e. equality) from Agda to Haskell: https://github.com/agda/agda2hs/blob/02f495cdbc45874749665917f8a3f0bd7db5a158/docs/source/features.md?plain=1#L353-L410
 * In agda2hs there is the module `Haskell.Law` providing helpers for that
 * Currently I'm using a simple toy chain for experimenting with code extraction
 
