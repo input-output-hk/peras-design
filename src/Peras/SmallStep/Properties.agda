@@ -1,9 +1,8 @@
 module Peras.SmallStep.Properties where
 
-open import Peras.Block using (PartyId)
-open import Peras.SmallStep using (Honesty)
+open import Peras.Block using (PartyId; Honesty)
 
-module _ {T : Set} (honest? : PartyId → Honesty) where
+module _ {T : Set} (honest? : (p : PartyId) → Honesty p) where
 
   open import Data.List.Relation.Binary.Sublist.Propositional
 
