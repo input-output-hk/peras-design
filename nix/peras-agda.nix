@@ -17,7 +17,7 @@ repoRoot.nix.agda-packages.mkDerivation {
   everythingFile = "./src/Everything.agda";
   preBuild = ''
     # Create the missing everything file.
-    find src -type f -name \*.agda | sed -e 's/^src\//import /; s/\.agda$// ; s/\//./g' > Everything.agda
+    find src -type f -name '*.lagda.md' | sed -e 's@^src/@import @; s@\.lagda\.md$@@ ; s@/@.@g' > Everything.agda
     sed -i '1imodule Everything where' Everything.agda
     mv Everything.agda src/
   '';
