@@ -26,6 +26,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..), asList, commonPrefix)
+import Peras.IOSim.Types (Votes)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Gen, choose, elements, frequency, tabulate)
@@ -65,9 +66,9 @@ instance StateModel Network where
     -- Advance the time one or more slots possibly producing blocks.
     Tick :: Natural -> Action Network ()
     -- Observe a node's best chain
-    ObserveBestChain :: NodeId -> Action Network (Chain ())
+    ObserveBestChain :: NodeId -> Action Network (Chain Votes)
     -- Ensure chains have a common prefix
-    ChainsHaveCommonPrefix :: [Var (Chain ())] -> Action Network ()
+    ChainsHaveCommonPrefix :: [Var (Chain Votes)] -> Action Network ()
 
   arbitraryAction _ Network{nodeIds} =
     frequency
@@ -107,7 +108,7 @@ instance HasVariables (Action Network a) where
 data Simulator m = Simulator
   { step :: m ()
   -- ^ Step the network one slot
-  , preferredChain :: NodeId -> m (Chain ())
+  , preferredChain :: NodeId -> m (Chain Votes)
   -- ^ Return preferred chain for a specific node in the network.
   , stop :: m ()
   -- ^ Stop all nodes in the network
@@ -135,7 +136,7 @@ instance Monad m => RunModel Network (RunMonad m) where
     performTick =
       ask >>= lift . step
 
-    currentChain :: NodeId -> RunMonad m (Chain ())
+    currentChain :: NodeId -> RunMonad m (Chain Votes)
     currentChain nodeId =
       ask
         >>= lift . flip preferredChain nodeId

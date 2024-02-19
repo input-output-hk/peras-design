@@ -24,6 +24,7 @@ import Peras.IOSim.Node (initializeNodes)
 import qualified Peras.IOSim.Node.Types as Node
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
 import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.IOSim.Types (Votes)
 import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
@@ -82,7 +83,7 @@ runPropInIOSim p = do
     now <- getCurrentTime
     let (states, gen'') = runRand (initializeNodes parameters now topology) gen'
     network <- createNetwork topology
-    let initState :: NetworkState () = def & networkRandom .~ gen'' & currentStates .~ states
+    let initState :: NetworkState = def & networkRandom .~ gen'' & currentStates .~ states
     networkState <- newTVarIO initState
     runWithState networkState $ startNodes parameters protocol states network
     pure $
@@ -92,12 +93,12 @@ runPropInIOSim p = do
         , stop = pure ()
         }
 
-getPreferredChain :: Monad m => NodeId -> StateT (NetworkState ()) m (Chain ())
+getPreferredChain :: Monad m => NodeId -> StateT NetworkState m (Chain Votes)
 getPreferredChain nodeId = do
   nodeState <- currentStates `uses` (Map.! nodeId)
   pure $ nodeState ^. Node.preferredChain
 
-runWithState :: (Monad m, MonadSTM m) => TVar m (NetworkState ()) -> StateT (NetworkState ()) m a -> m a
+runWithState :: (Monad m, MonadSTM m) => TVar m NetworkState -> StateT NetworkState m a -> m a
 runWithState stateVar act = do
   st <- readTVarIO stateVar
   (res, st') <- runStateT act st

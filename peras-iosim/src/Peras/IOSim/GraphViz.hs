@@ -7,7 +7,7 @@ module Peras.IOSim.GraphViz (
 ) where
 
 import Control.Lens ((^.))
-import Data.List (nub)
+import Data.List (intercalate, nub)
 import Peras.Block (Block (..))
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
@@ -25,7 +25,7 @@ writeGraph ::
 writeGraph = (. G.renderDot) . writeFile
 
 peersGraph ::
-  NetworkState v ->
+  NetworkState ->
   G.Graph
 peersGraph networkState =
   let nodeStates = networkState ^. currentStates
@@ -55,9 +55,7 @@ peersGraph networkState =
         [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "LR")] <> nodes <> edges
 
 chainGraph ::
-  Eq v =>
-  Show v =>
-  NetworkState v ->
+  NetworkState ->
   G.Graph
 chainGraph networkState =
   let chains = S.toList (networkState ^. chainsSeen)
@@ -68,7 +66,7 @@ chainGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "oval")
           , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
           ]
-      nodeId bid = G.NodeId (G.StringId $ show bid) Nothing
+      nodeId bid = G.NodeId (G.StringId . init . tail $ show bid) Nothing
       -- FIXME: The Agda types don't handle block hashes yet, so we use the signature as a placehodler for now.
       mkNode Block{..} =
         G.NodeStatement
@@ -76,14 +74,14 @@ chainGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show signature
+                <> (init . tail . show) signature
                 <> "</b>"
                 <> "|slot="
                 <> show slotNumber
                 <> "|creator="
                 <> show creatorId
                 <> "|votes="
-                <> show includedVotes
+                <> intercalate "," (show <$> S.toList includedVotes)
           ]
       blocks Genesis = []
       blocks (Cons b p) = b : blocks p

@@ -17,19 +17,18 @@ import Peras.Chain (Chain (..))
 import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
 import Peras.IOSim.Node.Types (NodeState, owner, preferredChain, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Types (Coin)
+import Peras.IOSim.Types (Coin, Votes)
 import Peras.Message (Message (NewChain))
 
 import qualified Data.ByteString as BS
 
 nextSlot ::
-  Default v =>
   MonadRandom m =>
-  MonadState (NodeState v) m =>
+  MonadState NodeState m =>
   Protocol ->
   Slot ->
   Coin ->
-  m (Maybe (Message v))
+  m [Message Votes]
 nextSlot PseudoPraos{..} slotNumber total =
   do
     leader <- isSlotLeader activeSlotCoefficient total =<< use stake
@@ -45,18 +44,18 @@ nextSlot PseudoPraos{..} slotNumber total =
         signature <- Signature . BS.pack <$> replicateM 6 getRandom
         chain <- preferredChain `uses` Cons (Block slotNumber creatorId parentBlock includedVotes leadershipProof payload signature)
         preferredChain .= chain
-        pure . Just $ NewChain chain
-      else pure Nothing
+        pure [NewChain chain]
+      else pure mempty
 nextSlot PseudoPeras{} _ _ = error "Pseudo-Peras protocol is not yet implemented."
 nextSlot OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
 nextSlot OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
 nextSlot OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."
 
 newChain ::
-  MonadState (NodeState v) m =>
+  MonadState NodeState m =>
   Protocol ->
-  Chain v ->
-  m (Maybe (Message v))
+  Chain Votes ->
+  m [Message Votes]
 newChain PseudoPraos{} chain =
   do
     let chainLength Genesis = (0 :: Int)
@@ -65,8 +64,8 @@ newChain PseudoPraos{} chain =
     if on (>) chainLength chain preferred
       then do
         preferredChain .= chain
-        pure . Just $ NewChain chain
-      else pure Nothing
+        pure [NewChain chain]
+      else pure mempty
 newChain PseudoPeras{} _ = error "Pseudo-Peras protocol is not yet implemented."
 newChain OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newChain OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
@@ -81,3 +80,17 @@ isSlotLeader ::
 isSlotLeader activeSlotCoefficient' total staked =
   let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
    in (<= p) <$> getRandomR (0, 1)
+
+isCommitteeMember ::
+  MonadRandom m =>
+  Protocol ->
+  Coin ->
+  Coin ->
+  m Bool
+isCommitteeMember PseudoPraos{} _ _ = pure False
+isCommitteeMember PseudoPeras{..} total staked =
+  let p = 1 - (1 - pCommitteeLottery) ** (fromIntegral staked / fromIntegral total)
+   in (<= p) <$> getRandomR (0, 1)
+isCommitteeMember OuroborosPraos{} _ _ = error "Ouroboros-Praos protocol is not yet implemented."
+isCommitteeMember OuroborosGenesis{} _ _ = error "Ouroboros-Genesis protocol is not yet implemented."
+isCommitteeMember OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet implemented."

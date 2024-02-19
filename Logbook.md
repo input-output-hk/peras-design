@@ -1,5 +1,13 @@
 ## 2024-02-19
 
+### BB - Voting
+
+Updated `peras-iosim` to track voting.
+
+### BB - Nix CI and Development Environment
+
+Fixed Nix CI and development environment to handle literate Agda and an Agda dependency on `agda2hs`.
+
 ### AB fixing Common Prefix
 
 Trying to fix error in `NetworkModelSpec`, I first struggle with shrinking problems as I end up with traces without any `Tick` which is problematic as this means there won't be anything but a `Genesis` chain in all nodes.

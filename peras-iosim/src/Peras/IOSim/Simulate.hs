@@ -26,7 +26,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 simulation ::
   Parameters ->
   Protocol ->
-  IOSim s (NetworkState ())
+  IOSim s NetworkState
 simulation parameters@Parameters{..} protocol =
   do
     let (gen, gen') = split $ mkStdGen randomSeed
@@ -46,22 +46,20 @@ simulate ::
   Parameters ->
   Protocol ->
   Bool ->
-  (Either Failure (NetworkState ()), Maybe (SimTrace (NetworkState ())))
+  (Either Failure NetworkState, Maybe (SimTrace NetworkState))
 simulate parameters protocol False = (runSim $ simulation parameters protocol, Nothing)
 simulate parameters protocol True =
   let trace = runSimTrace $ simulation parameters protocol
    in (traceResult False trace, Just trace)
 
 writeTrace ::
-  Show v =>
   FilePath ->
-  SimTrace (NetworkState v) ->
+  SimTrace NetworkState ->
   IO ()
 writeTrace filename = writeFile filename . ppTrace
 
 writeReport ::
-  (A.ToJSON v, Eq v) =>
   FilePath ->
-  NetworkState v ->
+  NetworkState ->
   IO ()
 writeReport filename = LBS8.writeFile filename . A.encode

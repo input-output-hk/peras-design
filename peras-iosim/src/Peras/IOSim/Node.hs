@@ -47,9 +47,9 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
-data NodeProcess v m = NodeProcess
-  { incoming :: TQueue m (InEnvelope v)
-  , outgoing :: TQueue m (OutEnvelope v)
+data NodeProcess m = NodeProcess
+  { incoming :: TQueue m InEnvelope
+  , outgoing :: TQueue m OutEnvelope
   }
   deriving stock (Generic)
 
@@ -58,7 +58,7 @@ initializeNodes ::
   Parameters ->
   UTCTime ->
   Topology ->
-  m (M.Map NodeId (NodeState v))
+  m (M.Map NodeId NodeState)
 initializeNodes parameters now Topology{connections} =
   sequence $ initializeNode parameters now `M.mapWithKey` connections
 
@@ -68,7 +68,7 @@ initializeNode ::
   UTCTime ->
   NodeId ->
   S.Set NodeId ->
-  m (NodeState v)
+  m NodeState
 initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
   NodeState nodeId'
     <$> (MkPartyId . VerificationKey . BS.pack <$> replicateM 6 getRandom)
@@ -83,18 +83,17 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure False
 
 runNode ::
-  forall v m.
-  Default v =>
+  forall m.
   MonadDelay m =>
   MonadSTM m =>
   MonadTime m =>
   Protocol ->
   Coin ->
-  NodeState v ->
-  NodeProcess v m ->
+  NodeState ->
+  NodeProcess m ->
   m ()
 runNode protocol total state NodeProcess{..} =
-  let go :: Default v => MonadDelay m => MonadSTM m => MonadTime m => RandomGen g => g -> StateT (NodeState v) m ()
+  let go :: MonadDelay m => MonadSTM m => MonadTime m => RandomGen g => g -> StateT NodeState m ()
       go gen =
         do
           let atomically' = lift . atomically
@@ -106,7 +105,7 @@ runNode protocol total state NodeProcess{..} =
             >>= \case
               InEnvelope{..} ->
                 do
-                  (message, gen') <-
+                  (messages, gen') <-
                     case inMessage of
                       NextSlot slot ->
                         do
@@ -117,9 +116,7 @@ runNode protocol total state NodeProcess{..} =
                   currentState <- get
                   atomically' $
                     do
-                      case message of
-                        Nothing -> pure ()
-                        Just message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams'
+                      mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages
                       writeTQueue outgoing $ Idle now nodeId' currentState
                   clock .= now
                   go gen'

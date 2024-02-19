@@ -25,7 +25,6 @@ import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
 import Control.Monad.State (StateT, execStateT, lift)
-import Data.Default (Default)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
@@ -84,7 +83,7 @@ connectNode upstream downstream = Topology . M.insertWith (<>) upstream (S.singl
 createNetwork ::
   MonadSTM m =>
   Topology ->
-  m (Network v m)
+  m (Network m)
 createNetwork Topology{connections} =
   do
     nodesIn <- mapM (const newTQueueIO) connections
@@ -95,9 +94,7 @@ createNetwork Topology{connections} =
 --       one like a tree barrier.
 -- TODO: Rewrite as a state machine.
 runNetwork ::
-  forall m v.
-  Default v =>
-  Ord v =>
+  forall m.
   MonadDelay m =>
   MonadFork m =>
   MonadSay m =>
@@ -105,11 +102,11 @@ runNetwork ::
   MonadTime m =>
   Parameters ->
   Protocol ->
-  M.Map NodeId (NodeState v) ->
-  Network v m ->
+  M.Map NodeId NodeState ->
+  Network m ->
   Slot ->
-  NetworkState v ->
-  m (NetworkState v)
+  NetworkState ->
+  m NetworkState
 runNetwork parameters protocol states network@Network{..} endSlot initialState =
   flip execStateT (initialState & currentStates .~ states) $
     do
@@ -117,7 +114,7 @@ runNetwork parameters protocol states network@Network{..} endSlot initialState =
         -- Notify a node to stop.
         notifyStop destination nodeIn = output destination nodeIn Stop
         -- Receive and send messages.
-        loop :: MonadDelay m => MonadSay m => StateT (NetworkState v) m ()
+        loop :: MonadDelay m => MonadSay m => StateT NetworkState m ()
         loop =
           do
             stepToIdle parameters network
@@ -134,12 +131,12 @@ runNetwork parameters protocol states network@Network{..} endSlot initialState =
       loop
 
 startNodes ::
-  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m, Default v, MonadFork m, MonadTime m) =>
+  (Monad m, MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
   Parameters ->
   Protocol ->
-  M.Map NodeId (NodeState v) ->
-  Network v m ->
-  StateT (NetworkState v) m ()
+  M.Map NodeId NodeState ->
+  Network m ->
+  StateT NetworkState m ()
 startNodes parameters protocol states network =
   mapM_ forkNode $ M.toList nodesIn
  where
@@ -156,10 +153,10 @@ startNodes parameters protocol states network =
 
 -- Wait for all nodes to exit.
 waitForExits ::
-  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
+  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
-  Network v m ->
-  StateT (NetworkState v) m ()
+  Network m ->
+  StateT NetworkState m ()
 waitForExits parameters network =
   do
     allIdle <- activeNodes `uses` null
@@ -180,10 +177,10 @@ flush q =
 -- | Advance the network up to one single slot.
 -- This function loops until all nodes are idle
 stepToIdle ::
-  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v, MonadDelay m) =>
+  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
-  Network v m ->
-  StateT (NetworkState v) m ()
+  Network m ->
+  StateT NetworkState m ()
 stepToIdle parameters network = do
   -- Advance the slot counter and notify the nodes, if all nodes are idle.
   allIdle <- activeNodes `uses` null
@@ -212,11 +209,11 @@ stepToIdle parameters network = do
 
 -- | Dispatch a single message through the network.
 routeEnvelope ::
-  (Monad m, Eq v, MonadSTM m, MonadSay m, Ord v) =>
+  (Monad m, MonadSTM m, MonadSay m) =>
   Parameters ->
-  Network v m ->
-  OutEnvelope v ->
-  StateT (NetworkState v) m ()
+  Network m ->
+  OutEnvelope ->
+  StateT NetworkState m ()
 routeEnvelope parameters Network{nodesIn} = \case
   out@OutEnvelope{..} ->
     do
@@ -250,7 +247,7 @@ routeEnvelope parameters Network{nodesIn} = \case
     currentStates %= M.insert source nodeState
 
 -- Send a message and mark the destination as active.
-output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT (NetworkState v) m ()
+output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
 output destination inChannel inEnvelope =
   do
     lift . atomically . writeTQueue inChannel $ inEnvelope
