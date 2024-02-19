@@ -3,7 +3,7 @@
 let
   agdaPackages = repoRoot.nix.agda-packages;
 in
-pkgs.stdenv.mkDerivation {
+repoRoot.nix.agda-packages.mkDerivation {
   version = "1.0";
   pname = "peras";
   src = ./..;
@@ -11,19 +11,14 @@ pkgs.stdenv.mkDerivation {
     description = "Agda library for Peras.";
   };
   buildInputs = [
-    repoRoot.nix.agda-with-stdlib
     repoRoot.nix.agda-stdlib
-    repoRoot.nix.agda2hs
-    pkgs.gnumake
+    repoRoot.nix.agda2hs.lib
   ];
-  buildPhase = ''
-    echo "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib" > libraries
-    echo "${repoRoot.nix.agda2hs}/agda2hs.agda-lib" >> libraries
-    export AGDA_LIBS="--local-interfaces --library-file=$PWD/libraries"
-    make
-  '';
-  installPhase = ''
-    mkdir "$out"
-    cp -pr peras.agda-lib src "$out"
+  everythingFile = "./src/Everything.agda";
+  preBuild = ''
+    # Create the missing everything file.
+    find src -type f -name \*.agda | sed -e 's/^src\//import /; s/\.agda$// ; s/\//./g' > Everything.agda
+    sed -i '1imodule Everything where' Everything.agda
+    mv Everything.agda src/
   '';
 }
