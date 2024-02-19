@@ -5,6 +5,18 @@
 - Added CLI interface to `peras_topology`.
 - Refactored and cleanly isolated random-number generation in `peras-iosim`.
 
+### YH code extraction for property based tests
+
+* For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check. 
+
+```agda
+prop-genesis-in-slot0 : ∀ {c : Chain} → (v : ValidChain c) → slot (last c) ≡ 0
+prop-genesis-in-slot0 = ...
+
+propGenesisInSlot0 : ∀ (c : Chain) → (@0 v : ValidChain c) → Equal ℕ
+propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
+```
+
 ## 2024-02-15
 
 ### BB - Rust-based generator of randomized network topologies
