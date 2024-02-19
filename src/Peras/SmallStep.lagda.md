@@ -5,7 +5,10 @@ layout: page
 
 ```agda
 module Peras.SmallStep where
+```
 
+<!--
+```agda
 open import Data.Bool using (Bool; true; false)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map)
 open import Data.List.Membership.Propositional using (_∈_)
@@ -31,9 +34,11 @@ open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using 
 open Chain⋆ public
 open Honesty public
 ```
+-->
 
-Formalizing Nakamoto-Style Proof of Stake
-Søren Eller Thomsen and Bas Spitters
+# Small-step semantics
+
+Reference: Formalizing Nakamoto-Style Proof of Stake by Søren Eller Thomsen and Bas Spitters
 
 ```agda
 data Progress : Set where
@@ -44,14 +49,15 @@ data Progress : Set where
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
+```
 
--- parameterized with genesis block
+## Parameterized with genesis block
 
+```agda
 module _ {block₀ : Block⋆} where
 
-  -- TODO: Peras
-  ```
 
+  ```
   ## BlockTree
 
   ```agda
@@ -176,9 +182,11 @@ module _ {block₀ : Block⋆} where
     fetchMsgs : PartyId → Stateᵍ → List Message × Stateᵍ
     fetchMsgs _ N = (messages N , N) -- FIXME: * implement network model with delays
                                      --        * filter messages
+    ```
 
-    -- receive
+    ## Receive
 
+    ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honestNoState : ∀ {p N}
@@ -199,14 +207,18 @@ module _ {block₀ : Block⋆} where
       corrupt : ∀ {p N}
           ---------------------
         → N [ Corrupt {p} ]⇀ N
+    ```
 
+    ```agda
     []⇀-does-not-modify-messages : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
       → messages M ≡ messages N
     []⇀-does-not-modify-messages (honestNoState _) = refl
     []⇀-does-not-modify-messages (honest _ _ _) = refl -- why?
     []⇀-does-not-modify-messages corrupt = refl
+    ```
 
+    ```agda
     data _⇀_ : Stateᵍ → Stateᵍ → Set where
 
       Empty : ∀ {M}
@@ -220,7 +232,9 @@ module _ {block₀ : Block⋆} where
         → N ⇀ O
           ------
         → M ⇀ O
+    ```
 
+    ```agda
     ⇀-does-not-modify-messages : ∀ {M N}
       → M ⇀ N
       → messages M ≡ messages N
@@ -229,9 +243,11 @@ module _ {block₀ : Block⋆} where
       trans
         ([]⇀-does-not-modify-messages x₁)
         (⇀-does-not-modify-messages x₂)
+    ```
 
-    -- create
+    # Create
 
+    ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honestNoState : ∀ {p N}
@@ -252,7 +268,9 @@ module _ {block₀ : Block⋆} where
           ---------------------
         → N [ Corrupt {p} ]↷ N
 
+    ```
 
+    ```agda
     data _↷_ : Stateᵍ → Stateᵍ → Set where
 
       Empty : ∀ {M}
@@ -268,7 +286,7 @@ module _ {block₀ : Block⋆} where
         → (record M { execution-order = ps }) ↷ O
 
     ```
-    
+
     ## Small-step semantics for global state evolution
 
     ```agda
