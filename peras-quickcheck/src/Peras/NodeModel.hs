@@ -36,6 +36,7 @@ import Peras.IOSim.Node (NodeProcess (..), initializeNode, runNode)
 import Peras.IOSim.Node.Types (stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.IOSim.Types (Votes)
 import Peras.Message (Message (..), NodeId (..))
 import System.Random (mkStdGen)
 import Test.QuickCheck (choose, tabulate)
@@ -45,7 +46,7 @@ import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
 -- | A simple model of time passing and forged blocks
 data NodeModel = NodeModel
-  { forgedBlocks :: [Var [Block ()]]
+  { forgedBlocks :: [Var [Block Votes]]
   -- ^ List of forged blocks references as observed from the node's behaviour
   , slot :: Slot
   }
@@ -56,8 +57,8 @@ instance DynLogicModel NodeModel
 instance StateModel NodeModel where
   data Action NodeModel a where
     -- Advance the time one or more slots possibly producing blocks.
-    Tick :: Natural -> Action NodeModel [Block ()]
-    ForgedBlocksRespectSchedule :: [Var [Block ()]] -> Action NodeModel Rational
+    Tick :: Natural -> Action NodeModel [Block Votes]
+    ForgedBlocksRespectSchedule :: [Var [Block Votes]] -> Action NodeModel Rational
 
   arbitraryAction _ NodeModel{} =
     Some . Tick . fromInteger <$> choose (500, 2000)
@@ -92,7 +93,7 @@ instance HasVariables (Action NodeModel a) where
 data Node m = Node
   { nodeId :: NodeId
   , nodeThreadId :: ThreadId m
-  , nodeProcess :: NodeProcess () m
+  , nodeProcess :: NodeProcess m
   , nodeStake :: Rational
   }
 
@@ -102,7 +103,7 @@ initialiseNodeEnv ::
   , MonadTime m
   , MonadFork m
   ) =>
-  m (ThreadId m, NodeProcess () m, Rational)
+  m (ThreadId m, NodeProcess m, Rational)
 initialiseNodeEnv = do
   let gen = mkStdGen 42
   now <- getCurrentTime
@@ -144,7 +145,7 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
         mconcat <$> forM [1 .. n] tick
       ForgedBlocksRespectSchedule{} -> asks nodeStake
    where
-    tick :: Slot -> RunMonad m [Block ()]
+    tick :: Slot -> RunMonad m [Block Votes]
     tick k = do
       Node{nodeProcess = NodeProcess{incoming, outgoing}} <- ask
       -- tick the node

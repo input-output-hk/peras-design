@@ -14,22 +14,22 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (Block)
 import Peras.IOSim.Node.Types (NodeState)
-import Peras.IOSim.Types (ByteSize)
+import Peras.IOSim.Types (ByteSize, Votes)
 import Peras.Message (Message, NodeId)
 import Peras.Orphans ()
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 
-data InEnvelope v
+data InEnvelope
   = InEnvelope
       { origin :: Maybe NodeId
-      , inMessage :: Message v
+      , inMessage :: Message Votes
       }
   | Stop
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (InEnvelope v) where
+instance A.FromJSON InEnvelope where
   parseJSON =
     A.withObject "InEnvelope" $
       \o ->
@@ -46,7 +46,7 @@ instance (A.FromJSON v, Eq v) => A.FromJSON (InEnvelope v) where
                   else A.parseFail $ "Illegal action: " <> action
          in parseInEnvelope <|> parseStop
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (InEnvelope v) where
+instance A.ToJSON InEnvelope where
   toJSON InEnvelope{..} =
     A.object
       [ "origin" A..= origin
@@ -58,12 +58,12 @@ instance (A.ToJSON v, Eq v) => A.ToJSON (InEnvelope v) where
       ]
 
 -- TODO: Refactor (or eliminate) when the Agda and QuickCheck code stabilizes.
-data OutMessage v
-  = FetchBlock (Block v)
-  | SendMessage (Message v)
+data OutMessage
+  = FetchBlock (Block Votes)
+  | SendMessage (Message Votes)
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (OutMessage v) where
+instance A.FromJSON OutMessage where
   parseJSON =
     A.withObject "OutMessage" $
       \o ->
@@ -74,7 +74,7 @@ instance (A.FromJSON v, Eq v) => A.FromJSON (OutMessage v) where
             "SendMessage" -> SendMessage <$> o A..: "message"
             _ -> A.parseFail $ "Illegal output: " <> output
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (OutMessage v) where
+instance A.ToJSON OutMessage where
   toJSON (FetchBlock block) =
     A.object
       [ "output" A..= ("FetchBlock" :: String)
@@ -86,27 +86,27 @@ instance (A.ToJSON v, Eq v) => A.ToJSON (OutMessage v) where
       , "message" A..= message
       ]
 
-data OutEnvelope v
+data OutEnvelope
   = OutEnvelope
       { timestamp :: UTCTime
       , source :: NodeId
-      , outMessage :: OutMessage v
+      , outMessage :: OutMessage
       , bytes :: ByteSize
       , destination :: NodeId
       }
   | Idle
       { timestamp :: UTCTime
       , source :: NodeId
-      , currentState :: NodeState v
+      , currentState :: NodeState
       }
   | Exit
       { timestamp :: UTCTime
       , source :: NodeId
-      , nodeState :: NodeState v
+      , nodeState :: NodeState
       }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (OutEnvelope v) where
+instance A.FromJSON OutEnvelope where
   parseJSON =
     A.withObject "OutEnvelope" $
       \o ->
@@ -121,7 +121,7 @@ instance (A.FromJSON v, Eq v) => A.FromJSON (OutEnvelope v) where
             parseExit = Exit <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "nodeState"
          in parseMessage <|> parseIdle <|> parseExit
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (OutEnvelope v) where
+instance A.ToJSON OutEnvelope where
   toJSON OutEnvelope{..} =
     A.object
       [ "timestamp" A..= timestamp

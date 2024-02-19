@@ -21,10 +21,13 @@ data Protocol
       { activeSlotCoefficient :: Double
       -- ^ Low-fidelity version of Ouroboros Peras.
       , roundDuration :: Int
-      , meanCommitteeSize :: Int
+      , pCommitteeLottery :: Double
       , votingBoost :: Double
       , votingWindow :: (Int, Int)
       , votingQuorum :: Int
+      , voteMaximumAge :: Int
+      , cooldownDuration :: Int
+      , prefixCutoffWeight :: Double
       }
   | OuroborosPraos
   | -- | High-fidelity version of Ouroboros Praos.
@@ -47,11 +50,14 @@ instance A.FromJSON Protocol where
             "PseudoPeras" ->
               PseudoPeras
                 <$> o A..: "activeSlotCoefficient"
-                <*> o A..: "meanCommitteeSize"
+                <*> o A..: "pCommitteeLottery"
                 <*> o A..: "roundDuration"
                 <*> o A..: "votingBoost"
                 <*> o A..: "votingWindow"
                 <*> o A..: "votingQuorum"
+                <*> o A..: "voteMaximumAge"
+                <*> o A..: "cooldownDuration"
+                <*> o A..: "prefixCutoffWeight"
             "OuroborosPraos" ->
               pure OuroborosPraos
             "OuroborosGenesis" ->
@@ -70,10 +76,13 @@ instance A.ToJSON Protocol where
     A.object
       [ "protocol" A..= ("PseudoPeras" :: String)
       , "activeSlotCoefficient" A..= activeSlotCoefficient
-      , "meanCommitteeSize" A..= meanCommitteeSize
+      , "pCommitteeLottery" A..= pCommitteeLottery
       , "roundDuration" A..= roundDuration
       , "votingBoost" A..= votingBoost
       , "votingWindow" A..= votingWindow
+      , "voteMaximumAge" A..= voteMaximumAge
+      , "cooldownDuration" A..= cooldownDuration
+      , "prefixCutoffWeight" A..= prefixCutoffWeight
       ]
   toJSON OuroborosPraos =
     A.object

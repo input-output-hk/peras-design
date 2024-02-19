@@ -24,14 +24,14 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Coin)
+import Peras.IOSim.Types (Coin, Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
 import qualified Data.Aeson as A
 import qualified Data.Set as S
 
-data NodeState v = NodeState
+data NodeState = NodeState
   { _nodeId :: NodeId
   , _owner :: PartyId
   , _initialSeed :: Int
@@ -39,14 +39,14 @@ data NodeState v = NodeState
   , _slot :: Slot
   , _stake :: Coin
   , _vrfOutput :: Double
-  , _preferredChain :: Chain v
+  , _preferredChain :: Chain Votes
   , _downstreams :: S.Set NodeId
   , _slotLeader :: Bool
   , _committeeMember :: Bool
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (NodeState v) where
+instance A.FromJSON NodeState where
   parseJSON =
     A.withObject "NodeState" $
       \o ->
@@ -64,7 +64,7 @@ instance (A.FromJSON v, Eq v) => A.FromJSON (NodeState v) where
           _committeeMember <- o A..: "committeeMember"
           pure NodeState{..}
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (NodeState v) where
+instance A.ToJSON NodeState where
   toJSON NodeState{..} =
     A.object
       [ "nodeId" A..= _nodeId

@@ -26,6 +26,7 @@ import Peras.Block (Slot)
 import Peras.Chain (Chain)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
+import Peras.IOSim.Types (Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
@@ -43,27 +44,27 @@ instance FromJSON Topology where
 instance ToJSON Topology where
   toJSON Topology{..} = A.object ["connections" A..= connections]
 
-data Network v m = Network
-  { nodesIn :: M.Map NodeId (TQueue m (InEnvelope v))
-  , nodesOut :: TQueue m (OutEnvelope v)
+data Network m = Network
+  { nodesIn :: M.Map NodeId (TQueue m InEnvelope)
+  , nodesOut :: TQueue m OutEnvelope
   }
   deriving stock (Generic)
 
-data NetworkState v = NetworkState
+data NetworkState = NetworkState
   { _lastSlot :: Slot
   , _lastTime :: UTCTime
   , _activeNodes :: S.Set NodeId
-  , _chainsSeen :: S.Set (Chain v)
-  , _currentStates :: M.Map NodeId (NodeState v)
-  , _pending :: [OutEnvelope v]
+  , _chainsSeen :: S.Set (Chain Votes)
+  , _currentStates :: M.Map NodeId NodeState
+  , _pending :: [OutEnvelope]
   , _networkRandom :: StdGen -- FIXME: Is it okay not to serialize this?
   }
   deriving stock (Eq, Generic, Show)
 
-instance Ord v => Default (NetworkState v) where
+instance Default NetworkState where
   def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty M.empty mempty $ mkStdGen 12345
 
-instance (ToJSON v, Eq v) => ToJSON (NetworkState v) where
+instance ToJSON NetworkState where
   toJSON NetworkState{..} =
     A.object
       [ "lastSlot" A..= _lastSlot
