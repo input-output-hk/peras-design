@@ -10,7 +10,8 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filterᵇ; map; cartesianProduct)
+open import Data.Fin using (Fin; fromℕ; zero; suc)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
@@ -51,6 +52,14 @@ data Progress : Set where
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
+
+
+record MessageTup : Set where
+  constructor ⦅_,_,_⦆
+  field
+    msg : Message
+    rcv : PartyId
+    cd : Fin 3
 ```
 
 ## Parameterized with genesis block
@@ -122,6 +131,7 @@ module _ {block₀ : Block⋆} where
   * honest?
   * lottery
   * tx selection
+  * hash function
 
   ```agda
   module _ {T : Set}
@@ -129,6 +139,7 @@ module _ {block₀ : Block⋆} where
            (honest? : (p : PartyId) → Honesty p) -- Predicate or bool?
            -- (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
+           (_♯ : Block⋆ → Hash)
            where
 
   ```
@@ -150,20 +161,19 @@ module _ {block₀ : Block⋆} where
     lottery : PartyId → Slot → Bool
     lottery _ _ = false -- FIXME
 
-    honestCreate : Slot → List Tx → Stateˡ → List Message × Stateˡ
+    honestCreate : Slot → List Tx → Stateˡ → List MessageTup × Stateˡ
     honestCreate sl txs ⟨ p , tree ⟩ with lottery p sl
     ... | true = let best = (bestChain blockTree) (pred sl) tree
-                     parent = record { hash = emptyBS } -- FIXME
                      newBlock = record {
                          slotNumber = sl ;
                          creatorId = p ;
-                         parentBlock = parent ;
+                         parentBlock = tip best ♯ ;
                          includedVotes = S.empty HashO ; -- TODO: Peras
                          leadershipProof = record { proof = emptyBS } ; -- FIXME
                          payload = txs ;
                          signature = record { signature = emptyBS } -- FIXME
                        }
-                  in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
+                  in (record { msg = BlockMsg newBlock ; rcv = p ; cd = zero }) ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
   ```
 
@@ -178,13 +188,13 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_⟫
+      constructor ⟪_,_,_,_,_,_⟫
       field
         clock : Slot
         progress : Progress
         stateMap : Map Stateˡ
-        messages : List Message
-        -- history : List Message
+        messages : List MessageTup
+        history : List Message
         execution-order : List PartyId -- TODO: List (Honesty p)
 
     open Stateᵍ public
@@ -194,16 +204,20 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     N₀ : Stateᵍ
-    N₀ = ⟪ 0 , Ready , empty , [] , [] ⟫ -- FIXME: initial parties as parameter
+    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] ⟫ -- FIXME: initial parties as parameter
 
     updateStateˡ : PartyId → Stateˡ → Stateᵍ → Stateᵍ
     updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
+  ```
 
-    -- network
+  # Network
 
-    fetchMsgs : PartyId → Stateᵍ → List Message × Stateᵍ
-    fetchMsgs _ N = (messages N , N) -- FIXME: * implement network model with delays
-                                     --        * filter messages
+  ```agda
+    fetchMsgs : PartyId → Stateᵍ → List Message × List MessageTup
+    fetchMsgs p N =
+        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → true {- b ≡ p ∧ c ≡ᵇ zero -} }) (messages N) -- FIXME: filter
+            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → false }) (messages N)
+        in map ( λ { ⦅ m , _ , _ ⦆ → m } ) msgs , rest
   ```
 
   ## Receive
@@ -216,14 +230,15 @@ module _ {block₀ : Block⋆} where
           -------------------------------
         → N [ Honest {p} ]⇀ N
 
-      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs}
+      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs} {rest}
         → lookup (stateMap N) p ≡ just sₗ
-        → msgs ≡ proj₁ (fetchMsgs p N)
+        → (msgs , rest ) ≡ fetchMsgs p N
         → sₗ′ ≡ honestRcv msgs (clock N) sₗ
           --------------------------------
         → N [ Honest {p} ]⇀
           record N {
-              stateMap = M.insert p sₗ′ (stateMap N)
+              stateMap = M.insert p sₗ′ (stateMap N) ;
+              messages = rest
             }
 
       corrupt : ∀ {p N}
@@ -232,12 +247,12 @@ module _ {block₀ : Block⋆} where
   ```
 
   ```agda
-    []⇀-does-not-modify-messages : ∀ {M N p} {h : Honesty p}
+    []⇀-does-not-modify-history : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
-      → messages M ≡ messages N
-    []⇀-does-not-modify-messages (honestNoState _) = refl
-    []⇀-does-not-modify-messages (honest _ _ _) = refl -- why?
-    []⇀-does-not-modify-messages corrupt = refl
+      → history M ≡ history N
+    []⇀-does-not-modify-history (honestNoState _) = refl
+    []⇀-does-not-modify-history (honest _ _ _) = refl
+    []⇀-does-not-modify-history corrupt = refl
   ```
 
   ```agda
@@ -257,14 +272,14 @@ module _ {block₀ : Block⋆} where
   ```
 
   ```agda
-    ⇀-does-not-modify-messages : ∀ {M N}
+    ⇀-does-not-modify-history : ∀ {M N}
       → M ⇀ N
-      → messages M ≡ messages N
-    ⇀-does-not-modify-messages (Empty _) = refl
-    ⇀-does-not-modify-messages (Cons _ x₁ x₂) =
+      → history M ≡ history N
+    ⇀-does-not-modify-history (Empty _) = refl
+    ⇀-does-not-modify-history (Cons _ x₁ x₂) =
       trans
-        ([]⇀-does-not-modify-messages x₁)
-        (⇀-does-not-modify-messages x₂)
+        ([]⇀-does-not-modify-history x₁)
+        (⇀-does-not-modify-history x₂)
   ```
 
   # Create
@@ -314,38 +329,38 @@ module _ {block₀ : Block⋆} where
   ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {s sm ms ps} {N}
-        → let M = ⟪ s , Ready , sm , ms , ps ⟫
+      Deliver : ∀ {s sm ms hs ps} {N}
+        → let M = ⟪ s , Ready , sm , ms , hs , ps ⟫
            in M ⇀ N
               ---------------------------
             → M ↝ record N {
                      progress = Delivered
                    }
 
-      Bake : ∀ {s sm ms ps} {N}
-        → let M = ⟪ s , Delivered , sm , ms , ps ⟫
+      Bake : ∀ {s sm ms hs ps} {N}
+        → let M = ⟪ s , Delivered , sm , ms , hs , ps ⟫
            in M ↷ N
               -----------------------
             → M ↝ record N {
                      progress = Baked
                    }
 
-      NextRound : ∀ {s sm ms ps}
+      NextRound : ∀ {s sm ms hs ps}
           --------------------------------
-        → ⟪ s , Baked , sm , ms , ps ⟫ ↝
-          ⟪ suc s , Ready , sm , ms , ps ⟫
+        → ⟪ s , Baked , sm , ms , hs , ps ⟫ ↝
+          ⟪ suc s , Ready , sm , ms , hs , ps ⟫
 
-      PermParties : ∀ {s p sm ms ps ps′}
+      PermParties : ∀ {s p sm ms hs ps ps′}
         → ps ↭ ps′
           --------------------------
-        → ⟪ s , p , sm , ms , ps ⟫ ↝
-          ⟪ s , p , sm , ms , ps′ ⟫
+        → ⟪ s , p , sm , ms , hs , ps ⟫ ↝
+          ⟪ s , p , sm , ms , hs , ps′ ⟫
 
-      PermMsgs : ∀ {s p sm ms ms′ ps}
+      PermMsgs : ∀ {s p sm ms ms′ hs ps}
         → ms ↭ ms′
           --------------------------
-        → ⟪ s , p , sm , ms , ps ⟫ ↝
-          ⟪ s , p , sm , ms′ , ps ⟫
+        → ⟪ s , p , sm , ms , hs , ps ⟫ ↝
+          ⟪ s , p , sm , ms′ , hs , ps ⟫
   ```
 
   ## Reflexive, transitive closure (which is big-step in the paper)
@@ -372,96 +387,94 @@ module _ {block₀ : Block⋆} where
   -- TODO: rather use record type Hashable (requires an instance of the function)
 
   ```agda
-    module _ {_♯ : Block⋆ → Hash} where
+    data CollisionFree (N : Stateᵍ) : Set where
 
-      data CollisionFree (N : Stateᵍ) : Set where
-
-        collision-free : ∀ {b₁ b₂ : Block⋆}
-          → BlockMsg b₁ ∈ messages N
-          → BlockMsg b₂ ∈ messages N
-          → b₁ ♯ ≡ b₂ ♯
-          → b₁ ≡ b₂
-          → CollisionFree N
+      collision-free : ∀ {b₁ b₂ : Block⋆}
+        → BlockMsg b₁ ∈ history N
+        → BlockMsg b₂ ∈ history N
+        → b₁ ♯ ≡ b₂ ♯
+        → b₁ ≡ b₂
+        → CollisionFree N
 
   {- TODO: All relation might simplify proofs
 
-        collision-free : ∀ {b₁ b₂ : Block⋆}
-          → All
-            (λ { (BlockMsg b₁ , BlockMsg b₂) →
-                 (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
-            (cartesianProduct (messages N) (messages N))
-          → CollisionFree N
+      collision-free : ∀ {b₁ b₂ : Block⋆}
+        → All
+          (λ { (BlockMsg b₁ , BlockMsg b₂) →
+               (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
+          (cartesianProduct (history N) (history N))
+        → CollisionFree N
   -}
 
-      subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
-        → x ∈ xs
-        → xs ≡ ys
-        → x ∈ ys
-      subst′ {A} {x} x₁ x₂ = subst (x ∈_) x₂ x₁
+    subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
+      → x ∈ xs
+      → xs ≡ ys
+      → x ∈ ys
+    subst′ {A} {x} x₁ x₂ = subst (x ∈_) x₂ x₁
 
-      -- When the current state is collision free, the pervious state was so too
+    -- When the current state is collision free, the pervious state was so too
 
-      {-
-      open import Data.List.Membership.Propositional.Properties
-      open import Data.Sum.Base using (_⊎_)
-      open import Data.List.Relation.Binary.Subset.Propositional.Properties
-      -}
+    {-
+    open import Data.List.Membership.Propositional.Properties
+    open import Data.Sum.Base using (_⊎_)
+    open import Data.List.Relation.Binary.Subset.Propositional.Properties
+    -}
 
-      []↷-collision-free : ∀ {M N p} {h : Honesty p}
-        → CollisionFree N
-        → M [ h ]↷ N
-        → CollisionFree M
-      []↷-collision-free x (honestNoState _) = x
-      []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} _) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
-      []↷-collision-free x corrupt = x
+    []↷-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → M [ h ]↷ N
+      → CollisionFree M
+    []↷-collision-free x (honestNoState _) = x
+    []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} _) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
+    []↷-collision-free x corrupt = x
 
-      ∷-collision-free : ∀ {cl pr sm ms ps p}
-        → CollisionFree ⟪ cl , pr , sm , ms , p ∷ ps ⟫
-        → CollisionFree ⟪ cl , pr , sm , ms , ps ⟫
-      ∷-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    ∷-collision-free : ∀ {cl pr sm ms hs ps p}
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
+    ∷-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-      prog-collision-free : ∀ {cl pr₁ pr₂ sm ms ps}
-        → CollisionFree ⟪ cl , pr₁ , sm , ms , ps ⟫
-        → CollisionFree ⟪ cl , pr₂ , sm , ms , ps ⟫
-      prog-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    prog-collision-free : ∀ {cl pr₁ pr₂ sm ms hs ps}
+      → CollisionFree ⟪ cl , pr₁ , sm , ms , hs , ps ⟫
+      → CollisionFree ⟪ cl , pr₂ , sm , ms , hs , ps ⟫
+    prog-collision-free (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-      ↷-collision-free : ∀ {M N}
-        → CollisionFree N
-        → M ↷ N
-        → CollisionFree M
-      ↷-collision-free x (Empty _) = x
-      ↷-collision-free {M = ⟪ clock₁ , progress₁ , stateMap₁ , messages₁ , ps ⟫} {N} n@(collision-free x x₄ x₅ x₆) (Cons {M = M} {p = p} {ps} {O = N} refl x₂ x₃) =
-        let m = ↷-collision-free n x₃
-            m′ = []↷-collision-free {M = ⟪ clock₁ , progress₁ , stateMap₁ , messages₁ , p ∷ ps ⟫} m x₂
-        in ∷-collision-free m′
+    ↷-collision-free : ∀ {M N}
+      → CollisionFree N
+      → M ↷ N
+      → CollisionFree M
+    ↷-collision-free x (Empty _) = x
+    ↷-collision-free {M = ⟪ cl , pr , sm , ms , hs , ps ⟫} {N} n@(collision-free x x₄ x₅ x₆) (Cons {M = M} {p = p} {ps} {O = N} refl x₂ x₃) =
+      let m = ↷-collision-free n x₃
+          m′ = []↷-collision-free {M = ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫} m x₂
+      in ∷-collision-free m′
 
-      ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
-        → N₁ ↝ N₂
-        → CollisionFree N₂
-          ----------------
-        → CollisionFree N₁
+    ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
+      → N₁ ↝ N₂
+      → CollisionFree N₂
+        ----------------
+      → CollisionFree N₁
 
-      ↝-collision-free (Deliver (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free (Deliver (Cons refl x₅ y)) (collision-free x x₁ x₂ x₃) =
-        let ≡-msg = trans ([]⇀-does-not-modify-messages x₅) (⇀-does-not-modify-messages y)
-        in collision-free (subst′ x (sym ≡-msg)) (subst′ x₁ (sym ≡-msg)) x₂ x₃
-      ↝-collision-free (Bake (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free (Bake (Cons refl x₅ y)) n@(collision-free x x₁ x₂ x₃) =
-        let m = ↷-collision-free (prog-collision-free n) y
-            m′ = []↷-collision-free m x₅
-        in ∷-collision-free m′
-      ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free (PermParties _) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
-      ↝-collision-free (PermMsgs p) (collision-free x x₁ x₂ x₃) = collision-free (∈-resp-↭ (↭-sym p) x) (∈-resp-↭ (↭-sym p) x₁) x₂ x₃
+    ↝-collision-free (Deliver (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    ↝-collision-free (Deliver (Cons refl x₅ y)) (collision-free x x₁ x₂ x₃) =
+      let ≡-msg = trans ([]⇀-does-not-modify-history x₅) (⇀-does-not-modify-history y)
+      in collision-free (subst′ x (sym ≡-msg)) (subst′ x₁ (sym ≡-msg)) x₂ x₃
+    ↝-collision-free (Bake (Empty refl)) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    ↝-collision-free (Bake (Cons refl x₅ y)) n@(collision-free x x₁ x₂ x₃) =
+      let m = ↷-collision-free (prog-collision-free n) y
+          m′ = []↷-collision-free m x₅
+      in ∷-collision-free m′
+    ↝-collision-free NextRound (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    ↝-collision-free (PermParties _) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
+    ↝-collision-free (PermMsgs p) (collision-free x x₁ x₂ x₃) = collision-free x x₁ x₂ x₃
 
-      -- When the current state is collision free, previous states were so too
+    -- When the current state is collision free, previous states were so too
 
-      ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
-        → N₁ ↝⋆ N₂
-        → CollisionFree N₂
-          ----------------
-        → CollisionFree N₁
-      ↝⋆-collision-free (_ ∎) N = N
-      ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
-        ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+    ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
+      → N₁ ↝⋆ N₂
+      → CollisionFree N₂
+        ----------------
+      → CollisionFree N₁
+    ↝⋆-collision-free (_ ∎) N = N
+    ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
+      ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
   ```
