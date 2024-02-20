@@ -14,9 +14,7 @@
 -- | A simple and early stage model for a Praos/Peras node and its environment.
 module Peras.NodeModel where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, readTQueue, writeTQueue)
 import Control.Monad (forM)
-import Control.Monad.Class.MonadFork (ThreadId)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
 import qualified Data.Set as Set
@@ -26,7 +24,6 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
-import Peras.IOSim.Node (NodeProcess (..))
 import Peras.IOSim.Types (Votes)
 import Peras.Message (Message (..), NodeId (..))
 import Test.QuickCheck (choose, tabulate)
@@ -82,12 +79,9 @@ instance HasVariables (Action NodeModel a) where
 -- | Basic interface to a single node instance.
 data Node m = Node
   { nodeId :: NodeId
-  , nodeThreadId :: ThreadId m
-  , nodeProcess :: NodeProcess m
-  , -- FIXME: these types link the `Node` representation to what's defined in peras-iosim package
-    -- which is not desirable, define own "test" interface
-    -- or better yet, define an interface in Agda?
-    nodeStake :: Rational
+  , sendMessage :: InEnvelope -> m ()
+  , receiveMessage :: m OutEnvelope
+  , nodeStake :: Rational
   }
 
 defaultActiveSlotCoefficient :: Double
@@ -101,7 +95,7 @@ instance MonadTrans RunMonad where
 
 type instance Realized (RunMonad m) a = a
 
-instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
+instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
   perform NodeModel{slot} action _context =
     case action of
       Tick n ->
@@ -110,20 +104,20 @@ instance forall m. MonadSTM m => RunModel NodeModel (RunMonad m) where
    where
     tick :: Slot -> RunMonad m [Block Votes]
     tick k = do
-      Node{nodeProcess = NodeProcess{incoming, outgoing}} <- ask
+      Node{sendMessage, receiveMessage} <- ask
       -- tick the node
       lift $ do
-        atomically $ writeTQueue incoming (InEnvelope Nothing $ NextSlot $ slot + k)
+        sendMessage (InEnvelope Nothing $ NextSlot $ slot + k)
         -- collect outgoing messages until Idle
-        atomically $ waitForIdle outgoing []
+        waitForIdle receiveMessage []
 
-    waitForIdle q acc = do
-      readTQueue q >>= \case
+    waitForIdle receive acc = do
+      receive >>= \case
         Idle{} -> pure acc
         OutEnvelope
           { outMessage = SendMessage (NewChain (Cons b _))
-          } -> waitForIdle q (b : acc)
-        _other -> waitForIdle q acc
+          } -> waitForIdle receive (b : acc)
+        _other -> waitForIdle receive acc
 
   postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do
     let blocks = length $ foldMap env blockVars
