@@ -9,6 +9,7 @@ Finished migrating the pseudo-Peras protocol from `random-forks` to `peras-iosim
 - Flagged potential ambiguities in Peras specification.
     - Clarification needed before implementing quorums.
 - Revised visualization to display each vote.
+- Added simulation execution to CI.
 
 ## 2024-02-19
 
