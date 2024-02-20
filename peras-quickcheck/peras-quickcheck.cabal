@@ -106,10 +106,12 @@ test-suite quickcheck-model-test
                    Peras.NodeModelSpec
                    Peras.Node.IOSim
                    Peras.Node.Netsim
+                   Peras.Node.Netsim.Rust
                    Peras.Util
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
+    include-dirs: cbits
 
     -- The interface type and version of the test suite.
     type:             exitcode-stdio-1.0
