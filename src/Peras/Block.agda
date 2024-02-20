@@ -5,7 +5,7 @@ open import Agda.Builtin.Nat
 open import Data.Bool
 open import Data.List
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
-open import Relation.Binary using (StrictTotalOrder)
+open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
 
 open import Haskell.Prelude using (Eq)
 
@@ -33,6 +33,8 @@ postulate
   paEq : Relation.Binary.Rel PartyId 0ℓ
   paLt : Relation.Binary.Rel PartyId 0ℓ
   paIs : Relation.Binary.IsStrictTotalOrder paEq paLt
+
+  _≟-PartyId_ : DecidableEquality PartyId
 
 PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 PartyIdO = record {

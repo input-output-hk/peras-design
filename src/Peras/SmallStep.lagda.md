@@ -9,8 +9,9 @@ module Peras.SmallStep where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false)
+open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.Fin using (Fin; fromℕ; zero; suc)
+open import Data.Fin.Properties using (_≟_)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
@@ -21,13 +22,14 @@ open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Nullary using (yes; no)
+open import Relation.Nullary.Decidable using (⌊_⌋)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 open import Peras.Chain using (Chain⋆; ValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
-open import Peras.Block using (PartyId; PartyIdO; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
+open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
 open import Data.Tree.AVL.Sets as S using ()
 open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
@@ -137,7 +139,7 @@ module _ {block₀ : Block⋆} where
   module _ {T : Set}
            (blockTree : TreeType T)
            (honest? : (p : PartyId) → Honesty p) -- Predicate or bool?
-           -- (lottery : PartyId → Slot → Bool)
+           (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
            (_♯ : Block⋆ → Hash)
            where
@@ -158,10 +160,7 @@ module _ {block₀ : Block⋆} where
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
     honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
 
-    lottery : PartyId → Slot → Bool
-    lottery _ _ = false -- FIXME
-
-    honestCreate : Slot → List Tx → Stateˡ → List MessageTup × Stateˡ
+    honestCreate : Slot → List Tx → Stateˡ → List Message × Stateˡ
     honestCreate sl txs ⟨ p , tree ⟩ with lottery p sl
     ... | true = let best = (bestChain blockTree) (pred sl) tree
                      newBlock = record {
@@ -173,8 +172,9 @@ module _ {block₀ : Block⋆} where
                          payload = txs ;
                          signature = record { signature = emptyBS } -- FIXME
                        }
-                  in (record { msg = BlockMsg newBlock ; rcv = p ; cd = zero }) ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
+                  in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
+
   ```
 
   ## Global state
@@ -195,7 +195,7 @@ module _ {block₀ : Block⋆} where
         stateMap : Map Stateˡ
         messages : List MessageTup
         history : List Message
-        execution-order : List PartyId -- TODO: List (Honesty p)
+        execution-order : List PartyId -- TODO: List (Honesty p) ?
 
     open Stateᵍ public
   ```
@@ -215,9 +215,22 @@ module _ {block₀ : Block⋆} where
   ```agda
     fetchMsgs : PartyId → Stateᵍ → List Message × List MessageTup
     fetchMsgs p N =
-        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → true {- b ≡ p ∧ c ≡ᵇ zero -} }) (messages N) -- FIXME: filter
-            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → false }) (messages N)
+        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → ⌊ p ≟-PartyId r ⌋ ∧ ⌊ d ≟ zero ⌋ }) (messages N)
+            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → not (⌊ p ≟-PartyId r ⌋ ∧ ⌊ d ≟ zero ⌋) }) (messages N)
         in map ( λ { ⦅ m , _ , _ ⦆ → m } ) msgs , rest
+
+    gossipMsg : Message → Stateᵍ → Stateᵍ
+    gossipMsg m N =
+      record N {
+        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) (execution-order N)) ++ messages N ;
+        history = m ∷ history N
+      }
+
+    gossipMsgs : List Message → Stateᵍ → Stateᵍ
+    gossipMsgs msgs N = foldr gossipMsg N msgs
+
+    honestGossip : List Message → Stateᵍ → Stateᵍ
+    honestGossip = gossipMsgs
   ```
 
   ## Receive
@@ -246,14 +259,18 @@ module _ {block₀ : Block⋆} where
         → N [ Corrupt {p} ]⇀ N
   ```
 
+  <!--
   ```agda
+    {-
     []⇀-does-not-modify-history : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
       → history M ≡ history N
     []⇀-does-not-modify-history (honestNoState _) = refl
     []⇀-does-not-modify-history (honest _ _ _) = refl
     []⇀-does-not-modify-history corrupt = refl
+    -}
   ```
+  -->
 
   ```agda
     data _⇀_ : Stateᵍ → Stateᵍ → Set where
@@ -265,13 +282,15 @@ module _ {block₀ : Block⋆} where
 
       Cons : ∀ {M p ps} {N} {O}
         → execution-order M ≡ p ∷ ps
-        → (record M { execution-order = ps }) [ honest? p ]⇀ N
+        → record M { execution-order = ps } [ honest? p ]⇀ N
         → N ⇀ O
           ------
         → M ⇀ O
   ```
 
+  <!--
   ```agda
+    {-
     ⇀-does-not-modify-history : ∀ {M N}
       → M ⇀ N
       → history M ≡ history N
@@ -280,7 +299,9 @@ module _ {block₀ : Block⋆} where
       trans
         ([]⇀-does-not-modify-history x₁)
         (⇀-does-not-modify-history x₂)
+    -}
   ```
+  -->
 
   # Create
 
@@ -292,13 +313,13 @@ module _ {block₀ : Block⋆} where
           -------------------------------
         → N [ Honest {p} ]↷ N
 
-      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs}
-        → (msgs , sₗ′) ≡ honestCreate (clock N) (txSelection (clock N) p) sₗ
+      honest : ∀ {p M N} {sₗ sₗ′ : Stateˡ} {msgs}
+        → (msgs , sₗ′) ≡ honestCreate (clock M) (txSelection (clock M) p) sₗ
+        → N ≡ honestGossip msgs M
           ------------------------------------------------------------------
-        → N [ Honest {p} ]↷
+        → M [ Honest {p} ]↷
           record N {
-              stateMap = M.insert p sₗ′ (stateMap N);
-              messages = msgs ++ messages N
+              stateMap = M.insert p sₗ′ (stateMap N)
             }
 
       corrupt : ∀ {p N}
@@ -319,8 +340,8 @@ module _ {block₀ : Block⋆} where
         → execution-order M ≡ p ∷ ps
         → M [ honest? p ]↷ N
         → N ↷ O
-          ------
-        → (record M { execution-order = ps }) ↷ O
+          -------------------------------------
+        → record M { execution-order = ps } ↷ O
 
   ```
 
@@ -329,38 +350,44 @@ module _ {block₀ : Block⋆} where
   ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {s sm ms hs ps} {N}
-        → let M = ⟪ s , Ready , sm , ms , hs , ps ⟫
-           in M ⇀ N
-              ---------------------------
-            → M ↝ record N {
-                     progress = Delivered
-                   }
+      Deliver : ∀ {M N}
+        → progress M ≡ Ready
+        → M ⇀ N
+          ---------------------------
+        → M ↝ record N {
+                 progress = Delivered
+               }
 
-      Bake : ∀ {s sm ms hs ps} {N}
-        → let M = ⟪ s , Delivered , sm , ms , hs , ps ⟫
-           in M ↷ N
-              -----------------------
-            → M ↝ record N {
-                     progress = Baked
-                   }
+      Bake : ∀ {M N}
+        → progress M ≡ Delivered
+        → M ↷ N
+          -----------------------
+        → M ↝ record N {
+                 progress = Baked
+               }
 
-      NextRound : ∀ {s sm ms hs ps}
-          --------------------------------
-        → ⟪ s , Baked , sm , ms , hs , ps ⟫ ↝
-          ⟪ suc s , Ready , sm , ms , hs , ps ⟫
+      NextRound : ∀ {M}
+        → progress M ≡ Baked
+          ------------------------------
+        → M ↝ record M {
+                 clock = suc (clock M) ;
+                 progress = Ready
+               }
 
-      PermParties : ∀ {s p sm ms hs ps ps′}
-        → ps ↭ ps′
-          --------------------------
-        → ⟪ s , p , sm , ms , hs , ps ⟫ ↝
-          ⟪ s , p , sm , ms , hs , ps′ ⟫
+      PermParties : ∀ {N ps}
+        → execution-order N ↭ ps
+          ---------------------------
+        → N ↝ record N {
+                 execution-order = ps
+               }
 
-      PermMsgs : ∀ {s p sm ms ms′ hs ps}
-        → ms ↭ ms′
-          --------------------------
-        → ⟪ s , p , sm , ms , hs , ps ⟫ ↝
-          ⟪ s , p , sm , ms′ , hs , ps ⟫
+      PermMsgs : ∀ {N ms}
+        → messages N ↭ ms
+          --------------------
+        → N ↝ record N {
+                 messages = ms
+               }
+
   ```
 
   ## Reflexive, transitive closure (which is big-step in the paper)
@@ -405,7 +432,10 @@ module _ {block₀ : Block⋆} where
           (cartesianProduct (history N) (history N))
         → CollisionFree N
   -}
+  ```
 
+  <!--
+  ```agda
     subst′ : ∀ {A : Set} {x : A} {xs ys : List A}
       → x ∈ xs
       → xs ≡ ys
@@ -420,12 +450,23 @@ module _ {block₀ : Block⋆} where
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     -}
 
+    {-
+    []⇀-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → M [ h ]⇀ N
+      → CollisionFree M
+    []⇀-collision-free x (honestNoState _) = x
+    []⇀-collision-free x (honest x₁ x₂ x₃) = {!!}
+    []⇀-collision-free x corrupt = x
+    -}
+
+    {-
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
       → M [ h ]↷ N
       → CollisionFree M
     []↷-collision-free x (honestNoState _) = x
-    []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} _) = collision-free x x₁ x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
+    []↷-collision-free (collision-free x x₁ x₂ x₃) (honest {msgs = []} _ _) = collision-free {!!} {!!} x₂ x₃ -- lottery is always false, therefore no (m ∷ msgs) case so far
     []↷-collision-free x corrupt = x
 
     ∷-collision-free : ∀ {cl pr sm ms hs ps p}
@@ -477,4 +518,7 @@ module _ {block₀ : Block⋆} where
     ↝⋆-collision-free (_ ∎) N = N
     ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+
+    -}
   ```
+  -->
