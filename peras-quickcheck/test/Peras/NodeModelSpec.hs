@@ -9,7 +9,7 @@ import Data.Functor (void)
 import Peras.Node.IOSim (runPropInIOSim)
 import Peras.NodeModel (Action (..), NodeModel (..))
 import Test.Hspec (Spec)
-import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
+import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Property, Testable, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Monadic (PropertyM, assert)
@@ -17,7 +17,7 @@ import Test.QuickCheck.StateModel (Actions, RunModel, runActions)
 
 spec :: Spec
 spec =
-  modifyMaxShrinks (const 0) $ prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
+  prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
 
 newtype WrapM m a = Wrap {unWrap :: forall prop. (RunModel NodeModel m, Testable prop) => PropertyM m a -> prop}
 

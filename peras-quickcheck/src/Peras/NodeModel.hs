@@ -143,7 +143,7 @@ produceExpectedNumberOfBlocks stakeRatio blocks slot =
         <> show defaultActiveSlotCoefficient
         <> ", Slot: "
         <> show slot
-    monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 100 + 1) * 100)]
+    monitorPost $ tabulate "# Blocks" ["<= " <> show ((blocks `div` 1000 + 1) * 1000)]
     pure $
       equalsBinomialWithinTails
         (fromIntegral slot) -- The sample size.
