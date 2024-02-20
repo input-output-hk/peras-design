@@ -5,7 +5,7 @@
 
 module Peras.Node.Netsim where
 
-import Control.Exception (IOException, throwIO, try)
+import Control.Exception (IOException, finally, throwIO, try)
 import Control.Monad.Reader (ReaderT (..))
 import Data.Function ((&))
 import Peras.Message (NodeId (..))
@@ -24,12 +24,20 @@ runPropInNetSim = monadic (ioProperty . runner)
 withNewNode :: (Node IO -> IO Property) -> IO Property
 withNewNode k = do
   node <- startNode
-  try (k node) >>= \case
-    Right v -> pure v
-    Left (e :: IOException) ->
-      pure $
-        property False
-          & counterexample ("Execution failed with error: " <> show e)
+  runTest node
+    `finally` stopNode node
+ where
+  runTest node =
+    try (k node)
+      >>= \case
+        Right v -> pure v
+        Left (e :: IOException) ->
+          pure $
+            property False
+              & counterexample ("Execution failed with error: " <> show e)
+
+stopNode :: Node IO -> IO ()
+stopNode node = pure ()
 
 startNode :: IO (Node IO)
 startNode = pure node
@@ -38,7 +46,7 @@ startNode = pure node
   node =
     Node
       { nodeId = MkNodeId "N1"
-      , sendMessage = const $ throwIO $ userError $ "not implemented"
-      , receiveMessage = throwIO $ userError $ "not implemented"
+      , sendMessage = const $ throwIO $ userError $ "sendMessage not implemented"
+      , receiveMessage = throwIO $ userError $ "sendMessage not implemented"
       , nodeStake = 1
       }
