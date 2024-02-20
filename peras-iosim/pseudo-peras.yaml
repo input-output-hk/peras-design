@@ -1,0 +1,10 @@
+protocol: PseudoPeras
+activeSlotCoefficient: 0.05
+roundDuration: 10
+pCommitteeLottery: 0.5
+votingBoost: 0.25
+votingWindow: [1, 100]
+votingQuorum: 8
+voteMaximumAge: 1000
+cooldownDuration: 1000000
+prefixCutoffWeight:  10000000

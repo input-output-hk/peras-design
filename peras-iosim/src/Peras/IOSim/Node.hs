@@ -29,15 +29,14 @@ import Control.Monad.State (
   StateT,
   evalStateT,
  )
-import Data.Default (Default)
 import GHC.Generics (Generic)
-import Peras.Block (PartyId (MkPartyId))
+import Peras.Block (Block (Block, includedVotes), PartyId (MkPartyId))
 import Peras.Chain (Chain (Genesis))
 import Peras.Crypto (VerificationKey (VerificationKey))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
 import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId)
-import Peras.IOSim.Protocol (newChain, nextSlot)
+import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin)
@@ -78,6 +77,7 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> getRandomR (1, maximumStake)
     <*> getRandomR (0, 1)
     <*> pure Genesis
+    <*> pure mempty
     <*> pure downstreams'
     <*> pure False
     <*> pure False
@@ -111,7 +111,7 @@ runNode protocol total state NodeProcess{..} =
                         do
                           lift $ threadDelay 1000000
                           runRand $ nextSlot protocol slot total
-                      SomeBlock _ -> error "Block transfer not implemented."
+                      SomeBlock Block{includedVotes} -> runRand $ newVote protocol (S.findMin includedVotes) >> pure mempty
                       NewChain chain -> runRand $ newChain protocol chain
                   currentState <- get
                   atomically' $

@@ -28,7 +28,7 @@ import Control.Monad.State (StateT, execStateT, lift)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Block (Slot)
+import Peras.Block (Slot, includedVotes)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
   Network (..),
@@ -41,6 +41,7 @@ import Peras.IOSim.Network.Types (
   lastTime,
   networkRandom,
   pending,
+  votesSeen,
  )
 import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
 import Peras.IOSim.Node.Types (NodeState, stake)
@@ -233,6 +234,7 @@ routeEnvelope parameters Network{nodesIn} = \case
               -- FIXME: Awkwardly peek at the chain.
               case message of
                 NewChain chain -> chainsSeen %= S.insert chain
+                SomeBlock block -> votesSeen %= S.union (includedVotes block)
                 _ -> pure ()
               -- Forward the message.
               output destination (nodesIn M.! destination) $ InEnvelope (pure source) message

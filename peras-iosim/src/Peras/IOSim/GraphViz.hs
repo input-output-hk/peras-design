@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.GraphViz (
@@ -7,16 +8,21 @@ module Peras.IOSim.GraphViz (
 ) where
 
 import Control.Lens ((^.))
-import Data.List (intercalate, nub)
+import Data.Function (on)
+import Data.List (intercalate, nub, sortBy)
 import Peras.Block (Block (..))
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
+import Peras.IOSim.Types (Vote (..))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Language.Dot.Pretty as G
 import qualified Language.Dot.Syntax as G
+
+show' :: Show a => a -> String
+show' = init . tail . show
 
 writeGraph ::
   FilePath ->
@@ -36,15 +42,15 @@ peersGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show name
+                <> show' name
                 <> "</b>"
-                <> "|stake="
+                <> "|Stake "
                 <> show (nodeState ^. stake)
-                <> "|vrfOutput="
+                <> "|VrfOutput "
                 <> take 6 (show $ nodeState ^. vrfOutput)
-                <> "|slotLeader="
+                <> "|SlotLeader "
                 <> show (nodeState ^. slotLeader)
-                <> "|committeeMember="
+                <> "|CommitteeMember "
                 <> show (nodeState ^. committeeMember)
           ]
       mkEdge name name' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeIds M.! name, G.ENodeId G.DirectedEdge $ nodeIds M.! name'] mempty
@@ -66,7 +72,12 @@ chainGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "oval")
           , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
           ]
-      nodeId bid = G.NodeId (G.StringId . init . tail $ show bid) Nothing
+      nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
+      sortVotes = compare `on` (\Vote{..} -> (votingRound, voter, voteForBlock))
+      showVotes [] = ""
+      showVotes vs = "|" <> intercalate "|" (showVote <$> sortBy sortVotes vs)
+      showVote Vote{votingRound, voter, voteForBlock = Block{signature}} =
+        "Round " <> show votingRound <> ": " <> show' voter <> " voted for " <> show' signature
       -- FIXME: The Agda types don't handle block hashes yet, so we use the signature as a placehodler for now.
       mkNode Block{..} =
         G.NodeStatement
@@ -74,14 +85,13 @@ chainGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> (init . tail . show) signature
+                <> show' signature
                 <> "</b>"
-                <> "|slot="
+                <> "|Slot "
                 <> show slotNumber
-                <> "|creator="
-                <> show creatorId
-                <> "|votes="
-                <> intercalate "," (show <$> S.toList includedVotes)
+                <> "|Creator "
+                <> show' creatorId
+                <> showVotes (S.toList includedVotes)
           ]
       blocks Genesis = []
       blocks (Cons b p) = b : blocks p

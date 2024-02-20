@@ -11,6 +11,7 @@ module Peras.IOSim.Node.Types (
   downstreams,
   nodeId,
   owner,
+  activeVotes,
   preferredChain,
   initialSeed,
   slot,
@@ -24,7 +25,7 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Coin, Votes)
+import Peras.IOSim.Types (Coin, Vote, Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
@@ -40,6 +41,7 @@ data NodeState = NodeState
   , _stake :: Coin
   , _vrfOutput :: Double
   , _preferredChain :: Chain Votes
+  , _activeVotes :: Votes
   , _downstreams :: S.Set NodeId
   , _slotLeader :: Bool
   , _committeeMember :: Bool
@@ -59,6 +61,7 @@ instance A.FromJSON NodeState where
           _stake <- o A..: "stake"
           _vrfOutput <- o A..: "vrfOutput"
           _preferredChain <- o A..: "preferredChain"
+          _activeVotes <- o A..: "activeVotes"
           _downstreams <- o A..: "downstreams"
           _slotLeader <- o A..: "slotLeader"
           _committeeMember <- o A..: "committeeMember"
@@ -75,6 +78,7 @@ instance A.ToJSON NodeState where
       , "stake" A..= _stake
       , "vrfOutput" A..= _vrfOutput
       , "preferredChain" A..= _preferredChain
+      , "activeVotes" A..= _activeVotes
       , "downstreams" A..= _downstreams
       , "slotLeader" A..= _slotLeader
       , "committeeMember" A..= _committeeMember
