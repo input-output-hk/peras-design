@@ -13,13 +13,13 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 
 data Protocol
-  = PseudoPraos
+  = -- | Low-fidelity version of OuroborosPraos.
+    PseudoPraos
       { activeSlotCoefficient :: Double
-      -- ^ Low-fidelity version of OuroborosPraos.
       }
-  | PseudoPeras
+  | -- | Low-fidelity version of Ouroboros Peras.
+    PseudoPeras
       { activeSlotCoefficient :: Double
-      -- ^ Low-fidelity version of Ouroboros Peras.
       , pCommitteeLottery :: Double
       , roundDuration :: Int
       , votingBoost :: Double
@@ -29,12 +29,12 @@ data Protocol
       , cooldownDuration :: Int
       , prefixCutoffWeight :: Double
       }
-  | OuroborosPraos
   | -- | High-fidelity version of Ouroboros Praos.
-    OuroborosGenesis
+    OuroborosPraos
   | -- | High-fidelity version of Ouroboros Genesis.
+    OuroborosGenesis
+  | -- | High-fidelity version of Ouroboros Peras.
     OuroborosPeras
-  -- \| High-fidelity version of Ouroboros Peras.
   deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance A.FromJSON Protocol where

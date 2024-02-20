@@ -1,8 +1,16 @@
+## 2024-02-20
+
+### BB - Pseudo-Peras Protocol
+
+Finished migrating the pseudo-Peras protocol from `random-forks` to `peras-iosim`.
+
+- Updated `peras-iosim` to track voting.
+- Implemented voting logic.
+- Flagged potential ambiguities in Peras specification.
+    - Clarification needed before implementing quorums.
+- Revised visualization to display each vote.
+
 ## 2024-02-19
-
-### BB - Voting
-
-Updated `peras-iosim` to track voting.
 
 ### BB - Nix CI and Development Environment
 
