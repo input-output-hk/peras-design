@@ -79,9 +79,9 @@ instance HasVariables (Action NodeModel a) where
 -- | Basic interface to a single node instance.
 data Node m = Node
   { nodeId :: NodeId
+  , nodeStake :: Rational
   , sendMessage :: InEnvelope -> m ()
   , receiveMessage :: m OutEnvelope
-  , nodeStake :: Rational
   }
 
 defaultActiveSlotCoefficient :: Double
