@@ -89,7 +89,7 @@ instance HasVariables (Action NodeModel a) where
     ForgedBlocksRespectSchedule blockVars -> Set.fromList $ Some <$> blockVars
     _other -> mempty
 
--- | Basic interface to a `Peras.IOSim.Node` instance.
+-- | Basic interface to a single node instance.
 data Node m = Node
   { nodeId :: NodeId
   , nodeThreadId :: ThreadId m
