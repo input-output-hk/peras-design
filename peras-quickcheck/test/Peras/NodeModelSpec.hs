@@ -7,24 +7,28 @@ module Peras.NodeModelSpec where
 
 import Data.Functor (void)
 import Peras.Node.IOSim (runPropInIOSim)
+import Peras.Node.Netsim (runPropInNetSim)
 import Peras.NodeModel (Action (..), NodeModel (..))
-import Test.Hspec (Spec)
+import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Property, Testable, property, within)
+import Test.QuickCheck (Property, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
-import Test.QuickCheck.Monadic (PropertyM, assert)
-import Test.QuickCheck.StateModel (Actions, RunModel, runActions)
+import Test.QuickCheck.Monadic (assert)
+import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
-spec =
-  prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
+spec = do
+  describe "IOSim Honest node" $
+    prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelIOSim)
+  describe "Netsim Honest node" $
+    prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelNetSim)
 
-newtype WrapM m a = Wrap {unWrap :: forall prop. (RunModel NodeModel m, Testable prop) => PropertyM m a -> prop}
-
-propHonestNodeMintingRate :: Property
-propHonestNodeMintingRate =
+propHonestNodeMintingRate ::
+  (Actions NodeModel -> Property) ->
+  Property
+propHonestNodeMintingRate runProp =
   within 50000000 $
-    forAllDL chainProgress propNodeModelIOSim
+    forAllDL chainProgress runProp
 
 chainProgress :: DL NodeModel ()
 chainProgress = do
@@ -38,5 +42,12 @@ propNodeModelIOSim ::
 propNodeModelIOSim actions =
   property $
     runPropInIOSim $ do
+      _ <- runActions actions
+      assert True
+
+propNodeModelNetSim :: Actions NodeModel -> Property
+propNodeModelNetSim actions =
+  property $
+    runPropInNetSim $ do
       _ <- runActions actions
       assert True
