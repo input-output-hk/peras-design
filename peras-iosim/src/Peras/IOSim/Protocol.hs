@@ -170,8 +170,8 @@ candidateWindow ::
   (Slot, Slot)
 candidateWindow (w0, w1) s =
   let
-    s0 = s - fromIntegral w0
-    s1 = s - fromIntegral w1
+    s0 = s - min s (fromIntegral w0)
+    s1 = s - min s (fromIntegral w1)
    in
     (min s0 s1, max s0 s1)
 
@@ -179,7 +179,7 @@ inclusionWindow ::
   Int ->
   Slot ->
   (Slot, Slot)
-inclusionWindow voteMaximumAge' s = (s - min s (fromIntegral voteMaximumAge'), s - 1)
+inclusionWindow voteMaximumAge' s = (s - min s (fromIntegral voteMaximumAge'), s - min s 1)
 
 roundNumber ::
   Int ->
@@ -211,12 +211,20 @@ addVote ::
   Block Votes ->
   Block Votes
 addVote vote block =
-  let
-    -- FIXME: We probably shouldn't tie the knot here, but this is a workaround until the Agda is more mature.
-    vote' = vote{voteForBlock = block'}
-    block' = block{includedVotes = vote' `S.insert` includedVotes block}
-   in
-    block'
+  if False
+    then -- FIXME: We probably shouldn't tie the knot here, but this is a workaround until the Agda is more mature.
+
+      let
+        vote' = vote{voteForBlock = block'}
+        block' = block{includedVotes = vote' `S.insert` includedVotes block}
+       in
+        block'
+    else
+      let
+        -- FIXME: We probably shouldn't tie the knot here, but this is a workaround until the Agda is more mature.
+        vote' = vote{voteForBlock = block}
+       in
+        block{includedVotes = S.singleton vote'}
 
 discardExpiredVotes ::
   (Slot, Slot) ->

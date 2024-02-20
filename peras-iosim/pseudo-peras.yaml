@@ -1,7 +1,7 @@
 protocol: PseudoPeras
 activeSlotCoefficient: 0.05
 roundDuration: 10
-pCommitteeLottery: 0.9
+pCommitteeLottery: 0.5
 votingBoost: 0.25
 votingWindow: [1, 100]
 votingQuorum: 8
