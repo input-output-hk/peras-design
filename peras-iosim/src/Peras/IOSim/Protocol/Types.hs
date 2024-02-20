@@ -20,8 +20,8 @@ data Protocol
   | PseudoPeras
       { activeSlotCoefficient :: Double
       -- ^ Low-fidelity version of Ouroboros Peras.
-      , roundDuration :: Int
       , pCommitteeLottery :: Double
+      , roundDuration :: Int
       , votingBoost :: Double
       , votingWindow :: (Int, Int)
       , votingQuorum :: Int

@@ -10,6 +10,7 @@ module Peras.IOSim.Network.Types (
   Topology (..),
   activeNodes,
   chainsSeen,
+  votesSeen,
   networkRandom,
   currentStates,
   lastSlot,
@@ -55,6 +56,7 @@ data NetworkState = NetworkState
   , _lastTime :: UTCTime
   , _activeNodes :: S.Set NodeId
   , _chainsSeen :: S.Set (Chain Votes)
+  , _votesSeen :: Votes
   , _currentStates :: M.Map NodeId NodeState
   , _pending :: [OutEnvelope]
   , _networkRandom :: StdGen -- FIXME: Is it okay not to serialize this?
@@ -62,7 +64,7 @@ data NetworkState = NetworkState
   deriving stock (Eq, Generic, Show)
 
 instance Default NetworkState where
-  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty M.empty mempty $ mkStdGen 12345
+  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty mempty M.empty mempty $ mkStdGen 12345
 
 instance ToJSON NetworkState where
   toJSON NetworkState{..} =
@@ -71,6 +73,7 @@ instance ToJSON NetworkState where
       , "lastTime" A..= _lastTime
       , "activeNodes" A..= _activeNodes
       , "chainsSeen" A..= _chainsSeen
+      , "votesSeen" A..= _votesSeen
       , "currentStates" A..= _currentStates
       , "pending" A..= _pending
       ]

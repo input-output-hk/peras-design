@@ -29,7 +29,6 @@ import Control.Monad.State (
   StateT,
   evalStateT,
  )
-import Data.Default (Default)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId (MkPartyId))
 import Peras.Chain (Chain (Genesis))
@@ -78,6 +77,7 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> getRandomR (1, maximumStake)
     <*> getRandomR (0, 1)
     <*> pure Genesis
+    <*> pure mempty
     <*> pure downstreams'
     <*> pure False
     <*> pure False
