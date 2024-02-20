@@ -1,31 +1,30 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Peras.NodeModelSpec where
 
-import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
-import Control.Monad.Reader (ReaderT (runReaderT))
 import Data.Functor (void)
-import Peras.Message (NodeId (..))
-import Peras.NodeModel (Action (..), Node (..), NodeModel (..), RunMonad, initialiseNodeEnv, runMonad)
+import Peras.Node.IOSim (runPropInIOSim)
+import Peras.NodeModel (Action (..), NodeModel (..))
 import Test.Hspec (Spec)
 import Test.Hspec.QuickCheck (modifyMaxShrinks, prop)
-import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
+import Test.QuickCheck (Property, Testable, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
-import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
-import Test.QuickCheck.Monadic (PropertyM (..), assert, monadic')
-import Test.QuickCheck.StateModel (Actions, runActions)
+import Test.QuickCheck.Monadic (PropertyM, assert)
+import Test.QuickCheck.StateModel (Actions, RunModel, runActions)
 
 spec :: Spec
 spec =
   modifyMaxShrinks (const 0) $ prop "Honest node mints blocks according to stakes" propHonestNodeMintingRate
 
+newtype WrapM m a = Wrap {unWrap :: forall prop. (RunModel NodeModel m, Testable prop) => PropertyM m a -> prop}
+
 propHonestNodeMintingRate :: Property
 propHonestNodeMintingRate =
   within 50000000 $
-    forAllDL chainProgress propNodeModel
+    forAllDL chainProgress propNodeModelIOSim
 
 chainProgress :: DL NodeModel ()
 chainProgress = do
@@ -33,35 +32,11 @@ chainProgress = do
   getModelStateDL >>= \NodeModel{forgedBlocks} ->
     void $ action (ForgedBlocksRespectSchedule forgedBlocks)
 
-propNodeModel :: Actions NodeModel -> Property
-propNodeModel actions =
+propNodeModelIOSim ::
+  Actions NodeModel ->
+  Property
+propNodeModelIOSim actions =
   property $
     runPropInIOSim $ do
       _ <- runActions actions
       assert True
-
-runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
-runPropInIOSim p = do
-  Capture eval <- capture
-  let simTrace =
-        runSimTrace $
-          withNode
-            >>= runReaderT (runMonad $ eval $ monadic' p)
-      traceDump = map (\(t, s) -> show t <> " : " <> s) $ selectTraceEventsSayWithTime' simTrace
-      logsOnError = counterexample ("trace:\n" <> unlines traceDump)
-  case traceResult False simTrace of
-    Right x ->
-      pure $ logsOnError x
-    Left ex ->
-      pure $ counterexample (show ex) $ logsOnError $ property False
-
-withNode :: IOSim s (Node (IOSim s))
-withNode =
-  initialiseNodeEnv >>= \(nodeThreadId, nodeProcess, nodeStake) ->
-    pure $
-      Node
-        { nodeId = MkNodeId "N1"
-        , nodeThreadId
-        , nodeProcess
-        , nodeStake
-        }
