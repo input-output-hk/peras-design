@@ -12,3 +12,4 @@ src/MAlonzo/
 .pre-commit-config.yaml
 .libraries
 /cabal.project.local
+target/
