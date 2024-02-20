@@ -5,7 +5,7 @@
 typedef struct ForeignNode ForeignNode;
 
 // Start node, returning a point to its handle
-ForeignNode* start_node(char *nodeId, double stake);
+ForeignNode* start_node(const char *nodeId, const double stake);
 
 
 // Stop a running node

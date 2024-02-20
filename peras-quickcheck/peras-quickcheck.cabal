@@ -113,6 +113,9 @@ test-suite quickcheck-model-test
     -- other-extensions:
     include-dirs: cbits
 
+    -- FIXME: dummy source file, to be replaced by actual library
+    c-sources: cbits/dummy.c
+
     -- The interface type and version of the test suite.
     type:             exitcode-stdio-1.0
 
