@@ -14,17 +14,11 @@
 -- | A simple and early stage model for a Praos/Peras node and its environment.
 module Peras.NodeModel where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, newTQueueIO, readTQueue, writeTQueue)
-import Control.Lens ((^.))
+import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, readTQueue, writeTQueue)
 import Control.Monad (forM)
-import Control.Monad.Class.MonadFork (MonadFork, ThreadId, forkIO)
-import Control.Monad.Class.MonadTime (MonadTime, getCurrentTime)
-import Control.Monad.Class.MonadTimer (MonadDelay)
-import Control.Monad.Random (runRand)
+import Control.Monad.Class.MonadFork (ThreadId)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
-import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Statistics.Util (equalsBinomialWithinTails)
 import GHC.Generics (Generic)
@@ -32,13 +26,9 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
-import Peras.IOSim.Node (NodeProcess (..), initializeNode, runNode)
-import Peras.IOSim.Node.Types (stake)
-import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.IOSim.Node (NodeProcess (..))
 import Peras.IOSim.Types (Votes)
 import Peras.Message (Message (..), NodeId (..))
-import System.Random (mkStdGen)
 import Test.QuickCheck (choose, tabulate)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (..), HasVariables, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost)
@@ -94,41 +84,14 @@ data Node m = Node
   { nodeId :: NodeId
   , nodeThreadId :: ThreadId m
   , nodeProcess :: NodeProcess m
-  , nodeStake :: Rational
+  , -- FIXME: these types link the `Node` representation to what's defined in peras-iosim package
+    -- which is not desirable, define own "test" interface
+    -- or better yet, define an interface in Agda?
+    nodeStake :: Rational
   }
-
-initialiseNodeEnv ::
-  ( MonadSTM m
-  , MonadDelay m
-  , MonadTime m
-  , MonadFork m
-  ) =>
-  m (ThreadId m, NodeProcess m, Rational)
-initialiseNodeEnv = do
-  let gen = mkStdGen 42
-  now <- getCurrentTime
-  nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
-  let (nodeState, _) = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
-  nodeThread <- forkIO $ runNode protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
-  pure (nodeThread, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
-
-protocol :: Protocol
-protocol = PseudoPraos defaultActiveSlotCoefficient
 
 defaultActiveSlotCoefficient :: Double
 defaultActiveSlotCoefficient = 0.1
-
-parameters :: Parameters
-parameters =
-  Parameters
-    { randomSeed = 12345
-    , peerCount = 1
-    , downstreamCount = 3
-    , totalStake = Just 1000
-    , maximumStake = 1000
-    , endSlot = 1000
-    , messageDelay = 0.35
-    }
 
 newtype RunMonad m a = RunMonad {runMonad :: ReaderT (Node m) m a}
   deriving newtype (Functor, Applicative, Monad, MonadReader (Node m))
