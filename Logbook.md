@@ -1,5 +1,10 @@
 ## 2024-02-21
 
+### YH - Formalisation in Agda
+
+* Refactored `CollisionFree` predicate and adjusted proof for the property that if the global state is collision-free, all previous state have been collision-free as well.
+* Initial model of Peras in Agda (currently in separate branch)
+
 ### BB - Peras IOSim
 
 - Implemented quorum logic in `PseudoPeras` protocol.
