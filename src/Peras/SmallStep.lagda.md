@@ -146,7 +146,7 @@ module _ {block₀ : Block⋆} where
 
   ```
 
-  ## local state
+  ## Local state
 
   ```agda
     Stateˡ = LocalState blockTree
@@ -485,7 +485,7 @@ module _ {block₀ : Block⋆} where
       []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
         → M [ h ]↷ N
         → history M ⊆ₘ history N
-    {- TODO: implement gossip as predicate
+    {- TODO: implement gossip data type
     []↷-hist-common-prefix (honestNoState _) x = x
     []↷-hist-common-prefix {M} {N} (honest x x₁) = {!!}
     []↷-hist-common-prefix corrupt x = x
