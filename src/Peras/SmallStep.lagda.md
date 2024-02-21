@@ -27,7 +27,7 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain⋆; ValidChain)
+open import Peras.Chain using (Chain⋆; ValidChain; Vote)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
 open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
@@ -54,6 +54,7 @@ data Progress : Set where
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
+   VoteMsg : Vote Hash → Message
 
 
 record MessageTup : Set where
@@ -156,6 +157,7 @@ module _ {block₀ : Block⋆} where
 
     processMsg : Message → Stateˡ → Stateˡ
     processMsg (BlockMsg b) sₗ = extendTreeₗ sₗ b
+    processMsg (VoteMsg v) sₗ = sₗ -- TODO
 
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
     honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
@@ -398,7 +400,7 @@ module _ {block₀ : Block⋆} where
 
       collision-free : ∀ {b₁ b₂ : Block⋆}
         → All
-          (λ { (BlockMsg b₁ , BlockMsg b₂) →
+          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
                (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
