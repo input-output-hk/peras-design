@@ -29,6 +29,7 @@ cabalProject:
     pkgs.graphviz # For plotting network topology and chain forking.
     pkgs.haskellPackages.threadscope # For visualizing profiles.
     pkgs.ghostscript_headless # For visualizing profiles.
+    pkgs.plantuml # For UML diagrams.
 
   ];
 
