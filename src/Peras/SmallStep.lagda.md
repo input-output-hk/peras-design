@@ -416,43 +416,45 @@ module _ {block₀ : Block⋆} where
     data CollisionFree (N : Stateᵍ) : Set where
 
       collision-free : ∀ {b₁ b₂ : Block⋆}
+        → BlockMsg b₁ ∈ history N
+        → BlockMsg b₁ ∈ history N
+        → b₁ ♯ ≡ b₂ ♯
+        → b₁ ≡ b₂
+        → CollisionFree N
+
+{-
+      collision-free : ∀ {b₁ b₂ : Block⋆}
         → All
           (λ { (BlockMsg b₁ , BlockMsg b₂) →
                (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
+-}
   ```
   When the current state is collision free, the pervious state was so too
 
   ```agda
-    -- open import Data.List.Membership.Propositional.Properties
-    -- open import Data.Sum.Base using (_⊎_)
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
-    open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
-    -- open import Data.List.Relation.Binary.Subset.Setoid (Message) using (_⊇_)
-    open import Data.List.Relation.Unary.Any.Properties
-    open import Data.List.Relation.Unary.Any
+    -- open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
 
-    -- []-cartesian : cartesianProduct [] [] ≡ []
-    -- []-cartesian = refl
+    -- All-resp-⊇
 
-    {-
-    sups : ∀ {a b} → (a ⊆ₘ b) → (cartesianProduct a a) ⊆ₘₓ (cartesianProduct b b)
-    sups {[]} {[]} x x₁ =
-      let xx = cartesianProduct [] []
-      in {!!}
-    sups {a₁ ∷ a} {b} x x₁ =
-      let -- aa = a₁ ∈ a
-          xx = cartesianProduct⁺ {!!} {!!}
-      in {!!}
+    -- ⊆→⊆-cartesianProduct : ∀ {a b} → a ⊆ₘ b → cartesianProduct a a ⊆ₘₓ cartesianProduct b b
+    -- ⊆→⊆-cartesianProduct {a} {b} x x₁ = {!!}
 
-    subs : ∀ {a b} → (b ⊇ a) → (cartesianProduct b b) ⊇ₓ (cartesianProduct a a)
-    subs {a} {b} x x₁ = {!!}
+    postulate
+      collision-free-resp-⊇ : ∀ {M N}
+        → CollisionFree N
+        → history N ⊇ history M
+        → CollisionFree M
+    -- collision-free-resp-⊇ (collision-free x x₂ x₃ x₄) x₁ = collision-free {!!} {!!} x₃ x₄
+
+    -- Receive
 
     []-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
-      → history N ⊇ history M
+      → history M ⊆ₘ history N
     []-hist-common-prefix (honestNoState _) x = x
     []-hist-common-prefix (honest _ _ _) x = x
     []-hist-common-prefix corrupt x = x
@@ -462,69 +464,78 @@ module _ {block₀ : Block⋆} where
       → M [ h ]⇀ N
       → CollisionFree M
     []⇀-collision-free cf-N (honestNoState _) = cf-N
-    []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    []⇀-collision-free (collision-free {b₁} {b₂} x a b c) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x a b c
     []⇀-collision-free cf-N corrupt = cf-N
 
-    hist-common-prefix : ∀ {M N}
+    ⇀-hist-common-prefix : ∀ {M N}
       → M ⇀ N
-      → history N ⊇ history M
-    hist-common-prefix (Empty _) x = x
-    hist-common-prefix (Cons x x₂ x₃) x₁ =
-      let xx = []-hist-common-prefix x₂
-          yy = hist-common-prefix x₃
-      in {!!}
+      → history M ⊆ₘ history N
+    ⇀-hist-common-prefix (Empty _) x = x
+    ⇀-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
 
     ⇀-collision-free : ∀ {M N}
       → CollisionFree N
       → M ⇀ N
       → CollisionFree M
-    ⇀-collision-free cf-N (Empty _) = cf-N
-    ⇀-collision-free {M} {N} (collision-free {b₁} {b₂} x) (Cons x₁ x₂ x₃) =
-      collision-free {b₁ = b₁} {b₂ = b₂} (All-resp-⊇ (subs {history M} {history N} (hist-common-prefix {M} {N} {!!})) x)
+    ⇀-collision-free cf-N M⇀N = collision-free-resp-⊇ cf-N (⇀-hist-common-prefix M⇀N)
+
+    -- Create
+
+    postulate
+      []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+        → M [ h ]↷ N
+        → history M ⊆ₘ history N
+    {- TODO: implement gossip as predicate
+    []↷-hist-common-prefix (honestNoState _) x = x
+    []↷-hist-common-prefix {M} {N} (honest x x₁) = {!!}
+    []↷-hist-common-prefix corrupt x = x
+    -}
+
+    ↷-hist-common-prefix : ∀ {M N}
+      → M ↷ N
+      → history M ⊆ₘ history N
+    ↷-hist-common-prefix (Empty _) x = x
+    ↷-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
       → M [ h ]↷ N
       → CollisionFree M
-    []↷-collision-free x (honestNoState _) = x
-    []↷-collision-free (collision-free {b₁} {b₂} x) (honest _ _) = collision-free {b₁ = b₁} {b₂ = b₂} (All-resp-⊇ {!!} x)
-    []↷-collision-free x corrupt = x
+    []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
     ↷-collision-free : ∀ {M N}
       → CollisionFree N
       → M ↷ N
       → CollisionFree M
     ↷-collision-free cf-N (Empty _) = cf-N
-    ↷-collision-free (collision-free {b₁} {b₂} x) (Cons x₁ x₂ x₃) = collision-free {b₁ = b₁} {b₂ = b₂} {!!}
+    ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝ N₂
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
-    ↝-collision-free (Deliver _ (Empty _)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) n@(collision-free {b₁} {b₂} cf) =
-      let xx = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-          yy = []⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} {!!}) x₁
-      in uncons-collision-free yy
+    ↝-collision-free (Deliver _ (Empty _)) (collision-free {b₁} {b₂} cf a b c) = collision-free {b₁ = b₁} {b₂ = b₂} cf a b c
+    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) n@(collision-free {b₁} {b₂} cf a b c) =
+      let cf-N = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf a b c) x₂
+      in uncons-collision-free ([]⇀-collision-free cf-N x₁)
       where
         uncons-collision-free : ∀ {cl pr sm ms hs ps p}
           → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
           → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
-        uncons-collision-free (collision-free {b₁} {b₂} x) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf) =
-      let xx = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-          yy = []↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} {!!}) x₁
-      in cons-collision-free yy
+        uncons-collision-free (collision-free {b₁} {b₂} x a b c) = collision-free {b₁ = b₁} {b₂ = b₂} x a b c
+    ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf a b c) = collision-free {b₁ = b₁} {b₂ = b₂} cf a b c
+    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf a b c) =
+      let cf-N = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf a b c) x₂
+      in cons-collision-free ([]↷-collision-free cf-N x₁)
       where
           cons-collision-free : ∀ {cl pr sm ms hs ps p}
             → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
             → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
-          cons-collision-free (collision-free {b₁} {b₂} x) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermMsgs _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+          cons-collision-free (collision-free {b₁} {b₂} x a b c) = collision-free {b₁ = b₁} {b₂ = b₂} x a b c
+    ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf a b c) = collision-free {b₁ = b₁} {b₂ = b₂} cf a b c
+    ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf a b c) = collision-free {b₁ = b₁} {b₂ = b₂} cf a b c
+    ↝-collision-free (PermMsgs _) (collision-free {b₁} {b₂} cf a b c) = collision-free {b₁ = b₁} {b₂ = b₂} cf a b c
 
     -- When the current state is collision free, previous states were so too
 
@@ -536,5 +547,4 @@ module _ {block₀ : Block⋆} where
     ↝⋆-collision-free (_ ∎) N = N
     ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
-    -}
   ```
