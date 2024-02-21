@@ -12,6 +12,7 @@ import Paths_peras_iosim (version)
 import Peras.IOSim.GraphViz (chainGraph, peersGraph, writeGraph)
 import Peras.IOSim.Simulate (simulate, writeReport, writeTrace)
 import System.Directory (removeFile)
+import System.Exit (die)
 import System.IO.Temp (emptySystemTempFile)
 import System.Process (system)
 
@@ -53,7 +54,7 @@ main =
                 writeGraph dotFile chains -- FIXME: Potentially duplicative.
                 void . system $ "dot -Tpng -o " <> pngFile <> " " <> dotFile
                 removeFile dotFile
-      Left failure -> error $ show failure
+      Left failure -> die $ show failure
 
 whenJust ::
   Applicative m =>

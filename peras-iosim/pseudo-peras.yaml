@@ -6,5 +6,5 @@ votingBoost: 0.25
 votingWindow: [1, 100]
 votingQuorum: 8
 voteMaximumAge: 1000
-cooldownDuration: 1000000
+cooldownDuration: 0
 prefixCutoffWeight:  10000000
