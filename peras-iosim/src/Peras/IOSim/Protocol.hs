@@ -18,6 +18,8 @@ import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (MonadState)
 import Data.Default (Default (def))
 import Data.Function (on)
+import Data.Maybe (mapMaybe)
+import Numeric.Natural (Natural)
 import Peras.Block (Block (Block, includedVotes, signature, slotNumber), Slot)
 import Peras.Chain (Chain (..), asList)
 import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
@@ -80,10 +82,12 @@ nextSlot PseudoPeras{..} slotNumber total =
     voterMessages <-
       if isNextRound roundDuration slotNumber
         then do
+          let r = slotNumber `div` fromIntegral roundDuration
+          votingAllowed <- preferredChain `uses` voteInRound roundDuration votingQuorum cooldownDuration r
           myself <- use owner
           voter <- isCommitteeMember pCommitteeLottery total =<< use stake
           committeeMember .= voter
-          if voter
+          if voter && votingAllowed
             then do
               -- FIXME: The specification does not say which block in the window should be voted for, so choose the most recent one on the preferred chain.
               unrecordedVotes <- activeVotes `uses` S.filter ((== myself) . Peras.IOSim.Types.voter)
@@ -253,3 +257,33 @@ eligibleForInclusion recordedBlocks recordedVotes window candidateVotes =
         windowOkay && notRecorded && blockOnChain
    in
     S.filter checkCandidate candidateVotes
+
+voteInRound ::
+  Int ->
+  Int ->
+  Int ->
+  Natural ->
+  Chain Votes ->
+  Bool
+voteInRound roundDuration' votingQuorum' cooldownDuration' round' chain =
+  let
+    r = lastQuorum roundDuration' votingQuorum' chain
+   in
+    r + 1 == round' || r + fromIntegral cooldownDuration' <= round'
+
+lastQuorum ::
+  Int ->
+  Int ->
+  Chain Votes ->
+  Round
+lastQuorum roundDuration' votingQuorum' chain =
+  let
+    hasQuorum :: Block Votes -> Maybe Round
+    hasQuorum Block{slotNumber, includedVotes} =
+      if S.size includedVotes >= votingQuorum'
+        then Just $ slotNumber `div` fromIntegral roundDuration'
+        else Nothing
+   in
+    case mapMaybe hasQuorum $ asList chain of
+      r : _ -> r
+      [] -> 0
