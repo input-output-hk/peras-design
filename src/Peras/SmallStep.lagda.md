@@ -127,7 +127,7 @@ module _ {block₀ : Block⋆} where
       partyId : PartyId
       tree : T
   ```
-  # Parmeterized module
+  # Parameterized module
 
   * blockTree
   * honest?
