@@ -18,7 +18,7 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
+open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Nullary using (yes; no)
@@ -27,8 +27,8 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain⋆; ValidChain; Vote)
-open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
+open import Peras.Chain using (Chain⋆; ValidChain; Vote; RoundNumber)
+open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
 open import Data.Tree.AVL.Sets as S using ()
@@ -38,6 +38,9 @@ open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using 
 
 open Chain⋆ public
 open Honesty public
+open MembershipProof public
+open Signature public
+open RoundNumber public
 ```
 -->
 
@@ -191,7 +194,7 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_,_⟫
+      constructor ⟪_,_,_,_,_,_,_⟫
       field
         clock : Slot
         progress : Progress
@@ -199,6 +202,7 @@ module _ {block₀ : Block⋆} where
         messages : List MessageTup
         history : List Message
         execution-order : List PartyId -- TODO: List (Honesty p) ?
+        votingRound : RoundNumber
 
     open Stateᵍ public
   ```
@@ -207,7 +211,7 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     N₀ : Stateᵍ
-    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] ⟫ -- FIXME: initial parties as parameter
+    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] , record { roundNumber = 0 } ⟫ -- FIXME: initial parties as parameter
 
     updateStateˡ : PartyId → Stateˡ → Stateᵍ → Stateᵍ
     updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
@@ -289,6 +293,7 @@ module _ {block₀ : Block⋆} where
         → N [ Honest {p} ]↷ N
 
       honest : ∀ {p M N} {sₗ sₗ′ : Stateˡ} {msgs}
+        → lookup (stateMap M)  p ≡ just sₗ
         → (msgs , sₗ′) ≡ honestCreate (clock M) (txSelection (clock M) p) sₗ
         → N ≡ honestGossip msgs M
           ------------------------------------------------------------------
@@ -323,7 +328,33 @@ module _ {block₀ : Block⋆} where
   ## Vote
 
   ```agda
+
+    data CommitteeMember : PartyId → RoundNumber → Set where
+
+    -- TODO: add constructor
+
+    honestVote : Slot → RoundNumber → Stateˡ → List Message
+    honestVote sl r ⟨ partyId , tree ⟩ =
+      VoteMsg (record {
+          roundNumber = r ;
+          creatorId = partyId ;
+          committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
+          blockHash = (tip ((bestChain blockTree) sl tree) ♯) ; -- Currently just selecting the tip of the best chain to vote
+          signature = record { signature = emptyBS } -- FIXME
+        }) ∷ []
+
+    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+
+      honest : ∀ {p M N} {sₗ} {msgs}
+        → lookup (stateMap M)  p ≡ just sₗ
+        → CommitteeMember p (votingRound M)
+        → msgs ≡ honestVote (clock M) (votingRound M) sₗ
+        → N ≡ honestGossip msgs M
+        → M [ Honest {p} ]⇉ N
+
     data _⇉_ : Stateᵍ → Stateᵍ → Set where
+
+    -- TODO: add constructor
   ```
 
   # Small-step semantics for global state evolution
@@ -345,7 +376,7 @@ module _ {block₀ : Block⋆} where
           ----------------------
         → M ↝ record N {
                  progress = Voted
-              }
+               }
 
       Bake : ∀ {M N}
         → progress M ≡ Voted
@@ -483,7 +514,7 @@ module _ {block₀ : Block⋆} where
       → M [ h ]↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix (honestNoState _) x = x
-    []↷-hist-common-prefix (honest {msgs = msgs} x x₁) = hist-honestGossipMsgs {msgs = msgs} x₁
+    []↷-hist-common-prefix (honest {msgs = msgs} _ x x₁) = hist-honestGossipMsgs {msgs = msgs} x₁
     []↷-hist-common-prefix corrupt x = x
 
     ↷-hist-common-prefix : ∀ {M N}
@@ -515,18 +546,18 @@ module _ {block₀ : Block⋆} where
       let cf-N = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
       in uncons-collision-free ([]⇀-collision-free cf-N x₁)
       where
-        uncons-collision-free : ∀ {cl pr sm ms hs ps p}
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
+        uncons-collision-free : ∀ {cl pr sm ms hs ps r p}
+          → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
+          → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
         uncons-collision-free (collision-free {b₁} {b₂} x) = collision-free {b₁ = b₁} {b₂ = b₂} x
     ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf) =
       let cf-N = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
       in cons-collision-free ([]↷-collision-free cf-N x₁)
       where
-          cons-collision-free : ∀ {cl pr sm ms hs ps p}
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
+          cons-collision-free : ∀ {cl pr sm ms hs ps r p}
+            → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
+            → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
           cons-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
