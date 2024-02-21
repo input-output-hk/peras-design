@@ -109,13 +109,6 @@ test-suite quickcheck-model-test
                    Peras.Node.Netsim.Rust
                    Peras.Util
 
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    include-dirs: cbits
-
-    -- FIXME: dummy source file, to be replaced by actual library
-    c-sources: cbits/dummy.c
-
     -- The interface type and version of the test suite.
     type:             exitcode-stdio-1.0
 
@@ -146,6 +139,7 @@ test-suite quickcheck-model-test
                   , peras-quickcheck
                   , quickcheck-dynamic
                   , si-timers
+    extra-libraries: peras
 
     build-tool-depends:
        hspec-discover:hspec-discover

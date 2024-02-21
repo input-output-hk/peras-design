@@ -22,17 +22,17 @@ import Foreign (Ptr, Word8, free, mallocBytes, peekArray, withForeignPtr)
 import Foreign.C (CString, withCString)
 import Peras.Message (NodeId (..))
 
-newtype RustNode = RustNode {foreignNode :: Ptr ForeignNode}
+newtype RustNode = RustNode {foreignNode :: Ptr PerasNode}
 
-data ForeignNode
+data PerasNode
 
-foreign import capi unsafe "peras.h start_node" c_start_node :: CString -> Double -> IO (Ptr ForeignNode)
+foreign import capi unsafe "peras.h start_node" c_start_node :: CString -> Double -> IO (Ptr PerasNode)
 
-foreign import capi unsafe "peras.h stop_node" c_stop_node :: Ptr ForeignNode -> IO ()
+foreign import capi unsafe "peras.h stop_node" c_stop_node :: Ptr PerasNode -> IO ()
 
-foreign import capi unsafe "peras.h send_message" c_send_message :: Ptr ForeignNode -> Ptr Word8 -> Int -> IO ()
+foreign import capi unsafe "peras.h send_message" c_send_message :: Ptr PerasNode -> Ptr Word8 -> Int -> IO ()
 
-foreign import capi unsafe "peras.h receive_message" c_receive_message :: Ptr ForeignNode -> Ptr Word8 -> Int -> IO Int
+foreign import capi unsafe "peras.h receive_message" c_receive_message :: Ptr PerasNode -> Ptr Word8 -> Int -> IO Int
 
 -- | Start a `RustNode` with given id and amount of stake.
 startNode :: NodeId -> Rational -> IO RustNode
