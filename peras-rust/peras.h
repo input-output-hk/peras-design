@@ -18,20 +18,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/**
+ * Opaque representation of a Peras node for foreign use
+ */
 typedef struct PerasNode PerasNode;
 
-uintptr_t receive_message(struct PerasNode *_node,
-                          uint8_t *_buf,
-                          uintptr_t _len);
+uintptr_t receive_message(struct PerasNode *node, uint8_t *buf, uintptr_t _len);
 
-void send_message(struct PerasNode *_node, const uint8_t *_buf, uintptr_t _len);
+void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
 
 /**
  * Create a new Peras node
  *
  */
-struct PerasNode *start_node(const uint32_t *_node_id, double _node_stake);
+struct PerasNode *start_node(const char *node_id, double node_stake);
 
-void stop_node(struct PerasNode *_node);
+void stop_node(struct PerasNode *node);
 
 #endif /* PERAS_LIBC */

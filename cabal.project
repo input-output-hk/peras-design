@@ -43,3 +43,9 @@ allow-older:
   io-classes-mtl
 
 write-ghc-environment-files: never
+
+-- FIXME: one need to set this to some meaningful _absolute_ path for the
+-- build to succeed
+-- package peras-quickcheck
+--   extra-lib-dirs: ../peras-rust/target/debug/
+--   extra-include-dirs: ../peras-rust/
