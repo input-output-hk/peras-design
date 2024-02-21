@@ -1,3 +1,12 @@
+## 2024-02-21
+
+### BB - Peras IOSim
+
+- Implemented quorum logic in `PseudoPeras` protocol.
+- Fixed orphan JSON instance for bytes.
+- Main returns exit code explicitly.
+- Cleaned up github CI.
+
 ## 2024-02-20
 
 ### BB - Pseudo-Peras Protocol
