@@ -49,6 +49,7 @@ Reference: Formalizing Nakamoto-Style Proof of Stake by Søren Eller Thomsen and
 data Progress : Set where
    Ready : Progress
    Delivered : Progress
+   Voted : Progress
    Baked : Progress
 
 -- TODO: use Peras.Message
@@ -277,7 +278,7 @@ module _ {block₀ : Block⋆} where
         → M ⇀ O
   ```
 
-  # Create
+  ## Create
 
   ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -319,7 +320,13 @@ module _ {block₀ : Block⋆} where
 
   ```
 
-  ## Small-step semantics for global state evolution
+  ## Vote
+
+  ```agda
+    data _⇉_ : Stateᵍ → Stateᵍ → Set where
+  ```
+
+  # Small-step semantics for global state evolution
 
   ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
@@ -332,8 +339,16 @@ module _ {block₀ : Block⋆} where
                  progress = Delivered
                }
 
-      Bake : ∀ {M N}
+      CastVote : ∀ {M N}
         → progress M ≡ Delivered
+        → M ⇉ N
+          ----------------------
+        → M ↝ record N {
+                 progress = Voted
+              }
+
+      Bake : ∀ {M N}
+        → progress M ≡ Voted
         → M ↷ N
           -----------------------
         → M ↝ record N {
