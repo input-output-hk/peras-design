@@ -8,8 +8,11 @@ module Peras.Node.Netsim where
 import Control.Exception (IOException, finally, try)
 import Control.Monad.Reader (ReaderT (..))
 import qualified Data.Aeson as A
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function ((&))
+import Data.Functor ((<&>))
+import Peras.IOSim.Message.Types (OutEnvelope)
 import Peras.Message (NodeId (..))
 import Peras.Node.Netsim.Rust (RustNode)
 import qualified Peras.Node.Netsim.Rust as Rust
@@ -54,8 +57,11 @@ startNode nodeId nodeStake = do
           Rust.sendMessage rustNode . LBS.toStrict . A.encode
       , receiveMessage =
           -- FIXME: Should use CBOR?
-          Rust.receiveMessage rustNode
-            >>= either (error . ("Failed to deserialise received message" <>)) pure . A.eitherDecode . LBS.fromStrict
+          Rust.receiveMessage rustNode <&> unmarshall
       , stopNode = Rust.stopNode rustNode
       , nodeStake
       }
+
+  unmarshall :: ByteString -> OutEnvelope
+  unmarshall bs =
+    either (error . (("Failed to deserialise received message (" <> show bs <> "): ") <>)) id . A.eitherDecode . LBS.fromStrict $ bs
