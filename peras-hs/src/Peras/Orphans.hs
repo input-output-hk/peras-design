@@ -23,7 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as T
-import Text.Read (Read (readPrec), readListDefault)
+import Text.Read (Read (readPrec))
 
 -- Only used for deriving instances of similar types.
 newtype Bytes = Bytes {getBytes :: BS.ByteString}
@@ -43,7 +43,7 @@ instance A.FromJSON Bytes where
   parseJSON = A.withText "Base 16 Bytes" $ either A.parseFail (pure . Bytes) . B16.decode . BS8.pack . T.unpack
 
 instance A.ToJSON Bytes where
-  toJSON = A.String . T.pack . show
+  toJSON = A.String . T.pack . init . tail . show
 
 deriving stock instance Generic v => Generic (Block v)
 deriving stock instance Ord v => Ord (Block v)
