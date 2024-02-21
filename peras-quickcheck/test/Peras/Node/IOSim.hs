@@ -7,13 +7,12 @@ module Peras.Node.IOSim where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, newTQueueIO, readTQueue, writeTQueue)
 import Control.Lens ((^.))
-import Control.Monad.Class.MonadFork (forkIO)
+import Control.Monad.Class.MonadFork (ThreadId, forkIO, killThread)
 import Control.Monad.Class.MonadTime (getCurrentTime)
 import Control.Monad.Class.MonadTimer.SI (MonadDelay, MonadFork, MonadTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (runReaderT))
-import Data.Functor (void)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Set as Set
@@ -33,15 +32,15 @@ initialiseNodeEnv ::
   , MonadTime m
   , MonadFork m
   ) =>
-  m (NodeProcess m, Rational)
+  m (ThreadId m, NodeProcess m, Rational)
 initialiseNodeEnv = do
   let gen = mkStdGen 42
   now <- getCurrentTime
   nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
   let (nodeState, _) = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
   -- FIXME: it's annoying to have threads running out of control
-  void $ forkIO $ runNode protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
-  pure (nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
+  threadId <- forkIO $ runNode protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
+  pure (threadId, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol
 protocol = PseudoPraos defaultActiveSlotCoefficient
@@ -75,11 +74,12 @@ runPropInIOSim p = do
 
 withNode :: IOSim s (Node (IOSim s))
 withNode =
-  initialiseNodeEnv >>= \(NodeProcess{incoming, outgoing}, nodeStake) -> do
+  initialiseNodeEnv >>= \(threadId, NodeProcess{incoming, outgoing}, nodeStake) -> do
     pure $
       Node
         { nodeId = MkNodeId "N1"
         , sendMessage = atomically . writeTQueue incoming
         , receiveMessage = atomically $ readTQueue outgoing
         , nodeStake
+        , stopNode = killThread threadId
         }

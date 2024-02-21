@@ -81,6 +81,7 @@ data Node m = Node
   { nodeId :: NodeId
   , nodeStake :: Rational
   , sendMessage :: InEnvelope -> m ()
+  , stopNode :: m ()
   , receiveMessage :: m OutEnvelope
   }
 

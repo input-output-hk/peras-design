@@ -1,13 +1,18 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Node.Netsim where
 
-import Control.Exception (IOException, finally, throwIO, try)
+import Control.Exception (IOException, finally, try)
 import Control.Monad.Reader (ReaderT (..))
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
 import Data.Function ((&))
 import Peras.Message (NodeId (..))
+import Peras.Node.Netsim.Rust (RustNode)
+import qualified Peras.Node.Netsim.Rust as Rust
 import Peras.NodeModel (Node (..), RunMonad, runMonad)
 import Test.QuickCheck (Property, Testable, counterexample, ioProperty, property)
 import Test.QuickCheck.Monadic (PropertyM, monadic)
@@ -22,7 +27,7 @@ runPropInNetSim = monadic (ioProperty . runner)
 
 withNewNode :: (Node IO -> IO Property) -> IO Property
 withNewNode k = do
-  node <- startNode
+  node <- startNode (MkNodeId "N1") 1
   runTest node
     `finally` stopNode node
  where
@@ -35,17 +40,22 @@ withNewNode k = do
             property False
               & counterexample ("Execution failed with error: " <> show e)
 
-stopNode :: Node IO -> IO ()
-stopNode node = pure ()
-
-startNode :: IO (Node IO)
-startNode = pure node
+startNode :: NodeId -> Rational -> IO (Node IO)
+startNode nodeId nodeStake = do
+  rustNode <- Rust.startNode nodeId nodeStake
+  pure $ mkNode rustNode
  where
-  node :: Node IO
-  node =
+  mkNode :: RustNode -> Node IO
+  mkNode rustNode =
     Node
-      { nodeId = MkNodeId "N1"
-      , sendMessage = const $ throwIO $ userError $ "sendMessage not implemented"
-      , receiveMessage = throwIO $ userError $ "sendMessage not implemented"
-      , nodeStake = 1
+      { nodeId
+      , sendMessage =
+          -- FIXME: Should use CBOR?
+          Rust.sendMessage rustNode . LBS.toStrict . A.encode
+      , receiveMessage =
+          -- FIXME: Should use CBOR?
+          Rust.receiveMessage rustNode
+            >>= either (error . ("Failed to deserialise received message" <>)) pure . A.eitherDecode . LBS.fromStrict
+      , stopNode = Rust.stopNode rustNode
+      , nodeStake
       }
