@@ -7,6 +7,47 @@
 - Main returns exit code explicitly.
 - Cleaned up github CI.
 
+### Meeting on ΔQ
+
+ΔQ is not static, can be a function of load of the system for example, or adversarial behaviour, eg. one can Transform ΔQ by some function and parameterised. Could even extend operators if needed. If we can model an adversary as a ΔQ and then hypothesis about adversarial power, we can construct a new ΔQ with probabilistic alternative of being connected to an adversary or not.
+
+PT did recent experimental work on how to represent probability distrubtions as [piecewise polynomials](https://github.com/DeltaQ-SD/dqsd-piecewise-poly), it needs a proper project to get momentum and concrete work. There's embryonic library representing [ΔQ algebra](https://github.com/DeltaQ-SD/dqsd-classes).
+
+Cardano ΔQ model in Neil's head => being able to answer questions about the network behaviour
+
+Several ways of using ΔQ:
+* ΔQ distribution in the simulation
+* Using for design/screening => ex-ante analysis, we have a 10-12 dimensional space => sampling for scenario
+* Exposing infeasability => fail early
+
+**Next steps**:
+* Outcome model for Peras => whiteboarding session
+* Plug in some estimates (uniform distribution)
+* Build a model with a tool
+
+### AB - Rust node
+
+Fleshing out the interface of the `RustNode`, eg. how it handles messages.
+* Need to understand how to pass ByteString to/from FFI, looking at: https://hackage.haskell.org/package/bytestring-0.12.1.0/docs/Data-ByteString-Internal.html#toForeignPtr which provides a way to pack/unpack a BS as a pointer to `Word8`, but a `ForeignPtr` cannot be passed to a C call
+* Can use `withForeignPtr` to pass the data: https://hackage.haskell.org/package/base-4.18.1.0/docs/Foreign-ForeignPtr-Safe.html#t:withForeignPtr
+* Now need to encode `InEnvelope` and `OutEnvelope` messages, going for JSON encoding for the moment but we said we would settle on CBOR. Need to find a good way to generate Rust types from Agda/Haskell types as these will be tedious to maintain in the long run
+
+
+Writing the FFI functions on the Rust side, trying to build a library without any implementation
+* How can I return a pointer to an opaque handle from Rust code?
+* Obviously, borrow checker prevents from returning non-owned values and references: https://bryce.fisher-fleig.org/strategies-for-returning-references-in-rust/ so it's simply a matter of returning a `Box<T>` in the Rust code
+
+Managed to call into the Rust library:
+```
+Peras.NodeModel
+  Netsim Honest node
+    mints blocks according to stakes [ ]thread '<unnamed>' panicked at src/lib.rs:10:5:
+not implemented
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+fatal runtime error: failed to initiate panic, error 5
+```
+Not sure how to handle the dependency between the peras-quickcheck and peras-rust library at build time :thinking:? The latter would need to be installed somewhere and accessible for use by the former, perhaps provide some extra flags at build time?
+
 ## 2024-02-20
 
 ### BB - Pseudo-Peras Protocol
@@ -19,6 +60,55 @@ Finished migrating the pseudo-Peras protocol from `random-forks` to `peras-iosim
     - Clarification needed before implementing quorums.
 - Revised visualization to display each vote.
 - Added simulation execution to CI.
+
+### AB - Implement Rust Node
+
+Starting work to implement a simple honest Peras node in Rust that I can connect to the `NodeModel`. As usual, I would like to start from the top so I need to decouple the `NodeModel` from the actual implementation of a `Node` in Haskell, and then implement a Haskell driver connecting to a Rust node through `netsim`'s FFI.
+
+Trying to generalise `runPropInIOSim` as used in the tests to an arbitrary runner, typechecker does not like the `forall s. PropertyM (IOSim s) a` type and cannot unify with ``Property m ()`.  Gave up trying to parameterise the `Actions -> Property` function with a monadic function, will just implement 2 functions in 2 different properties which will be just fine
+
+Trying to introduce a `runPropInNetsim` function which would run in some `Netsim m` monad transformer. This does not work because there are still `MonadSTM` constraints on the `RunModel` for `NodeModel` so I first need to cut a proper interface that's independent of io-classes.
+
+Scaffolded test runner in netsim and some simple Rust code, not linked still.
+Looking at waht are the good practices for Cargo.lock on https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html, seems like it's a good idea at first to commit it.
+
+Revisiting Rust code and how to connect with Haskell code through C FFI. I probably don't need `netsim.h` directly to interact with a rust node through q-d. I should rather define my own interface, expose that and _use_ `netsim` under the hood to orchestrate the process, but there's no value in using `netsim-ffi` directly.
+
+What I need is an interface that exposes these functions:
+
+```
+  , sendMessage :: InEnvelope -> m ()
+  , receiveMessage :: m OutEnvelope
+```
+
+but for Rust
+
+Got sidetracked while setting up peras-rust project as rust-analyser failed to run properly with LSP => Needed a `rustup update` which gave me rustc 1.76.0
+Worked out a test runner that takes a `PropertyM (RunMonad IO) a` and runs actions, creating and destroying and internal node in the process. Given we are working in IO it's good hygiene to ensure that we don't leak resources when start/stop nodes living in Rust, so better wrap everything in some kind of simple bracket-style function
+
+Reading again CAPI guide: https://downloads.haskell.org/ghc/9.0.1/docs/html/users_guide/exts/ffi.html?highlight=capiffi#extension-CApiFFI
+
+### Pairing on Agda Network Model
+
+Pairing on the Agda network model, we want to prove that `a ⊆ b -> a ⨉ a  ⊆ b ⨉ b`. It turned out to be surprisingly challenging, because of the functions and types used which did not lend themselves to nice reduction. YH finally found a solution later using some existing property of list membership:
+
+```
+   open import Data.List.Membership.Propositional.Properties
+
+    ⊆→⊆-cartesianProduct : ∀ {a b} → a ⊆ₘ b → cartesianProduct a a ⊆ₘₓ cartesianProduct b b
+    ⊆→⊆-cartesianProduct {a} a⊆b x =
+      let x₁ , x₂ = ∈-cartesianProduct⁻ a a x
+       in ∈-cartesianProduct⁺ (a⊆b x₁) (a⊆b x₂)
+```
+
+which replaced 20+ lines of complicated and unfinished proof by induction over various cases of `a` and `b`.
+
+Made me think that perhaps we could use `postulate` or `trustMe` more
+liberally at this stage of the code, to focus on types that matter. I
+have the feeling that spending an afternoon to prove that `a ⊆ b -> (a
+x a ) ⊆ (b x b)` is not the best use of our time, just like spending
+time to define what a transaction is or implementing real VRF in the
+prototype
 
 ## 2024-02-19
 
