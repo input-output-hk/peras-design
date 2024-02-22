@@ -33,7 +33,7 @@ jobs:
         nix build --show-trace .#peras-iosim
     - name: 🧪 Build `peras-quickcheck`.
       run: |
-        nix build --show-trace .#quickcheck-model-test
+        nix build --show-trace .#peras-quickcheck-test
     - name: 🧪 Build `random-forks`.
       run: |
         nix build --show-trace .#random-forks

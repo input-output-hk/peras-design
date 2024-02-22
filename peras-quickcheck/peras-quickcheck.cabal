@@ -106,7 +106,7 @@ library
 
     extra-libraries: peras
 
-test-suite quickcheck-model-test
+test-suite peras-quickcheck-test
     -- Import common warning flags.
     import:           warnings
 
