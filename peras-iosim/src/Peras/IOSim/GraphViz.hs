@@ -7,7 +7,7 @@ module Peras.IOSim.GraphViz (
   writeGraph,
 ) where
 
-import Control.Lens ((^.))
+import Control.Lens (to, (^.))
 import Data.Function (on)
 import Data.List (intercalate, nub, sortBy)
 import Peras.Block (Block (..))
@@ -16,6 +16,7 @@ import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Types (Vote (..))
 
+import qualified Data.Map as Map
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Language.Dot.Pretty as G
@@ -64,7 +65,7 @@ chainGraph ::
   NetworkState ->
   G.Graph
 chainGraph networkState =
-  let chains = S.toList (networkState ^. chainsSeen)
+  let chains = networkState ^. chainsSeen . to Map.elems
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement

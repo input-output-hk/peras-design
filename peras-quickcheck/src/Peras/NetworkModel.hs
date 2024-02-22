@@ -11,6 +11,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | A very simplistic and early stage model for a Praos/Peras nodes network.
@@ -153,17 +154,16 @@ instance Monad m => RunModel Network (RunMonad m) where
         prefix = commonPrefix chains
         prefixes = asList prefix
         chainLength = length $ asList prefix
-        chainDensity =
+        chainDensity :: Integer =
           if slot == 0
             then 0
-            else floor $ fromIntegral chainLength * 1000 / fromIntegral slot
+            else floor @Double $ fromIntegral chainLength * 1000 / fromIntegral slot
     counterexamplePost $ "Chains:  " <> show chains
     counterexamplePost $ "Common prefix:  " <> show prefix
     monitorPost $ tabulate "Prefix length" ["<= " <> show ((chainLength `div` 100 + 1) * 100)]
     monitorPost $ tabulate "Prefix density" ["<= " <> show (chainDensity `div` 10 + 1) <> "%"]
-    pure $
-      not (null prefixes)
-        || all (== Genesis) chains
+    -- FIXME: this 50 is arbitrary, should be related to some network parameter
+    pure $ slot < 50 || not (null prefixes)
   postcondition _ _ _ _ = pure True
 
 selectBlocks :: [Message ()] -> [Block ()]

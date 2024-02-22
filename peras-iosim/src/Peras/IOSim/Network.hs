@@ -233,7 +233,7 @@ routeEnvelope parameters Network{nodesIn} = \case
             do
               -- FIXME: Awkwardly peek at the chain.
               case message of
-                NewChain chain -> chainsSeen %= S.insert chain
+                NewChain chain -> chainsSeen %= M.insert source chain
                 SomeBlock block -> votesSeen %= S.union (includedVotes block)
                 _ -> pure ()
               -- Forward the message.
@@ -242,7 +242,7 @@ routeEnvelope parameters Network{nodesIn} = \case
   Idle{..} -> do
     lastTime %= max timestamp
     activeNodes %= S.delete source
-    currentStates %= M.insert source currentState
+    chainsSeen %= M.insert source bestChain
   Exit{..} -> do
     lastTime %= max timestamp
     activeNodes %= S.delete source

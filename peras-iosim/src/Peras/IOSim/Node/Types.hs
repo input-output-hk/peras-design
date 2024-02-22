@@ -25,7 +25,7 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Coin, Vote, Votes)
+import Peras.IOSim.Types (Coin, Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 

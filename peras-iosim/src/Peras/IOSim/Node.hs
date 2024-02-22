@@ -35,7 +35,7 @@ import Peras.Chain (Chain (Genesis))
 import Peras.Crypto (VerificationKey (VerificationKey))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId)
+import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId, preferredChain)
 import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
@@ -113,11 +113,11 @@ runNode protocol total state NodeProcess{..} =
                           runRand $ nextSlot protocol slot total
                       SomeBlock Block{includedVotes} -> runRand $ newVote protocol (S.findMin includedVotes) >> pure mempty
                       NewChain chain -> runRand $ newChain protocol chain
-                  currentState <- get
+                  bestChain <- use preferredChain
                   atomically' $
                     do
                       mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages
-                      writeTQueue outgoing $ Idle now nodeId' currentState
+                      writeTQueue outgoing $ Idle now nodeId' bestChain
                   clock .= now
                   go gen'
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
