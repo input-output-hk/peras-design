@@ -15,6 +15,5 @@ in
     packages.peras_topology = rust.peras_topology;
     packages.peras_rust = rust.peras_rust;
     devShells.profiled = project.variants.profiled.devShell;
-    z = project;
   }
 ]
