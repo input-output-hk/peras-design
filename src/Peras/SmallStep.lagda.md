@@ -267,19 +267,23 @@ module _ {block₀ : Block⋆} where
   ```
 
   ```agda
-    data _⇀_ : Stateᵍ → Stateᵍ → Set where
+    data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
 
       Empty : ∀ {M}
         → execution-order M ≡ []
-          ----------------------
-        → M ⇀ M
+        → Fold f M M
 
-      Cons : ∀ {M p ps} {N} {O}
+      Cons : ∀ {M p ps} {h : Honesty p} {N O}
         → execution-order M ≡ p ∷ ps
-        → record M { execution-order = ps } [ honest? p ]⇀ N
-        → N ⇀ O
-          ------
-        → M ⇀ O
+        → f M h N
+        → Fold f N O
+        → Fold f (record M { execution-order = ps }) O
+  ```
+
+  ```agda
+
+    _⇀_ = Fold _[_]⇀_
+
   ```
 
   ## Create
@@ -309,19 +313,8 @@ module _ {block₀ : Block⋆} where
   ```
 
   ```agda
-    data _↷_ : Stateᵍ → Stateᵍ → Set where
 
-      Empty : ∀ {M}
-        → execution-order M ≡ []
-          ----------------------
-        → M ↷ M
-
-      Cons : ∀ {M p ps} {N} {O}
-        → execution-order M ≡ p ∷ ps
-        → M [ honest? p ]↷ N
-        → N ↷ O
-          -------------------------------------
-        → record M { execution-order = ps } ↷ O
+    _↷_ = Fold _[_]↷_
 
   ```
 
@@ -536,6 +529,11 @@ module _ {block₀ : Block⋆} where
     ↷-collision-free cf-N (Empty _) = cf-N
     ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
+    ∷-collision-free : ∀ {cl pr sm ms hs ps r p}
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
+    ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝ N₂
       → CollisionFree N₂
@@ -544,21 +542,11 @@ module _ {block₀ : Block⋆} where
     ↝-collision-free (Deliver _ (Empty _)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) n@(collision-free {b₁} {b₂} cf) =
       let cf-N = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-      in uncons-collision-free ([]⇀-collision-free cf-N x₁)
-      where
-        uncons-collision-free : ∀ {cl pr sm ms hs ps r p}
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
-        uncons-collision-free (collision-free {b₁} {b₂} x) = collision-free {b₁ = b₁} {b₂ = b₂} x
+      in ∷-collision-free ([]⇀-collision-free cf-N x₁)
     ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf) =
       let cf-N = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-      in cons-collision-free ([]↷-collision-free cf-N x₁)
-      where
-          cons-collision-free : ∀ {cl pr sm ms hs ps r p}
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
-          cons-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+      in ∷-collision-free ([]↷-collision-free cf-N x₁)
     ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
     ↝-collision-free (PermMsgs _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
