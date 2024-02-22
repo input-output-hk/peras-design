@@ -24,6 +24,7 @@ import Distribution.Simple.Utils (
   rawSystemProc,
  )
 import System.Directory (
+  doesDirectoryExist,
   getCurrentDirectory,
  )
 import System.FilePath ((</>))
@@ -32,12 +33,17 @@ import System.Process (cwd, proc)
 import qualified Distribution.PackageDescription as Pkg
 
 main :: IO ()
-main =
-  defaultMainWithHooks
-    simpleUserHooks
-      { confHook = rustConfHook
-      , buildHook = rustBuildHook
-      }
+main = do
+  dir <- getCurrentDirectory -- Assume it's the directory containing the .cabal file
+  perasRustExists <- doesDirectoryExist $ dir </> "../peras-rust"
+  defaultMainWithHooks $
+    if perasRustExists
+      then
+        simpleUserHooks
+          { confHook = rustConfHook
+          , buildHook = rustBuildHook
+          }
+      else simpleUserHooks
 
 rustConfHook ::
   (Pkg.GenericPackageDescription, Pkg.HookedBuildInfo) ->
