@@ -1,5 +1,5 @@
 ---
-title: Marlowe.Language
+title: Peras.SmallStep
 layout: page
 ---
 
@@ -217,6 +217,22 @@ module _ {block₀ : Block⋆} where
     updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
   ```
 
+  ### Fold over parties in global state
+
+  ```agda
+    data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
+
+      Done : ∀ {M}
+        → execution-order M ≡ []
+        → Fold f M M
+
+      Step : ∀ {M p ps} {h : Honesty p} {N O}
+        → execution-order M ≡ p ∷ ps
+        → f M h N
+        → Fold f N O
+        → Fold f (record M { execution-order = ps }) O
+  ```
+
   # Network
 
   ```agda
@@ -242,6 +258,9 @@ module _ {block₀ : Block⋆} where
 
   ## Receive
 
+  A party receives messages from the global state by fetching messages assigned to the party,
+  updating the local block tree and putting the local state back into the global state.
+
   ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
@@ -266,19 +285,8 @@ module _ {block₀ : Block⋆} where
         → N [ Corrupt {p} ]⇀ N
   ```
 
-  ```agda
-    data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
-
-      Done : ∀ {M}
-        → execution-order M ≡ []
-        → Fold f M M
-
-      Step : ∀ {M p ps} {h : Honesty p} {N O}
-        → execution-order M ≡ p ∷ ps
-        → f M h N
-        → Fold f N O
-        → Fold f (record M { execution-order = ps }) O
-  ```
+  Receiving messages globally is receiving messages by party respecting the execution order
+  for the parties stored in the global state.
 
   ```agda
 
@@ -287,6 +295,10 @@ module _ {block₀ : Block⋆} where
   ```
 
   ## Create
+
+  A party can create a new block by adding it to the local block tree and gossiping the
+  block creation messages to the other parties. The local state gets updated in the global
+  state.
 
   ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -312,6 +324,9 @@ module _ {block₀ : Block⋆} where
 
   ```
 
+  Creating messages globally is creating messages by party respecting the execution order
+  for the parties stored in the global state.
+
   ```agda
 
     _↷_ = Fold _[_]↷_
@@ -335,7 +350,11 @@ module _ {block₀ : Block⋆} where
           blockHash = (tip ((bestChain blockTree) sl tree) ♯) ; -- Currently just selecting the tip of the best chain to vote
           signature = record { signature = emptyBS } -- FIXME
         }) ∷ []
+  ```
 
+  A party can cast a vote for a block, if the party is a member of the voting committee
+
+  ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honest : ∀ {p M N} {sₗ} {msgs}
@@ -345,6 +364,9 @@ module _ {block₀ : Block⋆} where
         → N ≡ honestGossip msgs M
         → M [ Honest {p} ]⇉ N
   ```
+
+  Voting globally is voting by party respecting the execution order for the parties
+  stored in the global state.
 
   ```agda
 
@@ -425,19 +447,10 @@ module _ {block₀ : Block⋆} where
         → L ↝⋆ N
   ```
 
-  ## Collision free predicate
+  # Collision free predicate
 
   ```agda
     data CollisionFree (N : Stateᵍ) : Set where
-
-{-
-      collision-free : ∀ {b₁ b₂ : Block⋆}
-        → BlockMsg b₁ ∈ history N
-        → BlockMsg b₁ ∈ history N
-        → b₁ ♯ ≡ b₂ ♯
-        → b₁ ≡ b₂
-        → CollisionFree N
--}
 
       collision-free : ∀ {b₁ b₂ : Block⋆}
         → All
@@ -447,7 +460,6 @@ module _ {block₀ : Block⋆} where
         → CollisionFree N
 
   ```
-  When the current state is collision free, the pervious state was so too
 
   ```agda
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
@@ -546,7 +558,11 @@ module _ {block₀ : Block⋆} where
       → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
       → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
     ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+  ```
 
+  ## When the current state is collision free, the pervious state was so too
+
+  ```agda
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝ N₂
       → CollisionFree N₂
@@ -567,9 +583,11 @@ module _ {block₀ : Block⋆} where
     ↝-collision-free (CastVote _ (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ⇉-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]⇉-collision-free cf-N x₁)
+   ```
 
-    -- When the current state is collision free, previous states were so too
+   ## When the current state is collision free, previous states were so too
 
+  ```agda
     ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝⋆ N₂
       → CollisionFree N₂
