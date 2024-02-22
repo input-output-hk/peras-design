@@ -63,3 +63,10 @@ jobs:
           --protocol-file peras-iosim/pseudo-praos.yaml \
           --trace-file "/dev/null" \
           --result-file "/dev/null"
+    - name: 🗳️ Simulate pseudo-Peras on a small network
+      run: |
+        nix run .#peras-iosim -- \
+          --parameter-file peras-iosim/small-network.yaml \
+          --protocol-file peras-iosim/pseudo-peras.yaml \
+          --trace-file "/dev/null" \
+          --result-file "/dev/null"
