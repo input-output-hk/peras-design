@@ -27,13 +27,15 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain⋆; ValidChain; Vote; RoundNumber)
+open import Peras.Chain using (Chain⋆; ValidChain; Vote; VoteBlockO; RoundNumber; _∻_)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.Tree.AVL.Sets as S using ()
 open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
+open import Data.Tree.AVL.Sets.Membership VoteBlockO renaming (_∈_ to _∈ₛ_)
+
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using (_⊆_)
 
 open Chain⋆ public
@@ -58,7 +60,7 @@ data Progress : Set where
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
-   VoteMsg : Vote Hash → Message
+   VoteMsg : Vote Block⋆ → Message
 
 
 record MessageTup : Set where
@@ -84,10 +86,16 @@ module _ {block₀ : Block⋆} where
                     (extendTree : T → Block⋆ → T)
                     (allBlocks : T → Blocks⋆)
                     (bestChain : Slot → T → Chain⋆)
+                    (addVote : T → Vote Block⋆ → T)
+
          : Set₁ where
 
     field
+  ```
 
+  Properties that must hold with respect to blocks
+
+  ```agda
       instantiated :
         allBlocks tree₀ ≡ singleton block₀
 
@@ -108,6 +116,15 @@ module _ {block₀ : Block⋆} where
         → toList (blocks (bestChain sl t)) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
   ```
 
+  Properties that must hold with respect to votes
+
+  ```agda
+      ignore-equivocation : ∀ {v w : Vote Block⋆} {t : T} (sl : Slot)
+        → v ∈ₛ votes (bestChain sl t)
+        → v ∻ w
+        → votes (bestChain sl (addVote t w)) ≡ votes (bestChain sl t)
+  ```
+
   ```agda
   record TreeType (T : Set) : Set₁ where
 
@@ -117,7 +134,11 @@ module _ {block₀ : Block⋆} where
       allBlocks : T → Blocks⋆
       bestChain : Slot → T → Chain⋆
 
-      is-TreeType : IsTreeType tree₀ extendTree allBlocks bestChain
+      addVote : T → Vote Block⋆ → T
+
+      is-TreeType : IsTreeType
+                      tree₀ extendTree allBlocks bestChain
+                      addVote
 
   open TreeType
   ```
@@ -151,17 +172,16 @@ module _ {block₀ : Block⋆} where
 
   ```
 
-  ## Local state
+  The local state initialized with the block tree
 
   ```agda
     Stateˡ = LocalState blockTree
+  ```
 
-    extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
-    extendTreeₗ ⟨ partyId , tree ⟩ b = ⟨ partyId , (extendTree blockTree) tree b ⟩
-
+  ```agda
     processMsg : Message → Stateˡ → Stateˡ
-    processMsg (BlockMsg b) sₗ = extendTreeₗ sₗ b
-    processMsg (VoteMsg v) sₗ = sₗ -- TODO
+    processMsg (BlockMsg b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+    processMsg (VoteMsg v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
 
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
     honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
@@ -212,9 +232,6 @@ module _ {block₀ : Block⋆} where
   ```agda
     N₀ : Stateᵍ
     N₀ = ⟪ 0 , Ready , empty , [] , [] , [] , record { roundNumber = 0 } ⟫ -- FIXME: initial parties as parameter
-
-    updateStateˡ : PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
   ```
 
   ### Fold over parties in global state
@@ -347,7 +364,7 @@ module _ {block₀ : Block⋆} where
           roundNumber = r ;
           creatorId = partyId ;
           committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-          blockHash = (tip ((bestChain blockTree) sl tree) ♯) ; -- Currently just selecting the tip of the best chain to vote
+          blockHash = (tip ((bestChain blockTree) sl tree)) ; -- Currently just selecting the tip of the best chain to vote
           signature = record { signature = emptyBS } -- FIXME
         }) ∷ []
   ```
