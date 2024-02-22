@@ -10,7 +10,7 @@ on:
     - main
 jobs:
   typecheck:
-    name: Typecheck Agda and build Haskell
+    name: Build libraries
     runs-on: self-hosted
     steps:
     - name: 📥 Checkout repository
@@ -25,26 +25,26 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🧪 Typecheck Agda
+    - name: 🏗️ Typecheck Agda
       run: |
         nix build --show-trace .#peras
-    - name: 🧪 Build `peras-iosim`.
+    - name: 🏗️ Build `peras-iosim`.
       run: |
         nix build --show-trace .#peras-iosim
-    - name: 🧪 Build `peras-quickcheck`.
+    - name: 🏗️ Build `peras-quickcheck`.
       run: |
         nix build --show-trace .#peras-quickcheck-test
-    - name: 🧪 Build `random-forks`.
+    - name: 🏗️ Build `random-forks`.
       run: |
         nix build --show-trace .#random-forks
-    - name: 🧪 Build `peras_rust`.
+    - name: 🏗️ Build `peras_rust`.
       run: |
         nix build --show-trace .#peras_rust
-    - name: 🧪 Build `peras_topology`.
+    - name: 🏗️ Build `peras_topology`.
       run: |
         nix build --show-trace .#peras_topology
   simulate-hs:
-    name: Run `peras-iosim`
+    name: Run simulations
     runs-on: self-hosted
     steps:
     - name: 📥 Checkout repository
@@ -59,7 +59,7 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🏃 Simulate pseudo-Praos on a small network
+    - name: 🔮 Simulate pseudo-Praos on a small network
       run: |
         nix run .#peras-iosim -- \
           --parameter-file peras-iosim/small-network.yaml \
@@ -74,6 +74,7 @@ jobs:
           --trace-file "/dev/null" \
           --result-file "/dev/null"
   tests:
+    if: true
     name: Run tests
     runs-on: self-hosted
     steps:
@@ -91,4 +92,7 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🔬 Test with `peras-quickcheck-tests`
       run: |
-        nix run .#peras-quickcheck-test
+        nix build .#peras_rust -o peras_rust
+        export DYLD_LIBRARY_PATH="$PWD/peras_rust/lib"
+        nix build .#peras-quickcheck-test
+        ./result/bin/peras-quickcheck-test
