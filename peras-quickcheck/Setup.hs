@@ -58,7 +58,7 @@ rustConfHook (description, buildInfo) flags = do
                   library
                     { Pkg.libBuildInfo =
                         libraryBuildInfo
-                          { Pkg.extraLibDirs = (dir </> "../peras-rust/target/debug") : Pkg.extraLibDirs libraryBuildInfo
+                          { Pkg.extraLibDirs = (dir </> "../peras-rust/target/release") : Pkg.extraLibDirs libraryBuildInfo
                           , Pkg.includes = "peras.h" : Pkg.includes libraryBuildInfo
                           , Pkg.includeDirs = (dir </> "../peras-rust/") : Pkg.includeDirs libraryBuildInfo
                           }
