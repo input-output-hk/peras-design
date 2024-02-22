@@ -3,7 +3,12 @@
 ### YH - Formalisation in Agda
 
 * Added new property to block tree asserting that equivocal votes can not be added
-  
+ 
+### BB - Nix maintenance
+
+- Fixed Nix derivations for Rust-Haskell linkages.
+- Added quickcheck test to CI.
+ 
 ## 2024-02-21
 
 ### YH - Formalisation in Agda
@@ -17,6 +22,7 @@
 - Fixed orphan JSON instance for bytes.
 - Main returns exit code explicitly.
 - Cleaned up github CI.
+- Activity and sequence diagrams.
 
 ### Meeting on ΔQ
 
