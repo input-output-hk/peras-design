@@ -60,6 +60,7 @@ data Progress : Set where
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
+   ChainMsg : Chain⋆ → Message
    VoteMsg : Vote Block⋆ → Message
 
 
@@ -75,9 +76,8 @@ record MessageTup : Set where
 
 ```agda
 module _ {block₀ : Block⋆} where
-
-
   ```
+
   ## BlockTree
 
   ```agda
@@ -169,7 +169,6 @@ module _ {block₀ : Block⋆} where
            (txSelection : Slot → PartyId → List Tx)
            (_♯ : Block⋆ → Hash)
            where
-
   ```
 
   The local state initialized with the block tree
@@ -181,6 +180,7 @@ module _ {block₀ : Block⋆} where
   ```agda
     processMsg : Message → Stateˡ → Stateˡ
     processMsg (BlockMsg b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+    processMsg (ChainMsg c) s = s -- TODO
     processMsg (VoteMsg v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
 
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
@@ -306,9 +306,7 @@ module _ {block₀ : Block⋆} where
   for the parties stored in the global state.
 
   ```agda
-
     _⇀_ = Fold _[_]⇀_
-
   ```
 
   ## Create
@@ -345,15 +343,12 @@ module _ {block₀ : Block⋆} where
   for the parties stored in the global state.
 
   ```agda
-
     _↷_ = Fold _[_]↷_
-
   ```
 
   ## Vote
 
   ```agda
-
     data CommitteeMember : PartyId → RoundNumber → Set where
 
     -- TODO: add constructor
@@ -386,9 +381,7 @@ module _ {block₀ : Block⋆} where
   stored in the global state.
 
   ```agda
-
     _⇉_ = Fold _[_]⇉_
-
   ```
 
   # Small-step semantics for global state evolution
@@ -441,7 +434,6 @@ module _ {block₀ : Block⋆} where
         → N ↝ record N {
                  messages = ms
                }
-
   ```
 
   ## Reflexive, transitive closure (which is big-step in the paper)
@@ -475,9 +467,9 @@ module _ {block₀ : Block⋆} where
                (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
-
   ```
 
+  <!--
   ```agda
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
@@ -576,8 +568,11 @@ module _ {block₀ : Block⋆} where
       → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
     ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
   ```
+  -->
 
-  ## When the current state is collision free, the pervious state was so too
+  ## Properties
+
+  When the current state is collision free, the pervious state was so too
 
   ```agda
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
@@ -585,6 +580,9 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
+  ```
+  <!--
+  ```agda
     ↝-collision-free (Deliver _ (Done _)) (collision-free cf) = collision-free cf
     ↝-collision-free (Deliver refl (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ⇀-collision-free (collision-free cf) x₂
@@ -600,9 +598,10 @@ module _ {block₀ : Block⋆} where
     ↝-collision-free (CastVote _ (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ⇉-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]⇉-collision-free cf-N x₁)
-   ```
+  ```
+  -->
 
-   ## When the current state is collision free, previous states were so too
+   When the current state is collision free, previous states were so too
 
   ```agda
     ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
@@ -610,7 +609,11 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
+  ```
+  <!--
+  ```agda
     ↝⋆-collision-free (_ ∎) N = N
     ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
   ```
+  -->
