@@ -12,6 +12,20 @@ let
       description = "A topology library for Peras";
     };
   };
+  peras_rust = inputs.nixos-unstable.legacyPackages.rustPlatform.buildRustPackage rec {
+    pname = "peras_rust";
+    version = "0.1.0";
+    src = ../peras-rust;
+    cargoSha256 = "0lq9jdfqznwilx0mrq43701wzqsfqinjc1v8qas8ph2135pp42dj";
+    doCheck = false; # FIXME: Turn on the unit tests as soon as they start passing.
+    preInstall = ''
+      mkdir -p "$out/include"
+      cp "$src/peras.h" "$out/include/"
+    '';
+    meta = with pkgs.stdenv.lib; {
+      description = "A rust library for Peras";
+    };
+  };
 in
 [
   (
@@ -21,6 +35,7 @@ in
     inherit repoRoot;
     packages.peras = peras-agda;
     packages.peras_topology = peras_topology;
+    packages.peras_rust = peras_rust;
     devShells.profiled = project.variants.profiled.devShell;
   }
 ]
