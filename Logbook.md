@@ -1,3 +1,9 @@
+## 2024-02-22
+
+### YH - Formalisation in Agda
+
+* Added new property to block tree asserting that equivocal votes can not be added
+  
 ## 2024-02-21
 
 ### YH - Formalisation in Agda
