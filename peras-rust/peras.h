@@ -23,7 +23,7 @@
  */
 typedef struct PerasNode PerasNode;
 
-uintptr_t receive_message(struct PerasNode *node, uint8_t *buf, uintptr_t _len);
+uintptr_t receive_message(struct PerasNode *node, uint8_t *buf, uintptr_t len);
 
 void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
 
@@ -31,7 +31,7 @@ void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
  * Create a new Peras node
  *
  */
-struct PerasNode *start_node(const char *node_id, double node_stake);
+struct PerasNode *start_node(const char *node_id, uint64_t node_stake);
 
 void stop_node(struct PerasNode *node);
 

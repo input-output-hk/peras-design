@@ -1,6 +1,7 @@
 mod peras_node;
 
 use std::{
+    cmp,
     ffi::{c_char, CStr},
     slice,
 };
@@ -10,14 +11,14 @@ use peras_node::{InEnvelope, Node};
 /// Opaque representation of a Peras node for foreign use
 pub struct PerasNode {
     nodeId: String,
-    stake: f64,
+    stake: u64,
     handle: Box<Node>,
 }
 
 /// Create a new Peras node
 ///
 #[no_mangle]
-pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: f64) -> Box<PerasNode> {
+pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: u64) -> Box<PerasNode> {
     let node: Node = Node::new();
     Box::new(PerasNode {
         nodeId: CStr::from_ptr(node_id).to_str().unwrap().into(),
@@ -41,19 +42,17 @@ pub unsafe extern "C" fn send_message(node: &mut PerasNode, buf: *const u8, len:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn receive_message(node: &mut PerasNode, buf: *mut u8, _len: usize) -> usize {
+pub unsafe extern "C" fn receive_message(node: &mut PerasNode, buf: *mut u8, len: usize) -> usize {
     match node.handle.receive() {
-        Node => 0,
+        None => 0,
         Some(msg) => {
             let bytes = serde_json::to_vec(&msg).unwrap();
             let bytes_ptr = bytes.as_ptr();
+            let count_copy = cmp::min(len, bytes.len());
 
             unsafe {
-                for i in 0..bytes.len() {
-                    buf.write(*bytes_ptr);
-                    *bytes_ptr.add(i);
-                }
-                bytes.len()
+                std::ptr::copy(bytes_ptr, buf, count_copy);
+                count_copy
             }
         }
     }
