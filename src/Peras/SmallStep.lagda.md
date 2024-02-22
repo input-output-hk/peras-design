@@ -269,11 +269,11 @@ module _ {block₀ : Block⋆} where
   ```agda
     data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
 
-      Empty : ∀ {M}
+      Done : ∀ {M}
         → execution-order M ≡ []
         → Fold f M M
 
-      Cons : ∀ {M p ps} {h : Honesty p} {N O}
+      Step : ∀ {M p ps} {h : Honesty p} {N O}
         → execution-order M ≡ p ∷ ps
         → f M h N
         → Fold f N O
@@ -488,8 +488,8 @@ module _ {block₀ : Block⋆} where
     ⇀-hist-common-prefix : ∀ {M N}
       → M ⇀ N
       → history M ⊆ₘ history N
-    ⇀-hist-common-prefix (Empty _) x = x
-    ⇀-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
+    ⇀-hist-common-prefix (Done _) x = x
+    ⇀-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
 
     ⇀-collision-free : ∀ {M N}
       → CollisionFree N
@@ -515,8 +515,8 @@ module _ {block₀ : Block⋆} where
     ↷-hist-common-prefix : ∀ {M N}
       → M ↷ N
       → history M ⊆ₘ history N
-    ↷-hist-common-prefix (Empty _) x = x
-    ↷-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
+    ↷-hist-common-prefix (Done _) x = x
+    ↷-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
@@ -528,7 +528,7 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N
       → M ↷ N
       → CollisionFree M
-    ↷-collision-free cf-N (Empty _) = cf-N
+    ↷-collision-free cf-N (Done _) = cf-N
     ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
     postulate
@@ -552,19 +552,19 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
-    ↝-collision-free (Deliver _ (Empty _)) (collision-free cf) = collision-free cf
-    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) (collision-free cf) =
+    ↝-collision-free (Deliver _ (Done _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Deliver refl (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ⇀-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]⇀-collision-free cf-N x₁)
-    ↝-collision-free (Bake _ (Empty _)) (collision-free cf) = collision-free cf
-    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free cf) =
+    ↝-collision-free (Bake _ (Done _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Bake x (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ↷-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]↷-collision-free cf-N x₁)
     ↝-collision-free (NextRound _) (collision-free cf) = collision-free cf
     ↝-collision-free (PermParties _) (collision-free cf) = collision-free cf
     ↝-collision-free (PermMsgs _) (collision-free cf) = collision-free cf
-    ↝-collision-free (CastVote _ (Empty x₁)) (collision-free cf) = collision-free cf
-    ↝-collision-free (CastVote _ (Cons refl x₁ x₂)) (collision-free cf) =
+    ↝-collision-free (CastVote _ (Done x₁)) (collision-free cf) = collision-free cf
+    ↝-collision-free (CastVote _ (Step refl x₁ x₂)) (collision-free cf) =
       let cf-N = ⇉-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]⇉-collision-free cf-N x₁)
 
