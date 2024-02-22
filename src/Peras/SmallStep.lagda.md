@@ -344,10 +344,12 @@ module _ {block₀ : Block⋆} where
         → msgs ≡ honestVote (clock M) (votingRound M) sₗ
         → N ≡ honestGossip msgs M
         → M [ Honest {p} ]⇉ N
+  ```
 
-    data _⇉_ : Stateᵍ → Stateᵍ → Set where
+  ```agda
 
-    -- TODO: add constructor
+    _⇉_ = Fold _[_]⇉_
+
   ```
 
   # Small-step semantics for global state evolution
@@ -529,6 +531,17 @@ module _ {block₀ : Block⋆} where
     ↷-collision-free cf-N (Empty _) = cf-N
     ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
+    postulate
+      []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+        → CollisionFree N
+        → M [ h ]⇉ N
+        → CollisionFree M
+
+      ⇉-collision-free : ∀ {M N}
+        → CollisionFree N
+        → M ⇉ N
+        → CollisionFree M
+
     ∷-collision-free : ∀ {cl pr sm ms hs ps r p}
       → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
       → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
@@ -539,17 +552,21 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
-    ↝-collision-free (Deliver _ (Empty _)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) n@(collision-free {b₁} {b₂} cf) =
-      let cf-N = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
+    ↝-collision-free (Deliver _ (Empty _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ⇀-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]⇀-collision-free cf-N x₁)
-    ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf) =
-      let cf-N = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
+    ↝-collision-free (Bake _ (Empty _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ↷-collision-free (collision-free cf) x₂
       in ∷-collision-free ([]↷-collision-free cf-N x₁)
-    ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermMsgs _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+    ↝-collision-free (NextRound _) (collision-free cf) = collision-free cf
+    ↝-collision-free (PermParties _) (collision-free cf) = collision-free cf
+    ↝-collision-free (PermMsgs _) (collision-free cf) = collision-free cf
+    ↝-collision-free (CastVote _ (Empty x₁)) (collision-free cf) = collision-free cf
+    ↝-collision-free (CastVote _ (Cons refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ⇉-collision-free (collision-free cf) x₂
+      in ∷-collision-free ([]⇉-collision-free cf-N x₁)
 
     -- When the current state is collision free, previous states were so too
 
