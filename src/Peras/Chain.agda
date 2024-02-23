@@ -58,7 +58,7 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 
 record Chain⋆ : Set where
   constructor MkChain
-  field blocks : Blocks⋆
+  field blocks : List Block⋆
         tip : Block⋆ -- The tip of this chain, must be a member of `blocks`
         votes : set VoteBlockO -- The set of "pending" votes, eg. which have not been included in a `Block`.
 

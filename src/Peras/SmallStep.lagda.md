@@ -12,7 +12,7 @@ module Peras.SmallStep where
 open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.Fin using (Fin; fromℕ; zero; suc)
 open import Data.Fin.Properties using (_≟_)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
@@ -105,15 +105,13 @@ module _ {block₀ : Block⋆} where
       valid : ∀ (t : T) (sl : Slot)
         → ValidChain (bestChain sl t)
 
-      -- TODO: drop `toList`?
       optimal : ∀ (c : Chain⋆) (t : T) (sl : Slot)
         → ValidChain c
-        → toList (blocks c) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
-        → size (blocks c) ≤ size (blocks (bestChain sl t))
+        → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
+        → length (blocks c) ≤ length (blocks (bestChain sl t))
 
-      -- TODO: drop `toList`?
       self-contained : ∀ (t : T) (sl : Slot)
-        → toList (blocks (bestChain sl t)) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
+        → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
   ```
 
   Properties that must hold with respect to votes

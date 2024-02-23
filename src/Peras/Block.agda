@@ -1,9 +1,10 @@
 module Peras.Block where
 
 open import Level
-open import Agda.Builtin.Nat
+open import Data.Nat using (ℕ)
 open import Data.Bool
 open import Data.List
+
 open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
 open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
 
@@ -48,7 +49,7 @@ data Honesty : PartyId → Set where
   Honest : ∀ {p : PartyId}
     → Honesty p
 
-  Corrupt : ∀ {p : PartyId} -- FIXME
+  Corrupt : ∀ {p : PartyId}
     → Honesty p
 
 -- Transactions
@@ -60,7 +61,7 @@ open Tx public
 
 {-# COMPILE AGDA2HS Tx newtype deriving Eq #-}
 
-Slot = Nat
+Slot = ℕ
 
 {-# COMPILE AGDA2HS Slot #-}
 
@@ -89,7 +90,7 @@ postulate
   blLt : Relation.Binary.Rel Block⋆ 0ℓ
   blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
 
-BlockO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
+BlockO : StrictTotalOrder _ _ _
 BlockO = record {
   Carrier            = Block⋆ ;
   _≈_                = blEq ;
