@@ -90,6 +90,9 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+    - name: 🔬 Test with `peras-hs-tests`
+      run: |
+        nix run .#test
     - name: 🔬 Test with `peras-quickcheck-tests`
       run: |
         nix build .#peras_rust -o peras_rust

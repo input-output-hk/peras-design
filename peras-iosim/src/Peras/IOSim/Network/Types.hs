@@ -9,6 +9,7 @@ module Peras.IOSim.Network.Types (
   NetworkState,
   Topology (..),
   activeNodes,
+  blocksSeen,
   chainsSeen,
   votesSeen,
   networkRandom,
@@ -23,7 +24,7 @@ import Control.Lens (makeLenses)
 import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
-import Peras.Block (Slot)
+import Peras.Block (Block, Slot)
 import Peras.Chain (Chain)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
@@ -57,6 +58,7 @@ data NetworkState = NetworkState
   , _activeNodes :: S.Set NodeId
   , _chainsSeen :: M.Map NodeId (Chain Votes)
   -- ^ The latest "best" seen by nodes
+  , _blocksSeen :: M.Map (Maybe (Block Votes)) (S.Set (Block Votes))
   , _votesSeen :: Votes
   , _currentStates :: M.Map NodeId NodeState
   , _pending :: [OutEnvelope]
@@ -65,7 +67,7 @@ data NetworkState = NetworkState
   deriving stock (Eq, Generic, Show)
 
 instance Default NetworkState where
-  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty mempty M.empty mempty $ mkStdGen 12345
+  def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty mempty mempty mempty mempty $ mkStdGen 12345
 
 instance ToJSON NetworkState where
   toJSON NetworkState{..} =
@@ -74,6 +76,7 @@ instance ToJSON NetworkState where
       , "lastTime" A..= _lastTime
       , "activeNodes" A..= _activeNodes
       , "chainsSeen" A..= _chainsSeen
+      , "blocksSeen" A..= _blocksSeen
       , "votesSeen" A..= _votesSeen
       , "currentStates" A..= _currentStates
       , "pending" A..= _pending

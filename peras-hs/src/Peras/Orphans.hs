@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -75,6 +77,13 @@ instance A.ToJSON v => A.ToJSON (Block v) where
       , "payload" A..= payload
       , "signature" A..= signature
       ]
+
+instance A.ToJSON v => A.ToJSONKey (Maybe (Block v)) where
+  toJSONKey =
+    A.toJSONKeyText $
+      \case
+        Nothing -> ""
+        Just Block{signature = s} -> T.pack . BS8.unpack . B16.encode $ Peras.Crypto.signature s
 
 deriving stock instance Generic v => Generic (Chain v)
 deriving stock instance Ord v => Ord (Chain v)
