@@ -55,7 +55,8 @@ data NetworkState = NetworkState
   { _lastSlot :: Slot
   , _lastTime :: UTCTime
   , _activeNodes :: S.Set NodeId
-  , _chainsSeen :: S.Set (Chain Votes)
+  , _chainsSeen :: M.Map NodeId (Chain Votes)
+  -- ^ The latest "best" seen by nodes
   , _votesSeen :: Votes
   , _currentStates :: M.Map NodeId NodeState
   , _pending :: [OutEnvelope]
