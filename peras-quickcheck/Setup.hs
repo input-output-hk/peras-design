@@ -64,7 +64,7 @@ rustConfHook (description, buildInfo) flags = do
                   library
                     { Pkg.libBuildInfo =
                         libraryBuildInfo
-                          { Pkg.extraLibDirs = (dir </> "../peras-rust/target/release") : Pkg.extraLibDirs libraryBuildInfo
+                          { Pkg.extraLibDirs = (dir </> "../peras-rust/target/debug") : Pkg.extraLibDirs libraryBuildInfo
                           , Pkg.includes = "peras.h" : Pkg.includes libraryBuildInfo
                           , Pkg.includeDirs = (dir </> "../peras-rust/") : Pkg.includeDirs libraryBuildInfo
                           }
@@ -80,7 +80,7 @@ rustBuildHook ::
   IO ()
 rustBuildHook description localBuildInfo hooks flags = do
   putStrLn "[rust] Compiling Rust dependencies..."
-  putStrLn "[rust] cargo build --release"
+  putStrLn "[rust] cargo build"
   dir <- getCurrentDirectory -- Assume it's the directory containing the .cabal file
   let cargo = proc "cargo" ["build"]
   rawSystemProc (fromFlag $ buildVerbosity flags) cargo{cwd = Just (dir </> ".." </> "peras-rust")}
