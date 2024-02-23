@@ -61,11 +61,12 @@ cabalProject:
     echo "${repoRoot.nix.agda-stdlib}/standard-library.agda-lib" > .libraries
     echo "${repoRoot.nix.agda2hs.lib}/agda2hs.agda-lib" >> .libraries
     export AGDA_LIBS="$PWD/.libraries"
-    # Rust hook.
-    export RUSTC_VERSION=$(rustup toolchain list | sed -n -e '/ (default)$/{s/ (default)$//;p}')
-    export PATH=''${CARGO_HOME:-~/.cargo}/bin:$PATH
-    export PATH=''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION/bin/:$PATH
     echo "NOTE: 'make' will use the libraries file '$AGDA_LIBS' unless 'AGDA_LIBS' is set differently."
+    # Rust hook.
+    export RUSTC_VERSION="$(rustup toolchain list | sed -n -e '/ (default)$/{s/ (default)$//;p}')"
+    export PATH="''${CARGO_HOME:-~/.cargo}/bin:$PATH"
+    export PATH="''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION/bin/:$PATH"
+    export LD_LIBRARY_PATH="$PWD/peras-rust/target/debug:$PATH"
   '';
 
   tools = {
