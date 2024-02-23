@@ -75,7 +75,7 @@ record MessageTup : Set where
 ## Parameterized with genesis block
 
 ```agda
-module _ {block₀ : Block⋆} where
+module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
   ```
 
   ## BlockTree
@@ -103,10 +103,10 @@ module _ {block₀ : Block⋆} where
         → allBlocks (extendTree t b) ≡ B.insert b (allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot)
-        → ValidChain (bestChain sl t)
+        → ValidChain {block₀} {_♯} (bestChain sl t)
 
       optimal : ∀ (c : Chain⋆) (t : T) (sl : Slot)
-        → ValidChain c
+        → ValidChain {block₀} {_♯} c
         → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
         → length (blocks c) ≤ length (blocks (bestChain sl t))
 
@@ -165,7 +165,6 @@ module _ {block₀ : Block⋆} where
            (honest? : (p : PartyId) → Honesty p) -- Predicate or bool?
            (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
-           (_♯ : Block⋆ → Hash)
            where
   ```
 

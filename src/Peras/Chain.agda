@@ -158,11 +158,26 @@ correctBlocks (MkChain blocks _ _) =
   in all verifyLeadershipProof bs
 -}
 
-data ValidChain : Chain⋆ → Set where
+open Block
+open Chain⋆
 
-  -- FIXME: constructors
+data ValidChain {block₀ : Block⋆} {_♯ : Block⋆ → Hash} : Chain⋆ → Set where
 
-{-
-postulate
-  isValidChain : Chain⋆ -> Bool
--}
+  Genesis : ∀ {vs : set VoteBlockO}
+    → ValidChain
+        record {
+          blocks = block₀ ∷ [] ;
+          tip = block₀ ;
+          votes = vs
+        }
+
+  Cons : ∀ {vs : set VoteBlockO} {c : Chain⋆}
+    → (b : Block⋆)
+    → ValidChain {block₀} {_♯} c
+    → parentBlock b ≡ tip c ♯
+    → ValidChain
+        record {
+          blocks = b ∷ (blocks c) ;
+          tip = b ;
+          votes = vs
+        }
