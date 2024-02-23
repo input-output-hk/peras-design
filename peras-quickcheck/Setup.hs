@@ -14,6 +14,7 @@ import Distribution.Simple.LocalBuildInfo (
  )
 import Distribution.Simple.Setup (
   BuildFlags (..),
+  CleanFlags (..),
   ConfigFlags (..),
   fromFlag,
  )
@@ -21,8 +22,10 @@ import Distribution.Simple.UserHooks (
   UserHooks (..),
  )
 import Distribution.Simple.Utils (
+  maybeExit,
   rawSystemProc,
  )
+import Distribution.Verbosity (Verbosity)
 import System.Directory (
   doesDirectoryExist,
   getCurrentDirectory,
@@ -32,16 +35,20 @@ import System.Process (cwd, proc)
 
 import qualified Distribution.PackageDescription as Pkg
 
+perasRustDir = ".." </> "peras-rust"
+
 main :: IO ()
 main = do
   dir <- getCurrentDirectory -- Assume it's the directory containing the .cabal file
-  perasRustExists <- doesDirectoryExist $ dir </> "../peras-rust"
+  let rustDir = dir </> perasRustDir
+  perasRustExists <- doesDirectoryExist rustDir
   defaultMainWithHooks $
     if perasRustExists
       then
         simpleUserHooks
-          { confHook = rustConfHook
-          , buildHook = rustBuildHook
+          { preConf = \_ flags -> buildRust (fromFlag $ configVerbosity flags)
+          , confHook = rustConfHook
+          , postClean = \_ flags _ _ -> cleanRust (fromFlag $ cleanVerbosity flags)
           }
       else simpleUserHooks
 
@@ -64,24 +71,25 @@ rustConfHook (description, buildInfo) flags = do
                   library
                     { Pkg.libBuildInfo =
                         libraryBuildInfo
-                          { Pkg.extraLibDirs = (dir </> "../peras-rust/target/debug") : Pkg.extraLibDirs libraryBuildInfo
+                          { Pkg.extraLibDirs = (dir </> perasRustDir </> "target/debug") : Pkg.extraLibDirs libraryBuildInfo
                           , Pkg.includes = "peras.h" : Pkg.includes libraryBuildInfo
-                          , Pkg.includeDirs = (dir </> "../peras-rust/") : Pkg.includeDirs libraryBuildInfo
+                          , Pkg.includeDirs = (dir </> perasRustDir) : Pkg.includeDirs libraryBuildInfo
                           }
                     }
             }
       }
 
-rustBuildHook ::
-  Pkg.PackageDescription ->
-  LocalBuildInfo ->
-  UserHooks ->
-  BuildFlags ->
-  IO ()
-rustBuildHook description localBuildInfo hooks flags = do
+buildRust :: Verbosity -> IO Pkg.HookedBuildInfo
+buildRust verbosity = do
   putStrLn "[rust] Compiling Rust dependencies..."
   putStrLn "[rust] cargo build"
   dir <- getCurrentDirectory -- Assume it's the directory containing the .cabal file
   let cargo = proc "cargo" ["build"]
-  rawSystemProc (fromFlag $ buildVerbosity flags) cargo{cwd = Just (dir </> ".." </> "peras-rust")}
-  buildHook simpleUserHooks description localBuildInfo hooks flags
+  maybeExit $ rawSystemProc verbosity cargo{cwd = Just (dir </> perasRustDir)}
+  pure Pkg.emptyHookedBuildInfo
+
+cleanRust :: Verbosity -> IO ()
+cleanRust verbosity = do
+  dir <- getCurrentDirectory -- Assume it's the directory containing the .cabal file
+  let cargo = proc "cargo" ["clean"]
+  maybeExit $ rawSystemProc verbosity cargo{cwd = Just (dir </> perasRustDir)}
