@@ -41,6 +41,14 @@ toSignable _ = emptyBS -- const ""
 postulate
   makeVote : ∀{msg} → RoundNumber -> PartyId -> msg -> Vote msg
 
+
+-- Equivocation relation
+
+data _∻_ : Vote Block⋆ → Vote Block⋆ → Set where
+
+  -- TODO: add constructor
+
+
 -- | A vote is valid if the committee-membership proof and the signature are valid.
 
 isValid : ∀{msg} → Vote msg -> Bool

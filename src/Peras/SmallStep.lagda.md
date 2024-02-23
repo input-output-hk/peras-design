@@ -1,5 +1,5 @@
 ---
-title: Marlowe.Language
+title: Peras.SmallStep
 layout: page
 ---
 
@@ -18,7 +18,7 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_)
+open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Nullary using (yes; no)
@@ -27,17 +27,22 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain⋆; ValidChain)
-open import Peras.Crypto using (Hash; HashO; hash; emptyBS)
+open import Peras.Chain using (Chain⋆; ValidChain; Vote; VoteBlockO; RoundNumber; _∻_)
+open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
 
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.Tree.AVL.Sets as S using ()
 open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
+open import Data.Tree.AVL.Sets.Membership VoteBlockO renaming (_∈_ to _∈ₛ_)
+
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using (_⊆_)
 
 open Chain⋆ public
 open Honesty public
+open MembershipProof public
+open Signature public
+open RoundNumber public
 ```
 -->
 
@@ -49,11 +54,14 @@ Reference: Formalizing Nakamoto-Style Proof of Stake by Søren Eller Thomsen and
 data Progress : Set where
    Ready : Progress
    Delivered : Progress
+   Voted : Progress
    Baked : Progress
 
 -- TODO: use Peras.Message
 data Message : Set where
    BlockMsg : Block⋆ → Message
+   ChainMsg : Chain⋆ → Message
+   VoteMsg : Vote Block⋆ → Message
 
 
 record MessageTup : Set where
@@ -68,9 +76,8 @@ record MessageTup : Set where
 
 ```agda
 module _ {block₀ : Block⋆} where
-
-
   ```
+
   ## BlockTree
 
   ```agda
@@ -79,10 +86,16 @@ module _ {block₀ : Block⋆} where
                     (extendTree : T → Block⋆ → T)
                     (allBlocks : T → Blocks⋆)
                     (bestChain : Slot → T → Chain⋆)
+                    (addVote : T → Vote Block⋆ → T)
+
          : Set₁ where
 
     field
+  ```
 
+  Properties that must hold with respect to blocks
+
+  ```agda
       instantiated :
         allBlocks tree₀ ≡ singleton block₀
 
@@ -103,6 +116,15 @@ module _ {block₀ : Block⋆} where
         → toList (blocks (bestChain sl t)) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
   ```
 
+  Properties that must hold with respect to votes
+
+  ```agda
+      ignore-equivocation : ∀ {v w : Vote Block⋆} {t : T} (sl : Slot)
+        → v ∈ₛ votes (bestChain sl t)
+        → v ∻ w
+        → votes (bestChain sl (addVote t w)) ≡ votes (bestChain sl t)
+  ```
+
   ```agda
   record TreeType (T : Set) : Set₁ where
 
@@ -112,7 +134,11 @@ module _ {block₀ : Block⋆} where
       allBlocks : T → Blocks⋆
       bestChain : Slot → T → Chain⋆
 
-      is-TreeType : IsTreeType tree₀ extendTree allBlocks bestChain
+      addVote : T → Vote Block⋆ → T
+
+      is-TreeType : IsTreeType
+                      tree₀ extendTree allBlocks bestChain
+                      addVote
 
   open TreeType
   ```
@@ -143,19 +169,19 @@ module _ {block₀ : Block⋆} where
            (txSelection : Slot → PartyId → List Tx)
            (_♯ : Block⋆ → Hash)
            where
-
   ```
 
-  ## Local state
+  The local state initialized with the block tree
 
   ```agda
     Stateˡ = LocalState blockTree
+  ```
 
-    extendTreeₗ : Stateˡ → Block⋆ → Stateˡ
-    extendTreeₗ ⟨ partyId , tree ⟩ b = ⟨ partyId , (extendTree blockTree) tree b ⟩
-
+  ```agda
     processMsg : Message → Stateˡ → Stateˡ
-    processMsg (BlockMsg b) sₗ = extendTreeₗ sₗ b
+    processMsg (BlockMsg b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+    processMsg (ChainMsg c) s = s -- TODO
+    processMsg (VoteMsg v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
 
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
     honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
@@ -188,7 +214,7 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_,_⟫
+      constructor ⟪_,_,_,_,_,_,_⟫
       field
         clock : Slot
         progress : Progress
@@ -196,6 +222,7 @@ module _ {block₀ : Block⋆} where
         messages : List MessageTup
         history : List Message
         execution-order : List PartyId -- TODO: List (Honesty p) ?
+        votingRound : RoundNumber
 
     open Stateᵍ public
   ```
@@ -204,10 +231,23 @@ module _ {block₀ : Block⋆} where
 
   ```agda
     N₀ : Stateᵍ
-    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] ⟫ -- FIXME: initial parties as parameter
+    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] , record { roundNumber = 0 } ⟫ -- FIXME: initial parties as parameter
+  ```
 
-    updateStateˡ : PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateStateˡ p sₗ N = record N { stateMap = M.insert p sₗ (stateMap N) }
+  ### Fold over parties in global state
+
+  ```agda
+    data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
+
+      Done : ∀ {M}
+        → execution-order M ≡ []
+        → Fold f M M
+
+      Step : ∀ {M p ps} {h : Honesty p} {N O}
+        → execution-order M ≡ p ∷ ps
+        → f M h N
+        → Fold f N O
+        → Fold f (record M { execution-order = ps }) O
   ```
 
   # Network
@@ -235,6 +275,9 @@ module _ {block₀ : Block⋆} where
 
   ## Receive
 
+  A party receives messages from the global state by fetching messages assigned to the party,
+  updating the local block tree and putting the local state back into the global state.
+
   ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
@@ -259,23 +302,18 @@ module _ {block₀ : Block⋆} where
         → N [ Corrupt {p} ]⇀ N
   ```
 
+  Receiving messages globally is receiving messages by party respecting the execution order
+  for the parties stored in the global state.
+
   ```agda
-    data _⇀_ : Stateᵍ → Stateᵍ → Set where
-
-      Empty : ∀ {M}
-        → execution-order M ≡ []
-          ----------------------
-        → M ⇀ M
-
-      Cons : ∀ {M p ps} {N} {O}
-        → execution-order M ≡ p ∷ ps
-        → record M { execution-order = ps } [ honest? p ]⇀ N
-        → N ⇀ O
-          ------
-        → M ⇀ O
+    _⇀_ = Fold _[_]⇀_
   ```
 
-  # Create
+  ## Create
+
+  A party can create a new block by adding it to the local block tree and gossiping the
+  block creation messages to the other parties. The local state gets updated in the global
+  state.
 
   ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -286,6 +324,7 @@ module _ {block₀ : Block⋆} where
         → N [ Honest {p} ]↷ N
 
       honest : ∀ {p M N} {sₗ sₗ′ : Stateˡ} {msgs}
+        → lookup (stateMap M)  p ≡ just sₗ
         → (msgs , sₗ′) ≡ honestCreate (clock M) (txSelection (clock M) p) sₗ
         → N ≡ honestGossip msgs M
           ------------------------------------------------------------------
@@ -300,24 +339,52 @@ module _ {block₀ : Block⋆} where
 
   ```
 
+  Creating messages globally is creating messages by party respecting the execution order
+  for the parties stored in the global state.
+
   ```agda
-    data _↷_ : Stateᵍ → Stateᵍ → Set where
-
-      Empty : ∀ {M}
-        → execution-order M ≡ []
-          ----------------------
-        → M ↷ M
-
-      Cons : ∀ {M p ps} {N} {O}
-        → execution-order M ≡ p ∷ ps
-        → M [ honest? p ]↷ N
-        → N ↷ O
-          -------------------------------------
-        → record M { execution-order = ps } ↷ O
-
+    _↷_ = Fold _[_]↷_
   ```
 
-  ## Small-step semantics for global state evolution
+  ## Vote
+
+  ```agda
+    data CommitteeMember : PartyId → RoundNumber → Set where
+
+    -- TODO: add constructor
+
+    honestVote : Slot → RoundNumber → Stateˡ → List Message
+    honestVote sl r ⟨ partyId , tree ⟩ =
+      VoteMsg (record {
+          roundNumber = r ;
+          creatorId = partyId ;
+          committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
+          blockHash = (tip ((bestChain blockTree) sl tree)) ; -- Currently just selecting the tip of the best chain to vote
+          signature = record { signature = emptyBS } -- FIXME
+        }) ∷ []
+  ```
+
+  A party can cast a vote for a block, if the party is a member of the voting committee
+
+  ```agda
+    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+
+      honest : ∀ {p M N} {sₗ} {msgs}
+        → lookup (stateMap M)  p ≡ just sₗ
+        → CommitteeMember p (votingRound M)
+        → msgs ≡ honestVote (clock M) (votingRound M) sₗ
+        → N ≡ honestGossip msgs M
+        → M [ Honest {p} ]⇉ N
+  ```
+
+  Voting globally is voting by party respecting the execution order for the parties
+  stored in the global state.
+
+  ```agda
+    _⇉_ = Fold _[_]⇉_
+  ```
+
+  # Small-step semantics for global state evolution
 
   ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
@@ -330,8 +397,16 @@ module _ {block₀ : Block⋆} where
                  progress = Delivered
                }
 
-      Bake : ∀ {M N}
+      CastVote : ∀ {M N}
         → progress M ≡ Delivered
+        → M ⇉ N
+          ----------------------
+        → M ↝ record N {
+                 progress = Voted
+               }
+
+      Bake : ∀ {M N}
+        → progress M ≡ Voted
         → M ↷ N
           -----------------------
         → M ↝ record N {
@@ -359,7 +434,6 @@ module _ {block₀ : Block⋆} where
         → N ↝ record N {
                  messages = ms
                }
-
   ```
 
   ## Reflexive, transitive closure (which is big-step in the paper)
@@ -382,30 +456,20 @@ module _ {block₀ : Block⋆} where
         → L ↝⋆ N
   ```
 
-  ## Collision free predicate
+  # Collision free predicate
 
   ```agda
     data CollisionFree (N : Stateᵍ) : Set where
 
-{-
-      collision-free : ∀ {b₁ b₂ : Block⋆}
-        → BlockMsg b₁ ∈ history N
-        → BlockMsg b₁ ∈ history N
-        → b₁ ♯ ≡ b₂ ♯
-        → b₁ ≡ b₂
-        → CollisionFree N
--}
-
       collision-free : ∀ {b₁ b₂ : Block⋆}
         → All
-          (λ { (BlockMsg b₁ , BlockMsg b₂) →
+          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
                (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
-
   ```
-  When the current state is collision free, the pervious state was so too
 
+  <!--
   ```agda
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
@@ -445,8 +509,8 @@ module _ {block₀ : Block⋆} where
     ⇀-hist-common-prefix : ∀ {M N}
       → M ⇀ N
       → history M ⊆ₘ history N
-    ⇀-hist-common-prefix (Empty _) x = x
-    ⇀-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
+    ⇀-hist-common-prefix (Done _) x = x
+    ⇀-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
 
     ⇀-collision-free : ∀ {M N}
       → CollisionFree N
@@ -466,14 +530,14 @@ module _ {block₀ : Block⋆} where
       → M [ h ]↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix (honestNoState _) x = x
-    []↷-hist-common-prefix (honest {msgs = msgs} x x₁) = hist-honestGossipMsgs {msgs = msgs} x₁
+    []↷-hist-common-prefix (honest {msgs = msgs} _ x x₁) = hist-honestGossipMsgs {msgs = msgs} x₁
     []↷-hist-common-prefix corrupt x = x
 
     ↷-hist-common-prefix : ∀ {M N}
       → M ↷ N
       → history M ⊆ₘ history N
-    ↷-hist-common-prefix (Empty _) x = x
-    ↷-hist-common-prefix (Cons refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
+    ↷-hist-common-prefix (Done _) x = x
+    ↷-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
@@ -485,44 +549,71 @@ module _ {block₀ : Block⋆} where
       → CollisionFree N
       → M ↷ N
       → CollisionFree M
-    ↷-collision-free cf-N (Empty _) = cf-N
+    ↷-collision-free cf-N (Done _) = cf-N
     ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
+    postulate
+      []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+        → CollisionFree N
+        → M [ h ]⇉ N
+        → CollisionFree M
+
+      ⇉-collision-free : ∀ {M N}
+        → CollisionFree N
+        → M ⇉ N
+        → CollisionFree M
+
+    ∷-collision-free : ∀ {cl pr sm ms hs ps r p}
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
+      → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
+    ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+  ```
+  -->
+
+  ## Properties
+
+  When the current state is collision free, the pervious state was so too
+
+  ```agda
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝ N₂
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
-    ↝-collision-free (Deliver _ (Empty _)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Deliver refl (Cons refl x₁ x₂)) n@(collision-free {b₁} {b₂} cf) =
-      let cf-N = ⇀-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-      in uncons-collision-free ([]⇀-collision-free cf-N x₁)
-      where
-        uncons-collision-free : ∀ {cl pr sm ms hs ps p}
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
-          → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
-        uncons-collision-free (collision-free {b₁} {b₂} x) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    ↝-collision-free (Bake _ (Empty x₁)) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (Bake x (Cons refl x₁ x₂)) (collision-free {b₁} {b₂} cf) =
-      let cf-N = ↷-collision-free (collision-free {b₁ = b₁} {b₂ = b₂} cf) x₂
-      in cons-collision-free ([]↷-collision-free cf-N x₁)
-      where
-          cons-collision-free : ∀ {cl pr sm ms hs ps p}
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps ⟫
-            → CollisionFree ⟪ cl , pr , sm , ms , hs , ps ⟫
-          cons-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (NextRound _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermParties _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
-    ↝-collision-free (PermMsgs _) (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
+  ```
+  <!--
+  ```agda
+    ↝-collision-free (Deliver _ (Done _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Deliver refl (Step refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ⇀-collision-free (collision-free cf) x₂
+      in ∷-collision-free ([]⇀-collision-free cf-N x₁)
+    ↝-collision-free (Bake _ (Done _)) (collision-free cf) = collision-free cf
+    ↝-collision-free (Bake x (Step refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ↷-collision-free (collision-free cf) x₂
+      in ∷-collision-free ([]↷-collision-free cf-N x₁)
+    ↝-collision-free (NextRound _) (collision-free cf) = collision-free cf
+    ↝-collision-free (PermParties _) (collision-free cf) = collision-free cf
+    ↝-collision-free (PermMsgs _) (collision-free cf) = collision-free cf
+    ↝-collision-free (CastVote _ (Done x₁)) (collision-free cf) = collision-free cf
+    ↝-collision-free (CastVote _ (Step refl x₁ x₂)) (collision-free cf) =
+      let cf-N = ⇉-collision-free (collision-free cf) x₂
+      in ∷-collision-free ([]⇉-collision-free cf-N x₁)
+  ```
+  -->
 
-    -- When the current state is collision free, previous states were so too
+   When the current state is collision free, previous states were so too
 
+  ```agda
     ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
       → N₁ ↝⋆ N₂
       → CollisionFree N₂
         ----------------
       → CollisionFree N₁
+  ```
+  <!--
+  ```agda
     ↝⋆-collision-free (_ ∎) N = N
     ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
   ```
+  -->
