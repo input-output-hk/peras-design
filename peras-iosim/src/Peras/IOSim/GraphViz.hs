@@ -43,7 +43,7 @@ peersGraph networkState =
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show' name
+                <> show name
                 <> "</b>"
                 <> "|Stake "
                 <> show (nodeState ^. stake)
