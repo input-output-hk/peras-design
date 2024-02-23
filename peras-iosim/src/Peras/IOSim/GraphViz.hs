@@ -7,16 +7,14 @@ module Peras.IOSim.GraphViz (
   writeGraph,
 ) where
 
-import Control.Lens (to, (^.))
+import Control.Lens ((^.))
 import Data.Function (on)
-import Data.List (intercalate, nub, sortBy)
+import Data.List (intercalate, sortBy)
 import Peras.Block (Block (..))
-import Peras.Chain (Chain (..))
-import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates)
+import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Types (Vote (..))
 
-import qualified Data.Map as Map
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Language.Dot.Pretty as G
@@ -65,7 +63,7 @@ chainGraph ::
   NetworkState ->
   G.Graph
 chainGraph networkState =
-  let chains = networkState ^. chainsSeen . to Map.elems
+  let tree = networkState ^. blocksSeen
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement
@@ -94,14 +92,11 @@ chainGraph networkState =
                 <> show' creatorId
                 <> showVotes (S.toList includedVotes)
           ]
-      blocks Genesis = []
-      blocks (Cons b p) = b : blocks p
-      nodes = mkNode <$> nub (concatMap blocks chains)
-      mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeId bid, G.ENodeId G.DirectedEdge $ nodeId bid'] mempty
-      mkEdges [] = []
-      mkEdges bs = zipWith mkEdge (init bs) (tail bs)
-      edges = nub $ concatMap (mkEdges . fmap signature . blocks) chains
-      mkEdge' bid' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeId bid', G.ENodeId G.DirectedEdge genesisId] mempty
-      edges' = nub $ mkEdge' . signature . last <$> filter (not . null) (blocks <$> chains)
+      blocks = S.toList . S.unions $ M.elems tree
+      nodes = mkNode <$> blocks
+      mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge bid', G.ENodeId G.DirectedEdge bid] mempty
+      mkEdges Nothing bs = mkEdge genesisId . nodeId . signature <$> S.toList bs
+      mkEdges (Just b) bs = mkEdge (nodeId $ signature b) . nodeId . signature <$> S.toList bs
+      edges = M.foldMapWithKey mkEdges tree
    in G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains") $
-        [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges <> edges'
+        [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges

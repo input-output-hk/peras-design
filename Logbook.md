@@ -1,5 +1,11 @@
 ## 2024-02-23
 
+### BB - Metric and visualization
+
+- Added observation of the whole tree of blocks to `peras-iosim`.
+- Revised chain visualization to use tree data type of observed blocks.
+- Design for computing metrics such as frequency of forks.
+
 ### AB - Rust Node
 
 Writing custom setup file to automatically build the `peras-rust` projet with cargo, inspired by: https://github.com/CardanoSolutions/cardano-node/blob/release/8.1.2/cddl/Setup.hs
