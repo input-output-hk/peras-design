@@ -13,3 +13,4 @@ src/MAlonzo/
 .libraries
 /cabal.project.local
 target/
+Cargo.lock
