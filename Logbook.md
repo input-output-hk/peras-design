@@ -1,14 +1,64 @@
+## 2024-02-23
+
+### AB - Rust Node
+
+Writing custom setup file to automatically build the `peras-rust` projet with cargo, inspired by: https://github.com/CardanoSolutions/cardano-node/blob/release/8.1.2/cddl/Setup.hs
+* Curiously it cannot find the `peras.h` header file even though I have added it in the `includeDirs`? -> the correct parameter to use is `includes` not `includeDirs`: https://cabal.readthedocs.io/en/3.4/cabal-package.html#pkg-field-includes
+* Need move FFI code to the `library` component of the package, not the `test` component as it's the former that will depend on rUst code. This is debatable and perhaps I should stick to have the code in `test/`?
+
+Need to restrict the scope of the state that's returned in the `Idle` message in order to avoid sneaking in implementation details from the Haskell node.
+The fact that `Idle` is part of `OutEnvelope` type and therefore of the interface between the network simulator and the node is problematic. Or is it just an artefact stemming from the fact the `NodeModelSpec` is trying to test at too low a level for its own good?
+
+Annoyingly default JSON serialisation provided by serde is not compatible with Aeson's :
+```
+Failed to deserialise received message ("{\"Idle\":{\"timestamp\":1708594079,\"source\":\"N1\",\"currentState\":{}}}"): Error in $: key "timestamp" not found
+```
+
+Trying to remove the `NodeState` from the `Idle` message but it does not work as expected: I use the `chainsSeen` in the `NetworkState` to store a map from nodes to preferred chain, but it's not updated for all nodes, eg. nodes which don't have downstream consumers won't send a `NewChain` message! I need to change the way the `NetworkState`'s  `chainsSeen` is updated: It's now updated in the `Idle`  handler _also_ and is a map from `NodeId` to `Chain`. This should not be a problem for plotting the end graph, but it will lose forks that get abandoned by a node in favor of a longer/better chain which might not be what we want.
+
+After changes in the `Setup.hs` file, `cabal build peras-quickcheck` fails with:
+
+```
+% cabal build peras-quickcheck
+Build profile: -w ghc-9.6.3 -O0
+In order, the following will be built (use -v for more details):
+ - peras-quickcheck-0.1.0.0 (lib:peras-quickcheck, test:peras-quickcheck-test) (configuration changed)
+Warning: peras-quickcheck.cabal:55:1: Ignoring trailing fields after sections:
+"extra-doc-files"
+Configuring peras-quickcheck-0.1.0.0...
+Error: setup: Missing dependency on a foreign library:
+* Missing (or bad) C library: peras_rust
+This problem can usually be solved by installing the system package that
+provides this library (you may need the "-dev" version). If the library is
+already installed but in a non-standard location then you can use the flags
+--extra-include-dirs= and --extra-lib-dirs= to specify where it is.If the
+library file does exist, it may contain errors that are caught by the C
+compiler at the preprocessing stage. In this case you can re-run configure
+with the verbosity flag -v3 to see the error messages.
+
+Error: cabal: Failed to build peras-quickcheck-0.1.0.0. The failure occurred
+during the configure step.
+```
+
+eg. it cannot find the DLL built by the `peras-rust` project.
+
+Seems like the `confHook` of cabal checks the existence of the library
+and fails if it does not exist ->
+[this](https://blog.michivi.com/posts/2022-08-cabal-setup/#build-using-cargo-from-cabal)
+blog post uses the `preconfigure` hook to ensure the Rust dependency
+is built.
+
 ## 2024-02-22
 
 ### YH - Formalisation in Agda
 
 * Added new property to block tree asserting that equivocal votes can not be added
- 
+
 ### BB - Nix maintenance
 
 - Fixed Nix derivations for Rust-Haskell linkages.
 - Added quickcheck test to CI.
- 
+
 ## 2024-02-21
 
 ### YH - Formalisation in Agda
