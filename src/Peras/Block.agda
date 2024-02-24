@@ -35,8 +35,6 @@ postulate
   paLt : Relation.Binary.Rel PartyId 0ℓ
   paIs : Relation.Binary.IsStrictTotalOrder paEq paLt
 
-  _≟-PartyId_ : DecidableEquality PartyId
-
 PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
 PartyIdO = record {
   Carrier            = PartyId ;
@@ -65,12 +63,11 @@ Slot = ℕ
 
 {-# COMPILE AGDA2HS Slot #-}
 
-record Block (t : Set) : Set where
+record Block : Set where
   field slotNumber : Slot
-        -- blockHeight : Word64
         creatorId : PartyId
         parentBlock : Hash
-        includedVotes : t -- set HashO
+        includedVotes : List Hash
         leadershipProof : LeadershipProof
         payload : List Tx
         signature : Signature
@@ -78,26 +75,3 @@ record Block (t : Set) : Set where
 open Block public
 
 {-# COMPILE AGDA2HS Block #-}
-
-postulate instance iBlockEq : {t : Set } -> ⦃ Eq t ⦄ -> Eq (Block t)
-
-{-# COMPILE AGDA2HS iBlockEq #-}
-
-Block⋆ = Block (set HashO)
-
-postulate
-  blEq : Relation.Binary.Rel Block⋆ 0ℓ
-  blLt : Relation.Binary.Rel Block⋆ 0ℓ
-  blIs : Relation.Binary.IsStrictTotalOrder blEq blLt
-
-BlockO : StrictTotalOrder _ _ _
-BlockO = record {
-  Carrier            = Block⋆ ;
-  _≈_                = blEq ;
-  _<_                = blLt ;
-  isStrictTotalOrder = blIs }
-
-postulate
-  isValidBlock : Block⋆ -> Bool
-
-Blocks⋆ = set BlockO

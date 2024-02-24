@@ -11,7 +11,7 @@ module Peras.SmallStep where
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.Fin using (Fin; fromℕ; zero; suc)
-open import Data.Fin.Properties using (_≟_)
+open import Data.Fin.Properties as Fin using ()
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
@@ -27,18 +27,15 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain⋆; ValidChain; Vote; VoteBlockO; RoundNumber; _∻_)
+open import Peras.Chain using (Chain; ValidChain; Vote; RoundNumber; _∻_)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
-open import Peras.Block using (PartyId; PartyIdO; _≟-PartyId_; Block⋆; BlockO; Blocks⋆; Slot; slotNumber; Tx; Honesty)
+open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
-open import Data.Tree.AVL.Sets as S using ()
-open import Data.Tree.AVL.Sets BlockO as B renaming (⟨Set⟩ to set) using (singleton; size; insert; toList)
-open import Data.Tree.AVL.Sets.Membership VoteBlockO renaming (_∈_ to _∈ₛ_)
 
-open import Data.List.Relation.Binary.Subset.Propositional {A = Block⋆} using (_⊆_)
+open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
-open Chain⋆ public
+open Chain public
 open Honesty public
 open MembershipProof public
 open Signature public
@@ -59,10 +56,9 @@ data Progress : Set where
 
 -- TODO: use Peras.Message
 data Message : Set where
-   BlockMsg : Block⋆ → Message
-   ChainMsg : Chain⋆ → Message
-   VoteMsg : Vote Block⋆ → Message
-
+   BlockMsg : Block → Message
+   ChainMsg : Chain → Message
+   VoteMsg : Vote Block → Message
 
 record MessageTup : Set where
   constructor ⦅_,_,_⦆
@@ -72,10 +68,19 @@ record MessageTup : Set where
     cd : Fin 3
 ```
 
+<!--
+Two sets are considered equal, if they are a subset of each other
+```agda
+open import Relation.Binary.Core using (Rel)
+_≐_ : Rel (List Block) _
+P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
+```
+-->
+
 ## Parameterized with genesis block
 
 ```agda
-module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
+module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
   ```
 
   ## BlockTree
@@ -83,56 +88,48 @@ module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
   ```agda
   record IsTreeType {T : Set}
                     (tree₀ : T)
-                    (extendTree : T → Block⋆ → T)
-                    (allBlocks : T → Blocks⋆)
-                    (bestChain : Slot → T → Chain⋆)
-                    (addVote : T → Vote Block⋆ → T)
+                    (extendTree : T → Block → T)
+                    (allBlocks : T → List Block)
+                    (bestChain : Slot → T → Chain)
+                    (addVote : T → Vote Block → T)
 
          : Set₁ where
 
     field
   ```
-
-  Properties that must hold with respect to blocks
+ 
+  Properties that must hold with respect to blocks and votes
 
   ```agda
       instantiated :
-        allBlocks tree₀ ≡ singleton block₀
+        allBlocks tree₀ ≡ block₀ ∷ []
 
-      extendable : ∀ (t : T) (b : Block⋆)
-        → allBlocks (extendTree t b) ≡ B.insert b (allBlocks t)
+      extendable : ∀ (t : T) (b : Block)
+        → (allBlocks (extendTree t b)) ≐ (b ∷ (allBlocks t))
 
       valid : ∀ (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} (bestChain sl t)
+        → ValidChain {block₀} {_♯} {L} (bestChain sl t)
 
-      optimal : ∀ (c : Chain⋆) (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} c
-        → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
+      optimal : ∀ (c : Chain) (t : T) (sl : Slot)
+        → ValidChain {block₀} {_♯} {L} c
+        → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
         → length (blocks c) ≤ length (blocks (bestChain sl t))
 
       self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (toList (allBlocks t))
+        → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
   ```
 
-  Properties that must hold with respect to votes
-
-  ```agda
-      ignore-equivocation : ∀ {v w : Vote Block⋆} {t : T} (sl : Slot)
-        → v ∈ₛ votes (bestChain sl t)
-        → v ∻ w
-        → votes (bestChain sl (addVote t w)) ≡ votes (bestChain sl t)
-  ```
 
   ```agda
   record TreeType (T : Set) : Set₁ where
 
     field
       tree₀ : T
-      extendTree : T → Block⋆ → T
-      allBlocks : T → Blocks⋆
-      bestChain : Slot → T → Chain⋆
+      extendTree : T → Block → T
+      allBlocks : T → List Block
+      bestChain : Slot → T → Chain
 
-      addVote : T → Vote Block⋆ → T
+      addVote : T → Vote Block → T
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
@@ -190,7 +187,7 @@ module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
                          slotNumber = sl ;
                          creatorId = p ;
                          parentBlock = tip best ♯ ;
-                         includedVotes = S.empty HashO ; -- TODO: Peras
+                         includedVotes = [] ; -- S.empty HashO ; -- TODO: Peras
                          leadershipProof = record { proof = emptyBS } ; -- FIXME
                          payload = txs ;
                          signature = record { signature = emptyBS } -- FIXME
@@ -250,11 +247,15 @@ module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
   # Network
 
   ```agda
+
+    open import Relation.Binary.Bundles using (StrictTotalOrder)
+
     fetchMsgs : PartyId → Stateᵍ → List Message × List MessageTup
     fetchMsgs p N =
-        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → ⌊ p ≟-PartyId r ⌋ ∧ ⌊ d ≟ zero ⌋ }) (messages N)
-            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → not (⌊ p ≟-PartyId r ⌋ ∧ ⌊ d ≟ zero ⌋) }) (messages N)
+        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → ⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋ }) (messages N)
+            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
         in map ( λ { ⦅ m , _ , _ ⦆ → m } ) msgs , rest
+      where open Relation.Binary.Bundles.DecSetoid (StrictTotalOrder.Eq.decSetoid PartyIdO)
 
     gossipMsg : Message → Stateᵍ → Stateᵍ
     gossipMsg m N =
@@ -458,7 +459,7 @@ module _ {block₀ : Block⋆} {_♯ : Block⋆ → Hash} where
   ```agda
     data CollisionFree (N : Stateᵍ) : Set where
 
-      collision-free : ∀ {b₁ b₂ : Block⋆}
+      collision-free : ∀ {b₁ b₂ : Block}
         → All
           (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
                (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
