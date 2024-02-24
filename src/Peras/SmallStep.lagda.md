@@ -1,8 +1,3 @@
----
-title: Peras.SmallStep
-layout: page
----
-
 ```agda
 module Peras.SmallStep where
 ```

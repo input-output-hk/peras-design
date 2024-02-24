@@ -1,8 +1,3 @@
----
-title: Peras.Chain
-layout: page
----
-
 ```agda
 module Peras.Chain where
 ```
