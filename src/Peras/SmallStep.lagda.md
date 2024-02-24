@@ -40,7 +40,7 @@ open RoundNumber public
 
 # Small-step semantics
 
-Reference: Formalizing Nakamoto-Style Proof of Stake by Søren Eller Thomsen and Bas Spitters
+Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
 ```agda
 data Progress : Set where
@@ -48,13 +48,18 @@ data Progress : Set where
    Delivered : Progress
    Voted : Progress
    Baked : Progress
+```
 
--- TODO: use Peras.Message
+TODO: use Peras.Message
+
+```agda
 data Message : Set where
    BlockMsg : Block → Message
    ChainMsg : Chain → Message
    VoteMsg : Vote Block → Message
+```
 
+```agda
 record MessageTup : Set where
   constructor ⦅_,_,_⦆
   field
@@ -87,9 +92,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
                     (allBlocks : T → List Block)
                     (bestChain : Slot → T → Chain)
                     (addVote : T → Vote Block → T)
-
          : Set₁ where
-
     field
   ```
  
@@ -114,6 +117,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
         → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
   ```
 
+  The block tree type
 
   ```agda
   record TreeType (T : Set) : Set₁ where
@@ -339,13 +343,19 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
     _↷_ = Fold _[_]↷_
   ```
 
-  ## Vote
+  ## Voting
 
+  ### Comittee membership
+  
   ```agda
     data CommitteeMember : PartyId → RoundNumber → Set where
 
     -- TODO: add constructor
+  ```
 
+  An honest party votes as follows:
+
+  ```agda
     honestVote : Slot → RoundNumber → Stateˡ → List Message
     honestVote sl r ⟨ partyId , tree ⟩ =
       VoteMsg (record {
@@ -377,7 +387,9 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
     _⇉_ = Fold _[_]⇉_
   ```
 
-  # Small-step semantics for global state evolution
+  # Small-step semantics
+
+  The small-step semantics describe the evolution of the global state.
 
   ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
@@ -429,7 +441,9 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
                }
   ```
 
-  ## Reflexive, transitive closure (which is big-step in the paper)
+  ## Reflexive, transitive closure
+
+  In the paper mentioned above this is big-step semantics.
 
   ```agda
     infix  2 _↝⋆_
