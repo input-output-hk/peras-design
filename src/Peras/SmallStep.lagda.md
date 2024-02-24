@@ -105,7 +105,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
         allBlocks tree₀ ≡ block₀ ∷ []
 
       extendable : ∀ (t : T) (b : Block)
-        → (allBlocks (extendTree t b)) ≐ (b ∷ (allBlocks t))
+        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot)
         → ValidChain {block₀} {_♯} {L} (bestChain sl t)

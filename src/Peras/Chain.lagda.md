@@ -1,5 +1,14 @@
-module Peras.Chain where
+---
+title: Peras.Chain
+layout: page
+---
 
+```agda
+module Peras.Chain where
+```
+
+<!--
+```agda
 open import Agda.Builtin.Word
 open import Data.Bool using (_∧_)
 open import Data.Nat using (ℕ)
@@ -11,10 +20,21 @@ open import Peras.Crypto
 open import Peras.Block hiding (ByteString; emptyBS)
 
 open import Haskell.Prelude
+```
+-->
 
+## Voting
+
+### Round number
+
+```agda
 record RoundNumber : Set where
   field roundNumber : ℕ
+```
 
+### Vote
+
+```agda
 record Vote msg : Set where
   constructor vote
   field roundNumber              : RoundNumber
@@ -24,9 +44,16 @@ record Vote msg : Set where
         signature                : Signature
 
 open Vote public
+```
 
+<!--
+```agda
 {-# COMPILE AGDA2HS Vote #-}
+```
+-->
 
+<!--
+```agda
 {-
 toSignable : ∀{msg} → Vote msg -> ByteString
 toSignable _ = emptyBS -- const ""
@@ -36,14 +63,18 @@ toSignable _ = emptyBS -- const ""
 postulate
   makeVote : ∀{msg} → RoundNumber -> PartyId -> msg -> Vote msg
 -}
+```
+-->
 
--- Equivocation relation
+### Equivocation relation
 
+```agda
 data _∻_ : Vote Block → Vote Block → Set where
 
   -- TODO: add constructor
-
-
+```
+<!--
+```agda
 -- | A vote is valid if the committee-membership proof and the signature are valid.
 {-
 isValid : ∀{msg} → Vote msg -> Bool
@@ -51,10 +82,14 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
   isCommitteeMember vkey committeeMembershipProof
     ∧ verify vkey signature (toSignable v)
 -}
+```
 
--- The tip of this chain, must be a member of `blocks`
--- The set of "pending" votes, eg. which have not been included in a `Block`.
+### Chain
 
+ * The tip of this chain, must be a member of `blocks`
+ * The set of "pending" votes, eg. which have not been included in a `Block`.
+
+```agda
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
@@ -62,12 +97,18 @@ record Chain : Set where
         votes : List (Vote Block)
 
 open Chain public
+```
 
+<!--
+```agda
 {-# COMPILE AGDA2HS Chain deriving (Eq) #-}
+```
+-->
 
+## Chain validity
 
--- | Chain validity
-
+<!--
+```agda
 open import Data.List.Relation.Unary.Unique.Propositional {A = Vote Block}
 open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 open import Relation.Nullary.Negation using (¬_)
@@ -76,22 +117,24 @@ open Block
 
 open import Data.Nat using (_≤_; _∸_)
 open import Data.List.Membership.Propositional using (_∈_)
+```
+-->
 
---
--- A chain is valid iff:
--- * the blocks (ignoring the vote hashes) form a valid Praos chain,
--- * all votes:
---      * are referenced by a unique block with a slot number $s$
---        strictly larger than the slot number corresponding to the
---        vote’s round number r (i.e., r*T < s),
---      * point to a block on the chain at least L slots in the past
---        (i.e., to a block with slot number s < r*T - L), and
--- * it contains no vote equivocations (i.e., multiple votes by the
---   same party for the same round).
---
--- TODO: expressing those conditions directly would be very expensive,
--- it's more efficient to enforce them whenever the chain is extended.
+A chain is valid iff:
+  * the blocks (ignoring the vote hashes) form a valid Praos chain,
+  * all votes:
+    * are referenced by a unique block with a slot number $s$
+      strictly larger than the slot number corresponding to the
+      vote’s round number r (i.e., r*T < s),
+    * point to a block on the chain at least L slots in the past
+      (i.e., to a block with slot number s < r*T - L), and
+  * it contains no vote equivocations (i.e., multiple votes by the
+    same party for the same round).
 
+TODO: expressing those conditions directly would be very expensive,
+it's more efficient to enforce them whenever the chain is extended.
+
+```agda
 data ValidChain {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} : Chain → Set where
 
   Genesis :
@@ -116,8 +159,9 @@ data ValidChain {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} : Chain →
           tip = b ;
           votes = vs
         }
-
-
+```
+<!--
+```agda
 {-
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own
 -- but let's make it total.
@@ -190,3 +234,5 @@ correctBlocks (MkChain blocks _ _) =
   let bs = toList BlockO blocks
   in all verifyLeadershipProof bs
 -}
+```
+-->
