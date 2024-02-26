@@ -1,5 +1,32 @@
 ## 2024-02-26
 
+### BB - Simulation experiment
+
+Tracking and reporting of rollbacks has been added to `peras-iosim`:
+
+1. Which nodes rolled back
+2. At what slot this occurred
+3. How many slots were rolled back
+4. How many blocks were rolled back
+5. The weight/length of the old and new chains
+
+Voting propagation and graphics were also improved.
+
+A reasonable set of [protocol parameters](peras-iosim/analyses/parameters-v1/protocol.yaml) and [network configuration](peras-iosim/analyses/parameters-v1/network.yaml) was set for a 100-node network with a mean committee size of 10. Here is the formula for setting the mean committee size:
+$$
+P_\text{lottery} = (1 - 1 / C)^(C / S)
+$$
+where $C$ is the mean committee size and $S$ is the total stake in the system.
+
+Findings from the simulation runs highlight the impracticality of blindly running simulations with realistics parameters and then mining the data:
+
+- The simulation results are strongly dependent upon the speed of diffusion of messages throught the network, so I high fidelity model for that is required.
+- Both Peras and Praos are so stable that one would need very long simulations to observe forks of more than one or two blocks.
+- Only in cases of very sparse connectivity or slow message diffusion are longer forks seen.
+- Peras quickly stabilizes the chain at the first block or two in each round, so even longer forks typically never last beyond then.
+- Hence, even for honest nodes, we need a mechanism to inject rare events such as multi-block forks, so that the effect of Peras can be studied efficiently.
+
+
 ### YH - Agda formalization
 
 * Refactoring of the data model in Agda. This requires to adjust all dependent modules
