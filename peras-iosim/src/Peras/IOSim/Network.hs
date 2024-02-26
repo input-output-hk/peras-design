@@ -73,7 +73,7 @@ randomTopology Parameters{..} =
           (j :) <$> choose (n - 1) (j `delete` js)
       randomConnects i topology =
         foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
-          <$> choose downstreamCount [0 .. peerCount - 1]
+          <$> choose downstreamCount (i `delete` [0 .. peerCount - 1])
    in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
@@ -256,7 +256,7 @@ routeEnvelope parameters Network{nodesIn} = \case
     currentStates %= M.insert source nodeState
 
 -- Send a message and mark the destination as active.
-output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
+output :: Show p => MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
 output destination inChannel inEnvelope =
   do
     lift . atomically . writeTQueue inChannel $ inEnvelope
