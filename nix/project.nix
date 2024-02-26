@@ -2,10 +2,18 @@
 
 let
 
+  peras_rust = repoRoot.nix.rust.peras_rust;
+
+  customSettings = {
+    libs = pkgs.lib.mkForce [ peras_rust ];
+    configureFlags = [
+      "--extra-include-dirs=${peras_rust}/include"
+      "--extra-lib-dirs=${peras_rust}/lib"
+    ];
+  };
+
   cabalProject' = pkgs.haskell-nix.cabalProject' ({ pkgs, config, ... }:
     let
-      # When `isCross` is `true`, it means that we are cross-compiling the project.
-      # WARNING You must use the `pkgs` coming from cabalProject' for `isCross` to work.
       isCross = pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform;
     in
     {
@@ -16,12 +24,16 @@ let
       };
       name = "peras-design";
       compiler-nix-name = lib.mkDefault "ghc96";
-      modules = [ ];
+      modules = [
+        {
+          packages.peras-quickcheck.components.library = customSettings;
+          packages.peras-quickcheck.components.tests.peras-quickcheck-test = customSettings;
+        }
+      ];
       flake.variants.profiled.modules = [{
         enableProfiling = true;
         enableLibraryProfiling = true;
       }];
-
     });
 
   cabalProject = cabalProject'.appendOverlays [ ];

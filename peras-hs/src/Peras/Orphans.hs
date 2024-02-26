@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -80,6 +82,13 @@ deriving stock instance Generic RoundNumber
 deriving stock instance Ord RoundNumber
 deriving stock instance Read RoundNumber
 deriving stock instance Show RoundNumber
+
+instance A.ToJSONKey (Maybe Block) where
+  toJSONKey =
+    A.toJSONKeyText $
+      \case
+        Nothing -> ""
+        Just Block{signature = s} -> T.pack . BS8.unpack . B16.encode $ Peras.Crypto.signature s
 
 instance A.FromJSON RoundNumber where
   parseJSON =

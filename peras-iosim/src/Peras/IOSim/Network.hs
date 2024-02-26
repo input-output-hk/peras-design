@@ -20,7 +20,7 @@ import Control.Lens (
  )
 import Control.Monad (unless, void)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
-import Control.Monad.Class.MonadSay (MonadSay (say))
+import Control.Monad.Class.MonadSay
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
@@ -29,12 +29,14 @@ import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
 import Peras.Block (Slot, includedVotes)
+import Peras.Chain (asList)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
   Network (..),
   NetworkState,
   Topology (..),
   activeNodes,
+  blocksSeen,
   chainsSeen,
   currentStates,
   lastSlot,
@@ -227,13 +229,18 @@ routeEnvelope parameters Network{nodesIn} = \case
       if out `elem` pendings || r > messageDelay parameters
         then case outMessage of
           -- FIXME: Implement this.
-          FetchBlock _ -> lift $ say "Fetching blocks is not yet implemented."
+          FetchBlock _ -> error "Fetching blocks is not yet implemented."
           -- Forward the message to the appropriate node.
           SendMessage message ->
             do
               -- FIXME: Awkwardly peek at the chain.
               case message of
-                NewChain chain -> chainsSeen %= S.insert chain
+                NewChain chain -> do
+                  chainsSeen %= M.insert source chain
+                  case asList chain of
+                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just tip) (S.singleton prior)
+                    tip : _ -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
+                    _ -> pure ()
                 SomeBlock block -> votesSeen %= S.union (includedVotes block)
                 _ -> pure ()
               -- Forward the message.
@@ -242,7 +249,7 @@ routeEnvelope parameters Network{nodesIn} = \case
   Idle{..} -> do
     lastTime %= max timestamp
     activeNodes %= S.delete source
-    currentStates %= M.insert source currentState
+    chainsSeen %= M.insert source bestChain
   Exit{..} -> do
     lastTime %= max timestamp
     activeNodes %= S.delete source

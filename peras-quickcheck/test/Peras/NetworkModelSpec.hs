@@ -7,7 +7,7 @@
 module Peras.NetworkModelSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Lens (uses, (&), (.~), (^.))
+import Control.Lens (uses, (&), (.~))
 import Control.Monad (forM)
 import Control.Monad.Class.MonadTime.SI (getCurrentTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
@@ -19,9 +19,8 @@ import Data.Functor (void)
 import qualified Data.Map as Map
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
-import Peras.IOSim.Network.Types (NetworkState, currentStates, networkRandom)
+import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
-import qualified Peras.IOSim.Node.Types as Node
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Votes)
@@ -94,9 +93,7 @@ runPropInIOSim p = do
         }
 
 getPreferredChain :: Monad m => NodeId -> StateT NetworkState m (Chain Votes)
-getPreferredChain nodeId = do
-  nodeState <- currentStates `uses` (Map.! nodeId)
-  pure $ nodeState ^. Node.preferredChain
+getPreferredChain nodeId = chainsSeen `uses` (Map.! nodeId)
 
 runWithState :: (Monad m, MonadSTM m) => TVar m NetworkState -> StateT NetworkState m a -> m a
 runWithState stateVar act = do

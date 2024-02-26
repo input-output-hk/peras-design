@@ -20,6 +20,7 @@ import Peras.Orphans ()
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
+import Peras.Chain (Chain)
 
 data InEnvelope
   = InEnvelope
@@ -97,7 +98,7 @@ data OutEnvelope
   | Idle
       { timestamp :: UTCTime
       , source :: NodeId
-      , currentState :: NodeState
+      , bestChain :: Chain Votes
       }
   | Exit
       { timestamp :: UTCTime
@@ -117,7 +118,7 @@ instance A.FromJSON OutEnvelope where
                 <*> o A..: "outMessage"
                 <*> o A..: "bytes"
                 <*> o A..: "destination"
-            parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "currentState"
+            parseIdle = Idle <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "bestChain"
             parseExit = Exit <$> o A..: "timestamp" <*> o A..: "source" <*> o A..: "nodeState"
          in parseMessage <|> parseIdle <|> parseExit
 
@@ -134,7 +135,7 @@ instance A.ToJSON OutEnvelope where
     A.object
       [ "timestamp" A..= timestamp
       , "source" A..= source
-      , "currentState" A..= currentState
+      , "bestChain" A..= bestChain
       ]
   toJSON Exit{..} =
     A.object
