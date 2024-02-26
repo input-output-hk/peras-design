@@ -22,9 +22,10 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain; ValidChain; Vote; RoundNumber; _∻_)
+open import Peras.Chain using (Chain; Vote; RoundNumber; _∻_; ValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
+open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 
@@ -41,6 +42,14 @@ open RoundNumber public
 # Small-step semantics
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
+
+The small-step semantics define the possible evolution of the global state of the system
+with respect to honest and adversary parties.
+
+### Progress
+
+In addition to the formalization in the paper, for the Peras protocol there is a new global
+state `Voted` indicating that all honest parties eligible to vote have cast a vote.
 
 ```agda
 data Progress : Set where
@@ -80,9 +89,14 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ## Parameterized with genesis block
 
 ```agda
-module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
+module _ {block₀ : Block} {_♯ : Block → Hash} where
   ```
+  The block tree, resp. the validity of the chain is defined with respect of the
+  parameters.
 
+  ```agda
+  open Params ⦃...⦄
+  ```
   ## BlockTree
 
   ```agda
@@ -95,7 +109,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
          : Set₁ where
     field
   ```
- 
+
   Properties that must hold with respect to blocks and votes
 
   ```agda
@@ -106,10 +120,10 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} {L} (bestChain sl t)
+        → ValidChain {block₀} {_♯} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} {L} c
+        → ValidChain {block₀} {_♯} c
         → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
         → length (blocks c) ≤ length (blocks (bestChain sl t))
 
@@ -346,7 +360,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} where
   ## Voting
 
   ### Comittee membership
-  
+
   ```agda
     data CommitteeMember : PartyId → RoundNumber → Set where
 

@@ -13,6 +13,7 @@ open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto
 open import Peras.Block hiding (ByteString; emptyBS)
+open import Peras.Params
 
 open import Haskell.Prelude
 ```
@@ -114,7 +115,10 @@ open import Data.Nat using (_≤_; _∸_)
 open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
-
+The validity of a chain is defined with respect of the Peras parameters.
+```agda
+open Params ⦃...⦄
+```
 A chain is valid iff:
   * the blocks (ignoring the vote hashes) form a valid Praos chain,
   * all votes:
@@ -130,9 +134,11 @@ TODO: expressing those conditions directly would be very expensive,
 it's more efficient to enforce them whenever the chain is extended.
 
 ```agda
-data ValidChain {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} : Chain → Set where
+module _ {block₀ : Block} {_♯ : Block → Hash} where
 
-  Genesis :
+  data ValidChain : Chain → Set where
+
+    Genesis :
       ValidChain
         record {
           blocks = block₀ ∷ [] ;
@@ -140,17 +146,16 @@ data ValidChain {block₀ : Block} {_♯ : Block → Hash} {L : ℕ} : Chain →
           votes = []
         }
 
-  Cons : ∀ {vs} {c}
-    → (b : Block)
-    → parentBlock b ≡ tip c ♯
-    → ValidChain {block₀} {_♯} {L} c
-    → Unique vs
-    → ¬ (Equivocation vs)
-    → All (λ { v → (blockHash v) ∈ blocks c }) vs
-    → All (λ { v → ((slotNumber b) ∸ L ≤ slotNumber (blockHash v)) }) vs
-    → ValidChain
+    Cons : ∀ {vs : List (Vote Block)} {c : Chain} {b : Block}
+      → parentBlock b ≡ tip c ♯
+      → ValidChain c
+      → Unique vs
+      → ¬ (Equivocation vs)
+      → All (λ { v → blockHash v ∈ blocks c }) vs
+      → All (λ { v → slotNumber (blockHash v) ≤ slotNumber b ∸ L }) vs
+      → ValidChain
         record {
-          blocks = b ∷ (blocks c) ;
+          blocks = b ∷ blocks c ;
           tip = b ;
           votes = vs
         }
