@@ -98,7 +98,7 @@ record Block : Set where
         parentBlock : Hash
         includedVotes : List Hash
         leadershipProof : LeadershipProof
-        payload : List ⊤
+        payload : List Tx
         signature : Signature
 
 open Block public
