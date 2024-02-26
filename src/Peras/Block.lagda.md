@@ -38,7 +38,7 @@ PartyIdO = <-strictTotalOrder
 
 ## Party
 
-```
+```agda
 record Party : Set where
   constructor MkParty
   field id : PartyId

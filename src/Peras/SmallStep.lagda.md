@@ -44,7 +44,7 @@ open RoundNumber public
 The small-step semantics define the possible evolution of the global state of the system
 under the Peras protocol modelling honest and adversary parties.
 
-The goal is to show `safety` and `liveness` for the protocol.
+The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
