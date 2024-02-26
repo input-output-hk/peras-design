@@ -41,10 +41,12 @@ open RoundNumber public
 
 # Small-step semantics
 
-Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
-
 The small-step semantics define the possible evolution of the global state of the system
-with respect to honest and adversary parties.
+under the Peras protocol modelling honest and adversary parties.
+
+The goal is to show `safety` and `liveness` for the protocol.
+
+Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
 ### Progress
 
@@ -77,16 +79,17 @@ record MessageTup : Set where
     cd : Fin 3
 ```
 
-<!--
-Two sets are considered equal, if they are a subset of each other
+We introduce the relation ≐ to denote that two lists have the same elements
+
 ```agda
 open import Relation.Binary.Core using (Rel)
 _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
--->
 
-## Parameterized with genesis block
+In the following the module is parameterized by
+ * a genesis block
+ * a hash function for blocks
 
 ```agda
 module _ {block₀ : Block} {_♯ : Block → Hash} where

@@ -154,11 +154,11 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
       → All (λ { v → blockHash v ∈ blocks c }) vs
       → All (λ { v → slotNumber (blockHash v) ≤ slotNumber b ∸ L }) vs
       → ValidChain
-        record {
-          blocks = b ∷ blocks c ;
-          tip = b ;
-          votes = vs
-        }
+          record {
+            blocks = b ∷ blocks c ;
+            tip = b ;
+            votes = vs
+          }
 ```
 <!--
 ```agda

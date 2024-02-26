@@ -4,17 +4,16 @@ module Peras.Block where
 
 <!--
 ```agda
-open import Level
+open import Data.Bool using (Bool)
 open import Data.Nat using (ℕ)
-open import Data.Bool
-open import Data.List
-
-open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set)
-open import Relation.Binary using (DecidableEquality; StrictTotalOrder)
-
-open import Haskell.Prelude using (Eq)
+open import Data.Nat.Properties using (<-strictTotalOrder)
+open import Data.List using (List)
+open import Level using (0ℓ)
+open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto hiding (ByteString; emptyBS; _isInfixOf_)
+
+open import Haskell.Prelude using (Eq)
 ```
 -->
 
@@ -35,32 +34,32 @@ postulate
 ## PartyId
 
 ```agda
-record PartyId : Set where
-  constructor MkPartyId
-  field vkey : VerificationKey
+PartyId = ℕ -- TODO: Data.Fin ?
+```
 
-open PartyId public
+The party identifier needs to be strictly, totally ordered to be used as key
+
+```agda
+PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
+PartyIdO = <-strictTotalOrder
+```
+
+## Party
+
+```
+record Party : Set where
+  constructor MkParty
+  field id : PartyId
+        vkey : VerificationKey
+
+open Party public
 ```
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS PartyId deriving (Eq) #-}
+{-# COMPILE AGDA2HS Party deriving (Eq) #-}
 ```
 -->
-
-```agda
-postulate
-  paEq : Relation.Binary.Rel PartyId 0ℓ
-  paLt : Relation.Binary.Rel PartyId 0ℓ
-  paIs : Relation.Binary.IsStrictTotalOrder paEq paLt
-
-PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
-PartyIdO = record {
-  Carrier            = PartyId ;
-  _≈_                = paEq ;
-  _<_                = paLt ;
-  isStrictTotalOrder = paIs }
-```
 
 ## Honesty of a party
 
