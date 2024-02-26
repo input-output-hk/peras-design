@@ -30,7 +30,7 @@ import Control.Monad.State (
   evalStateT,
  )
 import GHC.Generics (Generic)
-import Peras.Block (Block (Block, includedVotes), PartyId (MkPartyId))
+import Peras.Block (PartyId (MkPartyId))
 import Peras.Chain (Chain (Genesis))
 import Peras.Crypto (VerificationKey (VerificationKey))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
@@ -111,7 +111,7 @@ runNode protocol total state NodeProcess{..} =
                         do
                           lift $ threadDelay 1000000
                           runRand $ nextSlot protocol slot total
-                      SomeBlock Block{includedVotes} -> runRand $ mapM_ (newVote protocol) includedVotes >> pure mempty
+                      SomeBlock block -> runRand $ newVote protocol block
                       NewChain chain -> runRand $ newChain protocol chain
                   bestChain <- use preferredChain
                   atomically' $

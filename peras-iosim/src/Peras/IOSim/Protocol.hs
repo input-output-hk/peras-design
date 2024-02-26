@@ -124,15 +124,15 @@ newChain PseudoPraos{} chain =
       else pure mempty
 newChain protocol@PseudoPeras{votingBoost} chain =
   do
-    mapM_ (newVote protocol) . concatMap (S.toList . includedVotes) $ asList chain
+    newVotes <- fmap concat . mapM (newVote protocol) $ asList chain
     let chainLength Genesis = 0
         chainLength (Cons Block{includedVotes} chain') = 1 + chainLength chain' + votingBoost * fromIntegral (S.size includedVotes)
     preferred <- use preferredChain
     if on (>) chainLength chain preferred
       then do
         preferredChain .= chain
-        pure [NewChain chain]
-      else pure mempty
+        pure $ NewChain chain : newVotes
+      else pure newVotes
 newChain OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newChain OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
@@ -140,10 +140,17 @@ newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet impleme
 newVote ::
   MonadState NodeState m =>
   Protocol ->
-  Vote ->
-  m ()
-newVote PseudoPraos{} _ = pure ()
-newVote PseudoPeras{} vote = activeVotes %= S.insert vote
+  Block Votes ->
+  m [Message Votes]
+newVote PseudoPraos{} _ = pure mempty
+newVote PseudoPeras{} block@Block{includedVotes} =
+  do
+    unseen <- activeVotes `uses` S.difference includedVotes
+    if S.null unseen
+      then pure mempty
+      else do
+        activeVotes %= S.union includedVotes
+        pure [SomeBlock block]
 newVote OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newVote OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newVote OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
