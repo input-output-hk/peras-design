@@ -164,8 +164,8 @@ isCommitteeMember ::
   Coin ->
   Coin ->
   m Bool
-isCommitteeMember pCommitteeLottery' total staked =
-  let p = 1 - (1 - pCommitteeLottery') ** (fromIntegral staked / fromIntegral total)
+isCommitteeMember pCommitteeLottery' _total staked =
+  let p = 1 - (1 - pCommitteeLottery') ^ staked
    in (<= p) <$> getRandomR (0, 1)
 
 candidateWindow ::
