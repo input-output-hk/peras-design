@@ -10,6 +10,7 @@ module Peras.IOSim.Node.Types (
   committeeMember,
   downstreams,
   nodeId,
+  rollbacks,
   owner,
   activeVotes,
   preferredChain,
@@ -25,7 +26,7 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import GHC.Generics (Generic)
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
-import Peras.IOSim.Types (Coin, Votes)
+import Peras.IOSim.Types (Coin, Rollback, Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 
@@ -45,6 +46,7 @@ data NodeState = NodeState
   , _downstreams :: S.Set NodeId
   , _slotLeader :: Bool
   , _committeeMember :: Bool
+  , _rollbacks :: [Rollback]
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -65,6 +67,7 @@ instance A.FromJSON NodeState where
           _downstreams <- o A..: "downstreams"
           _slotLeader <- o A..: "slotLeader"
           _committeeMember <- o A..: "committeeMember"
+          _rollbacks <- o A..: "rollbacks"
           pure NodeState{..}
 
 instance A.ToJSON NodeState where
@@ -82,6 +85,7 @@ instance A.ToJSON NodeState where
       , "downstreams" A..= _downstreams
       , "slotLeader" A..= _slotLeader
       , "committeeMember" A..= _committeeMember
+      , "rollbacks" A..= _rollbacks
       ]
 
 makeLenses ''NodeState

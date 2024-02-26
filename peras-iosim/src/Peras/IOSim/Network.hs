@@ -256,7 +256,7 @@ routeEnvelope parameters Network{nodesIn} = \case
     currentStates %= M.insert source nodeState
 
 -- Send a message and mark the destination as active.
-output :: Show p => MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
+output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
 output destination inChannel inEnvelope =
   do
     lift . atomically . writeTQueue inChannel $ inEnvelope

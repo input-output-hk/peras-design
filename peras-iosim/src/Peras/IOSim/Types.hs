@@ -6,6 +6,7 @@
 module Peras.IOSim.Types (
   ByteSize,
   Coin,
+  Rollback (..),
   Round,
   Vote (..),
   Votes,
@@ -14,7 +15,7 @@ module Peras.IOSim.Types (
 import Data.Function (on)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Peras.Block (Block, PartyId)
+import Peras.Block (Block, PartyId, Slot)
 import Peras.Crypto (Signature)
 import Peras.Orphans ()
 
@@ -61,4 +62,35 @@ instance A.ToJSON Vote where
       , "signature" A..= voteSignature
       , "voter" A..= voter
       , "block" A..= voteForBlock
+      ]
+
+data Rollback = Rollback
+  { atSlot :: Slot
+  , slots :: Int
+  , blocks :: Int
+  , fromWeight :: Double
+  , toWeight :: Double
+  }
+  deriving stock (Eq, Generic, Ord, Read, Show)
+
+instance A.FromJSON Rollback where
+  parseJSON =
+    A.withObject "Rollback" $
+      \o ->
+        do
+          atSlot <- o A..: "atSlot"
+          slots <- o A..: "slots"
+          blocks <- o A..: "blocks"
+          fromWeight <- o A..: "fromWeight"
+          toWeight <- o A..: "toWeight"
+          pure Rollback{..}
+
+instance A.ToJSON Rollback where
+  toJSON Rollback{..} =
+    A.object
+      [ "atSlot" A..= atSlot
+      , "slots" A..= slots
+      , "blocks" A..= blocks
+      , "fromWeight" A..= fromWeight
+      , "toWeight" A..= toWeight
       ]

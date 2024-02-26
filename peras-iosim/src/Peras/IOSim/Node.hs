@@ -81,6 +81,7 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure downstreams'
     <*> pure False
     <*> pure False
+    <*> pure mempty
 
 runNode ::
   forall m.
