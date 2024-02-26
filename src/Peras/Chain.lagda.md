@@ -26,14 +26,22 @@ open import Haskell.Prelude
 ```agda
 record RoundNumber : Set where
   field roundNumber : ℕ
+
+open RoundNumber public
 ```
+
+<!--
+```agda
+{-# COMPILE AGDA2HS RoundNumber deriving Eq #-}
+```
+-->
 
 ### Vote
 
 ```agda
 record Vote msg : Set where
   constructor MkVote
-  field roundNumber              : RoundNumber
+  field votingRound              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
         blockHash                : msg
@@ -44,7 +52,7 @@ open Vote public
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Vote #-}
+{-# COMPILE AGDA2HS Vote deriving Eq #-}
 ```
 -->
 
@@ -162,7 +170,6 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
 ```
 <!--
 ```agda
-{-
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own
 -- but let's make it total.
 foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Maybe a
@@ -173,52 +180,38 @@ foldl1Maybe f xs =
         Nothing xs
 
 {-# COMPILE AGDA2HS foldl1Maybe #-}
--}
-{-
-  Module arguments are translated as explicit foralls in by Agda2hs, check
-  https://github.com/agda/agda2hs/blob/master/test/ScopedTypeVariables.agda
--}
-{-
-module ChainOps {t : Set} ⦃ isEqt : Eq t ⦄ where
 
-  -- | View of a `Chain` as a mere `List` of blocks.
-  asList : (c : Chain t) -> List (Block t)
-  asList Genesis = []
-  asList (Cons x c) = x ∷ (asList c)
+open import Haskell.Prelude
 
-  {-# COMPILE AGDA2HS asList #-}
+instance
+  postulate
+    iBlockEq : Eq Block
 
-  -- | View of a `List` of blocks as a `Chain` anchored in `Genesis`.
-  asChain : (blocks : List (Block t)) -> Chain t
-  asChain [] = Genesis
-  asChain (x ∷ bs) = Cons x (asChain bs)
+-- {-# COMPILE AGDA2HS iBlockEq #-}
 
-  {-# COMPILE AGDA2HS asChain #-}
+prefix : List Block -> List Block -> List Block -> List Block
+prefix acc (x ∷ xs) (y ∷ ys) =
+  if x == y
+   then prefix (x ∷ acc) xs ys
+   else reverse acc
+prefix acc _ _ = reverse acc
 
-  prefix : List (Block t) -> List (Block t) -> List (Block t) -> List (Block t)
-  prefix acc (x ∷ xs) (y ∷ ys) =
-    if x == y
-     then prefix (x ∷ acc) xs ys
-     else reverse acc
-  prefix acc _ _ = reverse acc
+{-# COMPILE AGDA2HS prefix #-}
 
-  {-# COMPILE AGDA2HS prefix #-}
+commonPrefix : List Chain -> List Block
+commonPrefix chains =
+  case listPrefix of λ where
+     Nothing -> []
+     (Just bs) -> reverse bs
+   where
+     listPrefix : Maybe (List Block)
+     listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (blocks l)) chains)
 
-  commonPrefix : List (Chain t) -> Chain t
-  commonPrefix chains =
-    case listPrefix of λ where
-       Nothing -> Genesis
-       (Just bs) -> asChain (reverse bs)
-     where
-       listPrefix : Maybe (List (Block t))
-       listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (asList l)) chains)
-
-  {-# COMPILE AGDA2HS commonPrefix #-}
+{-# COMPILE AGDA2HS commonPrefix #-}
 
 -- I wish I could prove that and translate it to a QC property in Haskell :)
 -- commonPrefixEq : {t : Set } -> ⦃ eqt : Eq t ⦄ -> (c₁ c₂ : Chain t) -> (c₁ ≡ c₂) -> (commonPrefix (c₁ ∷ c₂ ∷ []) ≡ c₁)
 -- commonPrefixEq = {!!}
--}
 
 {-
 postulate

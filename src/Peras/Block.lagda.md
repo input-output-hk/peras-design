@@ -49,7 +49,7 @@ open Party public
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Party deriving (Eq) #-}
+{-# COMPILE AGDA2HS Party deriving Eq #-}
 ```
 -->
 
@@ -106,6 +106,6 @@ open Block public
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Block #-}
+{-# COMPILE AGDA2HS Block deriving Eq #-}
 ```
 -->

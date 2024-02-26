@@ -8,8 +8,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
-import Peras.Block (Block (..), PartyId (..), Tx (..))
-import Peras.Chain (Chain (..), asChain)
+import Peras.Block (Block (..))
+import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (
   Hash (..),
   LeadershipProof (..),
@@ -20,9 +20,6 @@ import Peras.Crypto (
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, choose, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
-
-instance Arbitrary Tx where
-  arbitrary = Tx <$> (choose (50, 500) >>= genByteString)
 
 instance Arbitrary Hash where
   arbitrary = Hash <$> genByteString 4
@@ -42,17 +39,16 @@ instance Arbitrary VerificationKey where
 genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
 
-instance Arbitrary PartyId where
-  arbitrary = MkPartyId <$> arbitrary
-
-instance (Arbitrary t, Generic t) => Arbitrary (Block t) where
+instance Arbitrary Block where
   arbitrary = genericArbitrary uniform
   shrink block@Block{payload} =
     [block{payload = payload'} | payload' <- shrink payload]
 
-instance (Eq t, Arbitrary t, Generic t) => Arbitrary (Chain t) where
-  arbitrary = asChain <$> arbitrary
+instance Arbitrary RoundNumber where
+  arbitrary = RoundNumber <$> arbitrary
 
-  shrink = \case
-    Genesis -> []
-    Cons _ cs -> [cs]
+instance Arbitrary b => Arbitrary (Vote b) where
+  arbitrary = MkVote <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary Chain where
+  arbitrary = MkChain <$> arbitrary <*> arbitrary <*> arbitrary

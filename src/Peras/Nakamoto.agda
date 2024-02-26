@@ -24,13 +24,14 @@ record ConsensusConfig : Set where
 -- already referenced by blocks in C, and is not an equivocation of a
 -- vote referenced by blocks in C.
 
-postulate chainWeight : ConsensusConfig -> Block⋆ -> set VoteBlockO -> Word64
 {-
+postulate chainWeight : ConsensusConfig -> Block -> set VoteBlockO -> Word64
+
 chainWeight ConsensusConfig{roundLength} Block{blockHeight, slotNumber} pendingVotes =
   let chainWeight = blockHeight
       currentRound = slotNumber `div` roundLength
    in undefined
--}
+
 
 postulate
   wEq : Relation.Binary.Rel Word64 zero
@@ -54,7 +55,7 @@ record ConsensusState : Set where
 data Decision : Set where
   Tally : Vote Block⋆ → Decision
   Seen  : Block⋆ → Decision
-
+-}
 {-
 nakamotoLayer :: ConsensusConfig -> ConsensusState -> Message Block -> Decision
 nakamotoLayer config state = \case

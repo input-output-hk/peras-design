@@ -376,7 +376,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
     honestVote : Slot → RoundNumber → Stateˡ → List Message
     honestVote sl r ⟨ partyId , tree ⟩ =
       VoteMsg (record {
-          roundNumber = r ;
+          votingRound = r ;
           creatorId = partyId ;
           committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
           blockHash = (tip ((bestChain blockTree) sl tree)) ; -- Currently just selecting the tip of the best chain to vote
