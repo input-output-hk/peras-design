@@ -10,16 +10,16 @@ open import Relation.Binary using (StrictTotalOrder)
 open import Data.Unit
 open import Data.Bool
 
--- open import Haskell.Prelude
-
 postulate
   ByteString : Set
   emptyBS : ByteString
   _isInfixOf_ : ByteString → ByteString → Bool
 
-{-# FOREIGN AGDA2HS import Data.ByteString as BS #-}
+{-# FOREIGN AGDA2HS import Data.ByteString #-}
 {-# FOREIGN GHC import qualified Data.ByteString as BS #-}
 {-# COMPILE GHC ByteString = type BS.ByteString #-}
+{-# COMPILE GHC emptyBS = BS.empty #-}
+{-# COMPILE GHC _isInfixOf_ = BS.isInfixOf #-}
 
 record Hash : Set where
   field hash : ByteString

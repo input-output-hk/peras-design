@@ -12,7 +12,7 @@ open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
 open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto
-open import Peras.Block hiding (ByteString; emptyBS)
+open import Peras.Block
 open import Peras.Params
 
 open import Haskell.Prelude
@@ -32,7 +32,7 @@ record RoundNumber : Set where
 
 ```agda
 record Vote msg : Set where
-  constructor vote
+  constructor MkVote
   field roundNumber              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof

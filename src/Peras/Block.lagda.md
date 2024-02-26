@@ -8,6 +8,7 @@ open import Data.Bool using (Bool)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.List using (List)
+open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder)
 
@@ -17,25 +18,16 @@ open import Haskell.Prelude using (Eq)
 ```
 -->
 
-<!--
-```agda
--- TODO: ByteString is not exported from Peras.Crypto in Haskell
-postulate
-  ByteString : Set
-  emptyBS : ByteString
-  _isInfixOf_ : ByteString → ByteString → Bool
-
-{-# FOREIGN AGDA2HS import Data.ByteString as BS #-}
-{-# FOREIGN GHC import qualified Data.ByteString as BS #-}
-{-# COMPILE GHC ByteString = type BS.ByteString #-}
-```
--->
-
 ## PartyId
 
 ```agda
 PartyId = ℕ -- TODO: Data.Fin ?
 ```
+<!--
+```agda
+{-# COMPILE AGDA2HS PartyId deriving (Eq) #-}
+```
+-->
 
 The party identifier needs to be strictly, totally ordered to be used as key
 
@@ -76,15 +68,12 @@ data Honesty : PartyId → Set where
 ## Transactions
 
 ```agda
-record Tx : Set where
-  field tx : ByteString
-
-open Tx public
+Tx = ⊤
 ```
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Tx newtype deriving Eq #-}
+{-# COMPILE AGDA2HS Tx #-}
 ```
 -->
 
@@ -109,7 +98,7 @@ record Block : Set where
         parentBlock : Hash
         includedVotes : List Hash
         leadershipProof : LeadershipProof
-        payload : List Tx
+        payload : List ⊤
         signature : Signature
 
 open Block public
