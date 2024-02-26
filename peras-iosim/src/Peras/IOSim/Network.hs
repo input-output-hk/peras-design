@@ -238,8 +238,8 @@ routeEnvelope parameters Network{nodesIn} = \case
                 NewChain chain -> do
                   chainsSeen %= M.insert source chain
                   case asList chain of
-                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just tip) (S.singleton prior)
-                    tip : _ -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
+                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just prior) (S.singleton tip)
+                    [tip] -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
                     _ -> pure ()
                 SomeBlock block -> votesSeen %= S.union (includedVotes block)
                 _ -> pure ()
