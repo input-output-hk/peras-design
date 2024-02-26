@@ -1,3 +1,9 @@
+## 2024-02-26
+
+### YH - Agda formalization
+
+* Refactoring of the data model in Agda. This requires to adjust all dependent modules
+
 ## 2024-02-23
 
 ### BB - Metric and visualization
