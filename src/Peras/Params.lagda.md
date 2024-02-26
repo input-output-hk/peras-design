@@ -1,9 +1,11 @@
 ```agda
 module Peras.Params where
-
-open import Data.Nat using (ℕ)
-
 ```
+<!--
+```agda
+open import Data.Nat using (ℕ)
+```
+-->
 ## Peras parameters
 ```agda
 record Params : Set where
@@ -20,7 +22,7 @@ record Params : Set where
 The length (in slots) of a voting round
 
 #### K
-The length of a cooldown period (in voting rounds). This needs to be large enough so that order of b*n + k blocks are produced in time T*K, where k is the current common-prefix parameter
+The length of a cooldown period (in voting rounds). This needs to be large enough so that order of b\*n + k blocks are produced in time T\*K, where k is the current common-prefix parameter
 
 #### Lₗ, Lₕ 
 Defines the vote-candidate window is a security parameter to guarantee that there exists a block in the interval [Lₗ, Lₕ]
@@ -29,7 +31,7 @@ Defines the vote-candidate window is a security parameter to guarantee that ther
 Max age for including vote. A constant large enough to ensure honest votes get included
 
 #### τ
-The Number of votes required for quorum (3/4*n + 2*δ for some δ > 0)
+The Number of votes required for quorum (3/4\*n + 2\*δ for some δ > 0)
 
 #### b
 The weight boost per vote
