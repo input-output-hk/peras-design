@@ -12,20 +12,21 @@ module Peras.IOSim.Protocol (
   newVote,
 ) where
 
-import Control.Lens (use, uses, (%=), (.=))
+import Control.Lens (use, uses, (%=), (&), (.=))
 import Control.Monad (replicateM)
 import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (MonadState)
 import Data.Default (Default (def))
 import Data.Function (on)
+import Data.List (partition)
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (Block, includedVotes, signature, slotNumber), Slot)
 import Peras.Chain (Chain (..), asList)
 import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
-import Peras.IOSim.Node.Types (NodeState, activeVotes, committeeMember, owner, preferredChain, slot, slotLeader, stake)
+import Peras.IOSim.Node.Types (NodeState, activeVotes, committeeMember, owner, preferredChain, rollbacks, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Types (Coin, Round, Vote (..), Votes)
+import Peras.IOSim.Types (Coin, Rollback (..), Round, Vote (..), Votes)
 import Peras.Message (Message (NewChain, SomeBlock))
 
 import qualified Data.ByteString as BS
@@ -124,15 +125,29 @@ newChain PseudoPraos{} chain =
       else pure mempty
 newChain protocol@PseudoPeras{votingBoost} chain =
   do
-    mapM_ (newVote protocol) . concatMap (S.toList . includedVotes) $ asList chain
+    newVotes <- fmap concat . mapM (newVote protocol) $ asList chain
     let chainLength Genesis = 0
         chainLength (Cons Block{includedVotes} chain') = 1 + chainLength chain' + votingBoost * fromIntegral (S.size includedVotes)
     preferred <- use preferredChain
-    if on (>) chainLength chain preferred
+    let fromWeight = chainLength preferred
+        toWeight = chainLength chain
+        checkRollback olds news =
+          partition (`elem` asList news) (asList olds)
+            & \case
+              (_, []) -> pure ()
+              (prefix, suffix) ->
+                let
+                  atSlot = if null prefix then 0 else slotNumber $ head prefix
+                  slots = on (-) fromIntegral (slotNumber $ head suffix) atSlot
+                  blocks = length suffix
+                 in
+                  rollbacks %= (Rollback{..} :)
+    if toWeight > fromWeight
       then do
+        checkRollback preferred chain
         preferredChain .= chain
-        pure [NewChain chain]
-      else pure mempty
+        pure $ NewChain chain : newVotes
+      else pure newVotes
 newChain OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newChain OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
@@ -140,10 +155,17 @@ newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet impleme
 newVote ::
   MonadState NodeState m =>
   Protocol ->
-  Vote ->
-  m ()
-newVote PseudoPraos{} _ = pure ()
-newVote PseudoPeras{} vote = activeVotes %= S.insert vote
+  Block Votes ->
+  m [Message Votes]
+newVote PseudoPraos{} _ = pure mempty
+newVote PseudoPeras{} block@Block{includedVotes} =
+  do
+    unseen <- activeVotes `uses` S.difference includedVotes
+    if S.null unseen
+      then pure mempty
+      else do
+        activeVotes %= S.union includedVotes
+        pure [SomeBlock block]
 newVote OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newVote OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newVote OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
@@ -164,8 +186,8 @@ isCommitteeMember ::
   Coin ->
   Coin ->
   m Bool
-isCommitteeMember pCommitteeLottery' total staked =
-  let p = 1 - (1 - pCommitteeLottery') ** (fromIntegral staked / fromIntegral total)
+isCommitteeMember pCommitteeLottery' _total staked =
+  let p = 1 - (1 - pCommitteeLottery') ^ staked
    in (<= p) <$> getRandomR (0, 1)
 
 candidateWindow ::

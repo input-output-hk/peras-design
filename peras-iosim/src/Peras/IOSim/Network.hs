@@ -20,7 +20,7 @@ import Control.Lens (
  )
 import Control.Monad (unless, void)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
-import Control.Monad.Class.MonadSay
+import Control.Monad.Class.MonadSay (MonadSay)
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
@@ -73,7 +73,7 @@ randomTopology Parameters{..} =
           (j :) <$> choose (n - 1) (j `delete` js)
       randomConnects i topology =
         foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
-          <$> choose downstreamCount [0 .. peerCount - 1]
+          <$> choose downstreamCount (i `delete` [0 .. peerCount - 1])
    in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
@@ -238,8 +238,8 @@ routeEnvelope parameters Network{nodesIn} = \case
                 NewChain chain -> do
                   chainsSeen %= M.insert source chain
                   case asList chain of
-                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just tip) (S.singleton prior)
-                    tip : _ -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
+                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just prior) (S.singleton tip)
+                    [tip] -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
                     _ -> pure ()
                 SomeBlock block -> votesSeen %= S.union (includedVotes block)
                 _ -> pure ()
