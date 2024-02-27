@@ -16,12 +16,11 @@ data Vote msg = MkVote
   }
   deriving (Eq)
 
-data Chain = MkChain
-  { blocks :: [Block]
-  , tip :: Block
-  , votes :: [Vote Block]
-  }
+data Chain = MkChain {blocks :: [Block], votes :: [Vote Block]}
   deriving (Eq)
+
+tip :: Chain -> Block
+tip (MkChain blocks _) = head blocks
 
 foldl1Maybe :: (a -> a -> a) -> [a] -> Maybe a
 foldl1Maybe f xs =

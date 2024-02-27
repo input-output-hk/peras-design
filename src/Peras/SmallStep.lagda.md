@@ -22,7 +22,7 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
-open import Peras.Chain using (Chain; Vote; RoundNumber; _∻_; ValidChain)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain)
 open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 open import Peras.Params

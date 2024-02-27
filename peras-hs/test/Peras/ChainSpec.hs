@@ -19,12 +19,11 @@ spec :: Spec
 spec = do
   describe "Read/Show instances" $ do
     it "can read a simple Chain" $ do
-      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", payload = [], signature = \"00000100\"}], tip = Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", payload = [], signature = \"00000100\"}, votes = []}"
+      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", payload = [], signature = \"00000100\"}], votes = []}"
 
           c =
             MkChain
               { blocks = [Block{slotNumber = 1, creatorId = 1, parentBlock = "00000000", includedVotes = [], leadershipProof = "01000101", payload = [], signature = "00000100"}]
-              , tip = Block{slotNumber = 1, creatorId = 1, parentBlock = "00000000", includedVotes = [], leadershipProof = "01000101", payload = [], signature = "00000100"}
               , votes = []
               }
        in v `shouldBe` c
@@ -61,14 +60,12 @@ block2 = Block{slotNumber = 44, creatorId = 2, parentBlock = "", includedVotes =
 chain1 =
   MkChain
     { blocks = [block1, block2]
-    , tip = block2
     , votes = []
     }
 
 chain2 =
   MkChain
     { blocks = [block2]
-    , tip = block2
     , votes = []
     }
 

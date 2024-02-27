@@ -4,12 +4,8 @@ module Peras.Chain where
 
 <!--
 ```agda
-open import Agda.Builtin.Word
 open import Data.Bool using (_∧_)
 open import Data.Nat using (ℕ)
-open import Level
-open import Data.Tree.AVL.Sets renaming (⟨Set⟩ to set) hiding (foldr)
-open import Relation.Binary using (StrictTotalOrder)
 
 open import Peras.Crypto
 open import Peras.Block
@@ -97,15 +93,26 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
-        tip : Block
         votes : List (Vote Block)
+        @0 non-empty : NonEmpty blocks
 
 open Chain public
 ```
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Chain deriving (Eq) #-}
+{-# COMPILE AGDA2HS Chain deriving Eq #-}
+```
+-->
+
+```agda
+tip : Chain → Block
+tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
+```
+
+<!--
+```agda
+{-# COMPILE AGDA2HS tip #-}
 ```
 -->
 
@@ -150,8 +157,8 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
       ValidChain
         record {
           blocks = block₀ ∷ [] ;
-          tip = block₀ ;
-          votes = []
+          votes = [] ;
+          non-empty = NonEmpty.itsNonEmpty
         }
 
     Cons : ∀ {vs : List (Vote Block)} {c : Chain} {b : Block}
@@ -164,8 +171,8 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            tip = b ;
-            votes = vs
+            votes = vs ;
+            non-empty = NonEmpty.itsNonEmpty
           }
 ```
 <!--

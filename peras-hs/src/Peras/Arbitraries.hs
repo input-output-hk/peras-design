@@ -51,4 +51,4 @@ instance Arbitrary b => Arbitrary (Vote b) where
   arbitrary = MkVote <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary Chain where
-  arbitrary = MkChain <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = MkChain <$> arbitrary <*> arbitrary

@@ -140,7 +140,6 @@ instance A.FromJSON Chain where
       \o ->
         do
           blocks <- o A..: "blocks"
-          tip <- o A..: "tip"
           votes <- o A..: "votes"
           pure MkChain{..}
 
@@ -148,7 +147,6 @@ instance A.ToJSON Chain where
   toJSON MkChain{..} =
     A.object
       [ "blocks" A..= blocks
-      , "tip" A..= tip
       , "votes" A..= votes
       ]
 
