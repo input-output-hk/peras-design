@@ -176,6 +176,34 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
             non-empty = NonEmpty.itsNonEmpty
           }
 ```
+
+#### Properties
+
+For a valid chain we can show, that the blocks are non-empty without relying on the
+property in `non-empty` of the `Chain`.
+
+```agda
+  instance
+    itsNonEmptyChain : ∀ {c : Chain} → {ValidChain c} → NonEmpty (blocks c)
+    itsNonEmptyChain {MkChain (x ∷ _) _ _} = NonEmpty.itsNonEmpty
+```
+
+The last block in a valid chain is always the genesis block.
+
+```agda
+  last-is-block₀ : ∀ {c : Chain}
+    → (v : ValidChain c)
+    → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
+  last-is-block₀ Genesis = refl
+  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _ _) =
+    trans
+      (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
+      (last-is-block₀ {c} v)
+    where
+      drop-head : ∀ {A : Set} → (c : List A) → (b : A) → ⦃ _ : NonEmpty c ⦄ → last (b ∷ c) ≡ last c
+      drop-head (_ ∷ _) _ ⦃ NonEmpty.itsNonEmpty ⦄ = refl
+```
+
 <!--
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own
