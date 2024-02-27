@@ -41,9 +41,10 @@ test-suite test
     main-is:          Main.hs
     other-modules:    Peras.ChainSpec
     build-depends:
-                      base >= 4.9 && <5
+                        base >= 4.9 && <5
                   , QuickCheck
                   , hspec
+                  , hspec-golden-aeson
                   , peras-hs
                   , quickcheck-classes
 
