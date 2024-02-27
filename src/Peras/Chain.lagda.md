@@ -83,10 +83,11 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
     ∧ verify vkey signature (toSignable v)
 -}
 ```
+-->
 
 ### Chain
 
- * The tip of this chain, must be a member of `blocks`
+ * The tip of this chain is the head of `blocks`
  * The set of "pending" votes, eg. which have not been included in a `Block`.
 
 ```agda
