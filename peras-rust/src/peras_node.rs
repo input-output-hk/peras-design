@@ -1,4 +1,4 @@
-use chrono::serde::ts_seconds;
+use crate::chain::Chain;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -9,12 +9,12 @@ pub struct InEnvelope {}
 pub struct NodeState {}
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all_fields = "camelCase")]
 pub enum OutEnvelope {
     Idle {
-        #[serde(with = "ts_seconds")]
         timestamp: DateTime<Utc>,
         source: String,
-        currentState: NodeState,
+        best_chain: Chain,
     },
 }
 
@@ -44,7 +44,10 @@ impl Node {
         Some(OutEnvelope::Idle {
             timestamp: Utc::now(),
             source: "N1".to_string(),
-            currentState: NodeState {},
+            best_chain: Chain {
+                blocks: vec![],
+                votes: vec![],
+            },
         })
     }
 }
