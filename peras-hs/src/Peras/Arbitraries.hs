@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -6,7 +5,6 @@ module Peras.Arbitraries where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Block (Block (..))
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
@@ -18,7 +16,7 @@ import Peras.Crypto (
   VerificationKey (..),
  )
 import Peras.Orphans ()
-import Test.QuickCheck (Arbitrary (..), Gen, choose, vectorOf)
+import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
 
 instance Arbitrary Hash where
