@@ -14,8 +14,8 @@ module Peras.Orphans where
 import Data.Bifunctor (first)
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
-import Peras.Block (Block (..), PartyId (..), Tx (..))
-import Peras.Chain (Chain (..), asChain, asList)
+import Peras.Block (Block (..))
+import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
 import Peras.Message (Message (..), NodeId (..))
 
@@ -47,12 +47,12 @@ instance A.FromJSON Bytes where
 instance A.ToJSON Bytes where
   toJSON = A.String . T.pack . init . tail . show
 
-deriving stock instance Generic v => Generic (Block v)
-deriving stock instance Ord v => Ord (Block v)
-deriving stock instance Read v => Read (Block v)
-deriving stock instance Show v => Show (Block v)
+deriving stock instance Generic Block
+deriving stock instance Ord Block
+deriving stock instance Read Block
+deriving stock instance Show Block
 
-instance A.FromJSON v => A.FromJSON (Block v) where
+instance A.FromJSON Block where
   parseJSON =
     A.withObject "Block" $
       \o ->
@@ -66,7 +66,7 @@ instance A.FromJSON v => A.FromJSON (Block v) where
           signature <- o A..: "signature"
           pure Block{..}
 
-instance A.ToJSON v => A.ToJSON (Block v) where
+instance A.ToJSON Block where
   toJSON Block{..} =
     A.object
       [ "slotNo" A..= slotNumber
@@ -78,27 +78,76 @@ instance A.ToJSON v => A.ToJSON (Block v) where
       , "signature" A..= signature
       ]
 
-instance A.ToJSON v => A.ToJSONKey (Maybe (Block v)) where
+deriving stock instance Generic RoundNumber
+deriving stock instance Ord RoundNumber
+deriving stock instance Read RoundNumber
+deriving stock instance Show RoundNumber
+
+instance A.ToJSONKey (Maybe Block) where
   toJSONKey =
     A.toJSONKeyText $
       \case
         Nothing -> ""
         Just Block{signature = s} -> T.pack . BS8.unpack . B16.encode $ Peras.Crypto.signature s
 
-deriving stock instance Generic v => Generic (Chain v)
-deriving stock instance Ord v => Ord (Chain v)
-deriving stock instance Read v => Read (Chain v)
-deriving stock instance Show v => Show (Chain v)
+instance A.FromJSON RoundNumber where
+  parseJSON =
+    A.withObject "RoundNumber" $
+      \o ->
+        do
+          roundNumber <- o A..: "roundNumber"
+          pure RoundNumber{..}
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (Chain v) where
+instance A.ToJSON RoundNumber where
+  toJSON RoundNumber{..} =
+    A.object ["roundNumber" A..= roundNumber]
+
+deriving stock instance Generic v => Generic (Vote v)
+deriving stock instance Ord v => Ord (Vote v)
+deriving stock instance Read v => Read (Vote v)
+deriving stock instance Show v => Show (Vote v)
+
+instance A.FromJSON v => A.FromJSON (Vote v) where
+  parseJSON =
+    A.withObject "Block" $
+      \o ->
+        do
+          votingRound <- o A..: "votingRound"
+          creatorId <- o A..: "creatorId"
+          committeeMembershipProof <- o A..: "committeeMembershipProof"
+          blockHash <- o A..: "blockHash"
+          signature <- o A..: "signature"
+          pure MkVote{..}
+
+instance A.ToJSON v => A.ToJSON (Vote v) where
+  toJSON MkVote{..} =
+    A.object
+      [ "votingRound" A..= votingRound
+      , "creatorId" A..= creatorId
+      , "committeeMembershipProof" A..= committeeMembershipProof
+      , "blockHash" A..= blockHash
+      , "signature" A..= signature
+      ]
+
+deriving stock instance Generic Chain
+deriving stock instance Ord Chain
+deriving stock instance Read Chain
+deriving stock instance Show Chain
+
+instance A.FromJSON Chain where
   parseJSON =
     A.withObject "Chain" $
-      \o -> asChain <$> o A..: "blocks"
+      \o ->
+        do
+          blocks <- o A..: "blocks"
+          votes <- o A..: "votes"
+          pure MkChain{..}
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (Chain v) where
-  toJSON chain =
+instance A.ToJSON Chain where
+  toJSON MkChain{..} =
     A.object
-      [ "blocks" A..= asList chain
+      [ "blocks" A..= blocks
+      , "votes" A..= votes
       ]
 
 deriving stock instance Generic Hash
@@ -109,13 +158,13 @@ deriving via Bytes instance IsString Hash
 deriving via Bytes instance A.FromJSON Hash
 deriving via Bytes instance A.ToJSON Hash
 
-deriving stock instance Eq v => Eq (Message v)
-deriving stock instance Generic v => Generic (Message v)
-deriving stock instance Ord v => Ord (Message v)
-deriving stock instance Read v => Read (Message v)
-deriving stock instance Show v => Show (Message v)
+deriving stock instance Eq Message
+deriving stock instance Generic Message
+deriving stock instance Ord Message
+deriving stock instance Read Message
+deriving stock instance Show Message
 
-instance (A.FromJSON v, Eq v) => A.FromJSON (Message v) where
+instance A.FromJSON Message where
   parseJSON =
     A.withObject "Message" $
       \o ->
@@ -127,7 +176,7 @@ instance (A.FromJSON v, Eq v) => A.FromJSON (Message v) where
             "NewChain" -> NewChain <$> o A..: "chain"
             _ -> A.parseFail $ "Illegal input: " <> input
 
-instance (A.ToJSON v, Eq v) => A.ToJSON (Message v) where
+instance A.ToJSON Message where
   toJSON (NextSlot slot) =
     A.object
       [ "input" A..= ("NextSlot" :: String)
@@ -185,30 +234,6 @@ instance A.FromJSONKey NodeId where
 instance A.ToJSONKey NodeId where
   toJSONKey = A.toJSONKeyText $ T.pack . nodeId
 
-deriving stock instance Generic PartyId
-deriving stock instance Ord PartyId
-
-instance Read PartyId where
-  readsPrec s = fmap (first MkPartyId) . readsPrec s
-
-instance Show PartyId where
-  show = show . vkey
-
-instance IsString PartyId where
-  fromString = MkPartyId . fromString
-
-instance A.FromJSON PartyId where
-  parseJSON = fmap MkPartyId . A.parseJSON
-
-instance A.ToJSON PartyId where
-  toJSON = A.toJSON . vkey
-
-instance A.FromJSONKey PartyId where
-  fromJSONKey = A.FromJSONKeyTextParser $ either A.parseFail (pure . MkPartyId . VerificationKey) . B16.decode . BS8.pack . T.unpack
-
-instance A.ToJSONKey PartyId where
-  toJSONKey = A.toJSONKeyText $ T.pack . BS8.unpack . B16.encode . verificationKey . vkey
-
 deriving stock instance Generic Signature
 deriving stock instance Ord Signature
 deriving via Bytes instance Read Signature
@@ -216,14 +241,6 @@ deriving via Bytes instance Show Signature
 deriving via Bytes instance IsString Signature
 deriving via Bytes instance A.FromJSON Signature
 deriving via Bytes instance A.ToJSON Signature
-
-deriving stock instance Generic Tx
-deriving stock instance Ord Tx
-deriving via Bytes instance Read Tx
-deriving via Bytes instance Show Tx
-deriving via Bytes instance IsString Tx
-deriving via Bytes instance A.FromJSON Tx
-deriving via Bytes instance A.ToJSON Tx
 
 deriving stock instance Generic VerificationKey
 deriving stock instance Ord VerificationKey

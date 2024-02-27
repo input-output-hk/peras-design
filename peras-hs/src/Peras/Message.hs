@@ -5,7 +5,7 @@ import Peras.Chain (Chain)
 
 data NodeId = MkNodeId {nodeId :: String}
 
-data Message votes
+data Message
   = NextSlot Slot
-  | SomeBlock (Block votes)
-  | NewChain (Chain votes)
+  | SomeBlock Block
+  | NewChain Chain
