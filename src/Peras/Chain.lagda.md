@@ -85,7 +85,7 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 ```
 -->
 
-### Chain
+## Chain
 
  * The tip of this chain is the head of `blocks`
  * The set of "pending" votes, eg. which have not been included in a `Block`.
@@ -117,7 +117,7 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 ```
 -->
 
-## Chain validity
+### Chain validity
 
 <!--
 ```agda
