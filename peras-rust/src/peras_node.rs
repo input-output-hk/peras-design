@@ -54,11 +54,30 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::BufReader, path::Path};
+
     use super::*;
 
+    #[derive(Debug, Deserialize, Serialize)]
+    struct Golden<T> {
+        samples: Vec<T>,
+    }
+
     #[test]
-    fn it_works() {
-        let result = false;
-        assert!(result);
+    fn can_deserialize_chain_from_json() {
+        let curfile = file!();
+        let golden_path = Path::new(curfile)
+            .parent()
+            .unwrap()
+            .join("../../peras-hs/golden/Chain.json");
+        println!("file: {:?}", golden_path);
+        let golden_file = File::open(golden_path).expect("Unable to open file");
+        let reader = BufReader::new(golden_file);
+        let result: Result<Golden<Chain>, _> = serde_json::from_reader(reader);
+
+        if let Err(err) = result {
+            println!("{}", err);
+            assert!(false);
+        }
     }
 }
