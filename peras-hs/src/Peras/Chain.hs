@@ -4,7 +4,7 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
 
-data RoundNumber = RoundNumber {roundNumber :: Natural}
+newtype RoundNumber = RoundNumber {roundNumber :: Natural}
   deriving (Eq)
 
 data Vote msg = MkVote

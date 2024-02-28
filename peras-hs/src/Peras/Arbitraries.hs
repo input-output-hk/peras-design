@@ -20,19 +20,19 @@ import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
 
 instance Arbitrary Hash where
-  arbitrary = Hash <$> genByteString 4
+  arbitrary = Hash <$> genByteString 8
 
 instance Arbitrary Signature where
-  arbitrary = Signature <$> genByteString 4
+  arbitrary = Signature <$> genByteString 8
 
 instance Arbitrary LeadershipProof where
-  arbitrary = LeadershipProof <$> genByteString 4
+  arbitrary = LeadershipProof <$> genByteString 8
 
 instance Arbitrary MembershipProof where
-  arbitrary = MembershipProof <$> genByteString 4
+  arbitrary = MembershipProof <$> genByteString 8
 
 instance Arbitrary VerificationKey where
-  arbitrary = VerificationKey <$> genByteString 4
+  arbitrary = VerificationKey <$> genByteString 8
 
 genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
