@@ -41,11 +41,3 @@ The weight to cut off for common prefix
 
 #### N
 The committee size. This is a security parameter to avoid adversarially dominated committees
-
-### Default instance
-
-```agda
-instance
-  postulate
-    default-params : Params
-```

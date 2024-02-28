@@ -152,6 +152,7 @@ it's more efficient to enforce them whenever the chain is extended.
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄

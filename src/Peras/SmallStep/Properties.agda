@@ -7,6 +7,7 @@ open import Data.Maybe using (just)
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
 open import Peras.Chain using (Vote)
 open import Peras.Crypto using (Hashable)
+open import Peras.Params using (Params)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 
@@ -16,6 +17,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
+         ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄

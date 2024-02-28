@@ -96,6 +96,7 @@ In the following the module is parameterized by
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
+         ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄
