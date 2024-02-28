@@ -10,6 +10,9 @@ category:           Network
 build-type:         Simple
 extra-source-files: ReadMe.md
 
+data-files:
+  golden/Chain.json
+
 library
   exposed-modules:
     Peras.Arbitraries
@@ -40,6 +43,7 @@ test-suite test
     hs-source-dirs:   test
     main-is:          Main.hs
     other-modules:    Peras.ChainSpec
+                      Peras.OrphansSpec
     build-depends:
                         base >= 4.9 && <5
                   , QuickCheck
