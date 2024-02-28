@@ -174,10 +174,10 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
 
 ```agda
   module _ {T : Set}
-           (blockTree : TreeType T)
-           (honest? : (p : PartyId) → Honesty p) -- Predicate or bool?
-           (lottery : PartyId → Slot → Bool)
-           (txSelection : Slot → PartyId → List Tx)
+           {blockTree : TreeType T}
+           {honest? : (p : PartyId) → Honesty p} -- Predicate or bool?
+           {lottery : PartyId → Slot → Bool}
+           {txSelection : Slot → PartyId → List Tx}
            where
 ```
 
