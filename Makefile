@@ -25,7 +25,7 @@ $(HSDIR)/src/Peras/SmallStep.hs: src/Peras/SmallStep.lagda.md
 	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 $(HSDIR)/src/Peras/Chain.hs: src/Peras/Chain.lagda.md
-	@$(AGDA2HS) --config agda2hs.yaml --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 .PHONY : clean veryclean
 clean:
