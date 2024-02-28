@@ -94,7 +94,7 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
-        votes : List (Vote Block)
+        votes : List (Vote Hash)
         @0 non-empty : NonEmpty blocks
 
 open Chain public
@@ -172,7 +172,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            votes = vs ;
+            votes = map (λ { (MkVote r c m b s) → MkVote r c m (b ♯) s }) vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
 ```
