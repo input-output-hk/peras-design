@@ -1,0 +1,3 @@
+rewrites:
+  - from: "Peras.Chain.VoteB"
+    to: "Vote Hash"

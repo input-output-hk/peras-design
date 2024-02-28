@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -80,8 +81,8 @@ deriving stock instance Generic RoundNumber
 deriving stock instance Ord RoundNumber
 deriving stock instance Read RoundNumber
 deriving stock instance Show RoundNumber
-instance FromJSON RoundNumber
-instance ToJSON RoundNumber
+deriving newtype instance FromJSON RoundNumber
+deriving newtype instance ToJSON RoundNumber
 
 instance Enum RoundNumber where
   toEnum = RoundNumber . toEnum
@@ -120,42 +121,42 @@ deriving stock instance Ord Hash
 deriving via Bytes instance Read Hash
 deriving via Bytes instance Show Hash
 deriving via Bytes instance IsString Hash
-instance FromJSON Hash
-instance ToJSON Hash
-instance FromJSONKey Hash
-instance ToJSONKey Hash
+deriving via Bytes instance FromJSON Hash
+deriving via Bytes instance ToJSON Hash
+deriving via Bytes instance FromJSONKey Hash
+deriving via Bytes instance ToJSONKey Hash
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof
 deriving via Bytes instance Read MembershipProof
 deriving via Bytes instance Show MembershipProof
 deriving via Bytes instance IsString MembershipProof
-instance FromJSON MembershipProof
-instance ToJSON MembershipProof
+deriving via Bytes instance FromJSON MembershipProof
+deriving via Bytes instance ToJSON MembershipProof
 
 deriving stock instance Generic LeadershipProof
 deriving stock instance Ord LeadershipProof
 deriving via Bytes instance Read LeadershipProof
 deriving via Bytes instance Show LeadershipProof
 deriving via Bytes instance IsString LeadershipProof
-instance FromJSON LeadershipProof
-instance ToJSON LeadershipProof
+deriving via Bytes instance FromJSON LeadershipProof
+deriving via Bytes instance ToJSON LeadershipProof
 
 deriving stock instance Generic Signature
 deriving stock instance Ord Signature
 deriving via Bytes instance Read Signature
 deriving via Bytes instance Show Signature
 deriving via Bytes instance IsString Signature
-instance FromJSON Signature
-instance ToJSON Signature
+deriving via Bytes instance FromJSON Signature
+deriving via Bytes instance ToJSON Signature
 
 deriving stock instance Generic VerificationKey
 deriving stock instance Ord VerificationKey
 deriving via Bytes instance Read VerificationKey
 deriving via Bytes instance Show VerificationKey
 deriving via Bytes instance IsString VerificationKey
-instance FromJSON VerificationKey
-instance ToJSON VerificationKey
+deriving via Bytes instance FromJSON VerificationKey
+deriving via Bytes instance ToJSON VerificationKey
 
 -- Orphans for `Peras.Message`.
 

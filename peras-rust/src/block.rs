@@ -3,10 +3,13 @@ use serde::{Deserialize, Serialize};
 
 pub type Slot = u64;
 
+pub type PartyId = u64;
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "tag", rename_all = "camelCase")]
-pub struct PartyId {
-    pub id: u64,
+pub struct Party {
+    pub id: PartyId,
+    #[serde(with = "hex::serde")]
     pub vkey: [u8; 8],
 }
 

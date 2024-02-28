@@ -66,6 +66,8 @@ mod tests {
     #[test]
     fn can_deserialize_chain_from_json() {
         let curfile = file!();
+        // FIXME: having hardcoded relative path is not greatt for maintainability
+        // and portability
         let golden_path = Path::new(curfile)
             .parent()
             .unwrap()

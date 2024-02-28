@@ -6,7 +6,7 @@ import Peras.Crypto (Hash, Hashable, MembershipProof, Signature (bytes))
 
 import Peras.Crypto (Hash (..), Hashable (..))
 
-data RoundNumber = RoundNumber {roundNumber :: Natural}
+newtype RoundNumber = RoundNumber {roundNumber :: Natural}
   deriving (Eq)
 
 data Vote msg = MkVote
