@@ -23,7 +23,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain)
-open import Peras.Crypto using (Hash; HashO; hash; emptyBS; MembershipProof; Signature)
+open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
+
 open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 open import Peras.Params
 
@@ -71,7 +72,7 @@ data Message : Set where
 ```
 
 ```agda
-record MessageTup : Set where
+record Envelope : Set where
   constructor ⦅_,_,_⦆
   field
     msg : Message
@@ -92,7 +93,12 @@ In the following the module is parameterized by
  * a hash function for blocks
 
 ```agda
-module _ {block₀ : Block} {_♯ : Block → Hash} where
+module _ {block₀ : Block}
+         ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable (Vote Block) ⦄
+         where
+
+  open Hashable ⦃...⦄
 ```
   The block tree, resp. the validity of the chain is defined with respect of the
   parameters.
@@ -123,10 +129,10 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} (bestChain sl t)
+        → ValidChain {block₀} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
-        → ValidChain {block₀} {_♯} c
+        → ValidChain {block₀} c
         → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
         → length (blocks c) ≤ length (blocks (bestChain sl t))
 
@@ -146,6 +152,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
       bestChain : Slot → T → Chain
 
       addVote : T → Vote Block → T
+      danglingVotes : T → List (Vote Block)
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
@@ -199,11 +206,16 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
     honestCreate : Slot → List Tx → Stateˡ → List Message × Stateˡ
     honestCreate sl txs ⟨ p , tree ⟩ with lottery p sl
     ... | true = let best = (bestChain blockTree) (pred sl) tree
+                     votes = (danglingVotes blockTree) tree
+                     -- TODO:
+                     --   check expired
+                     --   preferred chain
+                     --   is equivocation
                      newBlock = record {
                          slotNumber = sl ;
                          creatorId = p ;
                          parentBlock = tip best ♯ ;
-                         includedVotes = [] ; -- S.empty HashO ; -- TODO: Peras
+                         includedVotes = map _♯ votes ;
                          leadershipProof = record { proof = emptyBS } ; -- FIXME
                          payload = txs ;
                          signature = record { signature = emptyBS } -- FIXME
@@ -229,7 +241,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
         clock : Slot
         progress : Progress
         stateMap : Map Stateˡ
-        messages : List MessageTup
+        messages : List Envelope
         history : List Message
         execution-order : List PartyId -- TODO: List (Honesty p) ?
         votingRound : RoundNumber
@@ -266,7 +278,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
 
     open import Relation.Binary.Bundles using (StrictTotalOrder)
 
-    fetchMsgs : PartyId → Stateᵍ → List Message × List MessageTup
+    fetchMsgs : PartyId → Stateᵍ → List Message × List Envelope
     fetchMsgs p N =
         let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → ⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋ }) (messages N)
             rest = filterᵇ ( λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
@@ -379,7 +391,7 @@ module _ {block₀ : Block} {_♯ : Block → Hash} where
           votingRound = r ;
           creatorId = partyId ;
           committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-          blockHash = (tip ((bestChain blockTree) sl tree)) ; -- Currently just selecting the tip of the best chain to vote
+          blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
           signature = record { signature = emptyBS } -- FIXME
         }) ∷ []
 ```

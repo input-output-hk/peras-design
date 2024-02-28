@@ -150,7 +150,11 @@ TODO: expressing those conditions directly would be very expensive,
 it's more efficient to enforce them whenever the chain is extended.
 
 ```agda
-module _ {block₀ : Block} {_♯ : Block → Hash} where
+module _ {block₀ : Block}
+         ⦃ _ : Hashable Block ⦄
+         where
+
+  open Hashable ⦃...⦄
 
   data ValidChain : Chain → Set where
 

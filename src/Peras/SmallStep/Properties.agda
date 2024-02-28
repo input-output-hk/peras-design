@@ -5,7 +5,8 @@ open import Data.List using (List)
 open import Data.Maybe using (just)
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
-open import Peras.Crypto using (Hash)
+open import Peras.Chain using (Vote)
+open import Peras.Crypto using (Hashable)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 
@@ -13,13 +14,15 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 module _ {block₀ : Block}
-         {_♯ : Block → Hash}
+         ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable (Vote Block) ⦄
          where
 
+  open Hashable ⦃...⦄
   open import Peras.SmallStep using (TreeType)
 
   module _ {T : Set}
-           (blockTree : TreeType {block₀} {_♯} T)
+           (blockTree : TreeType {block₀} T)
            (honest? : (p : PartyId) → Honesty p)
            (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
@@ -35,7 +38,7 @@ module _ {block₀ : Block}
 
     -- knowledge propagation
     postulate
-      lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {_♯} {T} {blockTree} {honest?} {lottery} {txSelection}}
+      lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {honest?} {lottery} {txSelection}}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : T}
         → N₀ ↝ N₁
