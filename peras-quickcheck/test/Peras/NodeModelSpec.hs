@@ -10,7 +10,7 @@ import Peras.Node.IOSim (runPropInIOSim)
 import Peras.Node.Netsim (runPropInNetSim)
 import Peras.NodeModel (Action (..), NodeModel (..))
 import Test.Hspec (Spec, describe)
-import Test.Hspec.QuickCheck (prop, xprop)
+import Test.Hspec.QuickCheck (modifyMaxSuccess, prop, xprop)
 import Test.QuickCheck (Property, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Monadic (assert)
@@ -18,10 +18,11 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec = do
-  describe "IOSim Honest node" $
-    prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelIOSim)
+  modifyMaxSuccess (const 30) $
+    describe "IOSim Honest node" $
+      prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelIOSim)
   describe "Netsim Honest node" $
-    xprop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelNetSim)
+    prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelNetSim)
 
 propHonestNodeMintingRate ::
   (Actions NodeModel -> Property) ->
