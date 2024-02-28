@@ -2,7 +2,7 @@
 
 echo "Boost,Seed,At Slot,Blocks,Slots,From Weight,To Weight" > rollbacks.csv
 
-for b in $(seq 0 0.005 0.100)
+for b in $(seq 0 0.001 0.100)
 do
   echo "boost = $b"
   sed -i -e "/^votingBoost:/s/.*/votingBoost: $b/" protocol.yaml

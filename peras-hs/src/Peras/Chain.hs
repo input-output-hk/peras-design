@@ -2,7 +2,7 @@ module Peras.Chain where
 
 import Numeric.Natural (Natural)
 import Peras.Block (Block, PartyId)
-import Peras.Crypto (MembershipProof, Signature)
+import Peras.Crypto (Hash, MembershipProof, Signature)
 
 data RoundNumber = RoundNumber {roundNumber :: Natural}
   deriving (Eq)
@@ -16,7 +16,7 @@ data Vote msg = MkVote
   }
   deriving (Eq)
 
-data Chain = MkChain {blocks :: [Block], votes :: [Vote Block]}
+data Chain = MkChain {blocks :: [Block], votes :: [Vote Hash]}
   deriving (Eq)
 
 tip :: Chain -> Block
