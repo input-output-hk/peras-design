@@ -2,12 +2,17 @@
 
 module Peras.OrphansSpec where
 
+import Paths_peras_hs (getDataDir)
 import Peras.Arbitraries ()
 import Peras.Chain (Chain)
 import Peras.Orphans ()
-import Test.Aeson.GenericSpecs (Proxy (Proxy), roundtripAndGoldenSpecs)
-import Test.Hspec (Spec)
+import Test.Aeson.GenericSpecs (GoldenDirectoryOption (..), Proxy (Proxy), Settings (..), defaultSettings, roundtripAndGoldenSpecsWithSettings)
+import Test.Hspec (Spec, runIO)
 
 spec :: Spec
 spec =
-  roundtripAndGoldenSpecs (Proxy @Chain)
+  do
+    goldenDir <- runIO getDataDir
+    roundtripAndGoldenSpecsWithSettings
+      (defaultSettings{goldenDirectoryOption = CustomDirectoryName goldenDir})
+      (Proxy @Chain)
