@@ -1,3 +1,32 @@
+## 2024-02-28
+
+### AB - Agda ↔ Haskell ↔ Rust matching
+
+Trying to write some tests in Rust to check serialisation with golden files in Haskell is ok.
+* Seems a bit clunky to reference files from parent directory but not sure I have the choice... Going to write the tests in the  `peras_node` test section
+
+Needed to change the way some data structures are serailsied in `Orphans.hs`: All newtypes were serialised with explicit fields, which does not seem useful at this stage -> made all those types produce JSON `via Bytes` in order to directly represent them as hex strings.
+
+Added `hex` dependency on Rust side to deserialise from hex strings into vector of bytes. This requires transforming `type` alias into `struct`s but serde provides a `transparent` annotation that makes it trivial to recover Haskell's `newtype` behaviour
+
+I am trying to change the Agda code to use `Vote Hash` instead of `Vote Block` but this fails. Is there a way to force the conversion in Agda2Hs for a specific field?
+* There are [Rewrite rules](https://agda.github.io/agda2hs/features.html#rewrite-rules) in Agda2hs but not sure if they work with converting expressions. Perhaps just need to define an alias?
+
+  This somehow works:
+
+  ```
+  rewrites:
+    - from: "Peras.Chain.VoteB"
+      to: "Vote Hash"
+  ```
+
+  but unfortunately the `Hash` datatype is not imported, need to import it explicitly?
+
+Seems like I cannot force the explicit import of a symbol that's not used on the Agda side
+Might need some cleverer trick but for now, let's just manually modify the Haskell file...
+
+BB fixed some erors in the nix build which is not able to find the `golden` files as they need to be added to the cabal descriptor to be picked up by `nix build`.
+
 ## 2024-02-26
 
 ### BB - Simulation experiment
