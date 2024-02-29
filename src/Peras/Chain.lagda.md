@@ -12,6 +12,7 @@ open import Peras.Block
 open import Peras.Params
 
 open import Haskell.Prelude
+{-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
 
@@ -270,3 +271,17 @@ correctBlocks (MkChain blocks _ _) =
 -}
 ```
 -->
+
+
+```agda
+private
+  instance
+    hashVote : Hashable (Vote a)
+    hashVote = record
+      { hash = λ v →
+                 (let record { bytes = s } = signature v
+                  in record { bs = s })
+      }
+
+{-# COMPILE AGDA2HS hashVote #-}
+```

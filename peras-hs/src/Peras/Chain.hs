@@ -2,7 +2,9 @@ module Peras.Chain where
 
 import Numeric.Natural (Natural)
 import Peras.Block (Block, PartyId)
-import Peras.Crypto (Hash, MembershipProof, Signature)
+import Peras.Crypto (Hash, Hashable, MembershipProof, Signature (bytes))
+
+import Peras.Crypto (Hash (..), Hashable (..))
 
 data RoundNumber = RoundNumber {roundNumber :: Natural}
   deriving (Eq)
@@ -49,3 +51,6 @@ commonPrefix chains =
   listPrefix :: Maybe [Block]
   listPrefix =
     foldl1Maybe (prefix []) (map (\l -> reverse (blocks l)) chains)
+
+instance Hashable (Vote a) where
+  hash = \v -> Hash (bytes (signature v))
