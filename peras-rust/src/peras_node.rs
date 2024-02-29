@@ -1,9 +1,17 @@
-use crate::chain::Chain;
+use std::{
+    sync::mpsc::{self, Receiver, Sender},
+    thread::{self, JoinHandle},
+};
+
+use crate::{chain::Chain, message::NodeId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct InEnvelope {}
+pub enum InEnvelope {
+    /// Kill the receiver
+    PoisonPill,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NodeState {}
@@ -19,36 +27,61 @@ pub enum OutEnvelope {
 }
 
 pub struct Node {
-    inbound: Box<Vec<InEnvelope>>,
-    outbound: Box<Vec<OutEnvelope>>,
+    node_id: NodeId,
+    node_stake: u64,
+}
+
+pub struct NodeHandle {
+    sender: Sender<InEnvelope>,
+    receiver: Receiver<OutEnvelope>,
+    thread: Option<JoinHandle<()>>,
 }
 
 impl Node {
-    pub fn new() -> Node {
-        println!("starting node");
+    pub fn new(node_id: NodeId, node_stake: u64) -> Self {
         Node {
-            inbound: Box::new(vec![]),
-            outbound: Box::new(vec![]),
+            node_id,
+            node_stake,
         }
     }
 
-    pub fn stop(&self) {
-        println!("stopping node")
+    pub fn start(&self) -> NodeHandle {
+        let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
+        let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
+
+        let thread = thread::spawn(move || work(rx_in, tx_out));
+
+        println!("starting node");
+
+        NodeHandle {
+            sender: tx_in,
+            receiver: rx_out,
+            thread: Some(thread),
+        }
+    }
+}
+
+fn work(rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
+    todo!()
+}
+
+impl NodeHandle {
+    pub fn stop(&mut self) {
+        if self.thread.as_ref().map_or(false, |t| t.is_finished()) {
+            return;
+        }
+        self.sender
+            .send(InEnvelope::PoisonPill)
+            .expect("sending poison pill failed");
+        self.thread.take().unwrap().join().expect("node stopped");
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
-        self.inbound.push(msg)
+        self.sender.send(msg).expect("sending failed");
     }
 
     pub fn receive(&mut self) -> Option<OutEnvelope> {
-        Some(OutEnvelope::Idle {
-            timestamp: Utc::now(),
-            source: "N1".to_string(),
-            best_chain: Chain {
-                blocks: vec![],
-                votes: vec![],
-            },
-        })
+        self.receiver.try_recv().ok()
     }
 }
 

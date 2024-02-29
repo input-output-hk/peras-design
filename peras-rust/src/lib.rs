@@ -10,25 +10,24 @@ use std::{
     slice,
 };
 
-use message::NodeId;
-use peras_node::{InEnvelope, Node};
+use peras_node::{InEnvelope, Node, NodeHandle};
 
 /// Opaque representation of a Peras node for foreign use
 pub struct PerasNode {
-    node_id: NodeId,
-    stake: u64,
-    handle: Box<Node>,
+    node: Box<Node>,
+    handle: Box<NodeHandle>,
 }
 
 /// Create a new Peras node
 ///
 #[no_mangle]
 pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: u64) -> Box<PerasNode> {
-    let node: Node = Node::new();
+    let node_id = CStr::from_ptr(node_id).to_str().unwrap().into();
+    let node: Node = Node::new(node_id, node_stake);
+    let handle = node.start();
     Box::new(PerasNode {
-        node_id: CStr::from_ptr(node_id).to_str().unwrap().into(),
-        stake: node_stake,
-        handle: Box::new(node),
+        node: Box::new(node),
+        handle: Box::new(handle),
     })
 }
 
