@@ -23,3 +23,5 @@ crate-type = [ "cdylib", "staticlib"]
 
 [dev-dependencies]
 fake = "2.9.2"
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"

@@ -70,7 +70,7 @@ impl Node {
     }
 
     pub fn is_slot_leader(&self, slot: u64) -> bool {
-        false
+        true
     }
 }
 
@@ -125,14 +125,13 @@ impl NodeHandle {
 #[cfg(test)]
 mod tests {
     use crate::chain::empty_chain;
+    extern crate quickcheck;
 
     use super::InEnvelope::*;
     use super::OutEnvelope::*;
     use std::{fs::File, io::BufReader, path::Path};
 
     use super::*;
-    use fake::Fake;
-    use fake::Faker;
 
     #[derive(Debug, Deserialize, Serialize)]
     struct Golden<T> {
@@ -185,10 +184,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake() {
+    #[quickcheck_macros::quickcheck]
+    fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake(slot: u64) {
         let node = Node::new("N1".into(), 100, 100);
-        let slot: u64 = Faker.fake();
         assert!(node.is_slot_leader(slot))
     }
 

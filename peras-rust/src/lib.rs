@@ -12,6 +12,11 @@ use std::{
 
 use peras_node::{InEnvelope, Node, NodeHandle};
 
+/// For testing purpose, must be at the toplevel
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 /// Opaque representation of a Peras node for foreign use
 pub struct PerasNode {
     handle: Box<NodeHandle>,
