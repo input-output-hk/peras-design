@@ -36,10 +36,25 @@ pub enum OutEnvelope {
     },
 }
 
+pub struct NodeParameters {
+    pub node_stake: u64,
+    pub total_stake: u64,
+    pub active_coefficient: f64,
+}
+
+impl Default for NodeParameters {
+    fn default() -> Self {
+        NodeParameters {
+            node_stake: 10,
+            total_stake: 100,
+            active_coefficient: 0.05,
+        }
+    }
+}
+
 pub struct Node {
     node_id: NodeId,
-    node_stake: u64,
-    total_stake: u64,
+    parameters: NodeParameters,
     seed: SmallRng,
 }
 
@@ -50,11 +65,10 @@ pub struct NodeHandle {
 }
 
 impl Node {
-    pub fn new(node_id: NodeId, node_stake: u64, total_stake: u64) -> Self {
+    pub fn new(node_id: NodeId, parameters: NodeParameters) -> Self {
         Node {
             node_id,
-            node_stake,
-            total_stake,
+            parameters,
             seed: SmallRng::seed_from_u64(12),
         }
     }
@@ -72,9 +86,10 @@ impl Node {
         }
     }
 
-    fn is_slot_leader(&mut self, active_coefficient: f64, slot: u64) -> bool {
-        let stake_ratio = (self.node_stake as f64) / (self.total_stake as f64);
-        let prob = 1.0 - (1.0 - active_coefficient).powf(stake_ratio);
+    fn is_slot_leader(&mut self, slot: u64) -> bool {
+        let stake_ratio =
+            (self.parameters.node_stake as f64) / (self.parameters.total_stake as f64);
+        let prob = 1.0 - (1.0 - self.parameters.active_coefficient).powf(stake_ratio);
         self.seed.gen_bool(prob)
     }
 }
@@ -165,7 +180,7 @@ mod tests {
 
     #[test]
     fn returns_idle_after_processing_tick() {
-        let node = Node::new("N1".into(), 42, 100);
+        let node = Node::new("N1".into(), Default::default());
         let mut handle = node.start();
 
         handle.send(SendMessage {
@@ -191,15 +206,26 @@ mod tests {
 
     #[quickcheck_macros::quickcheck]
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake(slot: u64) {
-        let mut node = Node::new("N1".into(), 100, 100);
-        assert!(node.is_slot_leader(1.0, slot))
+        let params = NodeParameters {
+            node_stake: 100,
+            total_stake: 100,
+            active_coefficient: 1.0,
+        };
+        let mut node = Node::new("N1".into(), params);
+
+        assert!(node.is_slot_leader(slot))
     }
 
     #[test]
     fn node_is_slot_leader_every_other_slot_given_coefficient_is_0_5_and_node_has_all_stake() {
-        let mut node = Node::new("N1".into(), 100, 100);
+        let params = NodeParameters {
+            node_stake: 100,
+            total_stake: 100,
+            active_coefficient: 0.5,
+        };
+        let mut node = Node::new("N1".into(), params);
         let schedule = (0..100)
-            .map(|n| node.is_slot_leader(0.5, n))
+            .map(|n| node.is_slot_leader(n))
             .filter(|b| *b)
             .count();
 
@@ -208,24 +234,36 @@ mod tests {
 
     #[test]
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_half_the_stake() {
-        let mut node = Node::new("N1".into(), 50, 100);
+        let params = NodeParameters {
+            node_stake: 50,
+            total_stake: 100,
+            active_coefficient: 1.0,
+        };
+        let mut node = Node::new("N1".into(), params);
+
         let schedule = (0..100)
-            .map(|n| node.is_slot_leader(1.0, n))
+            .map(|n| node.is_slot_leader(n))
             .filter(|b| *b)
             .count();
 
+        // NOTE: this is counterintuitive but a consequence of the slot leader election formula
         assert_eq!(schedule, 100);
     }
 
     #[test]
     fn node_is_slot_leader_every_3_slots_given_coefficient_is_0_5_and_node_has_half_the_stake() {
-        let mut node = Node::new("N1".into(), 50, 100);
+        let params = NodeParameters {
+            node_stake: 50,
+            total_stake: 100,
+            active_coefficient: 0.5,
+        };
+        let mut node = Node::new("N1".into(), params);
+
         let schedule = (0..100)
-            .map(|n| node.is_slot_leader(0.5, n))
+            .map(|n| node.is_slot_leader(n))
             .filter(|b| *b)
             .count();
 
         assert_eq!(schedule, 35);
     }
-
 }

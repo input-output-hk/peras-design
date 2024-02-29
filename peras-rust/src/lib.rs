@@ -10,11 +10,10 @@ use std::{
     slice,
 };
 
-use peras_node::{InEnvelope, Node, NodeHandle};
+use peras_node::{InEnvelope, Node, NodeHandle, NodeParameters};
 
 /// For testing purpose, must be at the toplevel
 #[cfg(test)]
-#[macro_use(quickcheck)]
 extern crate quickcheck_macros;
 
 /// Opaque representation of a Peras node for foreign use
@@ -31,7 +30,14 @@ pub unsafe extern "C" fn start_node(
     total_stake: u64,
 ) -> Box<PerasNode> {
     let node_id = CStr::from_ptr(node_id).to_str().unwrap().into();
-    let node: Node = Node::new(node_id, node_stake, total_stake);
+    let node: Node = Node::new(
+        node_id,
+        NodeParameters {
+            node_stake,
+            total_stake,
+            ..Default::default()
+        },
+    );
     let handle = node.start();
     Box::new(PerasNode {
         handle: Box::new(handle),
