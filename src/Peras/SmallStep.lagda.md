@@ -13,14 +13,14 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ)
+open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ; _+_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
-open import Relation.Nullary using (yes; no)
-open import Relation.Nullary.Decidable using (⌊_⌋)
-
+open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
+open import Relation.Nullary using (yes; no)
+open import Relation.Nullary.Decidable using (⌊_⌋)
 
 open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
@@ -29,7 +29,6 @@ open import Peras.Message renaming (Message to Msg)
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
-
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open Chain public
@@ -37,6 +36,7 @@ open Honesty public
 open MembershipProof public
 open Signature public
 open RoundNumber public
+open Vote
 ```
 -->
 
@@ -174,8 +174,8 @@ module _ {block₀ : Block}
   # Parameterized module
 
   * blockTree
-  * honest?
-  * lottery
+  * honesty?
+  * slot leader computable predicate
   * tx selection
   * hash function
 
@@ -183,7 +183,7 @@ module _ {block₀ : Block}
   module _ {T : Set}
            {blockTree : TreeType T}
            {honest? : (p : PartyId) → Honesty p} -- Predicate or bool?
-           {lottery : PartyId → Slot → Bool}
+           {isSlotLeader : PartyId → Slot → Bool}
            {txSelection : Slot → PartyId → List Tx}
            where
 ```
@@ -195,35 +195,30 @@ module _ {block₀ : Block}
 ```
 
 ```agda
-    processMsg : Message → Stateˡ → Stateˡ
-    processMsg (SomeBlock b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
-    processMsg (NewChain c) s = s -- TODO
-    processMsg (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
-    processMsg (NextSlot _) s = s -- TODO
+    honestReceive : List Message → Stateˡ → Stateˡ
+    honestReceive msg s = foldr receive s msg
+      where
+        receive : Message → Stateˡ → Stateˡ
+        receive (SomeBlock b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+        receive (NewChain c) s = s -- TODO
+        receive (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
+        receive (NextSlot _) s = s -- TODO
 
-    honestRcv : List Message → Slot → Stateˡ → Stateˡ
-    honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
-
-    honestCreate : Slot → List Tx → Stateˡ → List Message × Stateˡ
-    honestCreate sl txs ⟨ p , tree ⟩ with lottery p sl
-    ... | true = let best = (bestChain blockTree) (pred sl) tree
-                     votes = (danglingVotes blockTree) tree
-                     -- TODO:
-                     --   check expired
-                     --   preferred chain
-                     --   is equivocation
-                     newBlock = record {
-                         slotNumber = sl ;
-                         creatorId = p ;
-                         parentBlock = hash (tip best) ;
-                         includedVotes = map hash votes ;
-                         leadershipProof = record { proof = emptyBS } ; -- FIXME
-                         payload = txs ;
-                         signature = record { bytes = emptyBS } -- FIXME
-                       }
-                  in SomeBlock newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
-    ... | false = [] , ⟨ p , tree ⟩
-
+    honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
+    honestCreate sl (record { roundNumber = r }) txs ⟨ p , tree ⟩ =
+      let best = (bestChain blockTree) (pred sl) tree
+          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) ((danglingVotes blockTree) tree) -- TODO: check expired, preferred chain, equivocation
+          newBlock =
+            record {
+              slotNumber = sl ;
+              creatorId = p ;
+              parentBlock = hash (tip best) ;
+              includedVotes = map hash votes ;
+              leadershipProof = record { proof = emptyBS } ; -- FIXME
+              payload = txs ;
+              signature = record { bytes = emptyBS } -- FIXME
+            }
+      in SomeBlock newBlock , ⟨ p , (extendTree blockTree) tree newBlock ⟩
 ```
 
   ## Global state
@@ -293,28 +288,19 @@ The global state consists of the following fields:
   # Network
 
 ```agda
-
-    open import Relation.Binary.Bundles using (StrictTotalOrder)
-
-    fetchMsgs : PartyId → Stateᵍ → List Message × List Envelope
-    fetchMsgs p N =
-        let msgs = filterᵇ ( λ {⦅ m , r , d ⦆ → ⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋ }) (messages N)
-            rest = filterᵇ ( λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
-        in map ( λ { ⦅ m , _ , _ ⦆ → m } ) msgs , rest
+    retrieve : PartyId → Stateᵍ → List Message × List Envelope
+    retrieve p N =
+        let msgs = filterᵇ (λ {⦅ m , r , d ⦆ → ⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋ }) (messages N)
+            rest = filterᵇ (λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
+        in map (λ { ⦅ m , _ , _ ⦆ → m }) msgs , rest
       where open Relation.Binary.Bundles.DecSetoid (StrictTotalOrder.Eq.decSetoid PartyIdO)
 
-    gossipMsg : Message → Stateᵍ → Stateᵍ
-    gossipMsg m N =
+    broadcast : Message → Stateᵍ → Stateᵍ
+    broadcast m N =
       record N {
         messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) (executionOrder N)) ++ messages N ;
         history = m ∷ history N
       }
-
-    gossipMsgs : List Message → Stateᵍ → Stateᵍ
-    gossipMsgs msgs N = foldr gossipMsg N msgs
-
-    honestGossip : List Message → Stateᵍ → Stateᵍ
-    honestGossip = gossipMsgs
 ```
 
   ## Receive
@@ -330,14 +316,14 @@ The global state consists of the following fields:
           -------------------------------
         → N [ Honest {p} ]⇀ N
 
-      honest : ∀ {p N} {sₗ sₗ′ : Stateˡ} {msgs} {rest}
-        → lookup (stateMap N) p ≡ just sₗ
-        → (msgs , rest ) ≡ fetchMsgs p N
-        → sₗ′ ≡ honestRcv msgs (clock N) sₗ
-          --------------------------------
+      honest : ∀ {p N} {s s′ : Stateˡ} {msg} {rest}
+        → lookup (stateMap N) p ≡ just s
+        → (msg , rest) ≡ retrieve p N
+        → s′ ≡ honestReceive msg s
+          ------------------------
         → N [ Honest {p} ]⇀
           record N {
-              stateMap = M.insert p sₗ′ (stateMap N) ;
+              stateMap = M.insert p s′ (stateMap N) ;
               messages = rest
             }
 
@@ -367,14 +353,15 @@ The global state consists of the following fields:
           -------------------------------
         → N [ Honest {p} ]↷ N
 
-      honest : ∀ {p M N} {sₗ sₗ′ : Stateˡ} {msgs}
-        → lookup (stateMap M)  p ≡ just sₗ
-        → (msgs , sₗ′) ≡ honestCreate (clock M) (txSelection (clock M) p) sₗ
-        → N ≡ honestGossip msgs M
+      honest : ∀ {p M N} {s s′ : Stateˡ} {msg}
+        → lookup (stateMap M)  p ≡ just s
+        → isSlotLeader p (clock M) ≡ true
+        → (msg , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) s
+        → N ≡ broadcast msg M
           ------------------------------------------------------------------
         → M [ Honest {p} ]↷
           record N {
-              stateMap = M.insert p sₗ′ (stateMap N)
+              stateMap = M.insert p s′ (stateMap N)
             }
 
       corrupt : ∀ {p N}
@@ -403,15 +390,15 @@ The global state consists of the following fields:
   An honest party votes as follows:
 
 ```agda
-    honestVote : Slot → RoundNumber → Stateˡ → List Message
+    honestVote : Slot → RoundNumber → Stateˡ → Message
     honestVote sl r ⟨ partyId , tree ⟩ =
-      SomeVote (record {
-          votingRound = r ;
-          creatorId = partyId ;
-          committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-          blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
-          signature = record { bytes = emptyBS } -- FIXME
-        }) ∷ []
+      SomeVote record {
+        votingRound = r ;
+        creatorId = partyId ;
+        committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
+        blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
+        signature = record { bytes = emptyBS } -- FIXME
+      }
 ```
 
   A party can cast a vote for a block, if the party is a member of the voting committee
@@ -419,11 +406,11 @@ The global state consists of the following fields:
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p M N} {sₗ} {msgs}
-        → lookup (stateMap M)  p ≡ just sₗ
+      honest : ∀ {p M N} {s} {msg}
+        → lookup (stateMap M)  p ≡ just s
         → CommitteeMember p (votingRound M)
-        → msgs ≡ honestVote (clock M) (votingRound M) sₗ
-        → N ≡ honestGossip msgs M
+        → msg ≡ honestVote (clock M) (votingRound M) s
+        → N ≡ broadcast msg M
         → M [ Honest {p} ]⇉ N
 ```
 
@@ -525,6 +512,7 @@ The global state consists of the following fields:
 
 <!--
 ```agda
+
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
@@ -576,15 +564,15 @@ The global state consists of the following fields:
 
     -- TODO: implement Gossip data type
     postulate
-      hist-honestGossipMsgs : ∀ {M N} {msgs}
-        → N ≡ honestGossip msgs M
+      hist-honestGossipMsgs : ∀ {M N} {msg}
+        → N ≡ broadcast msg M
         → history N ⊇ history M
 
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix (honestNoState _) x = x
-    []↷-hist-common-prefix (honest {msgs = msgs} _ x x₁) = hist-honestGossipMsgs {msgs = msgs} x₁
+    []↷-hist-common-prefix (honest {msg = msg} _ _ x x₁) = hist-honestGossipMsgs {msg = msg} x₁
     []↷-hist-common-prefix corrupt x = x
 
     ↷-hist-common-prefix : ∀ {M N}
