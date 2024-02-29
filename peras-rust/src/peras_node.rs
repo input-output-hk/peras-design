@@ -51,12 +51,11 @@ pub struct NodeHandle {
 
 impl Node {
     pub fn new(node_id: NodeId, node_stake: u64, total_stake: u64) -> Self {
-        let seed = SmallRng::seed_from_u64(12);
         Node {
             node_id,
             node_stake,
             total_stake,
-            seed,
+            seed: SmallRng::seed_from_u64(12),
         }
     }
 
@@ -73,8 +72,9 @@ impl Node {
         }
     }
 
-    pub fn is_slot_leader(&mut self, active_coefficient: f64, slot: u64) -> bool {
-        let prob = 1.0 - (1.0 - active_coefficient);
+    fn is_slot_leader(&mut self, active_coefficient: f64, slot: u64) -> bool {
+        let stake_ratio = (self.node_stake as f64) / (self.total_stake as f64);
+        let prob = 1.0 - (1.0 - active_coefficient).powf(stake_ratio);
         self.seed.gen_bool(prob)
     }
 }
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn node_is_slot_leader_every_other_slot_given_coefficient_is_0_5_and_node_has_all_stake() {
-        let mut node = Node::new("N1".into(), 50, 100);
+        let mut node = Node::new("N1".into(), 100, 100);
         let schedule = (0..100)
             .map(|n| node.is_slot_leader(0.5, n))
             .filter(|b| *b)
@@ -205,4 +205,27 @@ mod tests {
 
         assert_eq!(schedule, 50);
     }
+
+    #[test]
+    fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_half_the_stake() {
+        let mut node = Node::new("N1".into(), 50, 100);
+        let schedule = (0..100)
+            .map(|n| node.is_slot_leader(1.0, n))
+            .filter(|b| *b)
+            .count();
+
+        assert_eq!(schedule, 100);
+    }
+
+    #[test]
+    fn node_is_slot_leader_every_3_slots_given_coefficient_is_0_5_and_node_has_half_the_stake() {
+        let mut node = Node::new("N1".into(), 50, 100);
+        let schedule = (0..100)
+            .map(|n| node.is_slot_leader(0.5, n))
+            .filter(|b| *b)
+            .count();
+
+        assert_eq!(schedule, 35);
+    }
+
 }
