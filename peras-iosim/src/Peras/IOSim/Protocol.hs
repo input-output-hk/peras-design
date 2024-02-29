@@ -18,18 +18,20 @@ import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (MonadState)
 import Data.Default (Default (def))
 import Data.Function (on)
-import Data.List (partition)
-import Data.Maybe (mapMaybe)
+import Data.List (nub, partition)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (Block, includedVotes, signature, slotNumber), Slot)
-import Peras.Chain (Chain (..), asList)
-import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), Signature (Signature))
-import Peras.IOSim.Node.Types (NodeState, activeVotes, committeeMember, owner, preferredChain, rollbacks, slot, slotLeader, stake)
+import Peras.Block (Block (Block, includedVotes, slotNumber), Slot)
+import Peras.Chain (Chain (..), RoundNumber (RoundNumber), Vote (..))
+import Peras.Crypto (Hash (Hash), LeadershipProof (LeadershipProof), MembershipProof (MembershipProof), Signature (Signature))
+import Peras.IOSim.Hash (hashBlock, hashVote)
+import Peras.IOSim.Node.Types (NodeState, activeVotes, blocksSeen, committeeMember, owner, preferredChain, rollbacks, slot, slotLeader, stake)
 import Peras.IOSim.Protocol.Types (Protocol (..))
-import Peras.IOSim.Types (Coin, Rollback (..), Round, Vote (..), Votes)
-import Peras.Message (Message (NewChain, SomeBlock))
+import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote', Votes)
+import Peras.Message (Message (NewChain, SomeVote))
 
 import qualified Data.ByteString as BS
+import qualified Data.Map as M
 import qualified Data.Set as S
 
 nextSlot ::
@@ -38,7 +40,7 @@ nextSlot ::
   Protocol ->
   Slot ->
   Coin ->
-  m [Message Votes]
+  m [Message']
 nextSlot PseudoPraos{..} slotNumber total =
   do
     leader <- isSlotLeader activeSlotCoefficient total =<< use stake
@@ -52,7 +54,7 @@ nextSlot PseudoPraos{..} slotNumber total =
             payload = mempty
         leadershipProof <- LeadershipProof . BS.pack <$> replicateM 6 getRandom
         signature <- Signature . BS.pack <$> replicateM 6 getRandom
-        chain <- preferredChain `uses` Cons (Block slotNumber creatorId parentBlock includedVotes leadershipProof payload signature)
+        chain <- preferredChain `uses` (\(MkChain blocks' votes') -> MkChain (Block slotNumber creatorId parentBlock includedVotes leadershipProof payload signature : blocks') votes')
         preferredChain .= chain
         pure [NewChain chain]
       else pure mempty
@@ -60,7 +62,7 @@ nextSlot PseudoPeras{..} slotNumber total =
   do
     -- FIXME: Consolidate code duplicated from `PseudoPraos`.
     let window = inclusionWindow voteMaximumAge slotNumber
-    activeVotes %= discardExpiredVotes window
+    activeVotes %= discardExpiredVotes roundDuration window
     leader <- isSlotLeader activeSlotCoefficient total =<< use stake
     slot .= slotNumber
     slotLeader .= leader
@@ -70,20 +72,24 @@ nextSlot PseudoPeras{..} slotNumber total =
           creatorId <- use owner
           let parentBlock = Hash mempty -- FIXME: The Agda types don't yet have a structure for tracking block hashes.
               payload = mempty
-          recordedBlocks <- preferredChain `uses` asList
-          recordedVotes <- preferredChain `uses` (S.unions . fmap includedVotes . asList)
-          includedVotes <- activeVotes `uses` eligibleForInclusion recordedBlocks recordedVotes window
+          blocksSeen' <- use blocksSeen
+          recordedBlocks <- use preferredChain
+          allVotes <- use activeVotes
+          recordedVotes <- preferredChain `uses` (M.restrictKeys allVotes . S.fromList . concatMap includedVotes . Peras.Chain.blocks)
+          includedVotes <- activeVotes `uses` eligibleForInclusion blocksSeen' recordedBlocks recordedVotes window
           leadershipProof <- LeadershipProof . BS.pack <$> replicateM 6 getRandom
           signature <- Signature . BS.pack <$> replicateM 6 getRandom
-          chain <- preferredChain `uses` Cons (Block slotNumber creatorId parentBlock includedVotes leadershipProof payload signature)
+          let block = Block slotNumber creatorId parentBlock (M.keys includedVotes) leadershipProof payload signature
+          chain <- preferredChain `uses` (\(MkChain blocks' votes') -> MkChain (Block slotNumber creatorId parentBlock (M.keys includedVotes) leadershipProof payload signature : blocks') votes')
           preferredChain .= chain
+          blocksSeen %= M.insert (hashBlock block) block
           pure [NewChain chain]
         else pure mempty
     -- FIXME: Maybe we should have a separate `nextRound` function?
     voterMessages <-
       if isNextRound roundDuration slotNumber
         then do
-          let r = slotNumber `div` fromIntegral roundDuration
+          let r = roundNumber roundDuration slotNumber
           votingAllowed <- preferredChain `uses` voteInRound roundDuration votingQuorum cooldownDuration r
           myself <- use owner
           voter <- isCommitteeMember pCommitteeLottery total =<< use stake
@@ -91,15 +97,23 @@ nextSlot PseudoPeras{..} slotNumber total =
           if voter && votingAllowed
             then do
               -- FIXME: The specification does not say which block in the window should be voted for, so choose the most recent one on the preferred chain.
-              unrecordedVotes <- activeVotes `uses` S.filter ((== myself) . Peras.IOSim.Types.voter)
+              unrecordedVotes <- activeVotes `uses` M.filter ((== myself) . creatorId)
               preferredChain `uses` selectBlockInWindow unrecordedVotes (candidateWindow votingWindow slotNumber)
                 >>= \case
                   Just block -> do
                     voteSignature <- Signature . BS.pack <$> replicateM 6 getRandom
-                    let vote = Vote (slotNumber `div` fromIntegral roundDuration) voteSignature block myself
+                    proof <- MembershipProof . BS.pack <$> replicateM 6 getRandom
+                    let vote =
+                          MkVote
+                            (fromIntegral $ slotNumber `div` roundDuration)
+                            myself
+                            proof
+                            block
+                            voteSignature
                     let voted = addVote vote block
-                    activeVotes %= S.insert vote
-                    pure [SomeBlock voted]
+                    blocksSeen %= M.insert (hashBlock voted) voted
+                    activeVotes %= M.insert (hashVote vote) (vote{blockHash = hashBlock block})
+                    pure [SomeVote vote]
                   Nothing -> pure mempty
             else pure mempty
         else pure mempty
@@ -111,43 +125,41 @@ nextSlot OuroborosPeras{} _ _ = error "Ouroboros-Peras protocol is not yet imple
 newChain ::
   MonadState NodeState m =>
   Protocol ->
-  Chain Votes ->
-  m [Message Votes]
+  Chain ->
+  m [Message']
 newChain PseudoPraos{} chain =
   do
-    let chainLength Genesis = (0 :: Int)
-        chainLength (Cons _ chain') = 1 + chainLength chain'
+    let chainLength = Peras.Chain.blocks
     preferred <- use preferredChain
     if on (>) chainLength chain preferred
       then do
         preferredChain .= chain
         pure [NewChain chain]
       else pure mempty
-newChain protocol@PseudoPeras{votingBoost} chain =
+newChain PseudoPeras{votingBoost} chain =
   do
-    newVotes <- fmap concat . mapM (newVote protocol) $ asList chain
-    let chainLength Genesis = 0
-        chainLength (Cons Block{includedVotes} chain') = 1 + chainLength chain' + votingBoost * fromIntegral (S.size includedVotes)
+    let chainLength chain' = sum $ (1 +) . (votingBoost *) . fromIntegral . length . includedVotes <$> Peras.Chain.blocks chain'
     preferred <- use preferredChain
     let fromWeight = chainLength preferred
         toWeight = chainLength chain
         checkRollback olds news =
-          partition (`elem` asList news) (asList olds)
+          partition (`elem` Peras.Chain.blocks news) (Peras.Chain.blocks olds)
             & \case
               (_, []) -> pure ()
               (prefix, suffix) ->
                 let
                   atSlot = if null prefix then 0 else slotNumber $ head prefix
                   slots = on (-) fromIntegral (slotNumber $ head suffix) atSlot
-                  blocks = length suffix
+                  blocks = fromIntegral $ length suffix
                  in
                   rollbacks %= (Rollback{..} :)
     if toWeight > fromWeight
       then do
         checkRollback preferred chain
         preferredChain .= chain
-        pure $ NewChain chain : newVotes
-      else pure newVotes
+        blocksSeen %= M.union (M.fromList [(hashBlock block, block) | block <- Peras.Chain.blocks chain])
+        pure [NewChain chain]
+      else newVotes $ Peras.Chain.votes chain
 newChain OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newChain OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
@@ -155,20 +167,42 @@ newChain OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet impleme
 newVote ::
   MonadState NodeState m =>
   Protocol ->
-  Block Votes ->
-  m [Message Votes]
+  Vote Block ->
+  m [Message']
 newVote PseudoPraos{} _ = pure mempty
-newVote PseudoPeras{} block@Block{includedVotes} =
+newVote PseudoPeras{} vote =
   do
-    unseen <- activeVotes `uses` S.difference includedVotes
-    if S.null unseen
+    let
+      hash = hashVote vote
+      vote' = vote{blockHash = hashBlock $ blockHash vote}
+    seen <- activeVotes `uses` M.member hash
+    if seen
       then pure mempty
       else do
-        activeVotes %= S.union includedVotes
-        pure [SomeBlock block]
+        activeVotes %= M.insert hash vote'
+        pure [SomeVote vote]
 newVote OuroborosPraos{} _ = error "Ouroboros-Praos protocol is not yet implemented."
 newVote OuroborosGenesis{} _ = error "Ouroboros-Genesis protocol is not yet implemented."
 newVote OuroborosPeras{} _ = error "Ouroboros-Peras protocol is not yet implemented."
+
+newVotes ::
+  MonadState NodeState m =>
+  [Vote'] ->
+  m [Message']
+newVotes votes =
+  do
+    let votes' = M.fromList $ (\v -> (hashVote v, v)) <$> votes
+    unseen <- activeVotes `uses` flip M.difference votes'
+    if M.null unseen
+      then pure mempty
+      else do
+        activeVotes %= M.union unseen
+        let
+          resolve vote =
+            do
+              block <- blocksSeen `uses` (fromMaybe (error "Block not present in `blocksSeen`!") . M.lookup (blockHash vote))
+              pure . SomeVote $ vote{blockHash = block}
+        mapM resolve $ M.elems unseen
 
 isSlotLeader ::
   MonadRandom m =>
@@ -191,7 +225,7 @@ isCommitteeMember pCommitteeLottery' _total staked =
    in (<= p) <$> getRandomR (0, 1)
 
 candidateWindow ::
-  (Int, Int) ->
+  (Natural, Natural) ->
   Slot ->
   (Slot, Slot)
 candidateWindow (w0, w1) s =
@@ -202,19 +236,19 @@ candidateWindow (w0, w1) s =
     (min s0 s1, max s0 s1)
 
 inclusionWindow ::
-  Int ->
+  Natural ->
   Slot ->
   (Slot, Slot)
 inclusionWindow voteMaximumAge' s = (s - min s (fromIntegral voteMaximumAge'), s - min s 1)
 
 roundNumber ::
-  Int ->
+  Natural ->
   Slot ->
-  Round
-roundNumber roundDuration' s = s `div` fromIntegral roundDuration'
+  RoundNumber
+roundNumber roundDuration' s = RoundNumber $ s `div` fromIntegral roundDuration'
 
 isNextRound ::
-  Int ->
+  Natural ->
   Slot ->
   Bool
 isNextRound roundDuration' s = s `mod` fromIntegral roundDuration' == 0
@@ -222,70 +256,63 @@ isNextRound roundDuration' s = s `mod` fromIntegral roundDuration' == 0
 selectBlockInWindow ::
   Votes ->
   (Slot, Slot) ->
-  Chain Votes ->
-  Maybe (Block Votes)
+  Chain ->
+  Maybe Block
 selectBlockInWindow unrecordedVotes window chain =
   let
-    blocksInWindow = filter ((`inWindow` window) . slotNumber) $ asList chain
+    blocksInWindow = filter ((`inWindow` window) . slotNumber) $ Peras.Chain.blocks chain
    in
-    case filter ((`S.notMember` S.map (signature . voteForBlock) unrecordedVotes) . signature) blocksInWindow of
+    case filter ((`M.notMember` unrecordedVotes) . hashBlock) blocksInWindow of
       block : _ -> pure block
-      _ -> Nothing
+      [] -> Nothing
 
 addVote ::
-  Vote ->
-  Block Votes ->
-  Block Votes
+  Vote Block ->
+  Block ->
+  Block
 addVote vote block =
-  if False
-    then -- FIXME: We probably shouldn't tie the knot here, but this is a workaround until the Agda is more mature.
-
-      let
-        vote' = vote{voteForBlock = block'}
-        block' = block{includedVotes = vote' `S.insert` includedVotes block}
-       in
-        block'
-    else
-      let
-        -- FIXME: We probably shouldn't tie the knot here, but this is a workaround until the Agda is more mature.
-        vote' = vote{voteForBlock = block}
-       in
-        block{includedVotes = S.singleton vote'}
+  let
+    vote' = vote{blockHash = block}
+   in
+    block{includedVotes = nub $ hashVote vote' : includedVotes block}
 
 discardExpiredVotes ::
+  Natural ->
   (Slot, Slot) ->
-  Votes ->
-  Votes
-discardExpiredVotes window =
-  S.filter $ \Vote{voteForBlock = Block{slotNumber}} -> slotNumber `inWindow` window
+  M.Map Hash Vote' ->
+  M.Map Hash Vote'
+discardExpiredVotes roundDuration' window =
+  M.filter $ \MkVote{votingRound} -> (fromIntegral votingRound * roundDuration') `inWindow` window
 
 inWindow :: Ord a => a -> (a, a) -> Bool
 inWindow x (xmin, xmax) = xmin <= x && x <= xmax
 
 eligibleForInclusion ::
-  [Block Votes] ->
+  M.Map Hash Block ->
+  Chain ->
   Votes ->
   (Slot, Slot) ->
   Votes ->
   Votes
-eligibleForInclusion recordedBlocks recordedVotes window candidateVotes =
+eligibleForInclusion blocksSeen' chain recordedVotes window candidateVotes =
   let
-    checkCandidate vote@Vote{voteForBlock} =
+    checkCandidate vote@MkVote{blockHash} =
       let
-        windowOkay = slotNumber voteForBlock `inWindow` window
-        notRecorded = vote `S.notMember` recordedVotes
-        blockOnChain = signature voteForBlock `elem` fmap signature recordedBlocks
+        block = fromMaybe (error "Block not present in `blocksSeen`!") $ blockHash `M.lookup` blocksSeen' -- FIXME: Dangerous!
+        windowOkay = slotNumber block `inWindow` window
+        notRecorded = hashVote vote `M.notMember` recordedVotes
+        blockOnChain = blockHash `elem` (hashBlock <$> Peras.Chain.blocks chain)
        in
         windowOkay && notRecorded && blockOnChain
    in
-    S.filter checkCandidate candidateVotes
+    M.filter checkCandidate candidateVotes
 
 voteInRound ::
-  Int ->
-  Int ->
+  Natural ->
   Int ->
   Natural ->
-  Chain Votes ->
+  RoundNumber ->
+  Chain ->
   Bool
 voteInRound roundDuration' votingQuorum' cooldownDuration' round' chain =
   let
@@ -294,18 +321,18 @@ voteInRound roundDuration' votingQuorum' cooldownDuration' round' chain =
     r + 1 == round' || r + fromIntegral cooldownDuration' <= round'
 
 lastQuorum ::
+  Natural ->
   Int ->
-  Int ->
-  Chain Votes ->
-  Round
+  Chain ->
+  RoundNumber
 lastQuorum roundDuration' votingQuorum' chain =
   let
-    hasQuorum :: Block Votes -> Maybe Round
+    hasQuorum :: Block -> Maybe RoundNumber
     hasQuorum Block{slotNumber, includedVotes} =
-      if S.size includedVotes >= votingQuorum'
-        then Just $ slotNumber `div` fromIntegral roundDuration'
+      if length includedVotes >= votingQuorum'
+        then Just . RoundNumber $ slotNumber `div` roundDuration'
         else Nothing
    in
-    case mapMaybe hasQuorum $ asList chain of
+    case mapMaybe hasQuorum $ Peras.Chain.blocks chain of
       r : _ -> r
       [] -> 0

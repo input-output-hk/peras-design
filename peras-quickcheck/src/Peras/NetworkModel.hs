@@ -26,8 +26,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain (..), asList, commonPrefix)
-import Peras.IOSim.Types (Votes)
+import Peras.Chain (Chain (..), commonPrefix)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Gen, choose, elements, frequency, tabulate)
@@ -67,9 +66,9 @@ instance StateModel Network where
     -- Advance the time one or more slots possibly producing blocks.
     Tick :: Natural -> Action Network ()
     -- Observe a node's best chain
-    ObserveBestChain :: NodeId -> Action Network (Chain Votes)
+    ObserveBestChain :: NodeId -> Action Network Chain
     -- Ensure chains have a common prefix
-    ChainsHaveCommonPrefix :: [Var (Chain Votes)] -> Action Network ()
+    ChainsHaveCommonPrefix :: [Var Chain] -> Action Network ()
 
   arbitraryAction _ Network{nodeIds} =
     frequency
@@ -109,7 +108,7 @@ instance HasVariables (Action Network a) where
 data Simulator m = Simulator
   { step :: m ()
   -- ^ Step the network one slot
-  , preferredChain :: NodeId -> m (Chain Votes)
+  , preferredChain :: NodeId -> m Chain
   -- ^ Return preferred chain for a specific node in the network.
   , stop :: m ()
   -- ^ Stop all nodes in the network
@@ -137,7 +136,7 @@ instance Monad m => RunModel Network (RunMonad m) where
     performTick =
       ask >>= lift . step
 
-    currentChain :: NodeId -> RunMonad m (Chain Votes)
+    currentChain :: NodeId -> RunMonad m Chain
     currentChain nodeId =
       ask
         >>= lift . flip preferredChain nodeId
@@ -152,8 +151,7 @@ instance Monad m => RunModel Network (RunMonad m) where
   postcondition (_, Network{slot}) (ChainsHaveCommonPrefix chainVars) env () = do
     let chains = fmap env chainVars
         prefix = commonPrefix chains
-        prefixes = asList prefix
-        chainLength = length $ asList prefix
+        chainLength = length prefix
         chainDensity :: Integer =
           if slot == 0
             then 0
@@ -163,10 +161,10 @@ instance Monad m => RunModel Network (RunMonad m) where
     monitorPost $ tabulate "Prefix length" ["<= " <> show ((chainLength `div` 100 + 1) * 100)]
     monitorPost $ tabulate "Prefix density" ["<= " <> show (chainDensity `div` 10 + 1) <> "%"]
     -- FIXME: this 50 is arbitrary, should be related to some network parameter
-    pure $ slot < 50 || not (null prefixes)
+    pure $ slot < 50 || not (null prefix)
   postcondition _ _ _ _ = pure True
 
-selectBlocks :: [Message ()] -> [Block ()]
+selectBlocks :: [Message ()] -> [Block]
 selectBlocks = mapMaybe $ \case
   SomeBlock b -> Just b
   _other -> Nothing

@@ -23,9 +23,12 @@ import Control.Concurrent.Class.MonadSTM.TQueue (TQueue)
 import Control.Lens (makeLenses)
 import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Default (Default (..))
+import Data.Map.Strict (Map)
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain)
+import Peras.Crypto (Hash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
 import Peras.IOSim.Types (Votes)
@@ -34,20 +37,15 @@ import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
 
 import Data.Aeson as A
-import Data.Map.Strict as M
-import Data.Set as S
 
-newtype Topology = Topology {connections :: M.Map NodeId (S.Set NodeId)}
+newtype Topology = Topology {connections :: Map NodeId (Set NodeId)}
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance FromJSON Topology where
-  parseJSON = A.withObject "Topology" $ \o -> Topology <$> o A..: "connections"
-
-instance ToJSON Topology where
-  toJSON Topology{..} = A.object ["connections" A..= connections]
+instance FromJSON Topology
+instance ToJSON Topology
 
 data Network m = Network
-  { nodesIn :: M.Map NodeId (TQueue m InEnvelope)
+  { nodesIn :: Map NodeId (TQueue m InEnvelope)
   , nodesOut :: TQueue m OutEnvelope
   }
   deriving stock (Generic)
@@ -55,20 +53,21 @@ data Network m = Network
 data NetworkState = NetworkState
   { _lastSlot :: Slot
   , _lastTime :: UTCTime
-  , _activeNodes :: S.Set NodeId
-  , _chainsSeen :: M.Map NodeId (Chain Votes)
+  , _activeNodes :: Set NodeId
+  , _chainsSeen :: Map NodeId Chain
   -- ^ The latest "best" seen by nodes
-  , _blocksSeen :: M.Map (Maybe (Block Votes)) (S.Set (Block Votes))
+  , _blocksSeen :: Map Hash (Set Block)
   , _votesSeen :: Votes
-  , _currentStates :: M.Map NodeId NodeState
+  , _currentStates :: Map NodeId NodeState
   , _pending :: [OutEnvelope]
-  , _networkRandom :: StdGen -- FIXME: Is it okay not to serialize this?
+  , _networkRandom :: StdGen
   }
   deriving stock (Eq, Generic, Show)
 
 instance Default NetworkState where
   def = NetworkState 0 (read "1970-01-01 00:00:00.0 UTC") mempty mempty mempty mempty mempty mempty $ mkStdGen 12345
 
+-- FIXME: Is it okay to not serialize the random seed?
 instance ToJSON NetworkState where
   toJSON NetworkState{..} =
     A.object

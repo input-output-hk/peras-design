@@ -16,7 +16,6 @@ module Peras.IOSim.Node (
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Lens (use, uses, (.=), (^.))
-import Control.Monad (replicateM)
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (RandomGen, mkStdGen, runRandT)
@@ -30,9 +29,8 @@ import Control.Monad.State (
   evalStateT,
  )
 import GHC.Generics (Generic)
-import Peras.Block (PartyId (MkPartyId))
-import Peras.Chain (Chain (Genesis))
-import Peras.Crypto (VerificationKey (VerificationKey))
+import Numeric.Natural (Natural)
+import Peras.Chain (Chain (..))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
 import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId, preferredChain)
@@ -42,7 +40,6 @@ import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin)
 import Peras.Message (Message (..), NodeId)
 
-import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
@@ -70,13 +67,14 @@ initializeNode ::
   m NodeState
 initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
   NodeState nodeId'
-    <$> (MkPartyId . VerificationKey . BS.pack <$> replicateM 6 getRandom)
+    <$> ((fromIntegral . abs :: Integer -> Natural) <$> getRandom)
     <*> getRandom
     <*> pure clock'
     <*> pure 0
     <*> getRandomR (1, maximumStake)
     <*> getRandomR (0, 1)
-    <*> pure Genesis
+    <*> pure (MkChain mempty mempty)
+    <*> pure mempty
     <*> pure mempty
     <*> pure downstreams'
     <*> pure False
@@ -112,7 +110,8 @@ runNode protocol total state NodeProcess{..} =
                         do
                           lift $ threadDelay 1000000
                           runRand $ nextSlot protocol slot total
-                      SomeBlock block -> runRand $ newVote protocol block
+                      SomeVote vote -> runRand $ newVote protocol vote
+                      SomeBlock _ -> error "Block transport is not supported."
                       NewChain chain -> runRand $ newChain protocol chain
                   bestChain <- use preferredChain
                   atomically' $

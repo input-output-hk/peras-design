@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -15,6 +16,7 @@ import Data.Aeson (
   withText,
  )
 import Data.Aeson.Types (parseFail)
+import Data.Bifunctor (bimap)
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..), Party (..))
@@ -34,8 +36,8 @@ newtype Bytes = Bytes {getBytes :: BS.ByteString}
 
 instance Read Bytes where
   readPrec = do
-    Right bs <- B16.decode . BS8.pack <$> readPrec
-    pure $ Bytes bs
+    Right bs' <- B16.decode . BS8.pack <$> readPrec
+    pure $ Bytes bs'
 
 instance Show Bytes where
   show = show . BS8.unpack . B16.encode . getBytes
@@ -81,6 +83,22 @@ deriving stock instance Show RoundNumber
 instance FromJSON RoundNumber
 instance ToJSON RoundNumber
 
+instance Enum RoundNumber where
+  toEnum = RoundNumber . toEnum
+  fromEnum (RoundNumber i) = fromEnum i
+instance Integral RoundNumber where
+  RoundNumber i `quotRem` RoundNumber j = bimap RoundNumber RoundNumber $ i `quotRem` j
+  toInteger (RoundNumber i) = toInteger i
+instance Num RoundNumber where
+  RoundNumber i + RoundNumber j = RoundNumber $ i + j
+  RoundNumber i - RoundNumber j = RoundNumber $ i - j
+  RoundNumber i * RoundNumber j = RoundNumber $ i * j
+  abs (RoundNumber i) = RoundNumber $ abs i
+  signum (RoundNumber i) = RoundNumber $ signum i
+  fromInteger = RoundNumber . fromInteger
+instance Real RoundNumber where
+  toRational (RoundNumber i) = toRational i
+
 deriving stock instance Generic v => Generic (Vote v)
 deriving stock instance Ord v => Ord (Vote v)
 deriving stock instance Read v => Read (Vote v)
@@ -104,6 +122,8 @@ deriving via Bytes instance Show Hash
 deriving via Bytes instance IsString Hash
 instance FromJSON Hash
 instance ToJSON Hash
+instance FromJSONKey Hash
+instance ToJSONKey Hash
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof

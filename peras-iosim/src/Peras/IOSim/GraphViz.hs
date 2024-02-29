@@ -11,9 +11,11 @@ import Control.Lens ((^.))
 import Data.Function (on)
 import Data.List (intercalate, sortBy)
 import Peras.Block (Block (..))
-import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates)
+import Peras.Chain (RoundNumber (roundNumber), Vote (..))
+import Peras.IOSim.Hash (genesisHash)
+import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
-import Peras.IOSim.Types (Vote (..))
+import Peras.IOSim.Util (votesInBlock)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -63,7 +65,8 @@ chainGraph ::
   NetworkState ->
   G.Graph
 chainGraph networkState =
-  let tree = networkState ^. blocksSeen
+  let tree = networkState ^. Peras.IOSim.Network.Types.blocksSeen
+      allVotes = networkState ^. votesSeen
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement
@@ -72,13 +75,12 @@ chainGraph networkState =
           , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
           ]
       nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
-      sortVotes = compare `on` (\Vote{..} -> (votingRound, voter, voteForBlock))
+      sortVotes = compare `on` (\MkVote{..} -> (votingRound, creatorId, blockHash))
       showVotes [] = ""
       showVotes vs = "|" <> intercalate "|" (showVote <$> sortBy sortVotes vs)
-      showVote Vote{votingRound, voter, voteForBlock = Block{signature}} =
-        "Round " <> show votingRound <> ": " <> show' voter <> " voted for " <> show' signature
-      -- FIXME: The Agda types don't handle block hashes yet, so we use the signature as a placehodler for now.
-      mkNode Block{..} =
+      showVote MkVote{votingRound, creatorId, blockHash} =
+        "Round " <> show (roundNumber votingRound) <> ": " <> show' creatorId <> " voted for " <> show' blockHash
+      mkNode block@Block{..} =
         G.NodeStatement
           (nodeId signature)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
@@ -90,13 +92,14 @@ chainGraph networkState =
                 <> show slotNumber
                 <> "|Creator "
                 <> show' creatorId
-                <> showVotes (S.toList includedVotes)
+                <> showVotes (M.elems $ votesInBlock block allVotes)
           ]
       blocks = S.toList . S.unions $ M.elems tree
       nodes = mkNode <$> blocks
       mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge bid', G.ENodeId G.DirectedEdge bid] mempty
-      mkEdges Nothing bs = mkEdge genesisId . nodeId . signature <$> S.toList bs
-      mkEdges (Just b) bs = mkEdge (nodeId $ signature b) . nodeId . signature <$> S.toList bs
+      mkEdges bid bs
+        | bid == genesisHash = mkEdge genesisId . nodeId . Peras.Block.signature <$> S.toList bs
+        | otherwise = mkEdge (nodeId bid) . nodeId . Peras.Block.signature <$> S.toList bs
       edges = M.foldMapWithKey mkEdges tree
    in G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains") $
         [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges

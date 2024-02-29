@@ -13,6 +13,7 @@ extra-source-files: ReadMe.md
 library
   exposed-modules:
     Peras.IOSim.GraphViz
+    Peras.IOSim.Hash
     Peras.IOSim.Message.Types
     Peras.IOSim.Network
     Peras.IOSim.Network.Types
@@ -23,6 +24,7 @@ library
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
+    Peras.IOSim.Util
   hs-source-dirs:   src
   build-depends:
     , aeson

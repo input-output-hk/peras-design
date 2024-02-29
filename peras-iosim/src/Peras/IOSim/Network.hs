@@ -28,8 +28,9 @@ import Control.Monad.State (StateT, execStateT, lift)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Block (Slot, includedVotes)
-import Peras.Chain (asList)
+import Peras.Block (Slot)
+import Peras.Chain (Chain (blocks), Vote (..))
+import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
   Network (..),
@@ -237,11 +238,11 @@ routeEnvelope parameters Network{nodesIn} = \case
               case message of
                 NewChain chain -> do
                   chainsSeen %= M.insert source chain
-                  case asList chain of
-                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (Just prior) (S.singleton tip)
-                    [tip] -> blocksSeen %= M.insertWith S.union Nothing (S.singleton tip)
+                  case blocks chain of
+                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
+                    [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
                     _ -> pure ()
-                SomeBlock block -> votesSeen %= S.union (includedVotes block)
+                SomeVote vote -> votesSeen %= M.insert (hashVote vote) (vote{blockHash = hashBlock $ blockHash vote})
                 _ -> pure ()
               -- Forward the message.
               output destination (nodesIn M.! destination) $ InEnvelope (pure source) message

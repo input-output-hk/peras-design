@@ -1,4 +1,4 @@
-protocol: PseudoPeras
+tag: PseudoPeras
 activeSlotCoefficient: 0.05
 roundDuration: 10
 pCommitteeLottery: 0.5

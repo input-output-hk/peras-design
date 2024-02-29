@@ -24,7 +24,6 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
-import Peras.IOSim.Types (Votes)
 import Peras.Message (Message (..), NodeId (..))
 import Test.QuickCheck (choose, tabulate)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
@@ -33,7 +32,7 @@ import Test.QuickCheck.StateModel.Variables (HasVariables (..))
 
 -- | A simple model of time passing and forged blocks
 data NodeModel = NodeModel
-  { forgedBlocks :: [Var [Block Votes]]
+  { forgedBlocks :: [Var [Block]]
   -- ^ List of forged blocks references as observed from the node's behaviour
   , slot :: Slot
   }
@@ -44,8 +43,8 @@ instance DynLogicModel NodeModel
 instance StateModel NodeModel where
   data Action NodeModel a where
     -- Advance the time one or more slots possibly producing blocks.
-    Tick :: Natural -> Action NodeModel [Block Votes]
-    ForgedBlocksRespectSchedule :: [Var [Block Votes]] -> Action NodeModel Rational
+    Tick :: Natural -> Action NodeModel [Block]
+    ForgedBlocksRespectSchedule :: [Var [Block]] -> Action NodeModel Rational
 
   arbitraryAction _ NodeModel{} =
     Some . Tick . fromInteger <$> choose (500, 2000)
@@ -103,7 +102,7 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
         mconcat <$> forM [1 .. n] tick
       ForgedBlocksRespectSchedule{} -> asks nodeStake
    where
-    tick :: Slot -> RunMonad m [Block Votes]
+    tick :: Slot -> RunMonad m [Block]
     tick k = do
       Node{sendMessage, receiveMessage} <- ask
       -- tick the node
@@ -116,7 +115,7 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
       receive >>= \case
         Idle{} -> pure acc
         OutEnvelope
-          { outMessage = SendMessage (NewChain (Cons b _))
+          { outMessage = SendMessage (NewChain (MkChain (b : _) _))
           } -> waitForIdle receive (b : acc)
         _other -> waitForIdle receive acc
 

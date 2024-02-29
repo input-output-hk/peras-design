@@ -23,7 +23,6 @@ import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, netwo
 import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
 import Peras.IOSim.Simulate.Types (Parameters (..))
-import Peras.IOSim.Types (Votes)
 import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
 import Test.Hspec (Spec)
@@ -92,7 +91,7 @@ runPropInIOSim p = do
         , stop = pure ()
         }
 
-getPreferredChain :: Monad m => NodeId -> StateT NetworkState m (Chain Votes)
+getPreferredChain :: Monad m => NodeId -> StateT NetworkState m Chain
 getPreferredChain nodeId = chainsSeen `uses` (Map.! nodeId)
 
 runWithState :: (Monad m, MonadSTM m) => TVar m NetworkState -> StateT NetworkState m a -> m a
