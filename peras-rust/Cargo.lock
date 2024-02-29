@@ -369,6 +369,7 @@ dependencies = [
  "netsim",
  "quickcheck",
  "quickcheck_macros",
+ "rand",
  "serde",
  "serde_json",
  "serde_yaml",

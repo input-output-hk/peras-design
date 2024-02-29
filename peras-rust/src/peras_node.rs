@@ -8,6 +8,7 @@ use crate::{
     message::{Message, NodeId},
 };
 use chrono::{DateTime, Utc};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -39,6 +40,7 @@ pub struct Node {
     node_id: NodeId,
     node_stake: u64,
     total_stake: u64,
+    seed: SmallRng,
 }
 
 pub struct NodeHandle {
@@ -49,10 +51,12 @@ pub struct NodeHandle {
 
 impl Node {
     pub fn new(node_id: NodeId, node_stake: u64, total_stake: u64) -> Self {
+        let seed = SmallRng::seed_from_u64(12);
         Node {
             node_id,
             node_stake,
             total_stake,
+            seed,
         }
     }
 
@@ -69,8 +73,9 @@ impl Node {
         }
     }
 
-    pub fn is_slot_leader(&self, slot: u64) -> bool {
-        true
+    pub fn is_slot_leader(&mut self, active_coefficient: f64, slot: u64) -> bool {
+        let prob = 1.0 - (1.0 - active_coefficient);
+        self.seed.gen_bool(prob)
     }
 }
 
@@ -186,8 +191,18 @@ mod tests {
 
     #[quickcheck_macros::quickcheck]
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake(slot: u64) {
-        let node = Node::new("N1".into(), 100, 100);
-        assert!(node.is_slot_leader(slot))
+        let mut node = Node::new("N1".into(), 100, 100);
+        assert!(node.is_slot_leader(1.0, slot))
     }
 
+    #[test]
+    fn node_is_slot_leader_every_other_slot_given_coefficient_is_0_5_and_node_has_all_stake() {
+        let mut node = Node::new("N1".into(), 50, 100);
+        let schedule = (0..100)
+            .map(|n| node.is_slot_leader(0.5, n))
+            .filter(|b| *b)
+            .count();
+
+        assert_eq!(schedule, 50);
+    }
 }
