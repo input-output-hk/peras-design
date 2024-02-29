@@ -83,13 +83,10 @@ _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 
-block₀ denotes the genesis block that is passed in as a module parameter together
-with a list of parties. The list is static in the sense that no new parties are
-add nor are parties remove from the list. Permutations of the list are allowed.
+block₀ denotes the genesis block that is passed in as a module parameter
 
 ```agda
 module _ {block₀ : Block}
-         {parties : List PartyId}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
          ⦃ _ : Params ⦄
@@ -106,7 +103,7 @@ module _ {block₀ : Block}
 ```agda
   open Params ⦃...⦄
 ```
-  ## BlockTree
+## BlockTree
 
 ```agda
   record IsTreeType {T : Set}
@@ -118,8 +115,7 @@ module _ {block₀ : Block}
          : Set₁ where
     field
 ```
-
-  Properties that must hold with respect to blocks and votes
+Properties that must hold with respect to blocks and votes
 
 ```agda
       instantiated :
@@ -139,8 +135,7 @@ module _ {block₀ : Block}
       self-contained : ∀ (t : T) (sl : Slot)
         → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
 ```
-
-  The block tree type
+The block tree type
 
 ```agda
   record TreeType (T : Set) : Set₁ where
@@ -160,8 +155,7 @@ module _ {block₀ : Block}
 
   open TreeType
 ```
-
-  ## Local state
+## Local state
 
 ```agda
   record LocalState {T : Set} (blockTree : TreeType T) : Set where
@@ -171,7 +165,7 @@ module _ {block₀ : Block}
       partyId : PartyId
       tree : T
 ```
-  # Parameterized module
+# Parameterized module
 
   * blockTree
   * honesty?
@@ -187,8 +181,7 @@ module _ {block₀ : Block}
            {txSelection : Slot → PartyId → List Tx}
            where
 ```
-
-  The local state initialized with the block tree
+The local state initialized with the block tree
 
 ```agda
     Stateˡ = LocalState blockTree
@@ -220,8 +213,7 @@ module _ {block₀ : Block}
             }
       in SomeBlock newBlock , ⟨ p , (extendTree blockTree) tree newBlock ⟩
 ```
-
-  ## Global state
+## Global state
 
 ```agda
     record Stateᵍ : Set where
@@ -261,15 +253,7 @@ The global state consists of the following fields:
 ```agda
     open Stateᵍ public
 ```
-
-  ### Initial global state
-
-```agda
-    N₀ : Stateᵍ
-    N₀ = ⟪ 0 , Ready , empty , [] , [] , parties , record { roundNumber = 0 } ⟫
-```
-
-  ### Fold over parties in global state
+### Fold over parties in global state
 
 ```agda
     data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
@@ -284,8 +268,7 @@ The global state consists of the following fields:
         → Fold f N O
         → Fold f (record M { executionOrder = ps }) O
 ```
-
-  # Network
+# Network
 
 ```agda
     retrieve : PartyId → Stateᵍ → List Message × List Envelope
@@ -302,11 +285,10 @@ The global state consists of the following fields:
         history = m ∷ history N
       }
 ```
+## Receive
 
-  ## Receive
-
-  A party receives messages from the global state by fetching messages assigned to the party,
-  updating the local block tree and putting the local state back into the global state.
+A party receives messages from the global state by fetching messages assigned to the party,
+updating the local block tree and putting the local state back into the global state.
 
 ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -332,18 +314,18 @@ The global state consists of the following fields:
         → N [ Corrupt {p} ]⇀ N
 ```
 
-  Receiving messages globally is receiving messages by party respecting the execution order
-  for the parties stored in the global state.
+Receiving messages globally is receiving messages by party respecting the execution order
+for the parties stored in the global state.
 
 ```agda
     _⇀_ = Fold _[_]⇀_
 ```
 
-  ## Create
+## Create
 
-  A party can create a new block by adding it to the local block tree and gossiping the
-  block creation messages to the other parties. The local state gets updated in the global
-  state.
+A party can create a new block by adding it to the local block tree and gossiping the
+block creation messages to the other parties. The local state gets updated in the global
+state.
 
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -367,19 +349,18 @@ The global state consists of the following fields:
       corrupt : ∀ {p N}
           ---------------------
         → N [ Corrupt {p} ]↷ N
-
 ```
 
-  Creating messages globally is creating messages by party respecting the execution order
-  for the parties stored in the global state.
+Creating messages globally is creating messages by party respecting the execution order
+for the parties stored in the global state.
 
 ```agda
     _↷_ = Fold _[_]↷_
 ```
 
-  ## Voting
+## Voting
 
-  ### Comittee membership
+### Comittee membership
 
 ```agda
     data CommitteeMember : PartyId → RoundNumber → Set where
@@ -387,7 +368,7 @@ The global state consists of the following fields:
     -- TODO: add constructor
 ```
 
-  An honest party votes as follows:
+An honest party votes as follows:
 
 ```agda
     honestVote : Slot → RoundNumber → Stateˡ → Message
@@ -401,7 +382,7 @@ The global state consists of the following fields:
       }
 ```
 
-  A party can cast a vote for a block, if the party is a member of the voting committee
+A party can cast a vote for a block, if the party is a member of the voting committee
 
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
@@ -414,16 +395,16 @@ The global state consists of the following fields:
         → M [ Honest {p} ]⇉ N
 ```
 
-  Voting globally is voting by party respecting the execution order for the parties
-  stored in the global state.
+Voting globally is voting by party respecting the execution order for the parties
+stored in the global state.
 
 ```agda
     _⇉_ = Fold _[_]⇉_
 ```
 
-  # Small-step semantics
+# Small-step semantics
 
-  The small-step semantics describe the evolution of the global state.
+The small-step semantics describe the evolution of the global state.
 
 ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
@@ -475,9 +456,9 @@ The global state consists of the following fields:
                }
 ```
 
-  ## Reflexive, transitive closure
+## Reflexive, transitive closure
 
-  In the paper mentioned above this is big-step semantics.
+In the paper mentioned above this is big-step semantics.
 
 ```agda
     infix  2 _↝⋆_
@@ -497,7 +478,7 @@ The global state consists of the following fields:
         → L ↝⋆ N
 ```
 
-  # Collision free predicate
+# Collision free predicate
 
 ```agda
     data CollisionFree (N : Stateᵍ) : Set where
@@ -512,7 +493,6 @@ The global state consists of the following fields:
 
 <!--
 ```agda
-
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
@@ -612,9 +592,9 @@ The global state consists of the following fields:
 ```
 -->
 
-  ## Properties
+## Properties
 
-  When the current state is collision free, the pervious state was so too
+When the current state is collision free, the pervious state was so too
 
 ```agda
     ↝-collision-free : ∀ {N₁ N₂ : Stateᵍ}
@@ -643,7 +623,7 @@ The global state consists of the following fields:
 ```
 -->
 
-   When the current state is collision free, previous states were so too
+When the current state is collision free, previous states were so too
 
 ```agda
     ↝⋆-collision-free : ∀ {N₁ N₂ : Stateᵍ}
