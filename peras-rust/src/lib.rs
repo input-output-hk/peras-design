@@ -14,11 +14,10 @@ use peras_node::{InEnvelope, Node, NodeHandle};
 
 /// Opaque representation of a Peras node for foreign use
 pub struct PerasNode {
-    node: Box<Node>,
     handle: Box<NodeHandle>,
 }
 
-/// Create a new Peras node
+/// Creates and starts a new Peras node
 ///
 #[no_mangle]
 pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: u64) -> Box<PerasNode> {
@@ -26,7 +25,6 @@ pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: u64) -> 
     let node: Node = Node::new(node_id, node_stake);
     let handle = node.start();
     Box::new(PerasNode {
-        node: Box::new(node),
         handle: Box::new(handle),
     })
 }
@@ -47,7 +45,7 @@ pub unsafe extern "C" fn send_message(node: &mut PerasNode, buf: *const u8, len:
 
 #[no_mangle]
 pub unsafe extern "C" fn receive_message(node: &mut PerasNode, buf: *mut u8, len: usize) -> usize {
-    match node.handle.receive() {
+    match node.handle.try_receive() {
         None => 0,
         Some(msg) => {
             let bytes = serde_json::to_vec(&msg).unwrap();
