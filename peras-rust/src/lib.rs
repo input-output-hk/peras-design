@@ -20,9 +20,13 @@ pub struct PerasNode {
 /// Creates and starts a new Peras node
 ///
 #[no_mangle]
-pub unsafe extern "C" fn start_node(node_id: *const c_char, node_stake: u64) -> Box<PerasNode> {
+pub unsafe extern "C" fn start_node(
+    node_id: *const c_char,
+    node_stake: u64,
+    total_stake: u64,
+) -> Box<PerasNode> {
     let node_id = CStr::from_ptr(node_id).to_str().unwrap().into();
-    let node: Node = Node::new(node_id, node_stake);
+    let node: Node = Node::new(node_id, node_stake, total_stake);
     let handle = node.start();
     Box::new(PerasNode {
         handle: Box::new(handle),

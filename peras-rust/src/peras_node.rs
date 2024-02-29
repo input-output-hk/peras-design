@@ -38,6 +38,7 @@ pub enum OutEnvelope {
 pub struct Node {
     node_id: NodeId,
     node_stake: u64,
+    total_stake: u64,
 }
 
 pub struct NodeHandle {
@@ -47,10 +48,11 @@ pub struct NodeHandle {
 }
 
 impl Node {
-    pub fn new(node_id: NodeId, node_stake: u64) -> Self {
+    pub fn new(node_id: NodeId, node_stake: u64, total_stake: u64) -> Self {
         Node {
             node_id,
             node_stake,
+            total_stake,
         }
     }
 
@@ -65,6 +67,10 @@ impl Node {
             receiver: rx_out,
             thread: Some(thread),
         }
+    }
+
+    pub fn is_slot_leader(&self, slot: u64) -> bool {
+        false
     }
 }
 
@@ -125,6 +131,8 @@ mod tests {
     use std::{fs::File, io::BufReader, path::Path};
 
     use super::*;
+    use fake::Fake;
+    use fake::Faker;
 
     #[derive(Debug, Deserialize, Serialize)]
     struct Golden<T> {
@@ -153,7 +161,7 @@ mod tests {
 
     #[test]
     fn returns_idle_after_processing_tick() {
-        let node = Node::new("N1".into(), 42);
+        let node = Node::new("N1".into(), 42, 100);
         let mut handle = node.start();
 
         handle.send(SendMessage {
@@ -176,4 +184,12 @@ mod tests {
             _ => assert!(false),
         }
     }
+
+    #[test]
+    fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake() {
+        let node = Node::new("N1".into(), 100, 100);
+        let slot: u64 = Faker.fake();
+        assert!(node.is_slot_leader(slot))
+    }
+
 }

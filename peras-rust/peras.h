@@ -31,7 +31,9 @@ void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
  * Creates and starts a new Peras node
  *
  */
-struct PerasNode *start_node(const char *node_id, uint64_t node_stake);
+struct PerasNode *start_node(const char *node_id,
+                             uint64_t node_stake,
+                             uint64_t total_stake);
 
 void stop_node(struct PerasNode *node);
 
