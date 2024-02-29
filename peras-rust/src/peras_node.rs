@@ -86,7 +86,8 @@ impl Node {
         }
     }
 
-    fn is_slot_leader(&mut self, slot: u64) -> bool {
+    // FIXME: why is the slot number not involved in the leadership selection?
+    fn is_slot_leader(&mut self, _slot: u64) -> bool {
         let stake_ratio =
             (self.parameters.node_stake as f64) / (self.parameters.total_stake as f64);
         let prob = 1.0 - (1.0 - self.parameters.active_coefficient).powf(stake_ratio);
@@ -265,5 +266,36 @@ mod tests {
             .count();
 
         assert_eq!(schedule, 35);
+    }
+
+    #[test]
+    fn produce_a_block_when_node_is_leader() {
+        let params = NodeParameters {
+            node_stake: 50,
+            total_stake: 100,
+            active_coefficient: 0.5,
+        };
+        let node = Node::new("N1".into(), params);
+        let mut handle = node.start();
+
+        handle.send(SendMessage {
+            origin: None,
+            message: Message::NextSlot(1),
+        });
+
+        let received = handle.receive();
+
+        handle.stop(); // should be in some teardown method
+
+        match received {
+            Idle {
+                timestamp: _,
+                source: _,
+                best_chain,
+            } => {
+                assert_eq!(best_chain, empty_chain());
+            }
+            _ => assert!(false),
+        }
     }
 }
