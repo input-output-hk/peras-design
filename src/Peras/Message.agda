@@ -20,16 +20,19 @@ open NodeId public
 -- definition, a message /output/ by one node is an /input/ to some
 -- other node.  The routing should be handled by the networking layer
 -- interposed between all the nodes.
-data Message : Set where
+data Message a : Set where
 
   -- | New slot occurs (represents the passage of time)
-  NextSlot : Slot → Message
+  NextSlot : Slot → Message a
 
   -- | Some `Block` is received from upstream or broadcast
   -- downstream.
-  SomeBlock : Block → Message
+  SomeBlock : Block → Message a
 
   -- | Best chain has changed.
-  NewChain : Chain → Message
+  NewChain : Chain → Message a
+
+  -- | Some `Vote` is received from upstream or broadcast
+  SomeVote : Vote a → Message a
 
 {-# COMPILE AGDA2HS Message #-}

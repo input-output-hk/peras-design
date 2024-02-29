@@ -12,7 +12,7 @@ open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder)
 
-open import Peras.Crypto hiding (ByteString; emptyBS; _isInfixOf_)
+open import Peras.Crypto
 
 open import Haskell.Prelude using (Eq)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}

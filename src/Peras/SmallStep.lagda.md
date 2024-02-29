@@ -24,8 +24,8 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
-
 open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
+open import Peras.Message renaming (Message to Msg)
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
@@ -62,16 +62,11 @@ data Progress : Set where
    Baked : Progress
 ```
 
-TODO: use Peras.Message
+Messages are put into an envelope
 
 ```agda
-data Message : Set where
-   BlockMsg : Block → Message
-   ChainMsg : Chain → Message
-   VoteMsg : Vote Block → Message
-```
+Message = Msg Block
 
-```agda
 record Envelope : Set where
   constructor ⦅_,_,_⦆
   field
@@ -88,9 +83,7 @@ _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 
-In the following the module is parameterized by
- * a genesis block
- * a hash function for blocks
+block₀ denotes the genesis block that is passed in as a module parameter:
 
 ```agda
 module _ {block₀ : Block}
@@ -98,7 +91,10 @@ module _ {block₀ : Block}
          ⦃ _ : Hashable (Vote Block) ⦄
          ⦃ _ : Params ⦄
          where
+```
+  Bringing the hash function into scope
 
+```agda
   open Hashable ⦃...⦄
 ```
   The block tree, resp. the validity of the chain is defined with respect of the
@@ -197,9 +193,10 @@ module _ {block₀ : Block}
 
 ```agda
     processMsg : Message → Stateˡ → Stateˡ
-    processMsg (BlockMsg b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
-    processMsg (ChainMsg c) s = s -- TODO
-    processMsg (VoteMsg v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
+    processMsg (SomeBlock b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+    processMsg (NewChain c) s = s -- TODO
+    processMsg (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
+    processMsg (NextSlot _) s = s -- TODO
 
     honestRcv : List Message → Slot → Stateˡ → Stateˡ
     honestRcv msgs _ sₗ = foldr processMsg sₗ msgs
@@ -221,19 +218,22 @@ module _ {block₀ : Block}
                          payload = txs ;
                          signature = record { bytes = emptyBS } -- FIXME
                        }
-                  in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
+                  in SomeBlock newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
 
 ```
 
   ## Global state
 
+  The global state consists of the following fields:
+
   * clock: Current slot of the system
-  * progress
-  * state map
+  * progress: State of progress
+  * state map: Map with local state per party
   * messages: All the messages that have been sent but not yet been delivered
   * history: All the messages that have been sent
-  * execution order
+  * execution order: The list of parties determines the execution order
+  * voting round: Current voting round
 
 ```agda
     record Stateᵍ : Set where
@@ -244,7 +244,7 @@ module _ {block₀ : Block}
         stateMap : Map Stateˡ
         messages : List Envelope
         history : List Message
-        execution-order : List PartyId -- TODO: List (Honesty p) ?
+        executionOrder : List PartyId
         votingRound : RoundNumber
 
     open Stateᵍ public
@@ -263,14 +263,14 @@ module _ {block₀ : Block}
     data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
 
       Done : ∀ {M}
-        → execution-order M ≡ []
+        → executionOrder M ≡ []
         → Fold f M M
 
       Step : ∀ {M p ps} {h : Honesty p} {N O}
-        → execution-order M ≡ p ∷ ps
+        → executionOrder M ≡ p ∷ ps
         → f M h N
         → Fold f N O
-        → Fold f (record M { execution-order = ps }) O
+        → Fold f (record M { executionOrder = ps }) O
 ```
 
   # Network
@@ -289,7 +289,7 @@ module _ {block₀ : Block}
     gossipMsg : Message → Stateᵍ → Stateᵍ
     gossipMsg m N =
       record N {
-        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) (execution-order N)) ++ messages N ;
+        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) (executionOrder N)) ++ messages N ;
         history = m ∷ history N
       }
 
@@ -388,7 +388,7 @@ module _ {block₀ : Block}
 ```agda
     honestVote : Slot → RoundNumber → Stateˡ → List Message
     honestVote sl r ⟨ partyId , tree ⟩ =
-      VoteMsg (record {
+      SomeVote (record {
           votingRound = r ;
           creatorId = partyId ;
           committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
@@ -457,10 +457,10 @@ module _ {block₀ : Block}
                }
 
       PermParties : ∀ {N ps}
-        → execution-order N ↭ ps
+        → executionOrder N ↭ ps
           ---------------------------
         → N ↝ record N {
-                 execution-order = ps
+                 executionOrder = ps
                }
 
       PermMsgs : ∀ {N ms}
@@ -500,7 +500,7 @@ module _ {block₀ : Block}
 
       collision-free : ∀ {b₁ b₂ : Block}
         → All
-          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
+          (λ { (m₁ , m₂) → m₁ ≡ SomeBlock b₁ → m₂ ≡ SomeBlock b₂ →
                (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
