@@ -126,6 +126,9 @@ open import Data.List.Relation.Unary.Unique.Propositional {A = Vote Block}
 open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 open import Relation.Nullary.Negation using (¬_)
 
+import Relation.Binary.PropositionalEquality as PropEq
+open PropEq using (trans)
+
 open Block
 
 open import Data.Nat using (_≤_; _∸_)
