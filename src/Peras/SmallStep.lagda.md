@@ -215,11 +215,11 @@ module _ {block₀ : Block}
                      newBlock = record {
                          slotNumber = sl ;
                          creatorId = p ;
-                         parentBlock = tip best ♯ ;
-                         includedVotes = map _♯ votes ;
+                         parentBlock = hash (tip best) ;
+                         includedVotes = map hash votes ;
                          leadershipProof = record { proof = emptyBS } ; -- FIXME
                          payload = txs ;
-                         signature = record { signature = emptyBS } -- FIXME
+                         signature = record { bytes = emptyBS } -- FIXME
                        }
                   in BlockMsg newBlock ∷ [] , ⟨ p , (extendTree blockTree) tree newBlock ⟩
     ... | false = [] , ⟨ p , tree ⟩
@@ -393,7 +393,7 @@ module _ {block₀ : Block}
           creatorId = partyId ;
           committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
           blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
-          signature = record { signature = emptyBS } -- FIXME
+          signature = record { bytes = emptyBS } -- FIXME
         }) ∷ []
 ```
 
@@ -501,7 +501,7 @@ module _ {block₀ : Block}
       collision-free : ∀ {b₁ b₂ : Block}
         → All
           (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
-               (b₁ ♯ ≡ b₂ ♯ → b₁ ≡ b₂) })
+               (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
 ```
