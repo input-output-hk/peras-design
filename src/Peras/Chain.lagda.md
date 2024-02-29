@@ -168,7 +168,7 @@ module _ {block₀ : Block}
         }
 
     Cons : ∀ {vs : List (Vote Block)} {c : Chain} {b : Block}
-      → parentBlock b ≡ tip c ♯
+      → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → Unique vs
       → ¬ (Equivocation vs)
@@ -177,7 +177,7 @@ module _ {block₀ : Block}
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            votes = map (λ { (MkVote r c m b s) → MkVote r c m (b ♯) s }) vs ;
+            votes = map (λ { (MkVote r c m b s) → MkVote r c m (hash b) s }) vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
 ```

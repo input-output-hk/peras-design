@@ -22,15 +22,16 @@ postulate
 {-# COMPILE GHC _isInfixOf_ = BS.isInfixOf #-}
 
 record Hash : Set where
-  field hash : ByteString
+  field bs : ByteString
 
 open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
 
-record Hashable (A : Set) : Set where
-  field _♯ : A → Hash
-  infix 100 _♯
+record Hashable (a : Set) : Set where
+  field hash : a → Hash
+
+{-# COMPILE AGDA2HS Hashable class #-}
 
 -- should use normal VRF algorithm like leadership membership
 record MembershipProof : Set where
@@ -54,7 +55,7 @@ open LeadershipProof public
 -}
 
 record Signature : Set where
-  field signature : ByteString
+  field bytes : ByteString
 
 open Signature public
 

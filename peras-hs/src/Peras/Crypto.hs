@@ -2,8 +2,11 @@ module Peras.Crypto where
 
 import Data.ByteString
 
-newtype Hash = Hash {hash :: ByteString}
+newtype Hash = Hash {bs :: ByteString}
   deriving (Eq)
+
+class Hashable a where
+  hash :: a -> Hash
 
 newtype MembershipProof = MembershipProof {proofM :: ByteString}
   deriving (Eq)
@@ -11,7 +14,7 @@ newtype MembershipProof = MembershipProof {proofM :: ByteString}
 newtype LeadershipProof = LeadershipProof {proof :: ByteString}
   deriving (Eq)
 
-newtype Signature = Signature {signature :: ByteString}
+newtype Signature = Signature {bytes :: ByteString}
   deriving (Eq)
 
 newtype VerificationKey = VerificationKey

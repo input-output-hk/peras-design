@@ -109,3 +109,16 @@ open Block public
 {-# COMPILE AGDA2HS Block deriving Eq #-}
 ```
 -->
+
+```agda
+private
+  instance
+    hashBlock : Hashable Block
+    hashBlock = record
+      { hash = λ b →
+                 (let record { bytes = s } = signature b
+                  in record { bs = s })
+      }
+
+{-# COMPILE AGDA2HS hashBlock #-}
+```
