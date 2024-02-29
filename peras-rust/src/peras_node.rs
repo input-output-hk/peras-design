@@ -10,7 +10,7 @@ use crate::{
     message::{Message, NodeId},
 };
 use chrono::{DateTime, Utc};
-use rand::{rngs::SmallRng, Rng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -64,7 +64,7 @@ impl Default for NodeParameters {
 pub struct Node {
     node_id: NodeId,
     parameters: NodeParameters,
-    seed: SmallRng,
+    seed: StdRng,
     best_chain: Chain,
 }
 
@@ -79,7 +79,7 @@ impl Node {
         Node {
             node_id,
             parameters,
-            seed: SmallRng::seed_from_u64(12),
+            seed: StdRng::seed_from_u64(12),
             best_chain: empty_chain(),
         }
     }

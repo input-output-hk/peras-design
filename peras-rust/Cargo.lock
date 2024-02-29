@@ -27,12 +27,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.80"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ad32ce52e4161730f7098c077cd2ed6229b5804ccf99e5366be1ab72a98b4e1"
-
-[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -321,23 +315,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
-name = "netsim"
-version = "0.1.0"
-source = "git+https://github.com/input-output-hk/ce-netsim?branch=main#564d7cf8fa7ce0098e2b3fc1ccff465b9c2ad44e"
-dependencies = [
- "anyhow",
- "netsim-core",
-]
-
-[[package]]
-name = "netsim-core"
-version = "0.1.0"
-source = "git+https://github.com/input-output-hk/ce-netsim?branch=main#564d7cf8fa7ce0098e2b3fc1ccff465b9c2ad44e"
-dependencies = [
- "anyhow",
-]
-
-[[package]]
 name = "num-traits"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,7 +343,6 @@ dependencies = [
  "chrono",
  "fake",
  "hex",
- "netsim",
  "quickcheck",
  "quickcheck_macros",
  "rand",
