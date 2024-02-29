@@ -26,7 +26,7 @@ newtype RustNode = RustNode {foreignNode :: Ptr PerasNode}
 
 data PerasNode
 
-foreign import capi unsafe "peras.h start_node" c_start_node :: CString -> Double -> IO (Ptr PerasNode)
+foreign import capi unsafe "peras.h start_node" c_start_node :: CString -> Double -> Double -> IO (Ptr PerasNode)
 
 foreign import capi unsafe "peras.h stop_node" c_stop_node :: Ptr PerasNode -> IO ()
 
@@ -35,10 +35,10 @@ foreign import capi unsafe "peras.h send_message" c_send_message :: Ptr PerasNod
 foreign import capi unsafe "peras.h receive_message" c_receive_message :: Ptr PerasNode -> Ptr Word8 -> Int -> IO Int
 
 -- | Start a `RustNode` with given id and amount of stake.
-startNode :: NodeId -> Rational -> IO RustNode
-startNode MkNodeId{nodeId} stake =
+startNode :: NodeId -> Integer -> Integer -> IO RustNode
+startNode MkNodeId{nodeId} nodeStake totalStake =
   withCString nodeId $ \cstr ->
-    RustNode <$> c_start_node cstr (fromRational stake)
+    RustNode <$> c_start_node cstr (fromIntegral nodeStake) (fromIntegral totalStake)
 
 -- | Stop given `RustNode`.
 stopNode :: RustNode -> IO ()

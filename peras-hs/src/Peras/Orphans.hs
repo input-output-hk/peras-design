@@ -10,13 +10,14 @@ module Peras.Orphans where
 
 import Data.Aeson (
   FromJSON (parseJSON),
-  FromJSONKey,
+  FromJSONKey (..),
+  FromJSONKeyFunction (FromJSONKeyTextParser),
   ToJSON (toJSON),
-  ToJSONKey,
+  ToJSONKey (..),
   Value (String),
   withText,
  )
-import Data.Aeson.Types (parseFail)
+import Data.Aeson.Types (parseFail, toJSONKeyText)
 import Data.Bifunctor (bimap)
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
@@ -51,6 +52,15 @@ instance FromJSON Bytes where
 
 instance ToJSON Bytes where
   toJSON = String . T.pack . init . tail . show
+
+instance FromJSONKey Bytes where
+  fromJSONKey = FromJSONKeyTextParser $ \t ->
+    case B16.decode . BS8.pack . T.unpack $ t of
+      Left err -> fail err
+      Right k -> pure $ Bytes k
+
+instance ToJSONKey Bytes where
+  toJSONKey = toJSONKeyText $ T.pack . init . tail . show
 
 deriving via Bytes instance FromJSON BS.ByteString
 deriving via Bytes instance ToJSON BS.ByteString
