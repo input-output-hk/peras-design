@@ -186,6 +186,7 @@ The local state initialized with the block tree
 ```agda
     Stateˡ = LocalState blockTree
 ```
+Honestly updating the local state upon receiving a message
 
 ```agda
     honestReceive : List Message → Stateˡ → Stateˡ
@@ -196,7 +197,10 @@ The local state initialized with the block tree
         receive (NewChain c) s = s -- TODO
         receive (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
         receive (NextSlot _) s = s -- TODO
+```
+Honestly creating a block
 
+```agda
     honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
     honestCreate sl (record { roundNumber = r }) txs ⟨ p , tree ⟩ =
       let best = (bestChain blockTree) (pred sl) tree
@@ -270,6 +274,8 @@ The global state consists of the following fields:
 ```
 # Network
 
+Retrieving a messages from the global message buffer
+
 ```agda
     retrieve : PartyId → Stateᵍ → List Message × List Envelope
     retrieve p N =
@@ -277,7 +283,10 @@ The global state consists of the following fields:
             rest = filterᵇ (λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
         in map (λ { ⦅ m , _ , _ ⦆ → m }) msgs , rest
       where open Relation.Binary.Bundles.DecSetoid (StrictTotalOrder.Eq.decSetoid PartyIdO)
+```
+Broadcasting messages, i.e. updating the global message buffer
 
+```agda
     broadcast : Message → Stateᵍ → Stateᵍ
     broadcast m N =
       record N {
