@@ -15,6 +15,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 module _ {block₀ : Block}
+         {parties : List PartyId}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
          ⦃ _ : Params ⦄
@@ -24,7 +25,7 @@ module _ {block₀ : Block}
   open import Peras.SmallStep using (TreeType)
 
   module _ {T : Set}
-           (blockTree : TreeType {block₀} T)
+           (blockTree : TreeType T)
            (honest? : (p : PartyId) → Honesty p)
            (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
@@ -40,7 +41,7 @@ module _ {block₀ : Block}
 
     -- knowledge propagation
     postulate
-      lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {honest?} {lottery} {txSelection}}
+      lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {parties} {T} {blockTree} {honest?} {lottery} {txSelection}}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : T}
         → N₀ ↝ N₁

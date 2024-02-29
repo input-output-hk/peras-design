@@ -83,10 +83,13 @@ _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 
-block₀ denotes the genesis block that is passed in as a module parameter:
+block₀ denotes the genesis block that is passed in as a module parameter together
+with a list of parties. The list is static in the sense that no new parties are
+add nor are parties remove from the list. Permutations of the list are allowed.
 
 ```agda
 module _ {block₀ : Block}
+         {parties : List PartyId}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
          ⦃ _ : Params ⦄
@@ -268,7 +271,7 @@ The global state consists of the following fields:
 
 ```agda
     N₀ : Stateᵍ
-    N₀ = ⟪ 0 , Ready , empty , [] , [] , [] , record { roundNumber = 0 } ⟫ -- FIXME: initial parties as parameter
+    N₀ = ⟪ 0 , Ready , empty , [] , [] , parties , record { roundNumber = 0 } ⟫
 ```
 
   ### Fold over parties in global state
