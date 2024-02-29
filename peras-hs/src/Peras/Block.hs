@@ -3,6 +3,8 @@ module Peras.Block where
 import Numeric.Natural (Natural)
 import Peras.Crypto (Hash, Hashable, LeadershipProof, Signature (bytes), VerificationKey)
 
+import Peras.Crypto (Hash (..), Hashable (..))
+
 type PartyId = Natural
 
 data Party = MkParty {id :: PartyId, vkey :: VerificationKey}
