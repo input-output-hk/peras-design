@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    chain::Chain,
+    chain::{empty_chain, Chain},
     message::{Message, NodeId},
 };
 use chrono::{DateTime, Utc};
@@ -70,8 +70,24 @@ impl Node {
 
 fn work(node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
     println!("starting node");
-
-    todo!()
+    loop {
+        let recv = rx_in.recv();
+        match recv {
+            Ok(InEnvelope::Stop) => return,
+            Ok(InEnvelope::SendMessage {
+                origin: _,
+                message: Message::NextSlot(slot),
+            }) => tx_out
+                .send(OutEnvelope::Idle {
+                    timestamp: Utc::now(),
+                    source: node.node_id.clone(),
+                    best_chain: empty_chain(),
+                })
+                .expect("Failed to send message"),
+            Ok(_) => (),
+            Err(err) => panic!("Error while receiving message {err}"),
+        }
+    }
 }
 
 impl NodeHandle {
@@ -145,10 +161,14 @@ mod tests {
             message: Message::NextSlot(1),
         });
 
-        match handle.receive() {
+        let received = handle.receive();
+
+        handle.stop(); // should be in some teardown method
+
+        match received {
             Idle {
-                timestamp,
-                source,
+                timestamp: _,
+                source: _,
                 best_chain,
             } => {
                 assert_eq!(best_chain, empty_chain());
