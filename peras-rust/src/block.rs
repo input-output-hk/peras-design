@@ -5,7 +5,7 @@ pub type Slot = u64;
 
 pub type PartyId = u64;
 
-#[derive(Eq, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[serde(tag = "tag", rename_all = "camelCase")]
 pub struct Party {
     pub id: PartyId,
@@ -13,11 +13,11 @@ pub struct Party {
     pub vkey: [u8; 8],
 }
 
-#[derive(Eq, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[serde(tag = "tag", rename_all = "camelCase")]
 pub struct Tx {}
 
-#[derive(Eq, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[serde(tag = "tag", rename_all = "camelCase")]
 pub struct Block {
     pub slot_number: Slot,

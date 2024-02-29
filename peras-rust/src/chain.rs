@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub type RoundNumber = u64;
 
-#[derive(Eq, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Vote {
     pub voting_round: RoundNumber,
@@ -16,7 +16,7 @@ pub struct Vote {
     pub signature: Signature,
 }
 
-#[derive(Eq, PartialEq, Debug, Deserialize, Serialize)]
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Chain {
     pub blocks: Vec<Block>,
     pub votes: Vec<Vote>,

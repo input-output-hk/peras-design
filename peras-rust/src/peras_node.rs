@@ -4,11 +4,13 @@ use std::{
 };
 
 use crate::{
+    block::Block,
     chain::{empty_chain, Chain},
+    crypto,
     message::{Message, NodeId},
 };
 use chrono::{DateTime, Utc};
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{rngs::SmallRng, Rng, RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -34,6 +36,13 @@ pub enum OutEnvelope {
         source: String,
         best_chain: Chain,
     },
+    OutMessage {
+        timestamp: DateTime<Utc>,
+        source: String,
+        destination: String,
+        message: Message,
+        bytes: u32,
+    },
 }
 
 pub struct NodeParameters {
@@ -56,6 +65,7 @@ pub struct Node {
     node_id: NodeId,
     parameters: NodeParameters,
     seed: SmallRng,
+    best_chain: Chain,
 }
 
 pub struct NodeHandle {
@@ -70,6 +80,7 @@ impl Node {
             node_id,
             parameters,
             seed: SmallRng::seed_from_u64(12),
+            best_chain: empty_chain(),
         }
     }
 
@@ -95,7 +106,7 @@ impl Node {
     }
 }
 
-fn work(node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
+fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
     println!("starting node");
     loop {
         let recv = rx_in.recv();
@@ -104,16 +115,52 @@ fn work(node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
             Ok(InEnvelope::SendMessage {
                 origin: _,
                 message: Message::NextSlot(slot),
-            }) => tx_out
-                .send(OutEnvelope::Idle {
-                    timestamp: Utc::now(),
-                    source: node.node_id.clone(),
-                    best_chain: empty_chain(),
-                })
-                .expect("Failed to send message"),
+            }) => match handle_slot(slot, &mut node) {
+                Some(out) => tx_out.send(out).expect("Failed to send message"),
+                None => (),
+            },
             Ok(_) => (),
             Err(err) => panic!("Error while receiving message {err}"),
         }
+        tx_out
+            .send(OutEnvelope::Idle {
+                timestamp: Utc::now(),
+                source: node.node_id.clone(),
+                best_chain: node.best_chain.clone(),
+            })
+            .expect("Failed to send Idle message")
+    }
+}
+
+fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
+    if node.is_slot_leader(slot) {
+        let mut signature = [0u8; 8];
+        node.seed.fill_bytes(&mut signature);
+        let mut leadership_proof = [0u8; 8];
+        node.seed.fill_bytes(&mut leadership_proof);
+        let new_block = Block {
+            slot_number: slot,
+            creator_id: 1,
+            parent_block: crypto::Hash {
+                hash: [0, 0, 0, 0, 0, 0, 0, 0],
+            },
+            included_votes: vec![],
+            leadership_proof: crypto::LeadershipProof {
+                proof: leadership_proof,
+            },
+            payload: vec![],
+            signature: crypto::Signature { signature },
+        };
+        node.best_chain.blocks.push(new_block);
+        Some(OutEnvelope::OutMessage {
+            timestamp: Utc::now(),
+            source: node.node_id.clone(),
+            destination: node.node_id.clone(), // FIXME this does not make sense
+            message: Message::NewChain(node.best_chain.clone()),
+            bytes: 0,
+        })
+    } else {
+        None
     }
 }
 
@@ -273,27 +320,32 @@ mod tests {
         let params = NodeParameters {
             node_stake: 50,
             total_stake: 100,
-            active_coefficient: 0.5,
+            active_coefficient: 1.0,
         };
         let node = Node::new("N1".into(), params);
         let mut handle = node.start();
 
-        handle.send(SendMessage {
-            origin: None,
-            message: Message::NextSlot(1),
-        });
+        for i in 1..5 {
+            handle.send(SendMessage {
+                origin: None,
+                message: Message::NextSlot(i),
+            })
+        }
 
         let received = handle.receive();
 
         handle.stop(); // should be in some teardown method
 
         match received {
-            Idle {
+            OutMessage {
                 timestamp: _,
                 source: _,
-                best_chain,
+                destination: _,
+                message: Message::NewChain(chain),
+                bytes: _,
             } => {
-                assert_eq!(best_chain, empty_chain());
+                println!("got chain {:?}", serde_json::to_string(&chain));
+                assert_ne!(chain, empty_chain());
             }
             _ => assert!(false),
         }

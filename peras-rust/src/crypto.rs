@@ -1,29 +1,29 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct Hash {
     #[serde(with = "hex::serde")]
-    hash: [u8; 8],
+    pub hash: [u8; 8],
 }
 
-#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct LeadershipProof {
     #[serde(with = "hex::serde")]
-    proof: [u8; 8],
+    pub proof: [u8; 8],
 }
 
-#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct MembershipProof {
     #[serde(with = "hex::serde")]
-    proof: [u8; 8],
+    pub proof: [u8; 8],
 }
 
-#[derive(Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub struct Signature {
     #[serde(with = "hex::serde")]
-    signature: [u8; 8],
+    pub signature: [u8; 8],
 }
