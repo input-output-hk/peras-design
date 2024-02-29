@@ -28,17 +28,9 @@ open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
 
-postulate
-  hsEq : Relation.Binary.Rel Hash 0ℓ
-  hsLt : Relation.Binary.Rel Hash 0ℓ
-  hsIs : Relation.Binary.IsStrictTotalOrder hsEq hsLt
-
-HashO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
-HashO = record {
-  Carrier            = Hash ;
-  _≈_                = hsEq ;
-  _<_                = hsLt ;
-  isStrictTotalOrder = hsIs }
+record Hashable (A : Set) : Set where
+  field _♯ : A → Hash
+  infix 100 _♯
 
 -- should use normal VRF algorithm like leadership membership
 record MembershipProof : Set where
