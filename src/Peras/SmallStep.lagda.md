@@ -225,28 +225,42 @@ module _ {block₀ : Block}
 
   ## Global state
 
-  The global state consists of the following fields:
-
-  * clock: Current slot of the system
-  * progress: State of progress
-  * state map: Map with local state per party
-  * messages: All the messages that have been sent but not yet been delivered
-  * history: All the messages that have been sent
-  * execution order: The list of parties determines the execution order
-  * voting round: Current voting round
-
 ```agda
     record Stateᵍ : Set where
       constructor ⟪_,_,_,_,_,_,_⟫
       field
-        clock : Slot
-        progress : Progress
-        stateMap : Map Stateˡ
-        messages : List Envelope
-        history : List Message
-        executionOrder : List PartyId
-        votingRound : RoundNumber
+```
+The global state consists of the following fields:
 
+* Current slot of the system
+```agda
+        clock : Slot
+```
+* State of progress
+```agda
+        progress : Progress
+```
+* Map with local state per party
+```agda
+        stateMap : Map Stateˡ
+```
+* All the messages that have been sent but not yet been delivered
+```agda
+        messages : List Envelope
+```
+* All the messages that have been sent
+```agda
+        history : List Message
+```
+* The list of parties determines the execution order
+```agda
+        executionOrder : List PartyId
+```
+* Current voting round
+```agda
+        votingRound : RoundNumber
+```
+```agda
     open Stateᵍ public
 ```
 
