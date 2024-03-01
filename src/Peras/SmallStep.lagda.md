@@ -176,8 +176,8 @@ The block tree type
 ```agda
   module _ {T : Set}
            {blockTree : TreeType T}
-           {honest? : (p : PartyId) → Honesty p} -- Predicate or bool?
            {isSlotLeader : PartyId → Slot → Bool}
+           {isCommitteeMember : PartyId → RoundNumber → Bool}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
            where
@@ -199,6 +199,21 @@ Honestly updating the local state upon receiving a message
         receive (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
         receive (NextSlot _) s = s -- TODO
 ```
+
+Voting honestly
+
+```agda
+    honestVote : Slot → RoundNumber → Stateˡ → Message
+    honestVote sl r ⟨ partyId , tree ⟩ =
+      SomeVote record {
+        votingRound = r ;
+        creatorId = partyId ;
+        committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
+        blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
+        signature = record { bytes = emptyBS } -- FIXME
+      }
+```
+
 Honestly creating a block
 
 ```agda
@@ -222,7 +237,7 @@ Honestly creating a block
 
 ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_⟫
+
       field
 ```
 The global state consists of the following fields:
@@ -230,6 +245,10 @@ The global state consists of the following fields:
 * Current slot of the system
 ```agda
         clock : Slot
+```
+* Current voting round
+```agda
+        votingRound : RoundNumber
 ```
 * Map with local state per party
 ```agda
@@ -242,10 +261,6 @@ The global state consists of the following fields:
 * All the messages that have been sent
 ```agda
         history : List Message
-```
-* Current voting round
-```agda
-        votingRound : RoundNumber
 ```
 ```agda
     open Stateᵍ public
@@ -281,11 +296,6 @@ updating the local block tree and putting the local state back into the global s
 ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honestNoState : ∀ {p N}
-        → lookup (stateMap N) p ≡ nothing
-          -------------------------------
-        → N [ Honest {p} ]⇀ N
-
       honest : ∀ {p N} {s s′ : Stateˡ} {msg} {rest}
         → lookup (stateMap N) p ≡ just s
         → (msg , rest) ≡ retrieve p N
@@ -301,7 +311,24 @@ updating the local block tree and putting the local state back into the global s
           ---------------------
         → N [ Corrupt {p} ]⇀ N
 ```
+## Vote
 
+A party can cast a vote for a block, if the party is a member of the voting committee
+
+```agda
+    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+
+      honest : ∀ {p M N} {s} {msg}
+        → lookup (stateMap M)  p ≡ just s
+        → isCommitteeMember p (votingRound M) ≡ true
+        → msg ≡ honestVote (clock M) (votingRound M) s
+        → N ≡ broadcast msg M
+        → M [ Honest {p} ]⇉ N
+
+      corrupt : ∀ {p N}
+          ---------------------
+        → N [ Corrupt {p} ]⇉ N
+```
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
@@ -310,11 +337,6 @@ state.
 
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
-
-      honestNoState : ∀ {p N}
-        → lookup (stateMap N) p ≡ nothing
-          -------------------------------
-        → N [ Honest {p} ]↷ N
 
       honest : ∀ {p M N} {s s′ : Stateˡ} {msg}
         → lookup (stateMap M)  p ≡ just s
@@ -330,43 +352,6 @@ state.
       corrupt : ∀ {p N}
           ---------------------
         → N [ Corrupt {p} ]↷ N
-```
-
-## Voting
-
-### Comittee membership
-
-```agda
-    data CommitteeMember : PartyId → RoundNumber → Set where
-
-    -- TODO: add constructor
-```
-
-An honest party votes as follows:
-
-```agda
-    honestVote : Slot → RoundNumber → Stateˡ → Message
-    honestVote sl r ⟨ partyId , tree ⟩ =
-      SomeVote record {
-        votingRound = r ;
-        creatorId = partyId ;
-        committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-        blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
-        signature = record { bytes = emptyBS } -- FIXME
-      }
-```
-
-A party can cast a vote for a block, if the party is a member of the voting committee
-
-```agda
-    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
-
-      honest : ∀ {p M N} {s} {msg}
-        → lookup (stateMap M)  p ≡ just s
-        → CommitteeMember p (votingRound M)
-        → msg ≡ honestVote (clock M) (votingRound M) s
-        → N ≡ broadcast msg M
-        → M [ Honest {p} ]⇉ N
 ```
 
 # Small-step semantics
@@ -465,7 +450,6 @@ In the paper mentioned above this is big-step semantics.
     []-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇀ N
       → history M ⊆ₘ history N
-    []-hist-common-prefix (honestNoState _) x = x
     []-hist-common-prefix (honest _ _ _) x = x
     []-hist-common-prefix corrupt x = x
 
@@ -473,7 +457,6 @@ In the paper mentioned above this is big-step semantics.
       → CollisionFree N
       → M [ h ]⇀ N
       → CollisionFree M
-    []⇀-collision-free cf-N (honestNoState _) = cf-N
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
     []⇀-collision-free cf-N corrupt = cf-N
 
@@ -488,7 +471,6 @@ In the paper mentioned above this is big-step semantics.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honestNoState _) x = x
     []↷-hist-common-prefix (honest {msg = msg} _ _ x x₁) = hist-honestGossipMsgs {msg = msg} x₁
     []↷-hist-common-prefix corrupt x = x
 

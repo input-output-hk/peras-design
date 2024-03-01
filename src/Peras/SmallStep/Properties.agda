@@ -5,7 +5,7 @@ open import Data.List using (List)
 open import Data.Maybe using (just)
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
-open import Peras.Chain using (Vote)
+open import Peras.Chain using (RoundNumber; Vote)
 open import Peras.Crypto using (Hashable)
 open import Peras.Params using (Params)
 
@@ -25,8 +25,8 @@ module _ {block₀ : Block}
 
   module _ {T : Set}
            (blockTree : TreeType T)
-           (honest? : (p : PartyId) → Honesty p)
-           (lottery : PartyId → Slot → Bool)
+           (isSlotLeader : PartyId → Slot → Bool)
+           (isCommitteeMember : PartyId → RoundNumber → Bool)
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
            where
@@ -41,7 +41,7 @@ module _ {block₀ : Block}
 
       -- knowledge propagation
       postulate
-        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {honest?} {lottery} {txSelection} {parties}}
+        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : T}
           → N₀ ↝ N₁
