@@ -221,7 +221,7 @@ Honestly creating a block
 
 ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_,_,_⟫
+      constructor ⟪_,_,_,_,_,_⟫
       field
 ```
 The global state consists of the following fields:
@@ -229,10 +229,6 @@ The global state consists of the following fields:
 * Current slot of the system
 ```agda
         clock : Slot
-```
-* State of progress
-```agda
-        progress : Progress
 ```
 * Map with local state per party
 ```agda
@@ -257,21 +253,7 @@ The global state consists of the following fields:
 ```agda
     open Stateᵍ public
 ```
-### Fold over parties in global state
 
-```agda
-    data Fold (f : ∀ {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set) : Stateᵍ → Stateᵍ → Set where
-
-      Done : ∀ {M}
-        → executionOrder M ≡ []
-        → Fold f M M
-
-      Step : ∀ {M p ps} {h : Honesty p} {N O}
-        → executionOrder M ≡ p ∷ ps
-        → f M h N
-        → Fold f N O
-        → Fold f (record M { executionOrder = ps }) O
-```
 # Network
 
 Retrieving a messages from the global message buffer
@@ -323,13 +305,6 @@ updating the local block tree and putting the local state back into the global s
         → N [ Corrupt {p} ]⇀ N
 ```
 
-Receiving messages globally is receiving messages by party respecting the execution order
-for the parties stored in the global state.
-
-```agda
-    _⇀_ = Fold _[_]⇀_
-```
-
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
@@ -358,13 +333,6 @@ state.
       corrupt : ∀ {p N}
           ---------------------
         → N [ Corrupt {p} ]↷ N
-```
-
-Creating messages globally is creating messages by party respecting the execution order
-for the parties stored in the global state.
-
-```agda
-    _↷_ = Fold _[_]↷_
 ```
 
 ## Voting
@@ -404,13 +372,6 @@ A party can cast a vote for a block, if the party is a member of the voting comm
         → M [ Honest {p} ]⇉ N
 ```
 
-Voting globally is voting by party respecting the execution order for the parties
-stored in the global state.
-
-```agda
-    _⇉_ = Fold _[_]⇉_
-```
-
 # Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
@@ -418,36 +379,25 @@ The small-step semantics describe the evolution of the global state.
 ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {M N}
-        → progress M ≡ Ready
-        → M ⇀ N
+      Deliver : ∀ {M N p} {h : Honesty p}
+        → M [ h ]⇀ N
           ---------------------------
-        → M ↝ record N {
-                 progress = Delivered
-               }
+        → M ↝ N
 
-      CastVote : ∀ {M N}
-        → progress M ≡ Delivered
-        → M ⇉ N
+      CastVote : ∀ {M N p} {h : Honesty p}
+        → M [ h ]⇉ N
           ----------------------
-        → M ↝ record N {
-                 progress = Voted
-               }
+        → M ↝ N
 
-      Bake : ∀ {M N}
-        → progress M ≡ Voted
-        → M ↷ N
+      Bake : ∀ {M N p} {h : Honesty p}
+        → M [ h ]↷ N
           -----------------------
-        → M ↝ record N {
-                 progress = Baked
-               }
+        → M ↝ N
 
       NextRound : ∀ {M}
-        → progress M ≡ Baked
           ------------------------------
         → M ↝ record M {
-                 clock = suc (clock M) ;
-                 progress = Ready
+                 clock = suc (clock M)
                }
 
       PermParties : ∀ {N ps}
@@ -537,18 +487,6 @@ In the paper mentioned above this is big-step semantics.
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
     []⇀-collision-free cf-N corrupt = cf-N
 
-    ⇀-hist-common-prefix : ∀ {M N}
-      → M ⇀ N
-      → history M ⊆ₘ history N
-    ⇀-hist-common-prefix (Done _) x = x
-    ⇀-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]-hist-common-prefix x₂) (⇀-hist-common-prefix x₃)
-
-    ⇀-collision-free : ∀ {M N}
-      → CollisionFree N
-      → M ⇀ N
-      → CollisionFree M
-    ⇀-collision-free cf-N M⇀N = collision-free-resp-⊇ cf-N (⇀-hist-common-prefix M⇀N)
-
     -- Create
 
     -- TODO: implement Gossip data type
@@ -564,24 +502,11 @@ In the paper mentioned above this is big-step semantics.
     []↷-hist-common-prefix (honest {msg = msg} _ _ x x₁) = hist-honestGossipMsgs {msg = msg} x₁
     []↷-hist-common-prefix corrupt x = x
 
-    ↷-hist-common-prefix : ∀ {M N}
-      → M ↷ N
-      → history M ⊆ₘ history N
-    ↷-hist-common-prefix (Done _) x = x
-    ↷-hist-common-prefix (Step refl x₂ x₃) = ⊆-trans ([]↷-hist-common-prefix x₂) (↷-hist-common-prefix x₃)
-
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
       → M [ h ]↷ N
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
-
-    ↷-collision-free : ∀ {M N}
-      → CollisionFree N
-      → M ↷ N
-      → CollisionFree M
-    ↷-collision-free cf-N (Done _) = cf-N
-    ↷-collision-free cf-N M↷N = collision-free-resp-⊇ cf-N (↷-hist-common-prefix M↷N)
 
     postulate
       []⇉-collision-free : ∀ {M N p} {h : Honesty p}
@@ -589,14 +514,9 @@ In the paper mentioned above this is big-step semantics.
         → M [ h ]⇉ N
         → CollisionFree M
 
-      ⇉-collision-free : ∀ {M N}
-        → CollisionFree N
-        → M ⇉ N
-        → CollisionFree M
-
-    ∷-collision-free : ∀ {cl pr sm ms hs ps r p}
-      → CollisionFree ⟪ cl , pr , sm , ms , hs , p ∷ ps , r ⟫
-      → CollisionFree ⟪ cl , pr , sm , ms , hs , ps , r ⟫
+    ∷-collision-free : ∀ {cl sm ms hs ps r p}
+      → CollisionFree ⟪ cl , sm , ms , hs , p ∷ ps , r ⟫
+      → CollisionFree ⟪ cl , sm , ms , hs , ps , r ⟫
     ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
 ```
 -->
@@ -614,21 +534,12 @@ When the current state is collision free, the pervious state was so too
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver _ (Done _)) (collision-free cf) = collision-free cf
-    ↝-collision-free (Deliver refl (Step refl x₁ x₂)) (collision-free cf) =
-      let cf-N = ⇀-collision-free (collision-free cf) x₂
-      in ∷-collision-free ([]⇀-collision-free cf-N x₁)
-    ↝-collision-free (Bake _ (Done _)) (collision-free cf) = collision-free cf
-    ↝-collision-free (Bake x (Step refl x₁ x₂)) (collision-free cf) =
-      let cf-N = ↷-collision-free (collision-free cf) x₂
-      in ∷-collision-free ([]↷-collision-free cf-N x₁)
-    ↝-collision-free (NextRound _) (collision-free cf) = collision-free cf
-    ↝-collision-free (PermParties _) (collision-free cf) = collision-free cf
-    ↝-collision-free (PermMsgs _) (collision-free cf) = collision-free cf
-    ↝-collision-free (CastVote _ (Done x₁)) (collision-free cf) = collision-free cf
-    ↝-collision-free (CastVote _ (Step refl x₁ x₂)) (collision-free cf) =
-      let cf-N = ⇉-collision-free (collision-free cf) x₂
-      in ∷-collision-free ([]⇉-collision-free cf-N x₁)
+    ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
+    ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
+    ↝-collision-free (Bake x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free NextRound (collision-free x) = collision-free x
+    ↝-collision-free (PermParties _) (collision-free x) = collision-free x
+    ↝-collision-free (PermMsgs _) (collision-free x) = collision-free x
 ```
 -->
 
