@@ -10,6 +10,9 @@ category:           Network
 build-type:         Simple
 extra-source-files: ReadMe.md
 
+data-dir: golden
+data-files: *.json
+
 library
   exposed-modules:
     Peras.IOSim.GraphViz
@@ -32,6 +35,7 @@ library
     , bytestring
     , containers
     , data-default
+    , generic-random
     , io-classes
     , io-sim
     , language-dot
@@ -39,6 +43,8 @@ library
     , MonadRandom
     , mtl
     , peras-hs
+    , QuickCheck
+    , quickcheck-instances
     , random
   default-extensions:  StrictData
   default-language: Haskell2010
@@ -53,8 +59,28 @@ executable peras-iosim
     , directory
     , optparse-applicative
     , peras-iosim
-    , process 
+    , process
     , temporary
     , yaml
   ghc-options:      -Wall -Wunused-packages
   default-language: Haskell2010
+
+test-suite test
+    default-language: Haskell2010
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    other-modules:    Peras.JsonSpec
+                      Paths_peras_iosim
+    build-depends:
+                        base >= 4.9 && <5
+                  , QuickCheck
+                  , hspec
+                  , hspec-golden-aeson
+                  , peras-iosim
+                  , quickcheck-classes
+
+    build-tool-depends:
+       hspec-discover:hspec-discover
+
+    ghc-options: -rtsopts -threaded

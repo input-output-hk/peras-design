@@ -25,11 +25,15 @@ import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Set (Set)
 import GHC.Generics (Generic)
+import Generic.Random (genericArbitrary, uniform)
+import Peras.Arbitraries ()
 import Peras.Block (PartyId, Slot)
 import Peras.Chain (Chain)
 import Peras.IOSim.Types (Blocks, Coin, Rollback, Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
+import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck.Instances.Time ()
 
 data NodeState = NodeState
   { _nodeId :: NodeId
@@ -51,5 +55,8 @@ data NodeState = NodeState
 
 instance FromJSON NodeState
 instance ToJSON NodeState
+
+instance Arbitrary NodeState where
+  arbitrary = genericArbitrary uniform
 
 makeLenses ''NodeState

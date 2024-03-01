@@ -14,12 +14,15 @@ module Peras.IOSim.Types (
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
 import GHC.Generics (Generic)
+import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Vote)
 import Peras.Crypto (Hash)
 import Peras.Message (Message)
 import Peras.Orphans ()
+import Test.QuickCheck (Arbitrary (arbitrary))
+import Test.QuickCheck.Instances.Natural ()
 
 type Coin = Int
 
@@ -44,3 +47,6 @@ data Rollback = Rollback
 
 instance FromJSON Rollback
 instance ToJSON Rollback
+
+instance Arbitrary Rollback where
+  arbitrary = genericArbitrary uniform
