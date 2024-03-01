@@ -191,7 +191,7 @@ Honestly updating the local state upon receiving a message
         receive (NextSlot _) s = s -- TODO
 ```
 
-#### Voting honestly
+### Voting honestly
 
 The vote is for the last block at least L slots old
 
@@ -210,7 +210,7 @@ The vote is for the last block at least L slots old
      in SomeVote vote , ⟨ p , (addVote blockTree) tree vote ⟩
 ```
 
-#### Honestly creating a block
+### Honestly creating a block
 
 ```agda
     honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
@@ -292,10 +292,10 @@ updating the local block tree and putting the local state back into the global s
 ```agda
     data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p N} {s s′ : Stateˡ} {msg} {rest}
+      honest : ∀ {p N} {s s′ : Stateˡ} {m} {rest}
         → lookup (stateMap N) p ≡ just s
-        → (msg , rest) ≡ retrieve p N
-        → s′ ≡ honestReceive msg s
+        → (m , rest) ≡ retrieve p N
+        → s′ ≡ honestReceive m s
           ------------------------
         → N [ Honest {p} ]⇀
           record N {
@@ -317,13 +317,13 @@ A party can cast a vote for a block, if
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p M N} {s s′} {msg}
-        → lookup (stateMap M)  p ≡ just s
+      honest : ∀ {p M N} {s s′} {m}
+        → lookup (stateMap M) p ≡ just s
         → clock M ≡ roundNumber (votingRound M) * T
         → isCommitteeMember p (votingRound M) ≡ true
         -- TODO: shouldVote r
-        → (msg , s′) ≡ honestVote (clock M) (votingRound M) s
-        → N ≡ broadcast msg M
+        → (m , s′) ≡ honestVote (clock M) (votingRound M) s
+        → N ≡ broadcast m M
         → M [ Honest {p} ]⇉
           record N {
               stateMap = M.insert p s′ (stateMap N)
@@ -342,12 +342,12 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p M N} {s s′} {msg}
-        → lookup (stateMap M)  p ≡ just s
+      honest : ∀ {p M N} {s s′} {m}
+        → lookup (stateMap M) p ≡ just s
         → isSlotLeader p (clock M) ≡ true
-        → (msg , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) s
-        → N ≡ broadcast msg M
-          ------------------------------------------------------------------
+        → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) s
+        → N ≡ broadcast m M
+          -----------------------------------------
         → M [ Honest {p} ]↷
           record N {
               stateMap = M.insert p s′ (stateMap N)
@@ -380,13 +380,13 @@ The small-step semantics describe the evolution of the global state.
           ----------
         → M ↝ N
 
-      NextRound : ∀ {M}
+      NextSlot : ∀ {M}
           ----------------------------
         → M ↝ record M {
                  clock = suc (clock M)
                }
 
-      PermMsgs : ∀ {N ms}
+      Permute : ∀ {N ms}
         → messages N ↭ ms
           ---------------
         → N ↝ record N {
@@ -468,14 +468,14 @@ In the paper mentioned above this is big-step semantics.
 
     -- TODO: implement Gossip data type
     postulate
-      hist-honestGossipMsgs : ∀ {M N} {msg}
-        → N ≡ broadcast msg M
+      hist-honestGossipMsgs : ∀ {M N} {m}
+        → N ≡ broadcast m M
         → history N ⊇ history M
 
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {msg = msg} _ _ x x₁) = hist-honestGossipMsgs {msg = msg} x₁
+    []↷-hist-common-prefix (honest {m = m} _ _ x x₁) = hist-honestGossipMsgs {m = m} x₁
     []↷-hist-common-prefix corrupt x = x
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
@@ -508,8 +508,8 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
     ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
-    ↝-collision-free NextRound (collision-free x) = collision-free x
-    ↝-collision-free (PermMsgs _) (collision-free x) = collision-free x
+    ↝-collision-free NextSlot (collision-free x) = collision-free x
+    ↝-collision-free (Permute _) (collision-free x) = collision-free x
 ```
 -->
 
