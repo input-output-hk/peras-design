@@ -179,6 +179,7 @@ The block tree type
            {honest? : (p : PartyId) → Honesty p} -- Predicate or bool?
            {isSlotLeader : PartyId → Slot → Bool}
            {txSelection : Slot → PartyId → List Tx}
+           {parties : List PartyId}
            where
 ```
 The local state initialized with the block tree
@@ -221,7 +222,7 @@ Honestly creating a block
 
 ```agda
     record Stateᵍ : Set where
-      constructor ⟪_,_,_,_,_,_⟫
+      constructor ⟪_,_,_,_,_⟫
       field
 ```
 The global state consists of the following fields:
@@ -241,10 +242,6 @@ The global state consists of the following fields:
 * All the messages that have been sent
 ```agda
         history : List Message
-```
-* The list of parties determines the execution order
-```agda
-        executionOrder : List PartyId
 ```
 * Current voting round
 ```agda
@@ -272,7 +269,7 @@ Broadcasting messages, i.e. updating the global message buffer
     broadcast : Message → Stateᵍ → Stateᵍ
     broadcast m N =
       record N {
-        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) (executionOrder N)) ++ messages N ;
+        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) parties) ++ messages N ;
         history = m ∷ history N
       }
 ```
@@ -400,13 +397,6 @@ The small-step semantics describe the evolution of the global state.
                  clock = suc (clock M)
                }
 
-      PermParties : ∀ {N ps}
-        → executionOrder N ↭ ps
-          ---------------------------
-        → N ↝ record N {
-                 executionOrder = ps
-               }
-
       PermMsgs : ∀ {N ms}
         → messages N ↭ ms
           --------------------
@@ -513,11 +503,6 @@ In the paper mentioned above this is big-step semantics.
         → CollisionFree N
         → M [ h ]⇉ N
         → CollisionFree M
-
-    ∷-collision-free : ∀ {cl sm ms hs ps r p}
-      → CollisionFree ⟪ cl , sm , ms , hs , p ∷ ps , r ⟫
-      → CollisionFree ⟪ cl , sm , ms , hs , ps , r ⟫
-    ∷-collision-free (collision-free {b₁} {b₂} cf) = collision-free {b₁ = b₁} {b₂ = b₂} cf
 ```
 -->
 
@@ -538,7 +523,6 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
     ↝-collision-free (Bake x) cf-N₂ =  []↷-collision-free cf-N₂ x
     ↝-collision-free NextRound (collision-free x) = collision-free x
-    ↝-collision-free (PermParties _) (collision-free x) = collision-free x
     ↝-collision-free (PermMsgs _) (collision-free x) = collision-free x
 ```
 -->

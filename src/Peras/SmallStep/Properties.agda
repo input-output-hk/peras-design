@@ -28,26 +28,24 @@ module _ {block₀ : Block}
            (honest? : (p : PartyId) → Honesty p)
            (lottery : PartyId → Slot → Bool)
            (txSelection : Slot → PartyId → List Tx)
+           (parties : List PartyId)
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; Progress; progress; ⟨_,_⟩)
+    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟨_,_⟩)
 
     module _ ⦃ N₀ : Stateᵍ ⦄ where
 
-      open Progress
       open TreeType
       open Stateᵍ
 
       -- knowledge propagation
       postulate
-        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {honest?} {lottery} {txSelection}}
+        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {honest?} {lottery} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : T}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
-          → progress N₁ ≡ Ready
-          → progress N₂ ≡ Delivered
           → lookup (stateMap N₁) p₁ ≡ just ⟨ p₁ , t₁ ⟩
           → lookup (stateMap N₁) p₂ ≡ just ⟨ p₂ , t₂ ⟩
           → clock N₁ ≡ clock N₂
