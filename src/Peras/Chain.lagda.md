@@ -11,7 +11,7 @@ open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (trans)
+open import Haskell.Prelude
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
