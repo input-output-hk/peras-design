@@ -110,7 +110,6 @@ impl Node {
 }
 
 fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
-    println!("starting node");
     loop {
         let recv = rx_in.recv();
         match recv {
@@ -125,6 +124,7 @@ fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>
             Ok(_) => (),
             Err(err) => panic!("Error while receiving message {err}"),
         }
+
         tx_out
             .send(OutEnvelope::Idle {
                 timestamp: Utc::now(),
@@ -176,7 +176,6 @@ impl NodeHandle {
             .send(InEnvelope::Stop)
             .expect("sending poison pill failed");
         self.thread.take().unwrap().join().expect("node stopped");
-        println!("stopped node");
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
