@@ -59,7 +59,7 @@ impl Default for NodeParameters {
         NodeParameters {
             node_stake: 10,
             total_stake: 100,
-            active_coefficient: 0.05,
+            active_coefficient: 0.1,
         }
     }
 }
