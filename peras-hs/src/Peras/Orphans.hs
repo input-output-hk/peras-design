@@ -170,18 +170,14 @@ deriving via Bytes instance ToJSON VerificationKey
 
 -- Orphans for `Peras.Message`.
 
-deriving stock instance Eq NodeId
 deriving stock instance Generic NodeId
-deriving stock instance Ord NodeId
-deriving stock instance Read NodeId
-deriving stock instance Show NodeId
 instance IsString NodeId where
   fromString = MkNodeId
 
-instance FromJSON NodeId
-instance ToJSON NodeId
-instance FromJSONKey NodeId
-instance ToJSONKey NodeId
+deriving newtype instance FromJSON NodeId
+deriving newtype instance ToJSON NodeId
+deriving newtype instance FromJSONKey NodeId
+deriving newtype instance ToJSONKey NodeId
 
 deriving stock instance Eq a => Eq (Message a)
 deriving stock instance Generic a => Generic (Message a)

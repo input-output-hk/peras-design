@@ -7,7 +7,7 @@ use crate::{
     block::Block,
     chain::{empty_chain, Chain},
     crypto,
-    message::{Message, NodeId},
+    message::{Message, NodeId, OutMessage},
 };
 use chrono::{DateTime, Utc};
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
@@ -38,11 +38,12 @@ pub enum OutEnvelope {
         source: String,
         best_chain: Chain,
     },
-    OutMessage {
+    #[serde(rename = "OutEnvelope")]
+    SendMessage {
         timestamp: DateTime<Utc>,
         source: String,
         destination: String,
-        message: Message,
+        out_message: OutMessage,
         bytes: u32,
     },
 }
@@ -154,11 +155,11 @@ fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
             signature: crypto::Signature { signature },
         };
         node.best_chain.blocks.push(new_block);
-        Some(OutEnvelope::OutMessage {
+        Some(OutEnvelope::SendMessage {
             timestamp: Utc::now(),
             source: node.node_id.clone(),
             destination: node.node_id.clone(), // FIXME this does not make sense
-            message: Message::NewChain(node.best_chain.clone()),
+            out_message: OutMessage::SendMessage(Message::NewChain(node.best_chain.clone())),
             bytes: 0,
         })
     } else {
@@ -175,6 +176,7 @@ impl NodeHandle {
             .send(InEnvelope::Stop)
             .expect("sending poison pill failed");
         self.thread.take().unwrap().join().expect("node stopped");
+        println!("stopped node");
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
@@ -196,12 +198,8 @@ impl NodeHandle {
 mod tests {
     use crate::chain::empty_chain;
     extern crate quickcheck;
-
-    use super::InEnvelope::*;
-    use super::OutEnvelope::*;
-    use std::{fs::File, io::BufReader, path::Path};
-
     use super::*;
+    use std::{fs::File, io::BufReader, path::Path};
 
     #[derive(Debug, Deserialize, Serialize)]
     struct Golden<T> {
@@ -251,7 +249,7 @@ mod tests {
         let node = Node::new("N1".into(), Default::default());
         let mut handle = node.start();
 
-        handle.send(SendMessage {
+        handle.send(InEnvelope::SendMessage {
             origin: None,
             in_message: Message::NextSlot(1),
         });
@@ -261,7 +259,7 @@ mod tests {
         handle.stop(); // should be in some teardown method
 
         match received {
-            Idle {
+            OutEnvelope::Idle {
                 timestamp: _,
                 source: _,
                 best_chain,
@@ -346,7 +344,7 @@ mod tests {
         let mut handle = node.start();
 
         for i in 1..5 {
-            handle.send(SendMessage {
+            handle.send(InEnvelope::SendMessage {
                 origin: None,
                 in_message: Message::NextSlot(i),
             })
@@ -357,11 +355,11 @@ mod tests {
         handle.stop(); // should be in some teardown method
 
         match received {
-            OutMessage {
+            OutEnvelope::SendMessage {
                 timestamp: _,
                 source: _,
                 destination: _,
-                message: Message::NewChain(chain),
+                out_message: OutMessage::SendMessage(Message::NewChain(chain)),
                 bytes: _,
             } => {
                 println!("got chain {:?}", serde_json::to_string(&chain));

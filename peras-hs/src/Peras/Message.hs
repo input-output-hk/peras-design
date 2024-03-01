@@ -3,7 +3,8 @@ module Peras.Message where
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain, Vote)
 
-data NodeId = MkNodeId {nodeId :: String}
+newtype NodeId = MkNodeId {nodeId :: String}
+  deriving (Eq, Ord, Read, Show)
 
 data Message a
   = NextSlot Slot

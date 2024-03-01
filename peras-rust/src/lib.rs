@@ -54,23 +54,25 @@ pub unsafe extern "C" fn send_message(node: &mut PerasNode, buf: *const u8, len:
     // make a slice
     let bytes = slice::from_raw_parts(buf, len);
     // unmarshall message
-    let msg: InEnvelope = serde_json::from_slice(bytes).unwrap();
-    node.handle.send(msg);
+    match serde_json::from_slice(bytes) {
+        Ok(msg) => node.handle.send(msg),
+        Err(err) => println!(
+            "Failed to deserialise message: {}\nError: {}",
+            std::str::from_utf8(bytes).unwrap(),
+            err
+        ),
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn receive_message(node: &mut PerasNode, buf: *mut u8, len: usize) -> usize {
-    match node.handle.try_receive() {
-        None => 0,
-        Some(msg) => {
-            let bytes = serde_json::to_vec(&msg).unwrap();
-            let bytes_ptr = bytes.as_ptr();
-            let count_copy = cmp::min(len, bytes.len());
+    let msg = node.handle.receive();
+    let bytes = serde_json::to_vec(&msg).unwrap();
+    let bytes_ptr = bytes.as_ptr();
+    let count_copy = cmp::min(len, bytes.len());
 
-            unsafe {
-                std::ptr::copy(bytes_ptr, buf, count_copy);
-                count_copy
-            }
-        }
+    unsafe {
+        std::ptr::copy(bytes_ptr, buf, count_copy);
+        count_copy
     }
 }

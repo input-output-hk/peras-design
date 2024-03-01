@@ -12,7 +12,7 @@ record NodeId : Set where
 
 open NodeId public
 
-{-# COMPILE AGDA2HS NodeId #-}
+{-# COMPILE AGDA2HS NodeId newtype deriving (Eq, Ord, Read, Show) #-}
 
 -- | Message exchanged between nodes.
 --
