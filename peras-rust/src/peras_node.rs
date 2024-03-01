@@ -154,7 +154,7 @@ fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
             payload: vec![],
             signature: crypto::Signature { signature },
         };
-        node.best_chain.blocks.push(new_block);
+        node.best_chain.blocks.insert(0, new_block);
         Some(OutEnvelope::SendMessage {
             timestamp: Utc::now(),
             source: node.node_id.clone(),
@@ -363,6 +363,45 @@ mod tests {
             } => {
                 println!("got chain {:?}", serde_json::to_string(&chain));
                 assert_ne!(chain, empty_chain());
+            }
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn grow_best_chain_from_the_head() {
+        let params = NodeParameters {
+            node_stake: 100,
+            total_stake: 100,
+            active_coefficient: 1.0,
+        };
+        let node = Node::new("N1".into(), params);
+        let mut handle = node.start();
+
+        for i in 1..5 {
+            handle.send(InEnvelope::SendMessage {
+                origin: None,
+                in_message: Message::NextSlot(i),
+            })
+        }
+
+        // we expect some Idle + NewChain messages
+        for i in 1..8 {
+            let _ = handle.receive();
+        }
+
+        let received = handle.receive();
+
+        handle.stop(); // should be in some teardown method
+
+        match received {
+            OutEnvelope::Idle {
+                timestamp: _,
+                source: _,
+                best_chain: Chain { blocks, votes },
+            } => {
+                let slots: Vec<u64> = blocks.iter().map(|b| b.slot_number).collect();
+                assert!(slots.windows(2).all(|w| w[0] > w[1]));
             }
             _ => assert!(false),
         }

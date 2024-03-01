@@ -17,8 +17,11 @@ module Peras.NodeModel where
 import Control.Monad (forM)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
+import qualified Data.Aeson as A
 import qualified Data.Set as Set
 import Data.Statistics.Util (equalsBinomialWithinTails)
+import qualified Data.Text.Lazy as LT
+import Data.Text.Lazy.Encoding (decodeUtf8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
@@ -59,7 +62,7 @@ instance StateModel NodeModel where
     case action of
       Tick n ->
         currentState
-          { forgedBlocks = var : forgedBlocks
+          { forgedBlocks = forgedBlocks <> [var]
           , slot = slot + n
           }
       ForgedBlocksRespectSchedule{} -> currentState
@@ -120,8 +123,10 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
         _other -> waitForIdle receive acc
 
   postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do
-    let blocks = length $ foldMap env blockVars
-    produceExpectedNumberOfBlocks stakeRatio blocks slot
+    let blocks = foldMap env blockVars
+        numberOfBlocks = length blocks
+    counterexamplePost $ "Chain: " <> LT.unpack (decodeUtf8 (A.encode blocks))
+    produceExpectedNumberOfBlocks stakeRatio numberOfBlocks slot
   postcondition _ _ _ _ = pure True
 
 produceExpectedNumberOfBlocks :: Monad m => Rational -> Int -> Slot -> PostconditionM m Bool
