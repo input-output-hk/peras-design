@@ -54,7 +54,7 @@ sendMessage RustNode{foreignNode} bytes =
         c_send_message foreignNode ptr len
 
 bufferSize :: Int
-bufferSize = 1 .<<. 12
+bufferSize = 1 .<<. 16
 
 receiveMessage :: RustNode -> IO ByteString
 receiveMessage RustNode{foreignNode} = do
