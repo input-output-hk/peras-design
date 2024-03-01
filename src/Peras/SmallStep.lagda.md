@@ -75,7 +75,7 @@ record Envelope : Set where
     cd : Fin 3
 ```
 
-<--
+<!--
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
 open import Relation.Binary.Core using (Rel)
