@@ -61,12 +61,12 @@ data Progress : Set where
    Voted : Progress
    Baked : Progress
 ```
-
+```agda
+Message = Msg Block
+```
 Messages are put into an envelope
 
 ```agda
-Message = Msg Block
-
 record Envelope : Set where
   constructor ⦅_,_,_⦆
   field
@@ -75,13 +75,14 @@ record Envelope : Set where
     cd : Fin 3
 ```
 
-We introduce the relation ≐ to denote that two lists have the same elements
-
+<--
 ```agda
+-- We introduce the relation ≐ to denote that two lists have the same elements
 open import Relation.Binary.Core using (Rel)
 _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
+-->
 
 block₀ denotes the genesis block that is passed in as a module parameter
 
