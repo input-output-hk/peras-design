@@ -23,8 +23,8 @@ module _ {block₀ : Block}
   open Hashable ⦃...⦄
   open import Peras.SmallStep using (TreeType)
 
-  module _ {T : Set}
-           (blockTree : TreeType T)
+  module _ {A : Set}
+           (blockTree : TreeType A)
            (isSlotLeader : PartyId → Slot → Bool)
            (isCommitteeMember : PartyId → RoundNumber → Bool)
            (txSelection : Slot → PartyId → List Tx)
@@ -41,9 +41,9 @@ module _ {block₀ : Block}
 
       -- knowledge propagation
       postulate
-        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {T} {blockTree} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
-          → {t₁ t₂ : T}
+          → {t₁ t₂ : A}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
           → lookup (stateMap N₁) p₁ ≡ just ⟨ p₁ , t₁ ⟩

@@ -13,7 +13,7 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ; _+_)
+open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ; _+_; _*_; _∸_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -49,18 +49,6 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-### Progress
-
-In addition to the formalization in the paper, for the Peras protocol there is a new global
-state `Voted` indicating that all honest parties eligible to vote have cast a vote.
-
-```agda
-data Progress : Set where
-   Ready : Progress
-   Delivered : Progress
-   Voted : Progress
-   Baked : Progress
-```
 ```agda
 Message = Msg Block
 ```
@@ -159,12 +147,12 @@ The block tree type
 ## Local state
 
 ```agda
-  record LocalState {T : Set} (blockTree : TreeType T) : Set where
+  record LocalState {A : Set} (blockTree : TreeType A) : Set where
 
     constructor ⟨_,_⟩
     field
       partyId : PartyId
-      tree : T
+      tree : A
 ```
 # Parameterized module
 
@@ -175,8 +163,8 @@ The block tree type
   * hash function
 
 ```agda
-  module _ {T : Set}
-           {blockTree : TreeType T}
+  module _ {A : Set}
+           {blockTree : TreeType A}
            {isSlotLeader : PartyId → Slot → Bool}
            {isCommitteeMember : PartyId → RoundNumber → Bool}
            {txSelection : Slot → PartyId → List Tx}
@@ -188,6 +176,8 @@ The local state initialized with the block tree
 ```agda
     Stateˡ = LocalState blockTree
 ```
+### Honest update
+
 Honestly updating the local state upon receiving a message
 
 ```agda
@@ -201,21 +191,26 @@ Honestly updating the local state upon receiving a message
         receive (NextSlot _) s = s -- TODO
 ```
 
-Voting honestly
+#### Voting honestly
+
+The vote is for the last block at least L slots old
 
 ```agda
-    honestVote : Slot → RoundNumber → Stateˡ → Message
-    honestVote sl r ⟨ partyId , tree ⟩ =
-      SomeVote record {
-        votingRound = r ;
-        creatorId = partyId ;
-        committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-        blockHash = tip ((bestChain blockTree) sl tree) ; -- Currently just selecting the tip of the best chain to vote
-        signature = record { bytes = emptyBS } -- FIXME
-      }
+    honestVote : Slot → RoundNumber → Stateˡ → Message × Stateˡ
+    honestVote sl r ⟨ p , tree ⟩ =
+      let best≤L = (bestChain blockTree) (sl ∸ L) tree
+          vote =
+            record {
+              votingRound = r ;
+              creatorId = p ;
+              committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
+              blockHash = tip best≤L ;
+              signature = record { bytes = emptyBS } -- FIXME
+            }
+     in SomeVote vote , ⟨ p , (addVote blockTree) tree vote ⟩
 ```
 
-Honestly creating a block
+#### Honestly creating a block
 
 ```agda
     honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
@@ -314,17 +309,25 @@ updating the local block tree and putting the local state back into the global s
 ```
 ## Vote
 
-A party can cast a vote for a block, if the party is a member of the voting committee
+A party can cast a vote for a block, if
+  * the current slot is the first slot in a voting round
+  * the party is a member of the voting committee
+  * the chain is not in a cooldown phase
 
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p M N} {s} {msg}
+      honest : ∀ {p M N} {s s′} {msg}
         → lookup (stateMap M)  p ≡ just s
+        → clock M ≡ roundNumber (votingRound M) * T
         → isCommitteeMember p (votingRound M) ≡ true
-        → msg ≡ honestVote (clock M) (votingRound M) s
+        -- TODO: shouldVote r
+        → (msg , s′) ≡ honestVote (clock M) (votingRound M) s
         → N ≡ broadcast msg M
-        → M [ Honest {p} ]⇉ N
+        → M [ Honest {p} ]⇉
+          record N {
+              stateMap = M.insert p s′ (stateMap N)
+            }
 
       corrupt : ∀ {p N}
           ---------------------
@@ -339,7 +342,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p M N} {s s′ : Stateˡ} {msg}
+      honest : ∀ {p M N} {s s′} {msg}
         → lookup (stateMap M)  p ≡ just s
         → isSlotLeader p (clock M) ≡ true
         → (msg , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) s
@@ -364,28 +367,28 @@ The small-step semantics describe the evolution of the global state.
 
       Deliver : ∀ {M N p} {h : Honesty p}
         → M [ h ]⇀ N
-          ---------------------------
+          ----------
         → M ↝ N
 
       CastVote : ∀ {M N p} {h : Honesty p}
         → M [ h ]⇉ N
-          ----------------------
+          ----------
         → M ↝ N
 
-      Bake : ∀ {M N p} {h : Honesty p}
+      CreateBlock : ∀ {M N p} {h : Honesty p}
         → M [ h ]↷ N
-          -----------------------
+          ----------
         → M ↝ N
 
       NextRound : ∀ {M}
-          ------------------------------
+          ----------------------------
         → M ↝ record M {
                  clock = suc (clock M)
                }
 
       PermMsgs : ∀ {N ms}
         → messages N ↭ ms
-          --------------------
+          ---------------
         → N ↝ record N {
                  messages = ms
                }
@@ -504,7 +507,7 @@ When the current state is collision free, the pervious state was so too
 ```agda
     ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
-    ↝-collision-free (Bake x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
     ↝-collision-free NextRound (collision-free x) = collision-free x
     ↝-collision-free (PermMsgs _) (collision-free x) = collision-free x
 ```
