@@ -119,11 +119,11 @@ Properties that must hold with respect to blocks and votes
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
         → ValidChain {block₀} c
-        → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
+        → blocks c ⊆ filterᵇ ((_≤ᵇ sl) ∘ slotNumber) (allBlocks t)
         → ∥ c ∥ ≤ ∥ bestChain sl t ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
+        → blocks (bestChain sl t) ⊆ filterᵇ ((_≤ᵇ sl) ∘ slotNumber) (allBlocks t)
 ```
 The block tree type
 
