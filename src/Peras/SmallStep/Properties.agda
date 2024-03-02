@@ -5,7 +5,7 @@ open import Data.List using (List)
 open import Data.Maybe using (just)
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
-open import Peras.Chain using (Vote)
+open import Peras.Chain using (RoundNumber; Vote)
 open import Peras.Crypto using (Hashable)
 open import Peras.Params using (Params)
 
@@ -15,7 +15,6 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 module _ {block₀ : Block}
-         {parties : List PartyId}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (Vote Block) ⦄
          ⦃ _ : Params ⦄
@@ -24,34 +23,33 @@ module _ {block₀ : Block}
   open Hashable ⦃...⦄
   open import Peras.SmallStep using (TreeType)
 
-  module _ {T : Set}
-           (blockTree : TreeType T)
-           (honest? : (p : PartyId) → Honesty p)
-           (lottery : PartyId → Slot → Bool)
+  module _ {A : Set}
+           (blockTree : TreeType A)
+           (isSlotLeader : PartyId → Slot → Bool)
+           (isCommitteeMember : PartyId → RoundNumber → Bool)
            (txSelection : Slot → PartyId → List Tx)
+           (parties : List PartyId)
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
+    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟨_,_⟩)
 
-    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; Progress; progress; N₀; ⟨_,_⟩)
+    module _ ⦃ N₀ : Stateᵍ ⦄ where
 
-    open Progress
-    open TreeType
-    open Stateᵍ
+      open TreeType
+      open Stateᵍ
 
-    -- knowledge propagation
-    postulate
-      lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {parties} {T} {blockTree} {honest?} {lottery} {txSelection}}
-        → {p₁ p₂ : PartyId}
-        → {t₁ t₂ : T}
-        → N₀ ↝ N₁
-        → N₁ ↝ N₂
-        → progress N₁ ≡ Ready
-        → progress N₂ ≡ Delivered
-        → lookup (stateMap N₁) p₁ ≡ just ⟨ p₁ , t₁ ⟩
-        → lookup (stateMap N₁) p₂ ≡ just ⟨ p₂ , t₂ ⟩
-        → clock N₁ ≡ clock N₂
-        → (allBlocks blockTree) t₁ ⊆ (allBlocks blockTree) t₂
+      -- knowledge propagation
+      postulate
+        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+          → {p₁ p₂ : PartyId}
+          → {t₁ t₂ : A}
+          → N₀ ↝ N₁
+          → N₁ ↝ N₂
+          → lookup (stateMap N₁) p₁ ≡ just ⟨ p₁ , t₁ ⟩
+          → lookup (stateMap N₁) p₂ ≡ just ⟨ p₂ , t₂ ⟩
+          → clock N₁ ≡ clock N₂
+          → (allBlocks blockTree) t₁ ⊆ (allBlocks blockTree) t₂
 
     {- From the paper:
 
