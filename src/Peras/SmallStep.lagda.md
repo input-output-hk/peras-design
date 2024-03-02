@@ -22,9 +22,9 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain; ∥_∥)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
-open import Peras.Block using (PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
+open import Peras.Block using (Party; PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 open import Peras.Message renaming (Message to Msg)
 open import Peras.Params
 
@@ -37,6 +37,7 @@ open MembershipProof public
 open Signature public
 open RoundNumber public
 open Vote
+open Party
 ```
 -->
 
@@ -119,7 +120,7 @@ Properties that must hold with respect to blocks and votes
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
         → ValidChain {block₀} c
         → blocks c ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
-        → length (blocks c) ≤ length (blocks (bestChain sl t))
+        → ∥ c ∥ ≤ ∥ bestChain sl t ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
         → blocks (bestChain sl t) ⊆ filterᵇ (λ {b → slotNumber b ≤ᵇ sl}) (allBlocks t)
@@ -198,13 +199,13 @@ The vote is for the last block at least L slots old
 ```agda
     honestVote : Slot → RoundNumber → Stateˡ → Message × Stateˡ
     honestVote sl r ⟨ p , tree ⟩ =
-      let best≤L = (bestChain blockTree) (sl ∸ L) tree
+      let best<L = (bestChain blockTree) (sl ∸ L) tree
           vote =
             record {
               votingRound = r ;
               creatorId = p ;
               committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-              blockHash = tip best≤L ;
+              blockHash = tip best<L ;
               signature = record { bytes = emptyBS } -- FIXME
             }
      in SomeVote vote , ⟨ p , (addVote blockTree) tree vote ⟩

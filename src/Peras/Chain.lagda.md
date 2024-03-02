@@ -5,13 +5,15 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_)
-open import Data.Nat using (ℕ)
+open import Data.List using (length; sum; upTo; filterᵇ)
+open import Data.Nat using (ℕ; _/_)
+open import Function.Base using (_∘_)
 
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (trans)
+open import Haskell.Prelude hiding (length; trans; _<_; _∘_; sum; b)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -22,6 +24,7 @@ open import Haskell.Prelude hiding (trans)
 
 ```agda
 record RoundNumber : Set where
+  constructor MkRoundNumber
   field roundNumber : ℕ
 
 open RoundNumber public
@@ -118,6 +121,38 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 ```
 -->
 
+#### Cooldown
+
+```agda
+postulate
+  voteInRound : Chain → RoundNumber → Bool
+```
+
+#### Chain weight
+
+The weight of a chain is defined with respect of the Peras parameters
+```agda
+open Params ⦃...⦄
+```
+The weight of a chain is computed wrt to a set of dangling votes
+```agda
+module _ ⦃ _ : Params ⦄ where
+
+  postulate
+    round-r-votes : Chain → RoundNumber → ℕ
+
+  ∥_∥ : Chain → ℕ
+  ∥ c ∥ =
+    let weight = length (blocks c)
+        s = slotNumber (tip c)
+        r-current = s -- / T
+        rounds = filterᵇ
+                   (voteInRound c)
+                   (map MkRoundNumber (upTo r-current))
+    in weight
+      + (b * sum (map (round-r-votes c) rounds))
+```
+
 ### Chain validity
 
 <!--
@@ -131,28 +166,23 @@ open PropEq using (trans)
 
 open Block
 
-open import Data.Nat using (_≤_; _∸_)
+open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
-The validity of a chain is defined with respect of the Peras parameters.
-```agda
-open Params ⦃...⦄
-```
 A chain is valid iff:
-  * the blocks (ignoring the vote hashes) form a valid Praos chain,
+  * the blocks (ignoring the vote hashes) form a valid Praos chain
+     * all blocks in the chain are valid -- TODO
+     * the chain is linked correctly
+     * the slots are strictly decreasing -- TODO
   * all votes:
-    * are referenced by a unique block with a slot number $s$
+    * are referenced by a unique block with a slot number *s*
       strictly larger than the slot number corresponding to the
       vote’s round number r (i.e., r*T < s),
     * point to a block on the chain at least L slots in the past
       (i.e., to a block with slot number s < r*T - L), and
   * it contains no vote equivocations (i.e., multiple votes by the
-    same party for the same round).
-
-TODO: expressing those conditions directly would be very expensive,
-it's more efficient to enforce them whenever the chain is extended.
-
+    same party for the same round)
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
@@ -177,7 +207,7 @@ module _ {block₀ : Block}
       → Unique vs
       → ¬ (Equivocation vs)
       → All (λ { v → blockHash v ∈ blocks c }) vs
-      → All (λ { v → slotNumber (blockHash v) ≤ slotNumber b ∸ L }) vs
+      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
@@ -225,8 +255,6 @@ foldl1Maybe f xs =
         Nothing xs
 
 {-# COMPILE AGDA2HS foldl1Maybe #-}
-
-open import Haskell.Prelude
 
 instance
   postulate
