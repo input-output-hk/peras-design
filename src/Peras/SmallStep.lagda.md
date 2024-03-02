@@ -78,7 +78,7 @@ block₀ denotes the genesis block that is passed in as a module parameter
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (Vote Block) ⦄
+         ⦃ _ : Hashable (Vote _) ⦄
          ⦃ _ : Params ⦄
          where
 ```
@@ -137,7 +137,6 @@ The block tree type
       bestChain : Slot → T → Chain
 
       addVote : T → Vote Block → T
-      danglingVotes : T → List (Vote Block)
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
@@ -217,7 +216,7 @@ The vote is for the last block at least L slots old
     honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
     honestCreate sl (record { roundNumber = r }) txs ⟨ p , tree ⟩ =
       let best = (bestChain blockTree) (pred sl) tree
-          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) ((danglingVotes blockTree) tree) -- TODO: check expired, preferred chain, equivocation
+          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
             record {
               slotNumber = sl ;
