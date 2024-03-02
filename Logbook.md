@@ -1,5 +1,13 @@
 ## 2024-03-01
 
+### YH Agda formalization
+* Adjusted the small-step semantics to include relations per party. This diverges from the PoS-NSB paper, but has to the following advantages:
+  * No need to keep track of the global `execution-order`
+  * No need for the `PermParties` rule, permutations of the messages are sufficient
+  * No need of the `Fold` relation
+  * `Progess` does not have to be tracked
+* Added an initial `weight` function for the chain 
+
 ### AB on peras-rust
 
 Rust node is panicking with some incoming messages:
