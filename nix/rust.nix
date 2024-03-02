@@ -14,7 +14,7 @@ let
     pname = "peras_rust";
     version = "0.1.0";
     src = ../peras-rust;
-    cargoSha256 = "0lq9jdfqznwilx0mrq43701wzqsfqinjc1v8qas8ph2135pp42dj";
+    cargoSha256 = "14w94a5jysbns9g07rdndrlvha5ywjk1dsnfxwxbkqyx2dck1nya";
     doCheck = false; # FIXME: Turn on the unit tests as soon as they start passing.
     preInstall = ''
       mkdir -p "$out/include"

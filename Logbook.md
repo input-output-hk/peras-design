@@ -1,3 +1,110 @@
+## 2024-03-01
+
+### AB on peras-rust
+
+Rust node is panicking with some incoming messages:
+```
+called `Result::unwrap()` on an `Err` value: Error("unknown variant `inMessage`, expected `Stop` or `SendMessage`", line: 1, column: 12)
+```
+Need to check the serialization of `InEnvelope` and `OutEnvelope` as well
+
+Rust code fails to deserialise the following message:
+```
+Failed to deserialise message: {"inMessage":{"contents":1,"tag":"NextSlot"},"origin":null,"tag":"InEnvelope"}
+```
+
+Then more issues _serializing_ messages:
+
+```
+called `Result::unwrap()` on an `Err` value: Error("cannot serialize tagged newtype variant Message::NextSlot containing an integer", line: 0, column: 0)
+```
+
+This is surprising as the compiler does not balk at the serde annotations. According to [this](https://serde.rs/enum-representations.html#internally-tagged) documentation
+
+> This representation works for struct variants, newtype variants containing structs or maps, and unit variants but does not work for enums containing tuple variants. Using a #[serde(tag = "...")] attribute on an enum containing a tuple variant is an error at compile time.
+
+However it does fail compilation :shrug:  Seems like I need [Adjacently tagged](https://serde.rs/enum-representations.html#adjacently-tagged) variants
+
+Solved the Haskell $\rightarrow$ Rust side at least for `NextSlot` messages, now solving the other direction:
+```
+       Failed to deserialise received message ("{\"tag\":\"Idle\",\"timestamp\":\"2024-03-01T08:12:24.653742Z\",\"source\":\"N1\",\"bestChain\":{\"blocks\":[],\"votes\":[]}}"): Error in $.source: parsing Peras.Message.NodeId(MkNodeId) failed, expected Object, but encountered String
+```
+
+Turned `NodeId` into a `newtype` upon code generation and refreshed the golden files and serialization to use `deriving newtype`, still need to fix some variant names
+
+Now, seems like there's an additional level of indirection in the `OutEnvelope`'s messages. After fixing (some) serialization issues, I now get a genuine and interesting error:
+```
+  test/Peras/NodeModelSpec.hs:25:5:
+  1) Peras.NodeModel, Netsim Honest node, mints blocks according to stakes
+       Assertion failed (after 2 tests):
+         do var0 <- action $ Tick 1861
+            action $ ForgedBlocksRespectSchedule [var0]
+            pure ()
+
+         Actual: 5, Expected:  18.610000000000003
+         Stake: 1 % 10, active slots: 0.1, Slot: 1861
+
+```
+
+Another interesting error this time in the CI: https://github.com/input-output-hk/peras-design/actions/runs/8108712754/job/22162439028?pr=45#step:5:147: the size of the buffer allocated to receive messages from the node is too small
+
+There's something fishy going on in the way we get the best chain from a node, as test fails with the following error:
+
+```
+         Chain: [{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283},{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283},{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283},{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283},{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283},{"creatorId":1,"includedVotes":[],"leadershipProof":"a04ce0a663426aa1","parentBlock":"0000000000000000","payload":[],"signature":"472682854cfeb3e1","slotNumber":283}]
+```
+
+eg. these are all the same blocks, but tracing the `handle_slot` function in rust shows the chain actually grows correctly. Could be that the `Node` 's `best_chain` changes are not visible from the `Idle` message?
+* Well, no, tracing the `Idle` messages sent shows the correct and changing chain
+* Actually, it's a problem with the ordering of the chain produced by the node: In Haskell, the tip is expected to be at the `head` of the chain, whereas in Rust it's `push`ed at the  end!
+
+There were actually 2 sorting issues:
+* One in rust, which is fixed by inserting at the head for the `best_chain`
+* One in `NodeModel` where we cons-ed the variables and therefore produced a chain where chunks were ordered but was overall not sorted
+
+### Team sync
+
+* Discussing logs and analysis/visualization
+* Everything we want to put into a browser should be in Rust
+* need to write an ADR about serialization
+* Create a Plutus contract to do Peras voting on-chain?
+* Q: What if we did not take into account the dangling votes when computing the weight of the chain?
+* Organise a presentation/workshop w/ Quviq on agda2hs
+* Generation -> standardise and write an ADR
+
+## 2024-02-29
+
+#### AB on peras-rust
+
+Trying to wrap my head around how to design the Rust node, seems like the way to go in Rust is to have:
+* A pair of channels than can be `clone`d and shared between threads -> `let (tx, rx) = mpsc::channel();`
+* Run the thread moving references ownership : `let thread = thread::spawn(move || { rx.receive()...} )`
+* Collect the threads higher up to `join` on them?
+
+Found nice writeup on how to use PBT in Rust: https://www.lpalmieri.com/posts/an-introduction-to-property-based-testing-in-rust/: uses [fake](https://docs.rs/fake/latest/fake) and [quickcheck](https://docs.rs/quickcheck/latest/quickcheck/)
+
+Found a reasonably good structure for the peras node, after a couple hours struggling with borrow checker and ownership constraints:
+* The state is maintained in a `Node` structure that's owned by the thread started with `Node::start()`
+* Communication with the `Node` is done through a `NodeHandle` that contains some channels and exposes methods `send()` and `receive()` to dispatch and retrieve messages
+* The node can be stopped through the `NodeHandle` by sending a "poison pill" message which will stop the thread
+* Found the `take()` method from `Option` which takes ownership of the content of the `Option`
+
+Also started to use quickcheck to test some simple properties of the leader election function, mostly as an exercise.
+Seems like the Rust quickcheck does not have all the nice reporting functions I am used to with Haskell's.
+
+Now working on the core algorithm for Praos block forging in order to be able to forge a chain.
+Once a node can forge a block and emit the corresponding `NewChain` message, I will ensure the `NodeModel` test passes before moving to `NetworkModel` and use netsim.
+
+The formulat to compute slot leadership is given as
+```
+1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
+```
+but this seems wrong: if `activeSlotCoefficient` is 1, then we always produce a block no matter what our share is.
+* Actually, this is a core property of Praos: The leadership check is independent of the slot and only depends on the node's stake
+
+Trying to move the `active_coefficient` in the Node structure but it ripples all over the place.
+What I need is to pass a parameters structure that will have sensible defaults.
+
 ## 2024-02-28
 
 ### AB - Agda ↔ Haskell ↔ Rust matching

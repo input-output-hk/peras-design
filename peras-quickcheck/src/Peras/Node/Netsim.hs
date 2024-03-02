@@ -12,6 +12,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import Data.Ratio ((%))
 import Peras.IOSim.Message.Types (OutEnvelope)
 import Peras.Message (NodeId (..))
 import Peras.Node.Netsim.Rust (RustNode)
@@ -30,7 +31,7 @@ runPropInNetSim = monadic (ioProperty . runner)
 
 withNewNode :: (Node IO -> IO Property) -> IO Property
 withNewNode k = do
-  node <- startNode (MkNodeId "N1") 1
+  node <- startNode (MkNodeId "N1") 100 1000
   runTest node
     `finally` stopNode node
  where
@@ -43,9 +44,9 @@ withNewNode k = do
             property False
               & counterexample ("Execution failed with error: " <> show e)
 
-startNode :: NodeId -> Rational -> IO (Node IO)
-startNode nodeId nodeStake = do
-  rustNode <- Rust.startNode nodeId nodeStake
+startNode :: NodeId -> Integer -> Integer -> IO (Node IO)
+startNode nodeId nodeStake totalStake = do
+  rustNode <- Rust.startNode nodeId nodeStake totalStake
   pure $ mkNode rustNode
  where
   mkNode :: RustNode -> Node IO
@@ -59,7 +60,7 @@ startNode nodeId nodeStake = do
           -- FIXME: Should use CBOR?
           Rust.receiveMessage rustNode <&> unmarshall
       , stopNode = Rust.stopNode rustNode
-      , nodeStake
+      , nodeStake = nodeStake % totalStake
       }
 
   unmarshall :: ByteString -> OutEnvelope

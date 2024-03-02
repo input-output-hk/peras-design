@@ -10,18 +10,25 @@ import Peras.Node.IOSim (runPropInIOSim)
 import Peras.Node.Netsim (runPropInNetSim)
 import Peras.NodeModel (Action (..), NodeModel (..))
 import Test.Hspec (Spec, describe)
-import Test.Hspec.QuickCheck (prop, xprop)
-import Test.QuickCheck (Property, property, within)
+import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
+import Test.QuickCheck (Property, mapSize, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Monadic (assert)
 import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec = do
-  describe "IOSim Honest node" $
-    prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelIOSim)
-  describe "Netsim Honest node" $
-    xprop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelNetSim)
+  modifyMaxSuccess (const 30) $
+    describe "IOSim Honest node" $
+      prop "mints blocks according to stakes" (propHonestNodeMintingRate propNodeModelIOSim)
+  -- NOTE: As those tests are run against a Rust node, across a FFI "barrier", they
+  -- are actually quite slow hence we limit the number of required successes and
+  -- reduce the size of generated test cases
+  modifyMaxSuccess (const 20) $
+    describe "Netsim Honest node" $
+      prop
+        "mints blocks according to stakes"
+        (mapSize (`div` 10) $ propHonestNodeMintingRate propNodeModelNetSim)
 
 propHonestNodeMintingRate ::
   (Actions NodeModel -> Property) ->

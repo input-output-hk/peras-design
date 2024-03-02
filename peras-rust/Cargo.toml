@@ -7,9 +7,13 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.34", features = ["serde"] }
+hex = { version = "0.4.3", features = ["serde"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 serde_yaml = "0.9.31"
+# depend on netsim at bleeding edge for the moment
+# netsim = { git = "https://github.com/input-output-hk/ce-netsim", branch = "main" }
+rand = "0.8.5"
 
 [build-dependencies]
 cbindgen = "0.26.0"
@@ -17,3 +21,8 @@ cbindgen = "0.26.0"
 [lib]
 name = "peras_rust"
 crate-type = [ "cdylib", "staticlib"]
+
+[dev-dependencies]
+fake = "2.9.2"
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"
