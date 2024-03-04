@@ -13,7 +13,7 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; ℕ; _+_; _*_; _∸_)
+open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; _≤?_; ℕ; _+_; _*_; _∸_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -119,11 +119,11 @@ Properties that must hold with respect to blocks and votes
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
         → ValidChain {block₀} c
-        → blocks c ⊆ filterᵇ ((_≤ᵇ sl) ∘ slotNumber) (allBlocks t)
+        → blocks c ⊆ filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
         → ∥ c ∥ ≤ ∥ bestChain sl t ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ filterᵇ ((_≤ᵇ sl) ∘ slotNumber) (allBlocks t)
+        → blocks (bestChain sl t) ⊆ filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
 ```
 The block tree type
 
