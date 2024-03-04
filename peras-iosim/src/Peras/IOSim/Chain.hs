@@ -37,7 +37,6 @@ module Peras.IOSim.Chain (
 ) where
 
 import Control.Exception (Exception (..))
-import Test.QuickCheck (Arbitrary (..))
 import Control.Monad (filterM, unless, (<=<))
 import Control.Monad.Except (throwError)
 import Data.Aeson (FromJSON, ToJSON)
@@ -50,6 +49,7 @@ import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Hash (BlockHash, VoteHash, hashBlock, hashVote)
 import Peras.IOSim.Types (Vote')
 import Peras.Orphans ()
+import Test.QuickCheck (Arbitrary (..))
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -182,9 +182,13 @@ addVote vote state =
         vhash = hashVote vote'
         r = votingRound vote
        in
-        addBlock block $
+        pure
           state
-            { voteIndex = M.insert vhash vote' $ voteIndex state
+            { blockIndex = M.insert (hashBlock block) block $ blockIndex state
+            , voteIndex = M.insert vhash vote' $ voteIndex state
+            , danglingBlocks =
+                (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
+                  danglingBlocks state
             , danglingVotes = S.insert vhash $ danglingVotes state
             , votesByRound = M.insertWith M.union r (M.singleton bhash $ S.singleton vhash) $ votesByRound state
             }
