@@ -44,6 +44,13 @@ main =
                 writeGraph dotFile peers -- FIXME: Potentially duplicative.
                 void . system $ "circo -Tpng -o " <> pngFile <> " " <> dotFile
                 removeFile dotFile
+          whenJust networkSvgFile $
+            \svgFile ->
+              do
+                dotFile <- emptySystemTempFile "network.dot"
+                writeGraph dotFile peers -- FIXME: Potentially duplicative.
+                void . system $ "circo -Tsvg -o " <> svgFile <> " " <> dotFile
+                removeFile dotFile
           let chains = chainGraph state
           whenJust chainDotFile $
             flip writeGraph chains
@@ -53,6 +60,13 @@ main =
                 dotFile <- emptySystemTempFile "chain.dot"
                 writeGraph dotFile chains -- FIXME: Potentially duplicative.
                 void . system $ "dot -Tpng -o " <> pngFile <> " " <> dotFile
+                removeFile dotFile
+          whenJust chainSvgFile $
+            \svgFile ->
+              do
+                dotFile <- emptySystemTempFile "chain.dot"
+                writeGraph dotFile chains -- FIXME: Potentially duplicative.
+                void . system $ "dot -Tsvg -o " <> svgFile <> " " <> dotFile
                 removeFile dotFile
       Left failure -> die $ show failure
 
@@ -70,8 +84,10 @@ data Command = Command
   , resultFile :: Maybe FilePath
   , networkDotFile :: Maybe FilePath
   , networkPngFile :: Maybe FilePath
+  , networkSvgFile :: Maybe FilePath
   , chainDotFile :: Maybe FilePath
   , chainPngFile :: Maybe FilePath
+  , chainSvgFile :: Maybe FilePath
   }
   deriving stock (Eq, Ord, Read, Show)
 
@@ -93,11 +109,21 @@ commandParser =
                 <> O.help "Path to output PNG file of network visualizaton. Requires `GraphViz` executable."
             )
           <*> (O.optional . O.strOption)
+            ( O.long "network-svg-file"
+                <> O.metavar "FILE"
+                <> O.help "Path to output SVG file of network visualizaton. Requires `GraphViz` executable."
+            )
+          <*> (O.optional . O.strOption)
             (O.long "chain-dot-file" <> O.metavar "FILE" <> O.help "Path to output GraphViz .dot file of chain visualizaton.")
           <*> (O.optional . O.strOption)
             ( O.long "chain-png-file"
                 <> O.metavar "FILE"
                 <> O.help "Path to output PNG file of chain visualizaton. Requires `GraphViz` executable."
+            )
+          <*> (O.optional . O.strOption)
+            ( O.long "chain-svg-file"
+                <> O.metavar "FILE"
+                <> O.help "Path to output SVG file of chain visualizaton. Requires `GraphViz` executable."
             )
    in O.info
         ( O.helper
