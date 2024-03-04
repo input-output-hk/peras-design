@@ -6,6 +6,7 @@ module Peras.Chain where
 ```agda
 open import Data.Bool using (_∧_; true; false)
 open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat)
+open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
 open import Data.Nat.Properties using (n≮n; _≟_)
@@ -142,7 +143,7 @@ open Params ⦃...⦄
 ```
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
-module _ -- ⦃ _ : Hashable (Vote _) ⦄
+module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -151,13 +152,23 @@ module _ -- ⦃ _ : Hashable (Vote _) ⦄
     nonZero = T-nonZero
 
   countDangling : List (Vote Hash) → RoundNumber → Hash → ℕ
-  countDangling vs (MkRoundNumber r) h = length (filter (λ {v → blockHash v ≟-Hash h}) vs)
+  countDangling vs r h = length
+    (filter (λ {v → blockHash v ≟-Hash h})
+    (filter (λ {v → votingRound v ≟-RoundNumber r }) vs))
 
+  -- TODO: need to check the round
   countBlocks : List Block → RoundNumber → Hash → ℕ
-  countBlocks bs (MkRoundNumber r) h = sum (map (λ {b → (length (filter (λ {v → v ≟-Hash h}) (includedVotes b)))}) bs)
+  countBlocks bs (MkRoundNumber r) h = sum
+    (map (λ {b →
+      (length
+        (filter (λ {v → v ≟-Hash h})
+        (includedVotes b)))})
+     bs)
 
   countVotes : Chain → RoundNumber → Hash → ℕ
   countVotes (MkChain bs vs _) r h = countBlocks bs r h + countDangling vs r h
+
+  open Hashable ⦃...⦄
 
   data SeenQuorum : Chain → RoundNumber → Set where
 
@@ -165,12 +176,11 @@ module _ -- ⦃ _ : Hashable (Vote _) ⦄
       → roundNumber r ≡ 0
       → SeenQuorum c r
 
-    LaterRound : ∀ {c} {r} {h}
+    LaterRound : ∀ {c} {r} {b}
       → roundNumber r > 0
-      → countVotes c r h ≥ τ
+      → b ∈ blocks c
+      → countVotes c r (hash b) ≥ τ
       → SeenQuorum c r
-
-  open Hashable ⦃...⦄
 
   postulate
     SeenQuorum? : ∀ (c : Chain) → (r : RoundNumber) → Dec (SeenQuorum c r)
