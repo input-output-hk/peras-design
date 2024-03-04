@@ -29,6 +29,7 @@ import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
+import Numeric.Natural (Natural)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (LeadershipProof (LeadershipProof), MembershipProof (MembershipProof), Signature (Signature))
@@ -49,7 +50,7 @@ import Peras.IOSim.Chain (
   voteRecorded,
  )
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
-import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake)
+import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote')
 import Peras.Message (Message (NewChain, SomeVote))
@@ -71,7 +72,9 @@ nextSlot protocol@Peras{..} slotNumber total =
     let handleIncompleteIndex = either (error . show) id
     slot .= slotNumber
     chainState %= discardExpiredVotes protocol slotNumber
-    leader <- isSlotLeader activeSlotCoefficient total =<< use stake
+    vrf <- getRandomR (0, 1)
+    vrfOutput .= vrf
+    leader <- isSlotLeader activeSlotCoefficient total (uniformRandomFromVrf vrf 0) <$> use stake
     slotLeader .= leader
     leaderMessages <-
       if leader
@@ -93,7 +96,7 @@ nextSlot protocol@Peras{..} slotNumber total =
         then do
           let r = currentRound protocol slotNumber
           votingAllowed <- chainState `uses` voteInRound protocol r
-          voter <- isCommitteeMember pCommitteeLottery total =<< use stake
+          voter <- isCommitteeMember pCommitteeLottery total (uniformRandomFromVrf vrf 1) <$> use stake
           committeeMember .= voter
           if voter && votingAllowed
             then do
@@ -172,25 +175,36 @@ newVotes votes =
     let votes' = handleIncompleteIndex $ mapM (resolveBlock state) votes
     concat <$> mapM newVote votes'
 
+uniformRandomFromVrf ::
+  Double ->
+  Natural ->
+  Double
+uniformRandomFromVrf vrf index =
+  let
+    b = 10
+    x = b ^ index * vrf
+   in
+    x - fromIntegral (floor x :: Integer)
+
 isSlotLeader ::
-  MonadRandom m =>
   Double ->
   Coin ->
+  Double ->
   Coin ->
-  m Bool
-isSlotLeader activeSlotCoefficient' total staked =
+  Bool
+isSlotLeader activeSlotCoefficient' total uniformRandom staked =
   let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
-   in (<= p) <$> getRandomR (0, 1)
+   in uniformRandom <= p
 
 isCommitteeMember ::
-  MonadRandom m =>
   Double ->
   Coin ->
+  Double ->
   Coin ->
-  m Bool
-isCommitteeMember pCommitteeLottery' _total staked =
+  Bool
+isCommitteeMember pCommitteeLottery' _total uniformRandom staked =
   let p = 1 - (1 - pCommitteeLottery') ^ staked
-   in (<= p) <$> getRandomR (0, 1)
+   in uniformRandom <= p
 
 candidateWindow ::
   Protocol ->
