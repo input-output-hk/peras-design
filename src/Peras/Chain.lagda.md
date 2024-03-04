@@ -4,16 +4,19 @@ module Peras.Chain where
 
 <!--
 ```agda
-open import Data.Bool using (_∧_)
-open import Data.List using (length; sum; upTo; filterᵇ)
-open import Data.Nat using (ℕ; _/_)
+open import Data.Bool using (_∧_; true; false)
+open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter)
+open import Data.List.Relation.Unary.All using (all?)
+open import Data.Nat using (ℕ; _/_; _>_; _≥_; NonZero; pred; _∸_)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_)
+open import Relation.Nullary using (¬_; Dec)
 
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _∘_; sum; b)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -124,13 +127,6 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 ```
 -->
 
-#### Cooldown
-
-```agda
-postulate
-  voteInRound : Chain → RoundNumber → Bool
-```
-
 #### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
@@ -141,19 +137,48 @@ The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Params ⦄ where
 
+  instance
+    nonZero : NonZero T -- TODO: why is this needed..?
+    nonZero = T-nonZero
+
   postulate
     round-r-votes : Chain → RoundNumber → ℕ
+    countVotes : Chain → RoundNumber → Hash → ℕ
+
+  data SeenQuorum : Chain → RoundNumber → Set where
+
+    Initial : ∀ {c} {r}
+      → r ≡ MkRoundNumber 0
+      → SeenQuorum c r
+
+    LaterRound : ∀ {c} {r}
+      → roundNumber r > zero
+      → Σ[ h ∈ Hash ]( countVotes c r h ≥ τ )
+      → SeenQuorum c r
+
+  data VoteInRound : Chain → RoundNumber → Set where
+
+    Last : ∀ {c r}
+      → roundNumber r > zero
+      → SeenQuorum c (MkRoundNumber (pred (roundNumber r)))
+      → VoteInRound c r
+
+    CooldownIsOver : ∀ {c r n}
+      → n > zero
+      → SeenQuorum c (MkRoundNumber (roundNumber r ∸ (n * K)))
+      → All (λ { i → ¬ (SeenQuorum c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
+      → VoteInRound c r
+
+  postulate
+    VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
 
   ∥_∥ : Chain → ℕ
   ∥ c ∥ =
-    let weight = length (blocks c)
+    let w = length (blocks c)
         s = slotNumber (tip c)
-        r-current = s -- / T
-        rounds = filterᵇ
-                   (voteInRound c)
-                   (map MkRoundNumber (upTo r-current))
-    in weight
-      + (b * sum (map (round-r-votes c) rounds))
+        r = s / T
+        rs = filter (VoteInRound? c) (map MkRoundNumber (upTo r))
+    in w + (b * sum (map (round-r-votes c) rs))
 ```
 
 ### Chain validity
