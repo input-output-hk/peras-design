@@ -326,6 +326,7 @@ A party can cast a vote for a block, if
         → VoteInRound ((bestChain blockTree) (clock M) (tree s)) (votingRound M)
         → (m , s′) ≡ honestVote (clock M) (votingRound M) s
         → N ≡ broadcast m M
+          -----------------
         → M [ Honest {p} ]⇉
           record N {
               stateMap = M.insert p s′ (stateMap N)

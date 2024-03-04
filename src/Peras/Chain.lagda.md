@@ -5,18 +5,20 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter)
-open import Data.List.Relation.Unary.All using (all?)
-open import Data.Nat using (ℕ; _/_; _>_; _≥_; NonZero; pred; _∸_)
+open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat)
+open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
+open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
+open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_)
-open import Relation.Nullary using (¬_; Dec)
+open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Relation.Binary using (DecidableEquality)
 
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -38,6 +40,14 @@ open RoundNumber public
 {-# COMPILE AGDA2HS RoundNumber newtype deriving Eq #-}
 ```
 -->
+
+```agda
+_≟-RoundNumber_ : DecidableEquality RoundNumber
+(MkRoundNumber r₁) ≟-RoundNumber (MkRoundNumber r₂) with r₁ ≟ r₂
+... | yes p = yes (cong MkRoundNumber p)
+... | no ¬p =  no (¬p ∘ cong roundNumber)
+
+```
 
 ### Vote
 
@@ -135,42 +145,78 @@ open Params ⦃...⦄
 ```
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
-module _ ⦃ _ : Params ⦄ where
+module _ -- ⦃ _ : Hashable (Vote _) ⦄
+         ⦃ _ : Params ⦄
+         where
 
   instance
     nonZero : NonZero T -- TODO: why is this needed..?
     nonZero = T-nonZero
 
-  postulate
-    round-r-votes : Chain → RoundNumber → ℕ
-    countVotes : Chain → RoundNumber → Hash → ℕ
+  countDangling : List (Vote Hash) → RoundNumber → Hash → ℕ
+  countDangling vs (MkRoundNumber r) h = length (filter (λ {v → blockHash v ≟-Hash h}) vs)
+
+  countBlocks : List Block → RoundNumber → Hash → ℕ
+  countBlocks bs (MkRoundNumber r) h = sum (map (λ {b → (length (filter (λ {v → v ≟-Hash h}) (includedVotes b)))}) bs)
+
+  countVotes : Chain → RoundNumber → Hash → ℕ
+  countVotes (MkChain bs vs _) r h = countBlocks bs r h + countDangling vs r h
 
   data SeenQuorum : Chain → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
-      → r ≡ MkRoundNumber 0
+      → roundNumber r ≡ 0
       → SeenQuorum c r
 
-    LaterRound : ∀ {c} {r}
-      → roundNumber r > zero
-      → Σ[ h ∈ Hash ]( countVotes c r h ≥ τ )
+    LaterRound : ∀ {c} {r} {h}
+      → roundNumber r > 0
+      → countVotes c r h ≥ τ
       → SeenQuorum c r
+
+  open Hashable ⦃...⦄
+
+  postulate
+    SeenQuorum? : ∀ (c : Chain) → (r : RoundNumber) → Dec (SeenQuorum c r)
+  {-
+  SeenQuorum? c (MkRoundNumber zero) = yes (Initial refl)
+  SeenQuorum? c@(MkChain bs vs _) r@(MkRoundNumber (suc _))
+    with any? (λ { v → (countVotes c r (hash v)) ≥? τ }) vs | any? (λ { h → (countVotes c r h) ≥? τ }) (concat (map includedVotes bs))
+  ... | yes (here {x} {xs} xx) | _ = yes (LaterRound {_} {_} {hash x} (s≤s z≤n) xx)
+  ... | yes (there p) | _ = yes (LaterRound (s≤s z≤n) {!!})
+  ... | no ¬p | yes q = {!!}
+  ... | no ¬p | no ¬q = {!!}
+  -}
 
   data VoteInRound : Chain → RoundNumber → Set where
 
     Last : ∀ {c r}
-      → roundNumber r > zero
+      → roundNumber r > 0
       → SeenQuorum c (MkRoundNumber (pred (roundNumber r)))
       → VoteInRound c r
 
     CooldownIsOver : ∀ {c r n}
-      → n > zero
+      → n > 0
+      → roundNumber r > 0
       → SeenQuorum c (MkRoundNumber (roundNumber r ∸ (n * K)))
       → All (λ { i → ¬ (SeenQuorum c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
       → VoteInRound c r
 
+  round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
+  round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
+  round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
+
   postulate
     VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
+    -- VoteInRound? c r@(MkRoundNumber zero) = no λ x → let ¬p = round≡0→¬VoteInRound {c} {r} refl in ¬p x
+    -- VoteInRound? c r@(MkRoundNumber (suc _)) with SeenQuorum? c (MkRoundNumber (pred (roundNumber r)))
+    -- ... | yes p = yes (Last (s≤s z≤n) p)
+    -- ... | no ¬p = {!!}
+
+  round-r-votes : Chain → RoundNumber → ℕ
+  round-r-votes (MkChain bs vs p) r =
+    let -- TODO: votes from blocks
+        d = filter (λ { v → (votingRound v) ≟-RoundNumber r }) vs
+    in length d
 
   ∥_∥ : Chain → ℕ
   ∥ c ∥ =

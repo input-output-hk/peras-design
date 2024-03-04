@@ -9,6 +9,7 @@ open import Level
 open import Relation.Binary using (StrictTotalOrder)
 open import Data.Unit
 open import Data.Bool
+open import Relation.Binary using (DecidableEquality)
 
 postulate
   ByteString : Set
@@ -27,6 +28,9 @@ record Hash : Set where
 open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
+
+postulate
+  _≟-Hash_ : DecidableEquality Hash
 
 record Hashable (a : Set) : Set where
   field hash : a → Hash
