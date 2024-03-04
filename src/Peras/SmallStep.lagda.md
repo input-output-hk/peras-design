@@ -22,7 +22,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain; ∥_∥)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain; VoteInRound; ∥_∥)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (Party; PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 open import Peras.Message renaming (Message to Msg)
@@ -153,6 +153,8 @@ The block tree type
     field
       partyId : PartyId
       tree : A
+
+  open LocalState
 ```
 # Parameterized module
 
@@ -321,7 +323,7 @@ A party can cast a vote for a block, if
         → lookup (stateMap M) p ≡ just s
         → clock M ≡ roundNumber (votingRound M) * T
         → isCommitteeMember p (votingRound M) ≡ true
-        -- TODO: shouldVote r
+        → VoteInRound ((bestChain blockTree) (clock M) (tree s)) (votingRound M)
         → (m , s′) ≡ honestVote (clock M) (votingRound M) s
         → N ≡ broadcast m M
         → M [ Honest {p} ]⇉
