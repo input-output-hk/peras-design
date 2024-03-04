@@ -108,9 +108,6 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
  * The set of "pending" votes, eg. which have not been included in a `Block`.
 
 ```agda
-VoteB : Set
-VoteB = Vote Block
-
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
