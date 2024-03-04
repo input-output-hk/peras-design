@@ -103,6 +103,10 @@ module _ {block₀ : Block}
                     (bestChain : Slot → T → Chain)
                     (addVote : T → Vote Block → T)
          : Set₁ where
+
+    allBlocksUpTo : Slot → T → List Block
+    allBlocksUpTo sl t = filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
+
     field
 ```
 Properties that must hold with respect to blocks and votes
@@ -119,11 +123,11 @@ Properties that must hold with respect to blocks and votes
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
         → ValidChain {block₀} c
-        → blocks c ⊆ filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
+        → blocks c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ ≤ ∥ bestChain sl t ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
+        → blocks (bestChain sl t) ⊆ allBlocksUpTo sl t
 ```
 The block tree type
 
