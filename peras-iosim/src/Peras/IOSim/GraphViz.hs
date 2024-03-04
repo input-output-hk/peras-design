@@ -15,7 +15,7 @@ import Peras.Chain (RoundNumber (roundNumber), Vote (..))
 import Peras.IOSim.Hash (genesisHash)
 import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
-import Peras.IOSim.Util (votesInBlock)
+import Peras.Message (NodeId (..))
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -36,14 +36,14 @@ peersGraph ::
   G.Graph
 peersGraph networkState =
   let nodeStates = networkState ^. currentStates
-      nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId $ show name) Nothing) nodeStates
+      nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId . show $ nodeId name) Nothing) nodeStates
       mkNode name nodeState =
         G.NodeStatement
           (nodeIds M.! name)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show name
+                <> show (nodeId name)
                 <> "</b>"
                 <> "|Stake "
                 <> show (nodeState ^. stake)
@@ -76,10 +76,11 @@ chainGraph networkState =
           ]
       nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
       sortVotes = compare `on` (\MkVote{..} -> (votingRound, creatorId, blockHash))
+      votesInBlock = fmap (allVotes M.!) . includedVotes
       showVotes [] = ""
       showVotes vs = "|" <> intercalate "|" (showVote <$> sortBy sortVotes vs)
       showVote MkVote{votingRound, creatorId, blockHash} =
-        "Round " <> show (roundNumber votingRound) <> ": " <> show' creatorId <> " voted for " <> show' blockHash
+        "Round " <> show (roundNumber votingRound) <> ": " <> show creatorId <> " voted for " <> show' blockHash
       mkNode block@Block{..} =
         G.NodeStatement
           (nodeId signature)
@@ -91,8 +92,8 @@ chainGraph networkState =
                 <> "|Slot "
                 <> show slotNumber
                 <> "|Creator "
-                <> show' creatorId
-                <> showVotes (M.elems $ votesInBlock block allVotes)
+                <> show creatorId
+                <> showVotes (votesInBlock block)
           ]
       blocks = S.toList . S.unions $ M.elems tree
       nodes = mkNode <$> blocks

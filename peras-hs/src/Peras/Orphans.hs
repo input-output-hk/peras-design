@@ -19,6 +19,7 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (parseFail, toJSONKeyText)
 import Data.Bifunctor (bimap)
+import Data.Default (Default (..))
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..), Party (..))
@@ -93,6 +94,8 @@ deriving stock instance Read RoundNumber
 deriving stock instance Show RoundNumber
 deriving newtype instance FromJSON RoundNumber
 deriving newtype instance ToJSON RoundNumber
+deriving newtype instance FromJSONKey RoundNumber
+deriving newtype instance ToJSONKey RoundNumber
 
 instance Enum RoundNumber where
   toEnum = RoundNumber . toEnum
@@ -123,6 +126,9 @@ deriving stock instance Read Chain
 deriving stock instance Show Chain
 instance FromJSON Chain
 instance ToJSON Chain
+
+instance Default Chain where
+  def = MkChain mempty mempty
 
 -- Orphans for `Peras.Crypto`.
 

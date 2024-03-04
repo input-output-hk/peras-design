@@ -35,20 +35,28 @@ Available options:
 
 ## Example
 
-Use the parameters [small-network.yaml](small-network.yaml) and the pseudo-Praos protocol [pseudo-praos.yaml](pseudo-praos.yaml).
+Use the parameters [small-network.yaml](small-network.yaml) and the pseudo-Praos protocol [pseudo-peras.yaml](pseudo-peras.yaml).
 
 ```console
 $ cat small-network.yaml 
-randomSeed: 12345
-peerCount: 10
+randomSeed: 13234
+peerCount: 100
 downstreamCount: 3
-totalStake: 10000
 maximumStake: 1000
-endSlot: 1000
+messageDelay: 0.35
+endSlot: 1200
 
-$ cat pseudo-praos.yaml 
-protocol: PseudoPraos
+$ cat pseudo-peras.yaml 
 activeSlotCoefficient: 0.05
+roundDuration: 10
+pCommitteeLottery: 0.00021
+votingBoost: 0.25
+votingWindow: [50, 1]
+votingQuorum: 10
+voteMaximumAge: 30
+cooldownDuration: 5
+prefixCutoffWeight:  10000000
+
 ```
 
 (Note that a one-node example is available in the configuration [one-node.yaml](one-node.yaml).)
@@ -58,7 +66,7 @@ Run the simulation. Beware of poor performance and high memory usage: consider r
 ```bash
 cabal run exe:peras-iosim -- \
   --parameter-file small-network.yaml \
-  --protocol-file pseudo-praos.yaml \
+  --protocol-file pseudo-peras.yaml \
   --result-file result.json \
   --network-png-file peers.png \
   --chain-png-file chains.png

@@ -15,6 +15,7 @@ data-files: *.json
 
 library
   exposed-modules:
+    Peras.IOSim.Chain
     Peras.IOSim.GraphViz
     Peras.IOSim.Hash
     Peras.IOSim.Message.Types
@@ -27,7 +28,6 @@ library
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
-    Peras.IOSim.Util
   hs-source-dirs:   src
   build-depends:
     , aeson

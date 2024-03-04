@@ -27,11 +27,11 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain)
+import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash)
+import Peras.IOSim.Hash (VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
-import Peras.IOSim.Types (Votes)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
@@ -57,7 +57,7 @@ data NetworkState = NetworkState
   , _chainsSeen :: Map NodeId Chain
   -- ^ The latest "best" seen by nodes
   , _blocksSeen :: Map Hash (Set Block)
-  , _votesSeen :: Votes
+  , _votesSeen :: Map VoteHash (Vote Hash)
   , _currentStates :: Map NodeId NodeState
   , _pending :: [OutEnvelope]
   , _networkRandom :: StdGen
