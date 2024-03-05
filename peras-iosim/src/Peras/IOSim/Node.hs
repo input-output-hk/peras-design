@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.IOSim.Node (
   NodeProcess (..),
@@ -16,6 +17,7 @@ module Peras.IOSim.Node (
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Lens (use, uses, (.=))
+import Control.Monad.Class.MonadSay
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
@@ -28,7 +30,7 @@ import Control.Monad.State (
 import Data.Default (def)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Peras.IOSim.Chain (preferredChain)
+import Peras.IOSim.Chain.Types (preferredChain)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
 import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId)
@@ -77,9 +79,13 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure False
     <*> pure mempty
 
+instance MonadSay m => MonadSay (StateT s m) where
+  say = lift . say
+
 runNode ::
   forall m.
   MonadDelay m =>
+  MonadSay m =>
   MonadSTM m =>
   MonadTime m =>
   Protocol ->
@@ -88,7 +94,7 @@ runNode ::
   NodeProcess m ->
   m ()
 runNode protocol total state NodeProcess{..} =
-  let go :: MonadDelay m => MonadSTM m => MonadTime m => StateT NodeState m ()
+  let go :: MonadDelay m => MonadSTM m => MonadSay m => MonadTime m => StateT NodeState m ()
       go =
         do
           let atomically' = lift . atomically

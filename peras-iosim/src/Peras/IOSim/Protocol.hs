@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Protocol (
@@ -23,16 +24,21 @@ module Peras.IOSim.Protocol (
   currentRound,
 ) where
 
-import Control.Lens (use, uses, (%=), (&), (.=))
+import Control.Lens (Lens', use, uses, (%=), (&), (.=))
 import Control.Monad (forM_, unless)
-import Control.Monad.Except (throwError)
+import Control.Monad.Class.MonadSay (MonadSay (..))
+import Control.Monad.Except (
+  ExceptT,
+  MonadError (throwError),
+  liftEither,
+  runExceptT,
+ )
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.IOSim.Chain (
-  ChainState (preferredChain),
   addChain,
   addVote,
   appendBlock,
@@ -47,6 +53,7 @@ import Peras.IOSim.Chain (
   resolveBlocksOnChain,
   voteRecorded,
  )
+import Peras.IOSim.Chain.Types (ChainState (preferredChain))
 import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeadership, proveMembership, signBlock, signVote, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
@@ -57,7 +64,17 @@ import Peras.Message (Message (NewChain, SomeVote))
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+uses' :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e b) -> m b
+uses' l f = uses l f >>= liftEither
+
+(%#=) :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e a) -> m ()
+l %#= f = uses l f >>= either throwError (l .=)
+
+sayInvalid :: MonadSay m => a -> ExceptT Invalid m a -> m a
+sayInvalid d x = runExceptT x >>= either ((>> pure d) . say . show) pure
+
 nextSlot ::
+  MonadSay m =>
   MonadState NodeState m =>
   Protocol ->
   Slot ->
@@ -65,8 +82,6 @@ nextSlot ::
   m [Message']
 nextSlot protocol@Peras{..} slotNumber total =
   do
-    -- FIXME: Improve handling of incomplete indexes.
-    let handleIncompleteIndex = either (error . show) id
     slot .= slotNumber
     chainState %= discardExpiredVotes protocol slotNumber
     vrfOutput %= nextVrf
@@ -75,18 +90,7 @@ nextSlot protocol@Peras{..} slotNumber total =
     slotLeader .= leader
     leaderMessages <-
       if leader
-        then do
-          block <-
-            Block slotNumber
-              <$> use owner
-              <*> uses chainState (hashTip . Peras.Chain.blocks . preferredChain)
-              <*> uses chainState (handleIncompleteIndex . eligibleDanglingVotes)
-              <*> pure (proveLeadership vrf ())
-              <*> pure mempty
-              <*> pure (signBlock vrf ())
-          chainState %= handleIncompleteIndex . appendBlock block
-          -- FIXME: Implement `prefixCutoffWeight` logic.
-          chainState `uses` (pure . NewChain . preferredChain)
+        then doLeading slotNumber vrf
         else pure mempty
     voterMessages <-
       if isFirstSlotInRound protocol slotNumber
@@ -96,34 +100,64 @@ nextSlot protocol@Peras{..} slotNumber total =
           voter <- isCommitteeMember pCommitteeLottery total vrf <$> use stake
           committeeMember .= voter
           if voter && votingAllowed
-            then do
-              chainState `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
-                >>= \case
-                  block : _ -> do
-                    vote <-
-                      MkVote r
-                        <$> use owner
-                        <*> pure (proveMembership vrf ())
-                        <*> pure block
-                        <*> pure (signVote vrf ())
-                    chainState %= handleIncompleteIndex . addVote vote
-                    pure [SomeVote vote]
-                  [] -> pure mempty
+            then doVoting protocol slotNumber r vrf
             else pure mempty
         else pure mempty
     pure $ leaderMessages <> voterMessages
 
+doLeading ::
+  MonadSay m =>
+  MonadState NodeState m =>
+  Slot ->
+  VrfOutput ->
+  m [Message']
+doLeading slotNumber vrf =
+  sayInvalid mempty $ do
+    block <-
+      Block slotNumber
+        <$> use owner
+        <*> uses chainState (hashTip . Peras.Chain.blocks . preferredChain)
+        <*> uses' chainState eligibleDanglingVotes
+        <*> pure (proveLeadership vrf ())
+        <*> pure mempty
+        <*> pure (signBlock vrf ())
+    chainState %#= appendBlock block
+    -- FIXME: Implement `prefixCutoffWeight` logic.
+    chainState `uses` (pure . NewChain . preferredChain)
+
+doVoting ::
+  MonadSay m =>
+  MonadState NodeState m =>
+  Protocol ->
+  Slot ->
+  RoundNumber ->
+  VrfOutput ->
+  m [Message']
+doVoting protocol slotNumber r vrf =
+  sayInvalid mempty $ do
+    chainState `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
+      >>= \case
+        block : _ -> do
+          vote <-
+            MkVote r
+              <$> use owner
+              <*> pure (proveMembership vrf ())
+              <*> pure block
+              <*> pure (signVote vrf ())
+          chainState %#= addVote vote
+          pure [SomeVote vote]
+        [] -> pure mempty
+
 newChain ::
+  MonadSay m =>
   MonadState NodeState m =>
   Protocol ->
   Chain ->
   m [Message']
 newChain protocol proposed =
-  do
-    -- FIXME: Improve handling of incomplete indexes.
-    let handleIncompleteIndex = either (error . show) id
+  sayInvalid mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
-    state' <- chainState `uses` (handleIncompleteIndex . preferChain proposed)
+    state' <- chainState `uses'` preferChain proposed
     let toWeight = chainWeight protocol state'
         checkRollback MkChain{blocks = olds} MkChain{blocks = news} =
           partition (`elem` news) olds
@@ -142,35 +176,39 @@ newChain protocol proposed =
         chainState .= state'
         pure [NewChain proposed]
       else do
-        chainState %= handleIncompleteIndex . addChain proposed
+        chainState %#= addChain proposed
         newVotes $ Peras.Chain.votes proposed
 
 newVote ::
+  MonadSay m =>
   MonadState NodeState m =>
   Vote Block ->
   m [Message']
-newVote vote =
-  do
-    -- FIXME: Improve handling of incomplete indexes.
-    let handleIncompleteIndex = either (error . show) id
-    chainState `uses` lookupVote (hashVote vote)
-      >>= \case
-        Right _ -> pure mempty
-        Left _ -> do
-          chainState %= handleIncompleteIndex . addVote vote
-          pure [SomeVote vote]
+newVote = sayInvalid mempty . newVote'
+
+newVote' ::
+  MonadError Invalid m =>
+  MonadState NodeState m =>
+  Vote Block ->
+  m [Message']
+newVote' vote =
+  chainState `uses` lookupVote (hashVote vote)
+    >>= \case
+      Right _ -> pure mempty
+      Left _ -> do
+        chainState %#= addVote vote
+        pure [SomeVote vote]
 
 newVotes ::
+  MonadError Invalid m =>
   MonadState NodeState m =>
   [Vote'] ->
   m [Message']
 newVotes votes =
   do
-    -- FIXME: Improve handling of incomplete indexes.
-    let handleIncompleteIndex = either (error . show) id
     state <- use chainState
-    let votes' = handleIncompleteIndex $ mapM (resolveBlock state) votes
-    concat <$> mapM newVote votes'
+    votes' <- liftEither $ mapM (resolveBlock state) votes
+    concat <$> mapM newVote' votes'
 
 isSlotLeader ::
   Double ->

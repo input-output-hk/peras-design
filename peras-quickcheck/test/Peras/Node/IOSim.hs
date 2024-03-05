@@ -8,11 +8,13 @@ module Peras.Node.IOSim where
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, newTQueueIO, readTQueue, writeTQueue)
 import Control.Lens ((^.))
 import Control.Monad.Class.MonadFork (ThreadId, forkIO, killThread)
+import Control.Monad.Class.MonadSay (MonadSay)
 import Control.Monad.Class.MonadTime (getCurrentTime)
 import Control.Monad.Class.MonadTimer.SI (MonadDelay, MonadFork, MonadTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (runReaderT))
+import Data.Default (def)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Set as Set
@@ -22,7 +24,6 @@ import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId (..))
 import Peras.NodeModel (Node (..), RunMonad, defaultActiveSlotCoefficient, runMonad)
-import Data.Default (def)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
 import Test.QuickCheck.Monadic (PropertyM (..), monadic')
@@ -30,6 +31,7 @@ import Test.QuickCheck.Monadic (PropertyM (..), monadic')
 initialiseNodeEnv ::
   ( MonadSTM m
   , MonadDelay m
+  , MonadSay m
   , MonadTime m
   , MonadFork m
   ) =>
@@ -44,7 +46,7 @@ initialiseNodeEnv = do
   pure (threadId, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol
-protocol = def {activeSlotCoefficient = defaultActiveSlotCoefficient}
+protocol = def{activeSlotCoefficient = defaultActiveSlotCoefficient}
 
 parameters :: Parameters
 parameters =
