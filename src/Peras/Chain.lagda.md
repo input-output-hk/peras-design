@@ -158,12 +158,13 @@ module _ ⦃ _ : Hashable Block ⦄
     (filter (λ {v → blockHash v ≟-Hash (hash b)})
     (filter (λ {v → votingRound v ≟-RoundNumber r}) vs))
 
+  -- FIXME: Only include votes for round r
   countBlocks : List Block → RoundNumber → Block → ℕ
   countBlocks bs (MkRoundNumber r) b = sum
-    (map (λ {b →
+    (map (λ {x →
       (length
         (filter (λ {v → v ≟-Hash (hash b)})
-        (includedVotes b)))})
+        (includedVotes x)))})
      bs)
 
   countVotes : Chain → RoundNumber → Block → ℕ
@@ -173,7 +174,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ### Quorum
 
-```
+```agda
   data SeenQuorum : Chain → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
@@ -225,10 +226,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ```agda
   round-r-votes : Chain → RoundNumber → ℕ
-  round-r-votes (MkChain bs vs p) r =
-    let -- TODO: votes from blocks
-        d = filter (λ { v → (votingRound v) ≟-RoundNumber r }) vs
-    in length d
+  round-r-votes c r = sum (map (countVotes c r) (blocks c))
 ```
 
 ### Chain weight
