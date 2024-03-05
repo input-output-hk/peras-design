@@ -305,7 +305,7 @@ updating the local block tree and putting the local state back into the global s
           ------------------------
         → N [ Honest {p} ]⇀
           record N {
-              stateMap = M.insert p s′ (stateMap N) ;
+              stateMap = insert p s′ (stateMap N) ;
               messages = rest
             }
 
@@ -333,7 +333,7 @@ A party can cast a vote for a block, if
           -----------------
         → M [ Honest {p} ]⇉
           record N {
-              stateMap = M.insert p s′ (stateMap N)
+              stateMap = insert p s′ (stateMap N)
             }
 
       corrupt : ∀ {p N}
@@ -357,7 +357,7 @@ state.
           -----------------------------------------
         → M [ Honest {p} ]↷
           record N {
-              stateMap = M.insert p s′ (stateMap N)
+              stateMap = insert p s′ (stateMap N)
             }
 
       corrupt : ∀ {p N}
