@@ -152,10 +152,8 @@ The block tree type
 
 ```agda
   record LocalState {A : Set} (blockTree : TreeType A) : Set where
-
-    constructor ⟨_,_⟩
+    constructor MkState
     field
-      partyId : PartyId
       tree : A
 
   open LocalState
@@ -191,9 +189,9 @@ Honestly updating the local state upon receiving a message
     honestReceive msg s = foldr receive s msg
       where
         receive : Message → Stateˡ → Stateˡ
-        receive (SomeBlock b) ⟨ p , t ⟩ = ⟨ p , (extendTree blockTree) t b ⟩
+        receive (SomeBlock b) (MkState t) = MkState ((extendTree blockTree) t b)
         receive (NewChain c) s = s -- TODO
-        receive (SomeVote v) ⟨ p , t ⟩ = ⟨ p , (addVote blockTree) t v ⟩
+        receive (SomeVote v) (MkState t) = MkState ((addVote blockTree) t v)
         receive (NextSlot _) s = s -- TODO
 ```
 
@@ -202,8 +200,8 @@ Honestly updating the local state upon receiving a message
 The vote is for the last block at least L slots old
 
 ```agda
-    honestVote : Slot → RoundNumber → Stateˡ → Message × Stateˡ
-    honestVote sl r ⟨ p , tree ⟩ =
+    honestVote : Slot → RoundNumber → PartyId → Stateˡ → Message × Stateˡ
+    honestVote sl r p (MkState tree) =
       let best<L = (bestChain blockTree) (sl ∸ L) tree
           vote =
             record {
@@ -213,14 +211,14 @@ The vote is for the last block at least L slots old
               blockHash = tip best<L ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-     in SomeVote vote , ⟨ p , (addVote blockTree) tree vote ⟩
+     in SomeVote vote , MkState ((addVote blockTree) tree vote)
 ```
 
 ### Honestly creating a block
 
 ```agda
-    honestCreate : Slot → RoundNumber → List Tx → Stateˡ → Message × Stateˡ
-    honestCreate sl (record { roundNumber = r }) txs ⟨ p , tree ⟩ =
+    honestCreate : Slot → RoundNumber → List Tx → PartyId → Stateˡ → Message × Stateˡ
+    honestCreate sl (record { roundNumber = r }) txs p (MkState tree) =
       let best = (bestChain blockTree) (pred sl) tree
           votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
@@ -233,7 +231,7 @@ The vote is for the last block at least L slots old
               payload = txs ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-      in SomeBlock newBlock , ⟨ p , (extendTree blockTree) tree newBlock ⟩
+      in SomeBlock newBlock , MkState ((extendTree blockTree) tree newBlock)
 ```
 ## Global state
 
@@ -328,7 +326,7 @@ A party can cast a vote for a block, if
         → clock M ≡ roundNumber (votingRound M) * T
         → isCommitteeMember p (votingRound M) ≡ true
         → VoteInRound ((bestChain blockTree) (clock M) (tree s)) (votingRound M)
-        → (m , s′) ≡ honestVote (clock M) (votingRound M) s
+        → (m , s′) ≡ honestVote (clock M) (votingRound M) p s
         → N ≡ broadcast m M
           -----------------
         → M [ Honest {p} ]⇉
@@ -352,7 +350,7 @@ state.
       honest : ∀ {p M N} {s s′} {m}
         → lookup (stateMap M) p ≡ just s
         → isSlotLeader p (clock M) ≡ true
-        → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) s
+        → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) p s
         → N ≡ broadcast m M
           -----------------------------------------
         → M [ Honest {p} ]↷
