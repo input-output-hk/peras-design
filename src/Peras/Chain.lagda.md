@@ -174,40 +174,47 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ### Quorum
 
+The relation `QuorumOnChain` checks whether there is a round-r quorum with respect to
+the votes on chain c and dangling votes for a block on chain c.
+
 ```agda
-  data SeenQuorum : Chain → RoundNumber → Set where
+  data QuorumOnChain : Chain → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
       → roundNumber r ≡ 0
-      → SeenQuorum c r
+      → QuorumOnChain c r
 
     LaterRound : ∀ {c} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
       → countVotes c r b ≥ τ
-      → SeenQuorum c r
+      → QuorumOnChain c r
 ```
 
 ```agda
   postulate
-    SeenQuorum? : ∀ (c : Chain) → (r : RoundNumber) → Dec (SeenQuorum c r)
+    QuorumOnChain? : ∀ (c : Chain) → (r : RoundNumber) → Dec (QuorumOnChain c r)
 ```
+
+In a cooldown period there is no voting.
 
 ```agda
   data VoteInRound : Chain → RoundNumber → Set where
 
     Last : ∀ {c r}
       → roundNumber r > 0
-      → SeenQuorum c (MkRoundNumber (pred (roundNumber r)))
+      → QuorumOnChain c (MkRoundNumber (pred (roundNumber r)))
       → VoteInRound c r
 
     CooldownIsOver : ∀ {c r n}
       → n > 0
       → roundNumber r > 0
-      → SeenQuorum c (MkRoundNumber (roundNumber r ∸ (n * K)))
-      → All (λ { i → ¬ (SeenQuorum c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
+      → QuorumOnChain c (MkRoundNumber (roundNumber r ∸ (n * K)))
+      → All (λ { i → ¬ (QuorumOnChain c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
       → VoteInRound c r
 ```
+
+There is not voting in round 0
 
 ```agda
   round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
@@ -219,7 +226,7 @@ module _ ⦃ _ : Hashable Block ⦄
   postulate
     VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
     -- VoteInRound? c r@(MkRoundNumber zero) = no λ x → let ¬p = round≡0→¬VoteInRound {c} {r} refl in ¬p x
-    -- VoteInRound? c r@(MkRoundNumber (suc _)) with SeenQuorum? c (MkRoundNumber (pred (roundNumber r)))
+    -- VoteInRound? c r@(MkRoundNumber (suc _)) with QuorumOnChain? c (MkRoundNumber (pred (roundNumber r)))
     -- ... | yes p = yes (Last (s≤s z≤n) p)
     -- ... | no ¬p = {!!}
 ```
