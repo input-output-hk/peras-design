@@ -24,6 +24,8 @@ module Peras.IOSim.Protocol (
 ) where
 
 import Control.Lens (use, uses, (%=), (&), (.=))
+import Control.Monad (forM_, unless)
+import Control.Monad.Except (throwError)
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
@@ -48,7 +50,7 @@ import Peras.IOSim.Chain (
 import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeadership, proveMembership, signBlock, signVote, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
-import Peras.IOSim.Protocol.Types (Protocol (..))
+import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
 import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote')
 import Peras.Message (Message (NewChain, SomeVote))
 
@@ -223,47 +225,64 @@ discardExpiredVotes protocol@Peras{voteMaximumAge = aa} now =
 
 -- | "A chain is *valid* if the blocks form a *valid Praos chain* and each vote
 --   is valid."
-validChain :: Protocol -> ChainState -> Bool
+validChain :: Protocol -> ChainState -> Either Invalid ()
 validChain protocol state =
-  validPraos (preferredChain state)
-    && either (const False) (all $ validVote protocol state) (resolveBlocksOnChain state)
+  do
+    validPraos (preferredChain state)
+    blocks <- resolveBlocksOnChain state
+    forM_ blocks $ validVote protocol state
 
 -- | Check whether a chain is valid Praos.
-validPraos :: Chain -> Bool
-validPraos MkChain{blocks = []} = True
+validPraos :: Chain -> Either Invalid ()
+validPraos MkChain{blocks = []} = pure ()
 validPraos MkChain{blocks} =
   -- FIXME: Also check signatures and proofs.
-  and $ zipWith ((>) `on` slotNumber) (init blocks) (tail blocks)
+  if and $ zipWith ((>) `on` slotNumber) (init blocks) (tail blocks)
+    then pure ()
+    else throwError InvalidPraosChain
 
 -- | A valid vote votes for a block whose slot is in the vote-candidate window
 --   and if it is referenced by a unique block in the vote-inclusion window.
-validVote :: Protocol -> ChainState -> Vote Block -> Bool
+validVote :: Protocol -> ChainState -> Vote Block -> Either Invalid ()
 validVote protocol state vote =
-  -- FIXME: Also check signatures and proofs.
-  validCandidate protocol state vote && validInclusion protocol state vote
+  do
+    -- FIXME: Also check signatures and proofs.
+    validCandidate protocol state vote
+    validInclusion protocol state vote
+    voteAllowedInRound protocol state vote
 
 -- | "Each vote $v$, with some slot number $s = r * T$, votes for a block with
 --   slot number in the *voting-candidate window* $\[s - L_low, s - L_high\]$
 --   *on the chain*.
-validCandidate :: Protocol -> ChainState -> Vote Block -> Bool
+validCandidate :: Protocol -> ChainState -> Vote Block -> Either Invalid ()
 validCandidate protocol@Peras{votingWindow = (lLow, lHigh)} state MkVote{votingRound = r, blockHash = block@Block{slotNumber}} =
   let
     s = firstSlotInRound protocol r
    in
-    isBlockOnChain state (hashBlock block) && s <= slotNumber + lLow && slotNumber + lHigh <= s
+    if isBlockOnChain state (hashBlock block) && s <= slotNumber + lLow && slotNumber + lHigh <= s
+      then pure ()
+      else throwError VoteOutsideCandidateWindow
 
 -- | "Each vote $v$, with some slot number $s = r * T$, is *referenced by a
 --   unique block* with a slot number s inside the *vote-inclusions window*
 --   $\[s + 1, s + A\]$."
-validInclusion :: Protocol -> ChainState -> Vote msg -> Bool
+validInclusion :: Protocol -> ChainState -> Vote msg -> Either Invalid ()
 validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound = r} =
   let
     s = firstSlotInRound protocol r
    in
     -- FIXME: Use `ChainState` to make this more efficient.
     case voteRecorded (preferredChain state) vote of
-      [Block{slotNumber}] -> s + 1 <= slotNumber && slotNumber <= s + aa
-      _ -> False
+      [Block{slotNumber}] ->
+        if s + 1 <= slotNumber && slotNumber <= s + aa
+          then pure ()
+          else throwError VoteOutsideInclusionWindow
+      _ -> throwError VoteRecordedMultipleTimes
+
+voteAllowedInRound :: Protocol -> ChainState -> Vote msg -> Either Invalid ()
+voteAllowedInRound protocol state MkVote{votingRound} =
+  unless (voteInRound protocol votingRound state) $
+    throwError VoteNotAllowedInRound
 
 currentRound :: Protocol -> Slot -> RoundNumber
 currentRound Peras{roundDuration = tt} s = RoundNumber $ s `div` tt

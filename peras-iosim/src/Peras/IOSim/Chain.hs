@@ -17,7 +17,7 @@ module Peras.IOSim.Chain (
   blockInWindow,
   voteOnChain,
   voteOnChain',
-  IncompleteIndex (..),
+  Invalid (..),
   voteRecorded,
   blockOnChain,
   resolveBlock,
@@ -36,7 +36,6 @@ module Peras.IOSim.Chain (
   addVote,
 ) where
 
-import Control.Exception (Exception (..))
 import Control.Monad (filterM, unless, (<=<))
 import Control.Monad.Except (throwError)
 import Data.Aeson (FromJSON, ToJSON)
@@ -47,6 +46,7 @@ import GHC.Generics (Generic)
 import Peras.Block (Block (..), Slot)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Hash (BlockHash, VoteHash, hashBlock, hashVote)
+import Peras.IOSim.Protocol.Types (Invalid (..))
 import Peras.IOSim.Types (Vote')
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
@@ -88,19 +88,10 @@ instance Default ChainState where
 instance Arbitrary ChainState where
   arbitrary = pure def
 
-newtype IncompleteIndex = IncompleteIndex {message :: String}
-  deriving stock (Eq, Generic, Ord, Read, Show)
-
-instance Exception IncompleteIndex where
-  displayException = message
-
-instance FromJSON IncompleteIndex
-instance ToJSON IncompleteIndex
-
-indexChain :: Chain -> Either IncompleteIndex ChainState
+indexChain :: Chain -> Either Invalid ChainState
 indexChain = flip preferChain def
 
-preferChain :: Chain -> ChainState -> Either IncompleteIndex ChainState
+preferChain :: Chain -> ChainState -> Either Invalid ChainState
 preferChain chain state =
   do
     state' <- addChain chain state
@@ -111,7 +102,7 @@ preferChain chain state =
         , danglingVotes = M.keysSet (voteIndex state') `S.difference` S.fromList (concatMap includedVotes $ blocks chain)
         }
 
-appendBlock :: Block -> ChainState -> Either IncompleteIndex ChainState
+appendBlock :: Block -> ChainState -> Either Invalid ChainState
 appendBlock block state =
   do
     votes' <- mapM (`lookupVote'` state) $ includedVotes block
@@ -126,7 +117,7 @@ appendBlock block state =
         , danglingVotes = danglingVotes state `S.difference` S.fromList (includedVotes block)
         }
 
-addChain :: Chain -> ChainState -> Either IncompleteIndex ChainState
+addChain :: Chain -> ChainState -> Either Invalid ChainState
 addChain MkChain{..} state =
   do
     let
@@ -145,15 +136,13 @@ addChain MkChain{..} state =
           }
       blockReferencesOkay = all ((`M.member` blockIndex state') . blockHash) votes
       voteReferencesOkay = all (all (`M.member` voteIndex state') . includedVotes) blocks
-    unless blockReferencesOkay
-      . throwError
-      $ IncompleteIndex "Incomplete index: votes reference non-existent blocks."
-    unless voteReferencesOkay
-      . throwError
-      $ IncompleteIndex "Incomplete index: blocks reference non-existent votes."
+    unless blockReferencesOkay $
+      throwError VoteReferencesUnknownBlock
+    unless voteReferencesOkay $
+      throwError BlockIncludesUnknownVote
     pure state'
 
-addBlock :: Block -> ChainState -> Either IncompleteIndex ChainState
+addBlock :: Block -> ChainState -> Either Invalid ChainState
 addBlock block state =
   let
     bhash = hashBlock block
@@ -170,7 +159,7 @@ addBlock block state =
                   danglingBlocks state
             }
 
-addVote :: Vote Block -> ChainState -> Either IncompleteIndex ChainState
+addVote :: Vote Block -> ChainState -> Either Invalid ChainState
 addVote vote state =
   if hashVote vote `M.member` voteIndex state
     then pure state
@@ -193,17 +182,17 @@ addVote vote state =
             , votesByRound = M.insertWith M.union r (M.singleton bhash $ S.singleton vhash) $ votesByRound state
             }
 
-lookupBlock :: BlockHash -> ChainState -> Either IncompleteIndex Block
+lookupBlock :: BlockHash -> ChainState -> Either Invalid Block
 lookupBlock hash ChainState{blockIndex} =
-  maybe (Left . IncompleteIndex $ "Incomplete index: block hash " <> show hash <> " missing from block index.") Right $
+  maybe (throwError HashOfUnknownBlock) pure $
     hash `M.lookup` blockIndex
 
-lookupVote :: VoteHash -> ChainState -> Either IncompleteIndex (Vote Block)
+lookupVote :: VoteHash -> ChainState -> Either Invalid (Vote Block)
 lookupVote hash state = resolveBlock state =<< hash `lookupVote'` state
 
-lookupVote' :: VoteHash -> ChainState -> Either IncompleteIndex Vote'
+lookupVote' :: VoteHash -> ChainState -> Either Invalid Vote'
 lookupVote' hash ChainState{voteIndex} =
-  maybe (Left . IncompleteIndex $ "Incomplete index: vote hash " <> show hash <> " missing from vote index.") Right $
+  maybe (throwError HashOfUnknownVote) pure $
     hash `M.lookup` voteIndex
 
 lookupRound :: RoundNumber -> ChainState -> M.Map BlockHash (S.Set VoteHash)
@@ -221,28 +210,28 @@ isBlockOnChain = flip S.notMember . danglingBlocks
 isVoteRecordedOnChain :: ChainState -> VoteHash -> Bool
 isVoteRecordedOnChain = flip S.notMember . danglingVotes
 
-resolveBlock :: ChainState -> Vote' -> Either IncompleteIndex (Vote Block)
+resolveBlock :: ChainState -> Vote' -> Either Invalid (Vote Block)
 resolveBlock state vote =
   do
     block <- blockHash vote `lookupBlock` state
     pure vote{blockHash = block}
 
-resolveBlocksOnChain :: ChainState -> Either IncompleteIndex [Vote Block]
+resolveBlocksOnChain :: ChainState -> Either Invalid [Vote Block]
 resolveBlocksOnChain state =
   mapM (resolveBlock state) . M.elems $
     M.withoutKeys (voteIndex state) (danglingVotes state)
 
-votesRecordedOnChain :: Chain -> Either IncompleteIndex [Vote Block]
+votesRecordedOnChain :: Chain -> Either Invalid [Vote Block]
 votesRecordedOnChain = resolveBlocksOnChain <=< indexChain
 
-votesRecordedOnChain' :: Chain -> Either IncompleteIndex [Vote']
+votesRecordedOnChain' :: Chain -> Either Invalid [Vote']
 votesRecordedOnChain' chain =
   do
     state <- indexChain chain
     pure . M.elems $
       M.withoutKeys (voteIndex state) (danglingVotes state)
 
-votesForBlocksOnChain :: Chain -> Either IncompleteIndex [Vote Block]
+votesForBlocksOnChain :: Chain -> Either Invalid [Vote Block]
 votesForBlocksOnChain chain =
   do
     state <- indexChain chain
@@ -250,7 +239,7 @@ votesForBlocksOnChain chain =
     mapM (resolveBlock state) . M.elems $
       M.filter ((`S.member` hashes) . blockHash) (voteIndex state)
 
-votesForBlocksOnChain' :: Chain -> Either IncompleteIndex [Vote']
+votesForBlocksOnChain' :: Chain -> Either Invalid [Vote']
 votesForBlocksOnChain' chain =
   do
     state <- indexChain chain
@@ -258,7 +247,7 @@ votesForBlocksOnChain' chain =
     pure . M.elems $
       M.filter ((`S.member` hashes) . blockHash) (voteIndex state)
 
-eligibleDanglingVotes :: ChainState -> Either IncompleteIndex [VoteHash]
+eligibleDanglingVotes :: ChainState -> Either Invalid [VoteHash]
 eligibleDanglingVotes state =
   do
     let hashes = M.keysSet (blockIndex state) `S.difference` danglingBlocks state
