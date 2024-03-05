@@ -1,5 +1,5 @@
-dist-newstyle/
 *.json
 *.txt
 *.dot
 *.png
+*.svg
