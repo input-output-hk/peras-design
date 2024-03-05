@@ -23,7 +23,7 @@ import qualified Language.Dot.Pretty as G
 import qualified Language.Dot.Syntax as G
 
 show' :: Show a => a -> String
-show' = init . tail . show
+show' = dropWhile (== '"') . reverse . dropWhile (== '"') . reverse . show
 
 writeGraph ::
   FilePath ->
@@ -36,14 +36,14 @@ peersGraph ::
   G.Graph
 peersGraph networkState =
   let nodeStates = networkState ^. currentStates
-      nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId . show $ nodeId name) Nothing) nodeStates
+      nodeIds = M.mapWithKey (\name _ -> G.NodeId (G.StringId $ nodeId name) Nothing) nodeStates
       mkNode name nodeState =
         G.NodeStatement
           (nodeIds M.! name)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show (nodeId name)
+                <> nodeId name
                 <> "</b>"
                 <> "|Stake "
                 <> show (nodeState ^. stake)
