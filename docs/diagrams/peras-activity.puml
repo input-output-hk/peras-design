@@ -10,16 +10,8 @@ while (Exit?)
             if (Is vote expired?) then (yes)
               :Discard vote;
             else (no)
-              if (Is vote for block\non preferred chain?) then (yes)
-                if (Is vote already included\non preferred chain?) then (no)
-                  if (Is an equivocation?) then (yes)
-                    :Discard vote;
-                  else (no)
-                    :Add vote to block;
-                  endif
-                else (yes)
-                  :Discard vote;
-                endif
+              if (Is a voting opportunity,\non preferred chain?) then (yes)
+                :Add vote to block;
               else (no)
                 :Keep as a\ndangling vote;
               endif
@@ -31,26 +23,19 @@ while (Exit?)
       else (no)
       endif
     case (New round) 
-      group (Determine last quorum)
+      group (Determine quorums)
         :Iterate from tip of chain;
-        repeat :Consider blocks in previous round;
+        repeat :Consider votes in previous round;
         repeat while (Any block in round has quorum?) is (no)
-        :Voting is allowed if last quorum was in\nprevious round or prior to cooldown;
+        :Voting is allowed if quorum was in last\nround or a multiple of the cooldown period;
       end group
       if (Is voting allowed in round?) then (yes)
-        note left:Does the committee\nmember have to vote in\nthe first slot of the round?
         if (Am I a committee member?) then (yes)
           group Select block
-            repeat :Consider each block\nof the preferred chain\nin candidate window;
-              if (Have I already\nvoted for the block\nin a previous round?) then (no)
-                :Vote for block;
-                :Send vote to downstream peers;
-                break
-              else (yes)
-                :Ignore block;
-              endif
-              note left:Can a committee\nmember vote for any\nblock in the window?\n\nMust they vote for a block\non their preferred chain?\n\nCan they vote for a block\nthey already voted for in a\nprevious round?
-            repeat while (More blocks to consider?) is (yes)
+            if (Are there blocks of the preferred\nchain in candidate window?) then (yes)
+              :Vote for most recent block;
+            else (no)
+            endif
           end group
         else (no)
         endif
@@ -60,12 +45,13 @@ while (Exit?)
     group Measure weight of chain received
       :Initial weight is length of chain;
       while (For each block on chain)
-        :Increment weight by\nnumber of votes\ntimes boost;
-        note left: So non-quorum votes\ncontribute to the\nweight of the chain?
+        if (Was the chain in cooldown?) then (no)
+          :Increment weight by\nnumber of votes\ntimes boost;
+        else (yes)
+        endif
       endWhile (no more blocks)
     end group
     if (Received chain has more\nweight than preferred chain?) then (yes)
-      note left:What should happen\nin the case of a tie?
       :Adopt received chain\nas preferred;
       :Send preferred chain\nto downstream peers;
     else (no)
@@ -73,11 +59,9 @@ while (Exit?)
     case (Vote received from upstream peer)
       if (Was vote already seen?) then (yes)
         :Ignore duplicate;
-        note right:Duplicates are\nnot forwarded\ndownstream
       else (no)
         if (Is the vote an equivocation?) then (yes)
           :Ignore the\nequivocation;
-          note left:Equivocations are\nnot forwarded\ndownstream
         else (no)
           :Add to dangling votes;
           :Send vote to\ndownstream peers;
