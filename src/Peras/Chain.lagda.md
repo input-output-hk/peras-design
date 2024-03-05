@@ -11,15 +11,16 @@ open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Function.Base using (_∘_)
+open import Function.Base using (_∘_; _$_)
 open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
 
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -32,6 +33,9 @@ open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred
 record RoundNumber : Set where
   constructor MkRoundNumber
   field roundNumber : ℕ
+
+  prev : RoundNumber
+  prev = record { roundNumber = pred roundNumber }
 
 open RoundNumber public
 ```
@@ -156,20 +160,23 @@ module _ ⦃ _ : Hashable Block ⦄
 Counting votes for a block from the dangling votes
 ```agda
   countDangling : List (Vote Hash) → RoundNumber → Block → ℕ
-  countDangling vs r b = length
-    (filter (λ {v → blockHash v ≟-Hash (hash b)})
-    (filter (λ {v → votingRound v ≟-RoundNumber r}) vs))
+  countDangling vs r b = length $
+    filter (λ { v →
+      (blockHash v ≟-Hash (hash b)) ×-dec
+      (votingRound v ≟-RoundNumber r)
+      })
+    vs
 ```
 Counting votes for a block from the blocks
+FIXME: Only include votes for round r
 ```agda
-  -- FIXME: Only include votes for round r
   countBlocks : List Block → RoundNumber → Block → ℕ
-  countBlocks bs (MkRoundNumber r) b = sum
-    (map (λ {x →
-      (length
-        (filter (λ {v → v ≟-Hash (hash b)})
-        (includedVotes x)))})
-     bs)
+  countBlocks bs (MkRoundNumber r) b = sum $
+    map (λ {x →
+      length $
+        filter (λ {v → v ≟-Hash (hash b)})
+          (includedVotes x)})
+    bs
 ```
 Counting votes for a block from dangling votes and votes on the chain
 ```agda
@@ -209,7 +216,7 @@ In a cooldown period there is no voting.
 
     Last : ∀ {c r}
       → roundNumber r > 0
-      → QuorumOnChain c (MkRoundNumber (pred (roundNumber r)))
+      → QuorumOnChain c (prev r)
       → VoteInRound c r
 
     CooldownIsOver : ∀ {c r n}
@@ -232,7 +239,7 @@ There is not voting in round 0
   postulate
     VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
     -- VoteInRound? c r@(MkRoundNumber zero) = no λ x → let ¬p = round≡0→¬VoteInRound {c} {r} refl in ¬p x
-    -- VoteInRound? c r@(MkRoundNumber (suc _)) with QuorumOnChain? c (MkRoundNumber (pred (roundNumber r)))
+    -- VoteInRound? c r@(MkRoundNumber (suc _)) with QuorumOnChain? c (prev r)
     -- ... | yes p = yes (Last (s≤s z≤n) p)
     -- ... | no ¬p = {!!}
 ```
