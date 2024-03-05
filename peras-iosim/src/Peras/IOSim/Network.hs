@@ -28,7 +28,6 @@ import Control.Monad.State (StateT, execStateT, lift)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Block (Slot)
 import Peras.Chain (Chain (blocks), Vote (..))
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
@@ -108,10 +107,9 @@ runNetwork ::
   Protocol ->
   M.Map NodeId NodeState ->
   Network m ->
-  Slot ->
   NetworkState ->
   m NetworkState
-runNetwork parameters protocol states network@Network{..} endSlot initialState =
+runNetwork parameters protocol states network@Network{..} initialState =
   flip execStateT (initialState & currentStates .~ states) $
     do
       let
@@ -123,7 +121,7 @@ runNetwork parameters protocol states network@Network{..} endSlot initialState =
           do
             stepToIdle parameters network
             -- Check on whether the simulation is ending.
-            doExit <- lastSlot `uses` (>= endSlot)
+            doExit <- lastSlot `uses` (>= endSlot parameters)
             if doExit
               then do
                 uncurry notifyStop `mapM_` M.toList nodesIn
@@ -193,7 +191,9 @@ stepToIdle parameters network = do
     then do
       -- FIXME: This is unsafe because a node might take more than one slot to do its computations.
       lastSlot %= (+ 1)
-      uncurry notifySlot `mapM_` M.toList nodesIn
+      stop <- lastSlot `uses` (>= endSlot parameters)
+      unless stop $
+        uncurry notifySlot `mapM_` M.toList nodesIn
       lift $ threadDelay 1000000
       -- FIXME: Assume that pending messages are received in the next slot.
       mapM_ route =<< use pending
@@ -222,12 +222,10 @@ routeEnvelope parameters Network{nodesIn} = \case
   out@OutEnvelope{..} ->
     do
       lastTime %= max timestamp
-      pendings <- use pending
       (r, gen) <- networkRandom `uses` uniformR (0, 1)
       networkRandom .= gen
-      -- Send the message if it was already pending or if it was received in the current slot.
       -- FIXME: This is an approximation.
-      if out `elem` pendings || r > messageDelay parameters
+      if r > messageDelay parameters
         then case outMessage of
           -- FIXME: Implement this.
           FetchBlock _ -> error "Fetching blocks is not yet implemented."

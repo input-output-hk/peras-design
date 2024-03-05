@@ -28,12 +28,13 @@ import Control.Monad.State (
   StateT,
   evalStateT,
  )
+import Data.Default (def)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Peras.Chain (Chain (..))
+import Peras.IOSim.Chain (preferredChain)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), clock, downstreams, initialSeed, nodeId, preferredChain)
+import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, initialSeed, nodeId)
 import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
@@ -73,9 +74,7 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure 0
     <*> getRandomR (1, maximumStake)
     <*> getRandomR (0, 1)
-    <*> pure (MkChain mempty mempty)
-    <*> pure mempty
-    <*> pure mempty
+    <*> pure def
     <*> pure downstreams'
     <*> pure False
     <*> pure False
@@ -110,10 +109,10 @@ runNode protocol total state NodeProcess{..} =
                         do
                           lift $ threadDelay 1000000
                           runRand $ nextSlot protocol slot total
-                      SomeVote vote -> runRand $ newVote protocol vote
+                      SomeVote vote -> runRand $ newVote vote
                       SomeBlock _ -> error "Block transport is not supported."
                       NewChain chain -> runRand $ newChain protocol chain
-                  bestChain <- use preferredChain
+                  bestChain <- chainState `uses` preferredChain
                   atomically' $
                     do
                       mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages

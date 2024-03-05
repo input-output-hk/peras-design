@@ -39,7 +39,7 @@ simulation parameters@Parameters{..} protocol =
           states' <- initializeNodes parameters now topology'
           pure (topology', states')
     network <- createNetwork topology
-    runNetwork parameters protocol states network endSlot $
+    runNetwork parameters protocol states network $
       def & networkRandom .~ gen'
 
 simulate ::

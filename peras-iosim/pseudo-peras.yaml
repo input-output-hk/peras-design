@@ -1,10 +1,9 @@
-tag: PseudoPeras
-activeSlotCoefficient: 0.05
+activeSlotCoefficient: 0.10
 roundDuration: 10
-pCommitteeLottery: 0.5
+pCommitteeLottery: 0.00021
 votingBoost: 0.25
-votingWindow: [1, 100]
-votingQuorum: 8
-voteMaximumAge: 1000
-cooldownDuration: 0
+votingWindow: [50, 1]
+votingQuorum: 10
+voteMaximumAge: 30
+cooldownDuration: 5
 prefixCutoffWeight:  10000000

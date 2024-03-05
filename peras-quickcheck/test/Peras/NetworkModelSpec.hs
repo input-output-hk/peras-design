@@ -21,7 +21,7 @@ import Peras.Chain (Chain (..))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
 import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
-import Peras.IOSim.Protocol.Types (Protocol (PseudoPraos))
+import Peras.IOSim.Protocol.Types (Protocol (activeSlotCoefficient))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
@@ -36,11 +36,11 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 spec :: Spec
 spec =
   -- those tests are a bit slow...
-  modifyMaxSuccess (const 30) $ prop "Chain progress" prop_chain_progress
+  modifyMaxSuccess (const 50) $ prop "Chain progress" prop_chain_progress
 
 prop_chain_progress :: Property
 prop_chain_progress =
-  within 50000000 $
+  within 50000000 $ -- FIXME: Is `within` working in the multi-threaded environment?
     forAllDL chainProgress propNetworkModel
 
 chainProgress :: DL Network ()
@@ -102,7 +102,7 @@ runWithState stateVar act = do
   pure res
 
 protocol :: Protocol
-protocol = PseudoPraos defaultActiveSlotCoefficient
+protocol = def{activeSlotCoefficient = defaultActiveSlotCoefficient}
 
 defaultActiveSlotCoefficient :: Double
 defaultActiveSlotCoefficient = 0.05
@@ -113,7 +113,7 @@ parameters =
     { randomSeed = 12345
     , peerCount = 10
     , downstreamCount = 3
-    , totalStake = Just 5000
+    , totalStake = Nothing
     , maximumStake = 1000
     , endSlot = 1000
     , messageDelay = 0.35

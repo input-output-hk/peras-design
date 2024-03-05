@@ -22,6 +22,7 @@ import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId (..))
 import Peras.NodeModel (Node (..), RunMonad, defaultActiveSlotCoefficient, runMonad)
+import Data.Default (def)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
 import Test.QuickCheck.Monadic (PropertyM (..), monadic')
@@ -43,7 +44,7 @@ initialiseNodeEnv = do
   pure (threadId, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol
-protocol = PseudoPraos defaultActiveSlotCoefficient
+protocol = def {activeSlotCoefficient = defaultActiveSlotCoefficient}
 
 parameters :: Parameters
 parameters =

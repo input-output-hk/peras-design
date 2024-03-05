@@ -5,14 +5,11 @@ module Peras.IOSim.Types (
   ByteSize,
   Coin,
   Rollback (..),
-  Votes,
   Vote',
-  Blocks,
   Message',
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Map (Map)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
@@ -28,13 +25,9 @@ type Coin = Int
 
 type ByteSize = Word
 
-type Blocks = Map Hash Block
-
 type Message' = Message Block
 
 type Vote' = Vote Hash
-
-type Votes = Map Hash Vote'
 
 data Rollback = Rollback
   { atSlot :: Slot

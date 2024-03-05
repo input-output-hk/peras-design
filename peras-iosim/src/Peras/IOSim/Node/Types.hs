@@ -10,14 +10,12 @@ module Peras.IOSim.Node.Types (
   nodeId,
   rollbacks,
   owner,
-  activeVotes,
-  preferredChain,
+  chainState,
   initialSeed,
   slot,
   slotLeader,
   stake,
   vrfOutput,
-  blocksSeen,
 ) where
 
 import Control.Lens (makeLenses)
@@ -28,8 +26,8 @@ import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
 import Peras.Block (PartyId, Slot)
-import Peras.Chain (Chain)
-import Peras.IOSim.Types (Blocks, Coin, Rollback, Votes)
+import Peras.IOSim.Chain (ChainState)
+import Peras.IOSim.Types (Coin, Rollback)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
@@ -43,9 +41,7 @@ data NodeState = NodeState
   , _slot :: Slot
   , _stake :: Coin
   , _vrfOutput :: Double
-  , _preferredChain :: Chain
-  , _blocksSeen :: Blocks
-  , _activeVotes :: Votes
+  , _chainState :: ChainState
   , _downstreams :: Set NodeId
   , _slotLeader :: Bool
   , _committeeMember :: Bool
