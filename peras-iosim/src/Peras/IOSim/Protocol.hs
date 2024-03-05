@@ -24,15 +24,11 @@ module Peras.IOSim.Protocol (
 ) where
 
 import Control.Lens (use, uses, (%=), (&), (.=))
-import Control.Monad (replicateM)
-import Control.Monad.Random (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
-import Numeric.Natural (Natural)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
-import Peras.Crypto (LeadershipProof (LeadershipProof), MembershipProof (MembershipProof), Signature (Signature))
 import Peras.IOSim.Chain (
   ChainState (preferredChain),
   addChain,
@@ -49,18 +45,17 @@ import Peras.IOSim.Chain (
   resolveBlocksOnChain,
   voteRecorded,
  )
+import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeadership, proveMembership, signBlock, signVote, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote')
 import Peras.Message (Message (NewChain, SomeVote))
 
-import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import qualified Data.Set as S
 
 nextSlot ::
-  MonadRandom m =>
   MonadState NodeState m =>
   Protocol ->
   Slot ->
@@ -72,9 +67,9 @@ nextSlot protocol@Peras{..} slotNumber total =
     let handleIncompleteIndex = either (error . show) id
     slot .= slotNumber
     chainState %= discardExpiredVotes protocol slotNumber
-    vrf <- getRandomR (0, 1)
-    vrfOutput .= vrf
-    leader <- isSlotLeader activeSlotCoefficient total (uniformRandomFromVrf vrf 0) <$> use stake
+    vrfOutput %= nextVrf
+    vrf <- use vrfOutput
+    leader <- isSlotLeader activeSlotCoefficient total vrf <$> use stake
     slotLeader .= leader
     leaderMessages <-
       if leader
@@ -84,9 +79,9 @@ nextSlot protocol@Peras{..} slotNumber total =
               <$> use owner
               <*> uses chainState (hashTip . Peras.Chain.blocks . preferredChain)
               <*> uses chainState (handleIncompleteIndex . eligibleDanglingVotes)
-              <*> (LeadershipProof . BS.pack <$> replicateM 6 getRandom)
+              <*> pure (proveLeadership vrf ())
               <*> pure mempty
-              <*> (Signature . BS.pack <$> replicateM 6 getRandom)
+              <*> pure (signBlock vrf ())
           chainState %= handleIncompleteIndex . appendBlock block
           -- FIXME: Implement `prefixCutoffWeight` logic.
           chainState `uses` (pure . NewChain . preferredChain)
@@ -96,7 +91,7 @@ nextSlot protocol@Peras{..} slotNumber total =
         then do
           let r = currentRound protocol slotNumber
           votingAllowed <- chainState `uses` voteInRound protocol r
-          voter <- isCommitteeMember pCommitteeLottery total (uniformRandomFromVrf vrf 1) <$> use stake
+          voter <- isCommitteeMember pCommitteeLottery total vrf <$> use stake
           committeeMember .= voter
           if voter && votingAllowed
             then do
@@ -106,9 +101,9 @@ nextSlot protocol@Peras{..} slotNumber total =
                     vote <-
                       MkVote r
                         <$> use owner
-                        <*> (MembershipProof . BS.pack <$> replicateM 6 getRandom)
+                        <*> pure (proveMembership vrf ())
                         <*> pure block
-                        <*> (Signature . BS.pack <$> replicateM 6 getRandom)
+                        <*> pure (signVote vrf ())
                     chainState %= handleIncompleteIndex . addVote vote
                     pure [SomeVote vote]
                   [] -> pure mempty
@@ -175,36 +170,25 @@ newVotes votes =
     let votes' = handleIncompleteIndex $ mapM (resolveBlock state) votes
     concat <$> mapM newVote votes'
 
-uniformRandomFromVrf ::
-  Double ->
-  Natural ->
-  Double
-uniformRandomFromVrf vrf index =
-  let
-    b = 10
-    x = b ^ index * vrf
-   in
-    x - fromIntegral (floor x :: Integer)
-
 isSlotLeader ::
   Double ->
   Coin ->
-  Double ->
+  VrfOutput ->
   Coin ->
   Bool
-isSlotLeader activeSlotCoefficient' total uniformRandom staked =
+isSlotLeader activeSlotCoefficient' total vrf staked =
   let p = 1 - (1 - activeSlotCoefficient') ** (fromIntegral staked / fromIntegral total)
-   in uniformRandom <= p
+   in slotLeaderRandom vrf <= p
 
 isCommitteeMember ::
   Double ->
   Coin ->
-  Double ->
+  VrfOutput ->
   Coin ->
   Bool
-isCommitteeMember pCommitteeLottery' _total uniformRandom staked =
+isCommitteeMember pCommitteeLottery' _total vrf staked =
   let p = 1 - (1 - pCommitteeLottery') ^ staked
-   in uniformRandom <= p
+   in committeMemberRandom vrf <= p
 
 candidateWindow ::
   Protocol ->

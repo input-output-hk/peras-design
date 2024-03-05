@@ -15,13 +15,10 @@ module Peras.IOSim.Node (
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
-import Control.Lens (use, uses, (.=), (^.))
+import Control.Lens (use, uses, (.=))
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
-import Control.Monad.Random (RandomGen, mkStdGen, runRandT)
-import Control.Monad.Random.Class (
-  MonadRandom (getRandom, getRandomR),
- )
+import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (
   MonadState (get),
   MonadTrans (lift),
@@ -34,7 +31,7 @@ import Numeric.Natural (Natural)
 import Peras.IOSim.Chain (preferredChain)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, initialSeed, nodeId)
+import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId)
 import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
@@ -91,11 +88,10 @@ runNode ::
   NodeProcess m ->
   m ()
 runNode protocol total state NodeProcess{..} =
-  let go :: MonadDelay m => MonadSTM m => MonadTime m => RandomGen g => g -> StateT NodeState m ()
-      go gen =
+  let go :: MonadDelay m => MonadSTM m => MonadTime m => StateT NodeState m ()
+      go =
         do
           let atomically' = lift . atomically
-              runRand = flip runRandT gen
           nodeId' <- use nodeId
           downstreams' <- downstreams `uses` S.toList
           now <- lift getCurrentTime
@@ -103,21 +99,21 @@ runNode protocol total state NodeProcess{..} =
             >>= \case
               InEnvelope{..} ->
                 do
-                  (messages, gen') <-
+                  messages <-
                     case inMessage of
                       NextSlot slot ->
                         do
                           lift $ threadDelay 1000000
-                          runRand $ nextSlot protocol slot total
-                      SomeVote vote -> runRand $ newVote vote
+                          nextSlot protocol slot total
+                      SomeVote vote -> newVote vote
                       SomeBlock _ -> error "Block transport is not supported."
-                      NewChain chain -> runRand $ newChain protocol chain
+                      NewChain chain -> newChain protocol chain
                   bestChain <- chainState `uses` preferredChain
                   atomically' $
                     do
                       mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages
                       writeTQueue outgoing $ Idle now nodeId' bestChain
                   clock .= now
-                  go gen'
+                  go
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
-   in go (mkStdGen $ state ^. initialSeed) `evalStateT` state
+   in go `evalStateT` state
