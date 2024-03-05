@@ -238,12 +238,15 @@ There is not voting in round 0
 ```agda
   postulate
     VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
+```
+<!--
+```agda
     -- VoteInRound? c r@(MkRoundNumber zero) = no λ x → let ¬p = round≡0→¬VoteInRound {c} {r} refl in ¬p x
     -- VoteInRound? c r@(MkRoundNumber (suc _)) with QuorumOnChain? c (prev r)
     -- ... | yes p = yes (Last (s≤s z≤n) p)
     -- ... | no ¬p = {!!}
 ```
-
+-->
 ```agda
   round-r-votes : Chain → RoundNumber → ℕ
   round-r-votes c r = sum (map (countVotes c r) (blocks c))
