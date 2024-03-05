@@ -152,12 +152,16 @@ module _ ⦃ _ : Hashable Block ⦄
     nonZero = T-nonZero
 
   open Hashable ⦃...⦄
-
+```
+Counting votes for a block from the dangling votes
+```agda
   countDangling : List (Vote Hash) → RoundNumber → Block → ℕ
   countDangling vs r b = length
     (filter (λ {v → blockHash v ≟-Hash (hash b)})
     (filter (λ {v → votingRound v ≟-RoundNumber r}) vs))
-
+```
+Counting votes for a block from the blocks
+```agda
   -- FIXME: Only include votes for round r
   countBlocks : List Block → RoundNumber → Block → ℕ
   countBlocks bs (MkRoundNumber r) b = sum
@@ -166,7 +170,9 @@ module _ ⦃ _ : Hashable Block ⦄
         (filter (λ {v → v ≟-Hash (hash b)})
         (includedVotes x)))})
      bs)
-
+```
+Counting votes for a block from dangling votes and votes on the chain
+```agda
   countVotes : Chain → RoundNumber → Block → ℕ
   countVotes (MkChain bs vs _) r b =
     countBlocks bs r b + countDangling vs r b
