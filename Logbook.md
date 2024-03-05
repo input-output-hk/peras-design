@@ -18,7 +18,10 @@ A major refactoring and rewrite of `peras-iosim`:
 - Added support for SVG graphics.
 
 Next steps:
+- Update UML diagrams.
 - Properly model block and vote diffusion via a "pull" process instead of the current "push" one. *This is critical for any realistic performance study.*
+- Add unit tests, especially for `ChainState` functions.
+- Implement the population of `BlockTree` and revise observability.
 - Define language-independent schemas for scenario definition, observability, and visualization.
 - Evaluate adding exception types specific to each kind of validation failure that can occur in the pseudo-code.
 - Revise time management in simulation and parallelize its execution.
