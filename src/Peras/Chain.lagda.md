@@ -151,25 +151,29 @@ module _ ⦃ _ : Hashable Block ⦄
     nonZero : NonZero T -- TODO: why is this needed..?
     nonZero = T-nonZero
 
-  countDangling : List (Vote Hash) → RoundNumber → Hash → ℕ
-  countDangling vs r h = length
-    (filter (λ {v → blockHash v ≟-Hash h})
-    (filter (λ {v → votingRound v ≟-RoundNumber r }) vs))
+  open Hashable ⦃...⦄
 
-  -- TODO: need to check the round
-  countBlocks : List Block → RoundNumber → Hash → ℕ
-  countBlocks bs (MkRoundNumber r) h = sum
+  countDangling : List (Vote Hash) → RoundNumber → Block → ℕ
+  countDangling vs r b = length
+    (filter (λ {v → blockHash v ≟-Hash (hash b)})
+    (filter (λ {v → votingRound v ≟-RoundNumber r}) vs))
+
+  countBlocks : List Block → RoundNumber → Block → ℕ
+  countBlocks bs (MkRoundNumber r) b = sum
     (map (λ {b →
       (length
-        (filter (λ {v → v ≟-Hash h})
+        (filter (λ {v → v ≟-Hash (hash b)})
         (includedVotes b)))})
      bs)
 
-  countVotes : Chain → RoundNumber → Hash → ℕ
-  countVotes (MkChain bs vs _) r h = countBlocks bs r h + countDangling vs r h
+  countVotes : Chain → RoundNumber → Block → ℕ
+  countVotes (MkChain bs vs _) r b =
+    countBlocks bs r b + countDangling vs r b
+```
 
-  open Hashable ⦃...⦄
+### Quorum
 
+```
   data SeenQuorum : Chain → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
@@ -179,21 +183,16 @@ module _ ⦃ _ : Hashable Block ⦄
     LaterRound : ∀ {c} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
-      → countVotes c r (hash b) ≥ τ
+      → countVotes c r b ≥ τ
       → SeenQuorum c r
+```
 
+```agda
   postulate
     SeenQuorum? : ∀ (c : Chain) → (r : RoundNumber) → Dec (SeenQuorum c r)
-  {-
-  SeenQuorum? c (MkRoundNumber zero) = yes (Initial refl)
-  SeenQuorum? c@(MkChain bs vs _) r@(MkRoundNumber (suc _))
-    with any? (λ { v → (countVotes c r (hash v)) ≥? τ }) vs | any? (λ { h → (countVotes c r h) ≥? τ }) (concat (map includedVotes bs))
-  ... | yes (here {x} {xs} xx) | _ = yes (LaterRound {_} {_} {hash x} (s≤s z≤n) xx)
-  ... | yes (there p) | _ = yes (LaterRound (s≤s z≤n) {!!})
-  ... | no ¬p | yes q = {!!}
-  ... | no ¬p | no ¬q = {!!}
-  -}
+```
 
+```agda
   data VoteInRound : Chain → RoundNumber → Set where
 
     Last : ∀ {c r}
@@ -207,24 +206,34 @@ module _ ⦃ _ : Hashable Block ⦄
       → SeenQuorum c (MkRoundNumber (roundNumber r ∸ (n * K)))
       → All (λ { i → ¬ (SeenQuorum c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
       → VoteInRound c r
+```
 
+```agda
   round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
   round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
   round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
+```
 
+```agda
   postulate
     VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
     -- VoteInRound? c r@(MkRoundNumber zero) = no λ x → let ¬p = round≡0→¬VoteInRound {c} {r} refl in ¬p x
     -- VoteInRound? c r@(MkRoundNumber (suc _)) with SeenQuorum? c (MkRoundNumber (pred (roundNumber r)))
     -- ... | yes p = yes (Last (s≤s z≤n) p)
     -- ... | no ¬p = {!!}
+```
 
+```agda
   round-r-votes : Chain → RoundNumber → ℕ
   round-r-votes (MkChain bs vs p) r =
     let -- TODO: votes from blocks
         d = filter (λ { v → (votingRound v) ≟-RoundNumber r }) vs
     in length d
+```
 
+### Chain weight
+
+```agda
   ∥_∥ : Chain → ℕ
   ∥ c ∥ =
     let w = length (blocks c)
