@@ -1,3 +1,28 @@
+## 2024-03-04
+
+### BB - Rewrite of `peras-iosim`
+
+A major refactoring and rewrite of `peras-iosim`:
+- Sub-algorithms for Peras protocol are now cleanly separated into pure or monadic functions.
+- The implementation is now putatively faithful to the Peras pseudo-code.
+    - The pseudo-code seems incorrect for two aspects of `voteInRound`.
+        - A quorum will never be reached unless we define `quorumOnChain(_, _, 0) = True`.
+        - The ellipses in the pseudo-code document should not be present, since otherwise a quorum can fail permanently.
+    - The "weight to cut off for common prefix" is not yet implemented, but it is mostly inconsequential.
+- The new `ChainState` type efficiently indexes blocks, votes, dangling blocks/votes, and rounds, which also tracking the preferred chain.
+    - Implementation runs faster.
+    - Much smaller memory footprint.
+- Fixed handling of the simulation-termination condition.
+    - The `peras-quickcheck-tests` run much faster and never deadlock.
+- A proxy for the VRF has been added.
+- Added support for SVG graphics.
+
+Next steps:
+- Properly model block and vote diffusion via a "pull" process instead of the current "push" one. *This is critical for any realistic performance study.*
+- Define language-independent schemas for scenario definition, observability, and visualization.
+- Evaluate adding exception types specific to each kind of validation failure that can occur in the pseudo-code.
+- Revise time management in simulation and parallelize its execution.
+
 ## 2024-03-01
 
 ### YH Agda formalization
