@@ -1,8 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Chain (
   addChain,
+  blockTree,
+  blockTrees,
   preferChain,
   lookupVote,
   lookupVote',
@@ -40,14 +43,31 @@ import Data.Foldable (foldr')
 import Data.Maybe (fromMaybe)
 import Peras.Block (Block (..), Slot)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
-import Peras.IOSim.Chain.Types (ChainState (..))
-import Peras.IOSim.Hash (BlockHash, VoteHash, hashBlock, hashVote)
+import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
+import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
 import Peras.IOSim.Types (Vote')
 import Peras.Orphans ()
 
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Tree as T
+
+blockTrees :: [ChainState] -> BlockTree
+blockTrees states =
+  let
+    index = M.unions $ blockIndex <$> states
+    edges = M.foldr (\block -> M.insertWith S.union (parentBlock block) $ S.singleton block) def index
+    children hash =
+      (index M.! hash,)
+        . maybe mempty (fmap hashBlock . S.toList)
+        $ hash `M.lookup` edges
+    roots = snd $ children genesisHash
+   in
+    T.unfoldForest children roots
+
+blockTree :: ChainState -> BlockTree
+blockTree = blockTrees . pure
 
 indexChain :: Chain -> Either Invalid ChainState
 indexChain = flip preferChain def
