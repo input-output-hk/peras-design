@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Peras.Network.TypesSpec where
+module Peras.IOSim.Network.TypesSpec where
 
 import Paths_peras_iosim (getDataDir)
 import Peras.IOSim.Network.Types (Topology)

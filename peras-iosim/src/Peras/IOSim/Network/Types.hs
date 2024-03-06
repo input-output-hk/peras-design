@@ -9,6 +9,8 @@ module Peras.IOSim.Network.Types (
   Network (..),
   NetworkState,
   Topology (..),
+  Delay,
+  Reliability (..),
   activeNodes,
   blocksSeen,
   chainsSeen,
@@ -18,6 +20,7 @@ module Peras.IOSim.Network.Types (
   lastSlot,
   lastTime,
   pending,
+  reliableLink,
 ) where
 
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue)
@@ -38,9 +41,31 @@ import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
 
 import Data.Aeson as A
+import Generic.Random (genericArbitrary, uniform)
 import Test.QuickCheck (Arbitrary (..))
 
-newtype Topology = Topology {connections :: Map NodeId (Set NodeId)}
+type Delay = Int -- TODO: microseconds, not too fancy to avoid portability issues
+
+newtype Reliability = Reliability Rational
+  deriving stock (Eq, Generic, Ord, Read, Show)
+  deriving newtype (Num, Arbitrary, ToJSON, FromJSON)
+
+data NodeLink = NodeLink
+  { messageDelay :: Delay
+  , reliability :: Reliability
+  }
+  deriving stock (Eq, Generic, Ord, Read, Show)
+
+instance ToJSON NodeLink
+instance FromJSON NodeLink
+
+reliableLink :: Delay -> NodeLink
+reliableLink = (`NodeLink` 1)
+
+instance Arbitrary NodeLink where
+  arbitrary = genericArbitrary uniform
+
+newtype Topology = Topology {connections :: Map NodeId (Map NodeId NodeLink)}
   deriving stock (Eq, Generic, Ord, Read, Show)
   deriving newtype (Arbitrary)
 

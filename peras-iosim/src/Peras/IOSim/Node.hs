@@ -40,6 +40,7 @@ import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin, messageSize)
 import Peras.Message (Message (..), NodeId)
 
+import Data.Map (keysSet)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
@@ -56,7 +57,7 @@ initializeNodes ::
   Topology ->
   m (M.Map NodeId NodeState)
 initializeNodes parameters now Topology{connections} =
-  sequence $ initializeNode parameters now `M.mapWithKey` connections
+  sequence $ initializeNode parameters now `M.mapWithKey` (keysSet <$> connections)
 
 initializeNode ::
   MonadRandom m =>

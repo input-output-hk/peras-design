@@ -75,9 +75,10 @@ test-suite test
     hs-source-dirs:   test
     main-is:          Main.hs
     other-modules:    Peras.JsonSpec
+                      Peras.IOSim.Network.TypesSpec
                       Paths_peras_iosim
     build-depends:
-                          base >= 4.9 && <5
+                    base >= 4.9 && <5
                   , QuickCheck
                   , hspec
                   , hspec-golden-aeson
