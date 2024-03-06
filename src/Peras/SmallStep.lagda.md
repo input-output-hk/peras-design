@@ -23,7 +23,8 @@ open import Relation.Nullary.Decidable using (⌊_⌋)
 
 open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
-open import Peras.Block using (Party; PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
+
+open import Peras.Block
 open import Peras.Message
 open import Peras.Params
 
@@ -31,7 +32,6 @@ open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open Chain public
--- open ChainState public using (⟨_,_⟩)
 open Honesty public
 open MembershipProof public
 open Signature public

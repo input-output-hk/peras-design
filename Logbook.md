@@ -1,3 +1,38 @@
+## 2024-03-06
+
+### AB+BB Pairing
+
+* Worked on refining the `Topology` descriptor and aligning its representation in Rust and Haskell
+* Added a `messageDelay` and `reliability` on each `NodeLink` represented in the topology file
+  * These could be further abstracted away later on using ΔQ distribution?
+* Added golden tests for the relevant types
+  * We added those manually to `peras-hs` but the types should probably live in Agda and get generated
+  * We reuse the golden tests on the Rust side to ensure consistency
+
+### Team meetings
+
+Discussing the problem of dangling votes and equivocation -> vote tracking is problematic in general in the model
+* When looking at the history of the chain, you don't know if someone cheated -> decision is local
+
+Also: How much votes can be in the dangling set?
+* About 2x committee size ~ unbounded nr of rounds but in practice 2
+  or 3 at most. As a node can only vote once per round, this bounds
+  the number of votes to committee size, times the time it takes to
+  forge a new block including all those votes
+
+### Weekly peras meeting
+
+Q: We need to distinguish worst case vs. average case
+* Peras improves the average case, not the worst case -> this is an interesting question
+* But what does worst case means? -> there's a difference b/w worst case block load (eg. from current 50% to 80+%) and adversarial worst case (eg. adversary power close to 50%?)
+
+Discussing the situation of dangling votes -> could be the case that we don't need the dangling votes for selecting chain
+* Sandro => will check whether it's still the case we need it in the algorithm
+
+Dangling votes counting for block selection can have an adversarial effect: a node can flip-flop between blocks because of votes arriving that change the decision which chain is heaviest
+* This could be a form of attack from an upstream adversary?
+* It's also problem from implementation pov because it implies there's more state to manage and carry around, and more blocks/votes to cache for possibly a long time
+
 ## 2024-03-05
 
 ### Peras IOSim improvements
@@ -9,7 +44,7 @@ Further improved validation logic in `peras-iosim` along with the monad stack.
 - Exception handling within protocol functions
 - Easy collection of `MonadSay` output
 
-Also, 
+Also,
 - Revised UML activity diagram, based on feedback from Sandro
 - Fixed LD_LIBRARY_PATH in Nix shell
 
