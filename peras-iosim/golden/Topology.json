@@ -2,2778 +2,2460 @@
     "samples": [
         {
             "connections": {
-                "Node-17": {
-                    "Node-10": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": -45
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 20,
-                            "numerator": 153
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -18
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 3,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -96
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 468
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 49
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -716
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 61
-                        }
-                    }
-                },
-                "Node-22": {},
-                "Node-25": {
-                    "Node-0": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": -75
-                        }
-                    },
-                    "Node-1": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": -220
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 299
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -15
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 119
-                        }
-                    },
-                    "Node-20": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": -71
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 109
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 16,
-                            "numerator": 125
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -3
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -296
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 73
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": -43
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 37
-                        }
-                    }
-                },
-                "Node-26": {
-                    "Node-19": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 11
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -35
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 14
-                        }
-                    }
-                },
-                "Node-4": {
-                    "Node-0": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 106
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": 8,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -103
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": 26,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -40
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 82
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": -646
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -94
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 25,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -22
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -27,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -189
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": -139
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -24,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": 59
-                        }
-                    }
-                },
-                "Node-9": {}
-            }
-        },
-        {
-            "connections": {
-                "Node-15": {
-                    "Node-1": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 3
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -19,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 267
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -247
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -17
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": -24,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 296
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -2
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 29
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 22,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 41
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 2,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -61
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 250
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -47
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 131
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": 116
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 103
-                        }
-                    }
-                },
-                "Node-18": {
-                    "Node-0": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -111
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 237
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -22
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 20
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": 476
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 9,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 297
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -29,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": 364
-                        }
-                    },
-                    "Node-20": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -196
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 26,
-                            "numerator": 415
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -18,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -29
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -27,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": 121
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": -276
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": -7,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -32
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -19
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -183
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -19,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -7
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": 12,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 239
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -206
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 16,
-                            "numerator": 189
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 111
-                        }
-                    }
-                },
-                "Node-21": {
-                    "Node-1": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -676
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -21
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": -29,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 13
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -7
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 41
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 26,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -134
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -24,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 461
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "connections": {
-                "Node-1": {
-                    "Node-1": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 43
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -502
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -23
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 8,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": 369
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -14
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 16
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 9
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -121
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 85
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": -29,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 38
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -150
-                        }
-                    }
-                },
-                "Node-20": {
-                    "Node-1": {
-                        "messageDelay": 17,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -12
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": 21,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 4
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": 12,
-                        "reliability": {
-                            "denominator": 20,
-                            "numerator": -411
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 29
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": -125
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": -179
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 18,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": 53
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 28,
-                            "numerator": 37
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 24,
-                            "numerator": -331
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 143
-                        }
-                    }
-                },
-                "Node-22": {
-                    "Node-0": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 20,
-                            "numerator": -397
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 306
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -7,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": -35
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 58
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -94
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": 269
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": -26,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 47
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": -428
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 1
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 42
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 707
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 23,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -22
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 398
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 61
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -522
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": -7,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 489
-                        }
-                    }
-                },
-                "Node-23": {
-                    "Node-11": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 30,
-                            "numerator": -149
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -293
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": -770
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": 243
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 35
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 99
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 28,
-                            "numerator": 829
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -9,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -1
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": -59
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": 575
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -35
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 17
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -659
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -10
-                        }
-                    }
-                },
-                "Node-27": {
-                    "Node-0": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 66
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": 18,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": 493
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 23,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": 527
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 94
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 126
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -24,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 41
-                        }
-                    }
-                },
-                "Node-3": {
-                    "Node-10": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": 9
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -217
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 231
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": 593
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": 17,
-                        "reliability": {
-                            "denominator": 16,
-                            "numerator": -259
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -55
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": -67
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -265
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": 2,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -173
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 9,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": 35
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -15,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 7
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 26,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 43
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": 209
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": -225
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 1
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 480
-                        }
-                    }
-                },
-                "Node-4": {
-                    "Node-1": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -286
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": 101
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -26,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 3
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -29
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 8
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 12,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -183
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 247
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": 23,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 5
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": -224
-                        }
-                    },
-                    "Node-20": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 289
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": -19,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -221
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": 233
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -176
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 85
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -9,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": 1
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -604
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": 479
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 5
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -399
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 56
-                        }
-                    }
-                },
-                "Node-8": {
-                    "Node-11": {
-                        "messageDelay": -20,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -665
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 20
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 296
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 169
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": 650
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -15,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": 579
-                        }
-                    },
-                    "Node-20": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 24,
-                            "numerator": -271
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -19
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 11
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 23,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -94
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": -7,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": -275
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -252
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 23
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": 25,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 94
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 30,
-                            "numerator": 463
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -22
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 58
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 16,
-                            "numerator": -141
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "connections": {
-                "Node-11": {
-                    "Node-0": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 31
-                        }
-                    },
-                    "Node-1": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -119
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 288
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": 559
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": -24,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -25
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": 209
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": 144
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 3
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": 16,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -173
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -84
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -167
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": 12,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -44
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -93
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 73
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -13
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 19
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": 25,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": 227
-                        }
-                    }
-                }
-            }
-        },
-        {
-            "connections": {
                 "Node-0": {
-                    "Node-10": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 20,
-                            "numerator": 89
-                        }
+                    "Node-0": {
+                        "messageDelay": -28,
+                        "reliability": -2.5
                     },
-                    "Node-12": {
-                        "messageDelay": 22,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -463
-                        }
+                    "Node-13": {
+                        "messageDelay": -7,
+                        "reliability": 0.8601881308412118
                     },
-                    "Node-15": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 7
-                        }
+                    "Node-14": {
+                        "messageDelay": -8,
+                        "reliability": -0.5
+                    },
+                    "Node-19": {
+                        "messageDelay": -15,
+                        "reliability": 16
                     },
                     "Node-20": {
-                        "messageDelay": -27,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 349
-                        }
+                        "messageDelay": -18,
+                        "reliability": 0.23675714112745672
                     },
-                    "Node-21": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 231
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": -3
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 173
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": 0,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": -115
-                        }
-                    }
-                },
-                "Node-1": {
-                    "Node-21": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 346
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -27
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 2,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -711
-                        }
+                    "Node-7": {
+                        "messageDelay": -16,
+                        "reliability": -0.6666666666666666
                     }
                 },
                 "Node-10": {
                     "Node-14": {
-                        "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 16,
-                            "numerator": -345
-                        }
+                        "messageDelay": 30,
+                        "reliability": 13
+                    },
+                    "Node-15": {
+                        "messageDelay": -18,
+                        "reliability": 25.166666666666668
+                    },
+                    "Node-30": {
+                        "messageDelay": 27,
+                        "reliability": 0.18856799413113312
+                    },
+                    "Node-5": {
+                        "messageDelay": 17,
+                        "reliability": 0.9768523587412201
+                    },
+                    "Node-6": {
+                        "messageDelay": -24,
+                        "reliability": 6.642857142857143
+                    }
+                },
+                "Node-11": {
+                    "Node-0": {
+                        "messageDelay": 8,
+                        "reliability": -17
+                    },
+                    "Node-1": {
+                        "messageDelay": -5,
+                        "reliability": -18.05
+                    },
+                    "Node-10": {
+                        "messageDelay": -24,
+                        "reliability": 1
+                    },
+                    "Node-11": {
+                        "messageDelay": -18,
+                        "reliability": 0.151847448150081
+                    },
+                    "Node-14": {
+                        "messageDelay": 6,
+                        "reliability": 0.2590100612210746
+                    },
+                    "Node-15": {
+                        "messageDelay": 21,
+                        "reliability": 2.5
                     },
                     "Node-18": {
-                        "messageDelay": 21,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 67
-                        }
+                        "messageDelay": -13,
+                        "reliability": -18.705882352941178
+                    },
+                    "Node-2": {
+                        "messageDelay": 13,
+                        "reliability": 7.666666666666667
+                    },
+                    "Node-20": {
+                        "messageDelay": -14,
+                        "reliability": 8
+                    },
+                    "Node-22": {
+                        "messageDelay": -6,
+                        "reliability": 5.15111184510465e-2
+                    },
+                    "Node-23": {
+                        "messageDelay": 23,
+                        "reliability": 0.3037278619875182
+                    },
+                    "Node-24": {
+                        "messageDelay": -18,
+                        "reliability": -6
                     },
                     "Node-25": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 24,
-                            "numerator": -73
-                        }
+                        "messageDelay": 30,
+                        "reliability": 1
                     },
-                    "Node-8": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 18,
-                            "numerator": 43
-                        }
+                    "Node-26": {
+                        "messageDelay": -5,
+                        "reliability": -24.428571428571427
+                    },
+                    "Node-28": {
+                        "messageDelay": -17,
+                        "reliability": -3.25
+                    },
+                    "Node-3": {
+                        "messageDelay": 29,
+                        "reliability": 0.9334856495505252
+                    },
+                    "Node-30": {
+                        "messageDelay": 0,
+                        "reliability": -19.857142857142858
+                    },
+                    "Node-4": {
+                        "messageDelay": -10,
+                        "reliability": -14.894736842105264
+                    },
+                    "Node-6": {
+                        "messageDelay": -28,
+                        "reliability": 0.5381940819178237
+                    },
+                    "Node-7": {
+                        "messageDelay": -7,
+                        "reliability": -19.4
+                    },
+                    "Node-9": {
+                        "messageDelay": 5,
+                        "reliability": 0.19581011829617223
                     }
                 },
                 "Node-12": {
-                    "Node-15": {
+                    "Node-0": {
+                        "messageDelay": -21,
+                        "reliability": 10
+                    },
+                    "Node-11": {
+                        "messageDelay": 23,
+                        "reliability": -2.5
+                    },
+                    "Node-12": {
+                        "messageDelay": 29,
+                        "reliability": 20.444444444444443
+                    },
+                    "Node-13": {
+                        "messageDelay": 22,
+                        "reliability": 25
+                    },
+                    "Node-16": {
+                        "messageDelay": -26,
+                        "reliability": 25.2
+                    },
+                    "Node-18": {
+                        "messageDelay": -12,
+                        "reliability": 0.1716251481814206
+                    },
+                    "Node-22": {
                         "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 131
-                        }
+                        "reliability": -26.333333333333332
+                    },
+                    "Node-23": {
+                        "messageDelay": 16,
+                        "reliability": 0.936418649744347
                     },
                     "Node-25": {
-                        "messageDelay": -29,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 91
-                        }
+                        "messageDelay": 23,
+                        "reliability": 1
                     },
                     "Node-28": {
+                        "messageDelay": -3,
+                        "reliability": 0.3333333333333333
+                    },
+                    "Node-30": {
+                        "messageDelay": 26,
+                        "reliability": 3
+                    }
+                },
+                "Node-13": {
+                    "Node-10": {
+                        "messageDelay": -19,
+                        "reliability": 27.238095238095237
+                    },
+                    "Node-11": {
+                        "messageDelay": -11,
+                        "reliability": -30
+                    },
+                    "Node-12": {
+                        "messageDelay": 28,
+                        "reliability": -28.545454545454547
+                    },
+                    "Node-13": {
+                        "messageDelay": 5,
+                        "reliability": 3.308123749942449e-2
+                    },
+                    "Node-14": {
+                        "messageDelay": 6,
+                        "reliability": -21.272727272727273
+                    },
+                    "Node-19": {
+                        "messageDelay": -19,
+                        "reliability": 0.3608520866913435
+                    },
+                    "Node-2": {
+                        "messageDelay": 3,
+                        "reliability": -26
+                    },
+                    "Node-20": {
+                        "messageDelay": 29,
+                        "reliability": -15.363636363636363
+                    },
+                    "Node-21": {
+                        "messageDelay": -5,
+                        "reliability": 0.5812809659609015
+                    },
+                    "Node-23": {
+                        "messageDelay": 4,
+                        "reliability": 3.3333333333333335
+                    },
+                    "Node-24": {
+                        "messageDelay": -1,
+                        "reliability": 29
+                    },
+                    "Node-25": {
+                        "messageDelay": 12,
+                        "reliability": -25
+                    },
+                    "Node-26": {
+                        "messageDelay": -4,
+                        "reliability": 18.181818181818183
+                    },
+                    "Node-27": {
+                        "messageDelay": -30,
+                        "reliability": 13.166666666666666
+                    },
+                    "Node-29": {
+                        "messageDelay": -16,
+                        "reliability": -0.5
+                    },
+                    "Node-4": {
+                        "messageDelay": 18,
+                        "reliability": 1
+                    },
+                    "Node-5": {
+                        "messageDelay": -21,
+                        "reliability": -6.75
+                    },
+                    "Node-6": {
+                        "messageDelay": -19,
+                        "reliability": 0.19386026444169646
+                    },
+                    "Node-9": {
+                        "messageDelay": -9,
+                        "reliability": 22.25
+                    }
+                },
+                "Node-14": {
+                    "Node-14": {
+                        "messageDelay": 9,
+                        "reliability": -25
+                    },
+                    "Node-17": {
+                        "messageDelay": -6,
+                        "reliability": 0.12429838499844603
+                    },
+                    "Node-18": {
+                        "messageDelay": 12,
+                        "reliability": 7.530800981058461e-2
+                    },
+                    "Node-19": {
+                        "messageDelay": 18,
+                        "reliability": 0.996276578756778
+                    },
+                    "Node-2": {
+                        "messageDelay": 20,
+                        "reliability": 0.75
+                    },
+                    "Node-21": {
+                        "messageDelay": 26,
+                        "reliability": 4.375
+                    },
+                    "Node-23": {
+                        "messageDelay": -16,
+                        "reliability": 25
+                    },
+                    "Node-28": {
+                        "messageDelay": 15,
+                        "reliability": -0.6666666666666666
+                    },
+                    "Node-9": {
+                        "messageDelay": 15,
+                        "reliability": 0.41038224896947906
+                    }
+                },
+                "Node-18": {
+                    "Node-0": {
+                        "messageDelay": 19,
+                        "reliability": -0.6666666666666666
+                    },
+                    "Node-1": {
+                        "messageDelay": -13,
+                        "reliability": 0.6666666666666666
+                    },
+                    "Node-10": {
+                        "messageDelay": 10,
+                        "reliability": -9.25
+                    },
+                    "Node-11": {
+                        "messageDelay": 17,
+                        "reliability": 0.5
+                    },
+                    "Node-13": {
+                        "messageDelay": 28,
+                        "reliability": -1.5
+                    },
+                    "Node-15": {
+                        "messageDelay": -25,
+                        "reliability": 2
+                    },
+                    "Node-19": {
+                        "messageDelay": -26,
+                        "reliability": -22.291666666666668
+                    },
+                    "Node-2": {
+                        "messageDelay": 22,
+                        "reliability": 0.33142162607404024
+                    },
+                    "Node-21": {
+                        "messageDelay": -14,
+                        "reliability": 13
+                    },
+                    "Node-24": {
+                        "messageDelay": -18,
+                        "reliability": 3
+                    },
+                    "Node-28": {
+                        "messageDelay": 16,
+                        "reliability": 0.6890621571362929
+                    },
+                    "Node-3": {
+                        "messageDelay": -26,
+                        "reliability": 6.8
+                    },
+                    "Node-4": {
+                        "messageDelay": -6,
+                        "reliability": -15
+                    },
+                    "Node-5": {
+                        "messageDelay": 6,
+                        "reliability": -26.833333333333332
+                    },
+                    "Node-6": {
+                        "messageDelay": 7,
+                        "reliability": -12
+                    },
+                    "Node-7": {
+                        "messageDelay": -4,
+                        "reliability": 8.724137931034482
+                    }
+                },
+                "Node-2": {
+                    "Node-0": {
+                        "messageDelay": -7,
+                        "reliability": 1.5
+                    },
+                    "Node-11": {
                         "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -21
-                        }
+                        "reliability": 0.8905462969889144
+                    },
+                    "Node-12": {
+                        "messageDelay": 11,
+                        "reliability": 0.16863148089476998
+                    },
+                    "Node-14": {
+                        "messageDelay": 1,
+                        "reliability": -2
+                    },
+                    "Node-15": {
+                        "messageDelay": 12,
+                        "reliability": 21.333333333333332
+                    },
+                    "Node-16": {
+                        "messageDelay": 24,
+                        "reliability": 15
+                    },
+                    "Node-17": {
+                        "messageDelay": 9,
+                        "reliability": 0.6
+                    },
+                    "Node-18": {
+                        "messageDelay": -12,
+                        "reliability": 30
+                    },
+                    "Node-2": {
+                        "messageDelay": 20,
+                        "reliability": 25.85
+                    },
+                    "Node-21": {
+                        "messageDelay": 11,
+                        "reliability": -23.46153846153846
+                    },
+                    "Node-24": {
+                        "messageDelay": 19,
+                        "reliability": 1.3333333333333333
+                    },
+                    "Node-26": {
+                        "messageDelay": -7,
+                        "reliability": 16.533333333333335
+                    },
+                    "Node-29": {
+                        "messageDelay": 23,
+                        "reliability": -3
+                    },
+                    "Node-3": {
+                        "messageDelay": 28,
+                        "reliability": 0.9198514963536656
+                    },
+                    "Node-30": {
+                        "messageDelay": -10,
+                        "reliability": -3.6538461538461537
+                    },
+                    "Node-4": {
+                        "messageDelay": -11,
+                        "reliability": -7.125
+                    },
+                    "Node-5": {
+                        "messageDelay": -18,
+                        "reliability": -28
+                    },
+                    "Node-6": {
+                        "messageDelay": 16,
+                        "reliability": 8
+                    },
+                    "Node-7": {
+                        "messageDelay": 9,
+                        "reliability": 0.9644733651969792
+                    },
+                    "Node-8": {
+                        "messageDelay": 16,
+                        "reliability": 6.115384615384615
+                    }
+                },
+                "Node-20": {
+                    "Node-12": {
+                        "messageDelay": 5,
+                        "reliability": -0.4
+                    },
+                    "Node-13": {
+                        "messageDelay": 22,
+                        "reliability": 26
+                    },
+                    "Node-16": {
+                        "messageDelay": -18,
+                        "reliability": 4
+                    },
+                    "Node-28": {
+                        "messageDelay": -21,
+                        "reliability": -24.125
+                    }
+                },
+                "Node-23": {
+                    "Node-0": {
+                        "messageDelay": -11,
+                        "reliability": 15
+                    },
+                    "Node-1": {
+                        "messageDelay": 25,
+                        "reliability": 0.883386164437772
+                    },
+                    "Node-10": {
+                        "messageDelay": 12,
+                        "reliability": 16.875
+                    },
+                    "Node-11": {
+                        "messageDelay": -19,
+                        "reliability": -0.6666666666666666
+                    },
+                    "Node-12": {
+                        "messageDelay": -27,
+                        "reliability": 23.642857142857142
+                    },
+                    "Node-13": {
+                        "messageDelay": -29,
+                        "reliability": 0.5914927309535233
+                    },
+                    "Node-15": {
+                        "messageDelay": -24,
+                        "reliability": 0.4820843970941927
+                    },
+                    "Node-17": {
+                        "messageDelay": 9,
+                        "reliability": 29
+                    },
+                    "Node-2": {
+                        "messageDelay": 16,
+                        "reliability": 22.545454545454547
+                    },
+                    "Node-20": {
+                        "messageDelay": -30,
+                        "reliability": 10.375
+                    },
+                    "Node-23": {
+                        "messageDelay": -26,
+                        "reliability": -20
+                    },
+                    "Node-24": {
+                        "messageDelay": -4,
+                        "reliability": -15.285714285714286
+                    },
+                    "Node-25": {
+                        "messageDelay": 24,
+                        "reliability": -27
+                    },
+                    "Node-26": {
+                        "messageDelay": 26,
+                        "reliability": 0
+                    },
+                    "Node-28": {
+                        "messageDelay": -11,
+                        "reliability": 0.7079085337212416
+                    },
+                    "Node-3": {
+                        "messageDelay": -17,
+                        "reliability": 0.8689753770949752
+                    },
+                    "Node-30": {
+                        "messageDelay": 16,
+                        "reliability": -14.310344827586206
+                    },
+                    "Node-6": {
+                        "messageDelay": -1,
+                        "reliability": 0.5523268168694753
+                    },
+                    "Node-7": {
+                        "messageDelay": -6,
+                        "reliability": 0.9578155921723682
+                    },
+                    "Node-8": {
+                        "messageDelay": 10,
+                        "reliability": -5
+                    }
+                },
+                "Node-24": {
+                    "Node-0": {
+                        "messageDelay": 30,
+                        "reliability": 0.33091628273003826
+                    },
+                    "Node-11": {
+                        "messageDelay": -25,
+                        "reliability": -0.6
+                    },
+                    "Node-12": {
+                        "messageDelay": -7,
+                        "reliability": 0.6
+                    },
+                    "Node-13": {
+                        "messageDelay": -23,
+                        "reliability": 24.307692307692307
+                    },
+                    "Node-16": {
+                        "messageDelay": 6,
+                        "reliability": 29.75
+                    },
+                    "Node-18": {
+                        "messageDelay": -30,
+                        "reliability": 2.5
+                    },
+                    "Node-2": {
+                        "messageDelay": 15,
+                        "reliability": 0.4803461006943094
+                    },
+                    "Node-21": {
+                        "messageDelay": -13,
+                        "reliability": 0.3391424399843349
+                    },
+                    "Node-22": {
+                        "messageDelay": 6,
+                        "reliability": -5.166666666666667
+                    },
+                    "Node-23": {
+                        "messageDelay": 9,
+                        "reliability": 0.6
+                    },
+                    "Node-26": {
+                        "messageDelay": -12,
+                        "reliability": 16.966666666666665
+                    },
+                    "Node-4": {
+                        "messageDelay": -1,
+                        "reliability": 30
+                    },
+                    "Node-5": {
+                        "messageDelay": 21,
+                        "reliability": 0.8349094982090233
+                    },
+                    "Node-6": {
+                        "messageDelay": -24,
+                        "reliability": 22.5
+                    },
+                    "Node-7": {
+                        "messageDelay": 16,
+                        "reliability": -18.5
+                    }
+                },
+                "Node-26": {
+                    "Node-1": {
+                        "messageDelay": -19,
+                        "reliability": 4
+                    },
+                    "Node-14": {
+                        "messageDelay": 23,
+                        "reliability": -9.291666666666666
+                    },
+                    "Node-17": {
+                        "messageDelay": -16,
+                        "reliability": -10
+                    },
+                    "Node-25": {
+                        "messageDelay": -25,
+                        "reliability": 24.6
+                    },
+                    "Node-28": {
+                        "messageDelay": 14,
+                        "reliability": 0.3342717001890607
+                    }
+                },
+                "Node-28": {
+                    "Node-1": {
+                        "messageDelay": 13,
+                        "reliability": 0.8338936943524279
+                    },
+                    "Node-10": {
+                        "messageDelay": -27,
+                        "reliability": 0.2029053968552441
+                    },
+                    "Node-14": {
+                        "messageDelay": -15,
+                        "reliability": 24
+                    },
+                    "Node-15": {
+                        "messageDelay": 2,
+                        "reliability": -29.103448275862068
+                    },
+                    "Node-17": {
+                        "messageDelay": 26,
+                        "reliability": 25
+                    },
+                    "Node-21": {
+                        "messageDelay": 10,
+                        "reliability": 17.76
+                    },
+                    "Node-22": {
+                        "messageDelay": -14,
+                        "reliability": -26.94736842105263
+                    },
+                    "Node-23": {
+                        "messageDelay": -1,
+                        "reliability": 0.3719496991638924
+                    },
+                    "Node-28": {
+                        "messageDelay": 17,
+                        "reliability": -12
+                    },
+                    "Node-4": {
+                        "messageDelay": -25,
+                        "reliability": 0.37285202446493826
+                    },
+                    "Node-5": {
+                        "messageDelay": 22,
+                        "reliability": 20.823529411764707
+                    },
+                    "Node-7": {
+                        "messageDelay": 6,
+                        "reliability": 3.5714285714285716
+                    }
+                },
+                "Node-4": {
+                    "Node-0": {
+                        "messageDelay": 30,
+                        "reliability": 23.285714285714285
+                    },
+                    "Node-10": {
+                        "messageDelay": 12,
+                        "reliability": 1
+                    },
+                    "Node-12": {
+                        "messageDelay": 21,
+                        "reliability": -17.9
+                    },
+                    "Node-14": {
+                        "messageDelay": -21,
+                        "reliability": 22.333333333333332
+                    },
+                    "Node-15": {
+                        "messageDelay": 2,
+                        "reliability": 5
+                    },
+                    "Node-16": {
+                        "messageDelay": 15,
+                        "reliability": -0.5
+                    },
+                    "Node-17": {
+                        "messageDelay": -29,
+                        "reliability": -11.724137931034482
+                    },
+                    "Node-19": {
+                        "messageDelay": 25,
+                        "reliability": 21
+                    },
+                    "Node-20": {
+                        "messageDelay": 21,
+                        "reliability": 3
+                    },
+                    "Node-21": {
+                        "messageDelay": -19,
+                        "reliability": -6.5
+                    },
+                    "Node-22": {
+                        "messageDelay": -10,
+                        "reliability": -22.3
+                    },
+                    "Node-23": {
+                        "messageDelay": -29,
+                        "reliability": -18.5
+                    },
+                    "Node-25": {
+                        "messageDelay": -9,
+                        "reliability": 22.5
+                    },
+                    "Node-26": {
+                        "messageDelay": 19,
+                        "reliability": 0.3483593880536655
+                    },
+                    "Node-27": {
+                        "messageDelay": 27,
+                        "reliability": 8.173913043478262
+                    },
+                    "Node-28": {
+                        "messageDelay": -22,
+                        "reliability": 0.9277929393556379
+                    },
+                    "Node-29": {
+                        "messageDelay": -5,
+                        "reliability": 0.5969602789840268
+                    },
+                    "Node-4": {
+                        "messageDelay": -4,
+                        "reliability": 16
+                    },
+                    "Node-5": {
+                        "messageDelay": 19,
+                        "reliability": -29
+                    },
+                    "Node-7": {
+                        "messageDelay": 23,
+                        "reliability": -1.625
+                    }
+                },
+                "Node-5": {
+                    "Node-0": {
+                        "messageDelay": -6,
+                        "reliability": 0.7174962851714408
+                    },
+                    "Node-1": {
+                        "messageDelay": -29,
+                        "reliability": 22
+                    },
+                    "Node-15": {
+                        "messageDelay": -20,
+                        "reliability": 0.7104687737284114
+                    },
+                    "Node-17": {
+                        "messageDelay": -26,
+                        "reliability": 25.428571428571427
+                    },
+                    "Node-19": {
+                        "messageDelay": 29,
+                        "reliability": -2
+                    },
+                    "Node-22": {
+                        "messageDelay": -5,
+                        "reliability": 4.028377937394245e-2
+                    },
+                    "Node-23": {
+                        "messageDelay": 14,
+                        "reliability": 4
+                    },
+                    "Node-24": {
+                        "messageDelay": 30,
+                        "reliability": -28
+                    },
+                    "Node-27": {
+                        "messageDelay": 24,
+                        "reliability": 0.33139956517807256
+                    },
+                    "Node-29": {
+                        "messageDelay": 0,
+                        "reliability": -6
+                    },
+                    "Node-4": {
+                        "messageDelay": -26,
+                        "reliability": 18
+                    },
+                    "Node-5": {
+                        "messageDelay": -11,
+                        "reliability": 29.1875
+                    },
+                    "Node-8": {
+                        "messageDelay": -15,
+                        "reliability": -8
+                    },
+                    "Node-9": {
+                        "messageDelay": -20,
+                        "reliability": -25
+                    }
+                },
+                "Node-6": {
+                    "Node-16": {
+                        "messageDelay": 2,
+                        "reliability": 6
+                    },
+                    "Node-21": {
+                        "messageDelay": 28,
+                        "reliability": 14.333333333333334
+                    },
+                    "Node-5": {
+                        "messageDelay": -9,
+                        "reliability": -8.925925925925926
+                    },
+                    "Node-8": {
+                        "messageDelay": -24,
+                        "reliability": 8.066666666666666
+                    },
+                    "Node-9": {
+                        "messageDelay": -16,
+                        "reliability": -1.5
+                    }
+                },
+                "Node-8": {
+                    "Node-0": {
+                        "messageDelay": 14,
+                        "reliability": 13
+                    },
+                    "Node-11": {
+                        "messageDelay": -3,
+                        "reliability": 4.733333333333333
+                    },
+                    "Node-14": {
+                        "messageDelay": -21,
+                        "reliability": -13
+                    },
+                    "Node-15": {
+                        "messageDelay": -5,
+                        "reliability": 11
+                    },
+                    "Node-16": {
+                        "messageDelay": 1,
+                        "reliability": -3
+                    },
+                    "Node-17": {
+                        "messageDelay": 12,
+                        "reliability": 21
+                    },
+                    "Node-18": {
+                        "messageDelay": 23,
+                        "reliability": -3
+                    },
+                    "Node-19": {
+                        "messageDelay": 13,
+                        "reliability": 0.3562472934252655
+                    },
+                    "Node-20": {
+                        "messageDelay": 21,
+                        "reliability": 0.46907181871562675
+                    },
+                    "Node-21": {
+                        "messageDelay": -11,
+                        "reliability": 0.8773760712403692
+                    },
+                    "Node-22": {
+                        "messageDelay": 2,
+                        "reliability": 0.75
+                    },
+                    "Node-28": {
+                        "messageDelay": -24,
+                        "reliability": 6.761904761904762
+                    },
+                    "Node-29": {
+                        "messageDelay": -1,
+                        "reliability": 0.25
+                    },
+                    "Node-3": {
+                        "messageDelay": -22,
+                        "reliability": -2.4285714285714284
+                    },
+                    "Node-5": {
+                        "messageDelay": -6,
+                        "reliability": 0.6921361345896155
+                    },
+                    "Node-6": {
+                        "messageDelay": 10,
+                        "reliability": -0.75
+                    },
+                    "Node-7": {
+                        "messageDelay": 23,
+                        "reliability": -3
+                    },
+                    "Node-8": {
+                        "messageDelay": 14,
+                        "reliability": 29.571428571428573
+                    },
+                    "Node-9": {
+                        "messageDelay": 17,
+                        "reliability": 16
+                    }
+                }
+            }
+        },
+        {
+            "connections": {
+                "Node-10": {
+                    "Node-10": {
+                        "messageDelay": -16,
+                        "reliability": 0.5193691817046828
+                    },
+                    "Node-11": {
+                        "messageDelay": -25,
+                        "reliability": -10.454545454545455
+                    },
+                    "Node-14": {
+                        "messageDelay": 1,
+                        "reliability": -26
+                    },
+                    "Node-15": {
+                        "messageDelay": -5,
+                        "reliability": 0.839784196253519
+                    },
+                    "Node-18": {
+                        "messageDelay": 11,
+                        "reliability": 0.6
+                    },
+                    "Node-21": {
+                        "messageDelay": -2,
+                        "reliability": -3
+                    },
+                    "Node-22": {
+                        "messageDelay": -4,
+                        "reliability": 0.542732252685071
+                    },
+                    "Node-24": {
+                        "messageDelay": 24,
+                        "reliability": -18.333333333333332
+                    },
+                    "Node-4": {
+                        "messageDelay": -1,
+                        "reliability": -26
+                    },
+                    "Node-6": {
+                        "messageDelay": -22,
+                        "reliability": 5
+                    }
+                },
+                "Node-8": {
+                    "Node-1": {
+                        "messageDelay": -10,
+                        "reliability": -4
+                    },
+                    "Node-11": {
+                        "messageDelay": 22,
+                        "reliability": 0.13514606643403138
+                    },
+                    "Node-13": {
+                        "messageDelay": -10,
+                        "reliability": 19
+                    },
+                    "Node-14": {
+                        "messageDelay": 24,
+                        "reliability": 2
+                    },
+                    "Node-15": {
+                        "messageDelay": -29,
+                        "reliability": -4.25
+                    },
+                    "Node-19": {
+                        "messageDelay": -22,
+                        "reliability": -13.846153846153847
+                    },
+                    "Node-2": {
+                        "messageDelay": -22,
+                        "reliability": -17.75
+                    },
+                    "Node-20": {
+                        "messageDelay": -27,
+                        "reliability": -0.75
+                    },
+                    "Node-22": {
+                        "messageDelay": -13,
+                        "reliability": 1
+                    },
+                    "Node-23": {
+                        "messageDelay": -25,
+                        "reliability": -2
+                    },
+                    "Node-24": {
+                        "messageDelay": -23,
+                        "reliability": -15
+                    },
+                    "Node-25": {
+                        "messageDelay": -20,
+                        "reliability": -23
+                    },
+                    "Node-27": {
+                        "messageDelay": -12,
+                        "reliability": -9
+                    },
+                    "Node-28": {
+                        "messageDelay": -7,
+                        "reliability": 0.4819518723126244
+                    },
+                    "Node-5": {
+                        "messageDelay": 17,
+                        "reliability": -30
+                    },
+                    "Node-6": {
+                        "messageDelay": 15,
+                        "reliability": 0.5918198171362442
+                    }
+                }
+            }
+        },
+        {
+            "connections": {
+                "Node-1": {
+                    "Node-11": {
+                        "messageDelay": -19,
+                        "reliability": 19.625
+                    },
+                    "Node-15": {
+                        "messageDelay": 11,
+                        "reliability": -27.75
+                    },
+                    "Node-17": {
+                        "messageDelay": 12,
+                        "reliability": 9.4
+                    },
+                    "Node-19": {
+                        "messageDelay": -24,
+                        "reliability": 21.444444444444443
+                    },
+                    "Node-2": {
+                        "messageDelay": 4,
+                        "reliability": 1.7604152231780246e-2
+                    },
+                    "Node-21": {
+                        "messageDelay": -10,
+                        "reliability": 14.25
+                    },
+                    "Node-24": {
+                        "messageDelay": 26,
+                        "reliability": -12
+                    },
+                    "Node-26": {
+                        "messageDelay": 5,
+                        "reliability": -0.6666666666666666
+                    },
+                    "Node-27": {
+                        "messageDelay": -13,
+                        "reliability": -7
+                    },
+                    "Node-29": {
+                        "messageDelay": -22,
+                        "reliability": -0.6
+                    },
+                    "Node-3": {
+                        "messageDelay": -3,
+                        "reliability": 3.1
+                    },
+                    "Node-30": {
+                        "messageDelay": 14,
+                        "reliability": -0.6
+                    },
+                    "Node-7": {
+                        "messageDelay": -1,
+                        "reliability": 0.2661827113134697
+                    }
+                },
+                "Node-13": {
+                    "Node-1": {
+                        "messageDelay": -16,
+                        "reliability": 30
+                    },
+                    "Node-12": {
+                        "messageDelay": -17,
+                        "reliability": 9.868113318743588e-2
+                    },
+                    "Node-13": {
+                        "messageDelay": -5,
+                        "reliability": 20
+                    },
+                    "Node-14": {
+                        "messageDelay": -5,
+                        "reliability": 17.333333333333332
+                    },
+                    "Node-15": {
+                        "messageDelay": -10,
+                        "reliability": -7.25
+                    },
+                    "Node-18": {
+                        "messageDelay": -2,
+                        "reliability": 0.19352918379211326
+                    },
+                    "Node-2": {
+                        "messageDelay": -15,
+                        "reliability": 14.714285714285714
+                    },
+                    "Node-20": {
+                        "messageDelay": -30,
+                        "reliability": 0.9609983527460931
+                    },
+                    "Node-22": {
+                        "messageDelay": -25,
+                        "reliability": 25.529411764705884
+                    },
+                    "Node-23": {
+                        "messageDelay": -5,
+                        "reliability": -1.6666666666666667
+                    },
+                    "Node-25": {
+                        "messageDelay": -17,
+                        "reliability": 1
+                    },
+                    "Node-26": {
+                        "messageDelay": -5,
+                        "reliability": 24.5625
+                    },
+                    "Node-27": {
+                        "messageDelay": -8,
+                        "reliability": 5
+                    },
+                    "Node-28": {
+                        "messageDelay": 16,
+                        "reliability": 26.555555555555557
+                    },
+                    "Node-29": {
+                        "messageDelay": 6,
+                        "reliability": -12
+                    },
+                    "Node-30": {
+                        "messageDelay": -27,
+                        "reliability": 0.8319251031330508
+                    },
+                    "Node-5": {
+                        "messageDelay": 10,
+                        "reliability": 28.761904761904763
+                    },
+                    "Node-7": {
+                        "messageDelay": -22,
+                        "reliability": 24.5
+                    },
+                    "Node-9": {
+                        "messageDelay": -22,
+                        "reliability": -0.6
+                    }
+                },
+                "Node-16": {
+                    "Node-0": {
+                        "messageDelay": -17,
+                        "reliability": -20.103448275862068
+                    },
+                    "Node-1": {
+                        "messageDelay": -27,
+                        "reliability": 1
+                    },
+                    "Node-12": {
+                        "messageDelay": 8,
+                        "reliability": -7.608695652173913
+                    },
+                    "Node-13": {
+                        "messageDelay": 25,
+                        "reliability": -15
+                    },
+                    "Node-15": {
+                        "messageDelay": -8,
+                        "reliability": 25.923076923076923
+                    },
+                    "Node-16": {
+                        "messageDelay": -22,
+                        "reliability": 16
+                    },
+                    "Node-18": {
+                        "messageDelay": 21,
+                        "reliability": 0.7100371800117627
+                    },
+                    "Node-2": {
+                        "messageDelay": 6,
+                        "reliability": 8
+                    },
+                    "Node-20": {
+                        "messageDelay": 22,
+                        "reliability": -9.411764705882353
+                    },
+                    "Node-22": {
+                        "messageDelay": -28,
+                        "reliability": -26.5
+                    },
+                    "Node-23": {
+                        "messageDelay": -4,
+                        "reliability": -9.461538461538462
+                    },
+                    "Node-24": {
+                        "messageDelay": -13,
+                        "reliability": 16.75
+                    },
+                    "Node-25": {
+                        "messageDelay": 6,
+                        "reliability": 0.1893592818570914
+                    },
+                    "Node-27": {
+                        "messageDelay": 17,
+                        "reliability": -13.884615384615385
+                    },
+                    "Node-4": {
+                        "messageDelay": -9,
+                        "reliability": -0.6666666666666666
+                    },
+                    "Node-5": {
+                        "messageDelay": 18,
+                        "reliability": 3
+                    },
+                    "Node-6": {
+                        "messageDelay": 17,
+                        "reliability": -22.375
+                    },
+                    "Node-9": {
+                        "messageDelay": -24,
+                        "reliability": -6.619047619047619
+                    }
+                },
+                "Node-17": {
+                    "Node-0": {
+                        "messageDelay": 9,
+                        "reliability": 0.6
+                    },
+                    "Node-1": {
+                        "messageDelay": -30,
+                        "reliability": 3.3529411764705883
+                    },
+                    "Node-12": {
+                        "messageDelay": -25,
+                        "reliability": 0.5
+                    },
+                    "Node-13": {
+                        "messageDelay": -21,
+                        "reliability": -0.3333333333333333
+                    },
+                    "Node-14": {
+                        "messageDelay": -10,
+                        "reliability": 11.607142857142858
+                    },
+                    "Node-15": {
+                        "messageDelay": 29,
+                        "reliability": 16.375
+                    },
+                    "Node-16": {
+                        "messageDelay": 8,
+                        "reliability": 16.68421052631579
+                    },
+                    "Node-17": {
+                        "messageDelay": 21,
+                        "reliability": -7.111111111111111
+                    },
+                    "Node-21": {
+                        "messageDelay": -12,
+                        "reliability": 28.8125
+                    },
+                    "Node-22": {
+                        "messageDelay": -3,
+                        "reliability": -5.769230769230769
+                    },
+                    "Node-26": {
+                        "messageDelay": 26,
+                        "reliability": 23
+                    },
+                    "Node-27": {
+                        "messageDelay": -5,
+                        "reliability": -18.25
+                    },
+                    "Node-29": {
+                        "messageDelay": -28,
+                        "reliability": -7
+                    },
+                    "Node-30": {
+                        "messageDelay": 11,
+                        "reliability": 0.3669380955894571
+                    },
+                    "Node-6": {
+                        "messageDelay": 18,
+                        "reliability": 9.454545454545455
+                    }
+                },
+                "Node-19": {
+                    "Node-0": {
+                        "messageDelay": 6,
+                        "reliability": 25.56
+                    },
+                    "Node-1": {
+                        "messageDelay": -18,
+                        "reliability": 26.785714285714285
+                    },
+                    "Node-10": {
+                        "messageDelay": 25,
+                        "reliability": 1.3333333333333333
+                    },
+                    "Node-12": {
+                        "messageDelay": -16,
+                        "reliability": 26.35
+                    },
+                    "Node-20": {
+                        "messageDelay": 1,
+                        "reliability": 0.75
+                    },
+                    "Node-23": {
+                        "messageDelay": -5,
+                        "reliability": 5
+                    },
+                    "Node-26": {
+                        "messageDelay": -28,
+                        "reliability": 12.23076923076923
+                    },
+                    "Node-29": {
+                        "messageDelay": -26,
+                        "reliability": -23.681818181818183
+                    },
+                    "Node-3": {
+                        "messageDelay": 18,
+                        "reliability": -12.461538461538462
+                    },
+                    "Node-5": {
+                        "messageDelay": 19,
+                        "reliability": -27.5
+                    },
+                    "Node-7": {
+                        "messageDelay": 16,
+                        "reliability": 13
+                    },
+                    "Node-8": {
+                        "messageDelay": 26,
+                        "reliability": 5
+                    },
+                    "Node-9": {
+                        "messageDelay": -4,
+                        "reliability": 19
+                    }
+                },
+                "Node-21": {
+                    "Node-11": {
+                        "messageDelay": 17,
+                        "reliability": -4
+                    },
+                    "Node-17": {
+                        "messageDelay": -17,
+                        "reliability": 28
+                    },
+                    "Node-29": {
+                        "messageDelay": 25,
+                        "reliability": 10.375
+                    },
+                    "Node-6": {
+                        "messageDelay": 25,
+                        "reliability": 0.6936253425329882
+                    }
+                },
+                "Node-23": {
+                    "Node-11": {
+                        "messageDelay": -18,
+                        "reliability": 1.5
+                    },
+                    "Node-12": {
+                        "messageDelay": -15,
+                        "reliability": -12.766666666666667
+                    },
+                    "Node-14": {
+                        "messageDelay": 29,
+                        "reliability": 0.9865073103686708
+                    },
+                    "Node-19": {
+                        "messageDelay": -1,
+                        "reliability": -4
+                    },
+                    "Node-20": {
+                        "messageDelay": -3,
+                        "reliability": 0.3895834858577365
+                    },
+                    "Node-21": {
+                        "messageDelay": 11,
+                        "reliability": 0.6094300465713628
+                    },
+                    "Node-25": {
+                        "messageDelay": 15,
+                        "reliability": -12
+                    },
+                    "Node-26": {
+                        "messageDelay": -28,
+                        "reliability": 1.6666666666666667
+                    },
+                    "Node-27": {
+                        "messageDelay": 7,
+                        "reliability": -2
+                    },
+                    "Node-28": {
+                        "messageDelay": 20,
+                        "reliability": -17.066666666666666
+                    },
+                    "Node-3": {
+                        "messageDelay": -9,
+                        "reliability": -23
+                    },
+                    "Node-30": {
+                        "messageDelay": -1,
+                        "reliability": -21
+                    },
+                    "Node-4": {
+                        "messageDelay": -11,
+                        "reliability": -17
+                    },
+                    "Node-5": {
+                        "messageDelay": 1,
+                        "reliability": 8.005063384036781e-2
                     },
                     "Node-7": {
                         "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 69
-                        }
+                        "reliability": 9.717403455269447e-2
+                    },
+                    "Node-9": {
+                        "messageDelay": 3,
+                        "reliability": -1
+                    }
+                },
+                "Node-24": {
+                    "Node-0": {
+                        "messageDelay": 17,
+                        "reliability": 1
+                    },
+                    "Node-1": {
+                        "messageDelay": 22,
+                        "reliability": 4
+                    },
+                    "Node-10": {
+                        "messageDelay": -24,
+                        "reliability": 0.4
+                    },
+                    "Node-13": {
+                        "messageDelay": 5,
+                        "reliability": 14
+                    },
+                    "Node-14": {
+                        "messageDelay": 25,
+                        "reliability": -0.5
+                    },
+                    "Node-16": {
+                        "messageDelay": -18,
+                        "reliability": 0.55712326476653
+                    },
+                    "Node-17": {
+                        "messageDelay": 26,
+                        "reliability": 7.4
+                    },
+                    "Node-19": {
+                        "messageDelay": -15,
+                        "reliability": 4.466666666666667
+                    },
+                    "Node-2": {
+                        "messageDelay": -18,
+                        "reliability": 14.5
+                    },
+                    "Node-22": {
+                        "messageDelay": 19,
+                        "reliability": 0.24340988513849426
+                    },
+                    "Node-23": {
+                        "messageDelay": 12,
+                        "reliability": -7
+                    },
+                    "Node-24": {
+                        "messageDelay": 25,
+                        "reliability": -10.653846153846153
+                    },
+                    "Node-30": {
+                        "messageDelay": -25,
+                        "reliability": -26.08695652173913
+                    },
+                    "Node-5": {
+                        "messageDelay": 22,
+                        "reliability": 3
+                    },
+                    "Node-6": {
+                        "messageDelay": -12,
+                        "reliability": 2
+                    },
+                    "Node-7": {
+                        "messageDelay": -7,
+                        "reliability": 0.4
+                    },
+                    "Node-8": {
+                        "messageDelay": -23,
+                        "reliability": 0.5350621981958413
+                    }
+                },
+                "Node-25": {
+                    "Node-1": {
+                        "messageDelay": 13,
+                        "reliability": -22
+                    },
+                    "Node-10": {
+                        "messageDelay": -25,
+                        "reliability": 27
+                    },
+                    "Node-20": {
+                        "messageDelay": -27,
+                        "reliability": 15.566666666666666
+                    },
+                    "Node-29": {
+                        "messageDelay": -24,
+                        "reliability": -0.5
+                    }
+                },
+                "Node-29": {
+                    "Node-0": {
+                        "messageDelay": -2,
+                        "reliability": 22
+                    },
+                    "Node-1": {
+                        "messageDelay": -27,
+                        "reliability": 0.3333333333333333
+                    },
+                    "Node-10": {
+                        "messageDelay": 12,
+                        "reliability": -21
+                    },
+                    "Node-11": {
+                        "messageDelay": 28,
+                        "reliability": 0.14714984813088827
+                    },
+                    "Node-12": {
+                        "messageDelay": -11,
+                        "reliability": 6.368390464293439e-2
+                    },
+                    "Node-14": {
+                        "messageDelay": -8,
+                        "reliability": 0.15023816922022415
+                    },
+                    "Node-16": {
+                        "messageDelay": -8,
+                        "reliability": 27.708333333333332
+                    },
+                    "Node-18": {
+                        "messageDelay": 5,
+                        "reliability": -21.666666666666668
+                    },
+                    "Node-19": {
+                        "messageDelay": -13,
+                        "reliability": 2.5
+                    },
+                    "Node-22": {
+                        "messageDelay": -20,
+                        "reliability": 2.5
+                    },
+                    "Node-25": {
+                        "messageDelay": 24,
+                        "reliability": 3.2
+                    },
+                    "Node-26": {
+                        "messageDelay": 23,
+                        "reliability": -22.642857142857142
+                    },
+                    "Node-27": {
+                        "messageDelay": -24,
+                        "reliability": -21.833333333333332
+                    },
+                    "Node-28": {
+                        "messageDelay": -13,
+                        "reliability": 12.5
+                    },
+                    "Node-29": {
+                        "messageDelay": -25,
+                        "reliability": 14.545454545454545
+                    },
+                    "Node-3": {
+                        "messageDelay": -11,
+                        "reliability": -24
+                    },
+                    "Node-5": {
+                        "messageDelay": -12,
+                        "reliability": -22
+                    },
+                    "Node-7": {
+                        "messageDelay": 8,
+                        "reliability": 0.5902166571021327
+                    },
+                    "Node-9": {
+                        "messageDelay": -16,
+                        "reliability": -3
+                    }
+                },
+                "Node-30": {
+                    "Node-11": {
+                        "messageDelay": 21,
+                        "reliability": 7
+                    }
+                }
+            }
+        },
+        {
+            "connections": {
+                "Node-10": {
+                    "Node-14": {
+                        "messageDelay": -12,
+                        "reliability": 0.6
+                    },
+                    "Node-16": {
+                        "messageDelay": -26,
+                        "reliability": -0.25
+                    },
+                    "Node-17": {
+                        "messageDelay": 4,
+                        "reliability": 9.666666666666666
+                    },
+                    "Node-18": {
+                        "messageDelay": -28,
+                        "reliability": -21
+                    },
+                    "Node-19": {
+                        "messageDelay": -30,
+                        "reliability": 22
+                    },
+                    "Node-2": {
+                        "messageDelay": -2,
+                        "reliability": 23.115384615384617
+                    },
+                    "Node-20": {
+                        "messageDelay": -9,
+                        "reliability": 1.6666666666666667
+                    },
+                    "Node-21": {
+                        "messageDelay": 11,
+                        "reliability": 18.82608695652174
+                    },
+                    "Node-22": {
+                        "messageDelay": 23,
+                        "reliability": -1.5
+                    },
+                    "Node-27": {
+                        "messageDelay": 13,
+                        "reliability": -18
+                    },
+                    "Node-28": {
+                        "messageDelay": 18,
+                        "reliability": -30
+                    },
+                    "Node-29": {
+                        "messageDelay": 28,
+                        "reliability": 0.6302707641914334
+                    },
+                    "Node-30": {
+                        "messageDelay": -17,
+                        "reliability": 20.933333333333334
+                    },
+                    "Node-7": {
+                        "messageDelay": 5,
+                        "reliability": 17.153846153846153
+                    },
+                    "Node-9": {
+                        "messageDelay": -11,
+                        "reliability": 0.5172521356147776
                     }
                 },
                 "Node-13": {
                     "Node-0": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": 180
-                        }
+                        "messageDelay": 11,
+                        "reliability": 7.857142857142857
                     },
-                    "Node-11": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 71
-                        }
+                    "Node-1": {
+                        "messageDelay": 9,
+                        "reliability": 5.315789473684211
+                    },
+                    "Node-12": {
+                        "messageDelay": 19,
+                        "reliability": 1.3333333333333333
                     },
                     "Node-13": {
-                        "messageDelay": -26,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": 416
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -216
-                        }
-                    },
-                    "Node-19": {
                         "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": -206
-                        }
+                        "reliability": -1.1
                     },
-                    "Node-2": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 652
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -326
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -16
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": -23
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -11
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -21
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 28,
-                            "numerator": -561
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -36
-                        }
-                    }
-                },
-                "Node-14": {
-                    "Node-0": {
-                        "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 452
-                        }
-                    },
-                    "Node-1": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 122
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -16
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": -103
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -18,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 54
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": -9,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 190
-                        }
+                    "Node-14": {
+                        "messageDelay": 10,
+                        "reliability": 15.083333333333334
                     },
                     "Node-16": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": 22
-                        }
+                        "messageDelay": -15,
+                        "reliability": -22
                     },
                     "Node-17": {
-                        "messageDelay": -9,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 9
-                        }
+                        "messageDelay": -17,
+                        "reliability": -0.3333333333333333
                     },
                     "Node-19": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -16
-                        }
+                        "messageDelay": 24,
+                        "reliability": -5
                     },
-                    "Node-20": {
-                        "messageDelay": 1,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": 512
-                        }
+                    "Node-21": {
+                        "messageDelay": -7,
+                        "reliability": 3
                     },
-                    "Node-22": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": 33
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 270
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -58
-                        }
+                    "Node-27": {
+                        "messageDelay": -18,
+                        "reliability": 1.5
                     },
                     "Node-28": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -69
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -4
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -22,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": 99
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 30
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": 18,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 16
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": -28,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -161
-                        }
-                    }
-                },
-                "Node-15": {
-                    "Node-10": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -345
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -63
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": 18,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": 23
-                        }
-                    },
-                    "Node-6": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": -65
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -111
-                        }
-                    }
-                },
-                "Node-19": {
-                    "Node-1": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": 191
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -49
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -30
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -13
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 206
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": 282
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -7
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": -18,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 181
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -22
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 22,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": -11
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": 122
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": 173
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 5,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -97
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 18
-                        }
+                        "messageDelay": 12,
+                        "reliability": 10
                     },
                     "Node-30": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": -293
-                        }
+                        "messageDelay": -25,
+                        "reliability": 17.473684210526315
                     },
                     "Node-4": {
-                        "messageDelay": 25,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -103
-                        }
+                        "messageDelay": 8,
+                        "reliability": 0.5
                     },
                     "Node-7": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -67
-                        }
-                    },
-                    "Node-8": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -10
-                        }
-                    },
-                    "Node-9": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -657
-                        }
-                    }
-                },
-                "Node-2": {
-                    "Node-10": {
                         "messageDelay": 23,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 348
-                        }
-                    },
-                    "Node-11": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 4
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": 3,
-                        "reliability": {
-                            "denominator": 14,
-                            "numerator": -121
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -614
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -59
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -101
-                        }
-                    },
-                    "Node-2": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -68
-                        }
-                    },
-                    "Node-21": {
-                        "messageDelay": 18,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 11
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 17,
-                            "numerator": 143
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -298
-                        }
-                    },
-                    "Node-25": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -429
-                        }
-                    },
-                    "Node-26": {
-                        "messageDelay": 9,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": -716
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -57
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": -8,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -66
-                        }
+                        "reliability": -18.833333333333332
                     },
                     "Node-8": {
                         "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 7
-                        }
+                        "reliability": -4
                     },
                     "Node-9": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 24,
-                            "numerator": -61
-                        }
+                        "messageDelay": -30,
+                        "reliability": -29
                     }
                 },
-                "Node-20": {
-                    "Node-0": {
-                        "messageDelay": -30,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 370
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -5,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 13
-                        }
-                    },
+                "Node-18": {
                     "Node-11": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 223
-                        }
+                        "messageDelay": 4,
+                        "reliability": -1.5
                     },
                     "Node-12": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": 554
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -55
-                        }
-                    },
-                    "Node-14": {
                         "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -49
-                        }
+                        "reliability": 16
                     },
                     "Node-16": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": 169
-                        }
+                        "messageDelay": 6,
+                        "reliability": -10
                     },
-                    "Node-19": {
-                        "messageDelay": -11,
-                        "reliability": {
-                            "denominator": 24,
-                            "numerator": -599
-                        }
+                    "Node-18": {
+                        "messageDelay": 0,
+                        "reliability": 0.7118649780581502
                     },
-                    "Node-20": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": 76
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -30,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -319
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 28,
-                            "numerator": -221
-                        }
+                    "Node-26": {
+                        "messageDelay": 28,
+                        "reliability": -11
                     },
                     "Node-27": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -93
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 27
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 129
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": -21,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": 263
-                        }
-                    },
-                    "Node-7": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": 119
-                        }
-                    },
-                    "Node-9": {
                         "messageDelay": -7,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 18
-                        }
-                    }
-                },
-                "Node-21": {
-                    "Node-1": {
-                        "messageDelay": -10,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -70
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -15,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": -483
-                        }
-                    },
-                    "Node-14": {
-                        "messageDelay": 8,
-                        "reliability": {
-                            "denominator": 8,
-                            "numerator": -221
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": 21,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -157
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 15,
-                            "numerator": -374
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 116
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 291
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": -18,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": 625
-                        }
+                        "reliability": 20
                     },
                     "Node-28": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": -3
-                        }
-                    },
-                    "Node-29": {
-                        "messageDelay": 25,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 133
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": 12,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": 454
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 14
-                        }
-                    },
-                    "Node-4": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -107
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -53
-                        }
+                        "messageDelay": -25,
+                        "reliability": -1.5
                     },
                     "Node-9": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 3
-                        }
+                        "messageDelay": -22,
+                        "reliability": 11
+                    }
+                },
+                "Node-24": {
+                    "Node-0": {
+                        "messageDelay": -15,
+                        "reliability": 11.238095238095237
+                    },
+                    "Node-10": {
+                        "messageDelay": 12,
+                        "reliability": 0.4579630745200266
+                    },
+                    "Node-12": {
+                        "messageDelay": -9,
+                        "reliability": 18.76923076923077
+                    },
+                    "Node-14": {
+                        "messageDelay": -3,
+                        "reliability": -1
+                    },
+                    "Node-15": {
+                        "messageDelay": -14,
+                        "reliability": 0.3193124219632022
+                    },
+                    "Node-16": {
+                        "messageDelay": -29,
+                        "reliability": 0.7129088051336209
+                    },
+                    "Node-17": {
+                        "messageDelay": 23,
+                        "reliability": 12.5
+                    },
+                    "Node-19": {
+                        "messageDelay": 24,
+                        "reliability": 0.6873158120810224
+                    },
+                    "Node-21": {
+                        "messageDelay": -3,
+                        "reliability": 0.5223708118644591
+                    },
+                    "Node-24": {
+                        "messageDelay": 27,
+                        "reliability": 15
+                    },
+                    "Node-25": {
+                        "messageDelay": -16,
+                        "reliability": -2
+                    },
+                    "Node-26": {
+                        "messageDelay": -10,
+                        "reliability": 0.8219807008833336
+                    },
+                    "Node-27": {
+                        "messageDelay": 13,
+                        "reliability": 0.3797832372794593
+                    },
+                    "Node-28": {
+                        "messageDelay": -25,
+                        "reliability": -12.166666666666666
+                    },
+                    "Node-29": {
+                        "messageDelay": -4,
+                        "reliability": 27
+                    },
+                    "Node-3": {
+                        "messageDelay": -1,
+                        "reliability": 0.3375636556402931
+                    },
+                    "Node-30": {
+                        "messageDelay": -12,
+                        "reliability": 0.3333333333333333
+                    },
+                    "Node-4": {
+                        "messageDelay": 10,
+                        "reliability": 5.241379310344827
+                    },
+                    "Node-6": {
+                        "messageDelay": -5,
+                        "reliability": 5.176470588235294
+                    },
+                    "Node-9": {
+                        "messageDelay": 28,
+                        "reliability": 0.1564331469492941
+                    }
+                },
+                "Node-25": {
+                    "Node-1": {
+                        "messageDelay": -3,
+                        "reliability": 3
+                    },
+                    "Node-13": {
+                        "messageDelay": -26,
+                        "reliability": -13
+                    },
+                    "Node-15": {
+                        "messageDelay": 0,
+                        "reliability": -15
+                    },
+                    "Node-17": {
+                        "messageDelay": 23,
+                        "reliability": 18
+                    },
+                    "Node-23": {
+                        "messageDelay": 29,
+                        "reliability": -9.166666666666666
+                    },
+                    "Node-26": {
+                        "messageDelay": -25,
+                        "reliability": -20
+                    },
+                    "Node-27": {
+                        "messageDelay": -15,
+                        "reliability": 12.333333333333334
+                    },
+                    "Node-6": {
+                        "messageDelay": 25,
+                        "reliability": 0.75
+                    }
+                },
+                "Node-26": {
+                    "Node-1": {
+                        "messageDelay": -28,
+                        "reliability": 0.24219749893518971
+                    },
+                    "Node-14": {
+                        "messageDelay": -8,
+                        "reliability": 0.4
+                    },
+                    "Node-15": {
+                        "messageDelay": 8,
+                        "reliability": -3.652173913043478
+                    },
+                    "Node-17": {
+                        "messageDelay": -1,
+                        "reliability": -10
+                    },
+                    "Node-19": {
+                        "messageDelay": -20,
+                        "reliability": 19.263157894736842
+                    },
+                    "Node-2": {
+                        "messageDelay": 7,
+                        "reliability": 0.25
+                    },
+                    "Node-23": {
+                        "messageDelay": 12,
+                        "reliability": 0
+                    },
+                    "Node-24": {
+                        "messageDelay": -3,
+                        "reliability": -4.826086956521739
+                    },
+                    "Node-25": {
+                        "messageDelay": -15,
+                        "reliability": 24.25
+                    },
+                    "Node-28": {
+                        "messageDelay": 19,
+                        "reliability": 3.586206896551724
+                    },
+                    "Node-29": {
+                        "messageDelay": -10,
+                        "reliability": 10.37037037037037
+                    },
+                    "Node-3": {
+                        "messageDelay": -18,
+                        "reliability": -1.3333333333333333
+                    },
+                    "Node-5": {
+                        "messageDelay": 13,
+                        "reliability": 0.6
+                    },
+                    "Node-6": {
+                        "messageDelay": 15,
+                        "reliability": -1
+                    },
+                    "Node-7": {
+                        "messageDelay": -5,
+                        "reliability": -16.235294117647058
+                    },
+                    "Node-9": {
+                        "messageDelay": 2,
+                        "reliability": 3
                     }
                 },
                 "Node-27": {
                     "Node-0": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 23
-                        }
+                        "messageDelay": 2,
+                        "reliability": 0.6361473265383059
                     },
                     "Node-1": {
-                        "messageDelay": -17,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -342
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -37
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 77
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 9,
-                            "numerator": 31
-                        }
-                    },
-                    "Node-9": {
                         "messageDelay": 3,
-                        "reliability": {
-                            "denominator": 28,
-                            "numerator": -671
-                        }
-                    }
-                },
-                "Node-3": {
-                    "Node-12": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 2,
-                            "numerator": -19
-                        }
+                        "reliability": 25.5
                     },
                     "Node-13": {
                         "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -29
-                        }
+                        "reliability": -18
+                    },
+                    "Node-15": {
+                        "messageDelay": -17,
+                        "reliability": 5
+                    },
+                    "Node-18": {
+                        "messageDelay": -6,
+                        "reliability": -26.857142857142858
                     },
                     "Node-2": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -52
-                        }
+                        "messageDelay": -10,
+                        "reliability": 4
+                    },
+                    "Node-20": {
+                        "messageDelay": 20,
+                        "reliability": 0.9275072494600795
+                    },
+                    "Node-22": {
+                        "messageDelay": 21,
+                        "reliability": -2.066666666666667
                     },
                     "Node-23": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 12,
-                            "numerator": 247
-                        }
-                    },
-                    "Node-24": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 301
-                        }
+                        "messageDelay": -3,
+                        "reliability": -4
                     },
                     "Node-26": {
-                        "messageDelay": -20,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": -279
-                        }
+                        "messageDelay": 8,
+                        "reliability": -1.6666666666666667
                     },
                     "Node-27": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -3
-                        }
+                        "messageDelay": -26,
+                        "reliability": 1.6666666666666667
+                    },
+                    "Node-28": {
+                        "messageDelay": 9,
+                        "reliability": -10.5
                     },
                     "Node-29": {
-                        "messageDelay": 13,
-                        "reliability": {
-                            "denominator": 26,
-                            "numerator": -41
-                        }
+                        "messageDelay": -4,
+                        "reliability": 0.5938763651974769
+                    },
+                    "Node-3": {
+                        "messageDelay": 16,
+                        "reliability": 0.8661085934886095
+                    }
+                },
+                "Node-30": {
+                    "Node-0": {
+                        "messageDelay": -20,
+                        "reliability": 8
+                    },
+                    "Node-1": {
+                        "messageDelay": -29,
+                        "reliability": -0.25
+                    },
+                    "Node-11": {
+                        "messageDelay": -9,
+                        "reliability": -3
+                    },
+                    "Node-12": {
+                        "messageDelay": -11,
+                        "reliability": 0.5
+                    },
+                    "Node-13": {
+                        "messageDelay": 11,
+                        "reliability": 0.5700124501543945
+                    },
+                    "Node-14": {
+                        "messageDelay": 29,
+                        "reliability": 0
+                    },
+                    "Node-18": {
+                        "messageDelay": -29,
+                        "reliability": 0
+                    },
+                    "Node-19": {
+                        "messageDelay": -6,
+                        "reliability": 0.5
+                    },
+                    "Node-2": {
+                        "messageDelay": 15,
+                        "reliability": -3
+                    },
+                    "Node-21": {
+                        "messageDelay": 0,
+                        "reliability": -11
+                    },
+                    "Node-23": {
+                        "messageDelay": -15,
+                        "reliability": 24.285714285714285
+                    },
+                    "Node-24": {
+                        "messageDelay": -15,
+                        "reliability": -26.85
+                    },
+                    "Node-27": {
+                        "messageDelay": 10,
+                        "reliability": 19
+                    },
+                    "Node-29": {
+                        "messageDelay": -5,
+                        "reliability": -3
+                    },
+                    "Node-30": {
+                        "messageDelay": 12,
+                        "reliability": 1.5
+                    },
+                    "Node-6": {
+                        "messageDelay": 6,
+                        "reliability": 12.642857142857142
+                    },
+                    "Node-7": {
+                        "messageDelay": -17,
+                        "reliability": 24
                     },
                     "Node-8": {
-                        "messageDelay": -4,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": -526
-                        }
+                        "messageDelay": 9,
+                        "reliability": 13.125
+                    },
+                    "Node-9": {
+                        "messageDelay": -22,
+                        "reliability": 0.3692734300690066
                     }
                 },
                 "Node-4": {
                     "Node-1": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -10
-                        }
+                        "messageDelay": -22,
+                        "reliability": -12.76
                     },
-                    "Node-11": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 26,
-                            "numerator": -317
-                        }
+                    "Node-12": {
+                        "messageDelay": 12,
+                        "reliability": 0.9415595509170334
+                    },
+                    "Node-15": {
+                        "messageDelay": -1,
+                        "reliability": -4
+                    },
+                    "Node-2": {
+                        "messageDelay": -2,
+                        "reliability": 9.181818181818182
+                    },
+                    "Node-20": {
+                        "messageDelay": -22,
+                        "reliability": -9.615384615384615
+                    },
+                    "Node-21": {
+                        "messageDelay": 28,
+                        "reliability": -0.4
+                    },
+                    "Node-24": {
+                        "messageDelay": -22,
+                        "reliability": 0.9969046045956249
                     },
                     "Node-28": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -279
-                        }
+                        "messageDelay": 3,
+                        "reliability": 9.166666666666666
                     },
-                    "Node-3": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -17
-                        }
+                    "Node-30": {
+                        "messageDelay": -10,
+                        "reliability": 1.5
+                    },
+                    "Node-4": {
+                        "messageDelay": -7,
+                        "reliability": 5.722222222222222
+                    },
+                    "Node-7": {
+                        "messageDelay": 14,
+                        "reliability": 11
                     },
                     "Node-9": {
+                        "messageDelay": 21,
+                        "reliability": 22
+                    }
+                }
+            }
+        },
+        {
+            "connections": {
+                "Node-12": {
+                    "Node-25": {
+                        "messageDelay": 29,
+                        "reliability": 0.2344618728142408
+                    },
+                    "Node-27": {
+                        "messageDelay": 5,
+                        "reliability": -1.5
+                    },
+                    "Node-28": {
+                        "messageDelay": -30,
+                        "reliability": 26.52
+                    },
+                    "Node-7": {
+                        "messageDelay": 16,
+                        "reliability": 0.37170233310649514
+                    }
+                },
+                "Node-14": {
+                    "Node-0": {
+                        "messageDelay": -4,
+                        "reliability": 2
+                    },
+                    "Node-1": {
+                        "messageDelay": 15,
+                        "reliability": -13.607142857142858
+                    },
+                    "Node-12": {
+                        "messageDelay": -28,
+                        "reliability": 19.64
+                    },
+                    "Node-14": {
+                        "messageDelay": 14,
+                        "reliability": -0.3333333333333333
+                    },
+                    "Node-18": {
                         "messageDelay": 10,
-                        "reliability": {
-                            "denominator": 29,
-                            "numerator": 676
-                        }
+                        "reliability": -18.58823529411765
+                    },
+                    "Node-19": {
+                        "messageDelay": -7,
+                        "reliability": 8.933333333333334
+                    },
+                    "Node-2": {
+                        "messageDelay": -23,
+                        "reliability": -29
+                    },
+                    "Node-22": {
+                        "messageDelay": 7,
+                        "reliability": 3.9166666666666665
+                    },
+                    "Node-26": {
+                        "messageDelay": 3,
+                        "reliability": -21
+                    },
+                    "Node-28": {
+                        "messageDelay": 2,
+                        "reliability": 20.666666666666668
+                    },
+                    "Node-29": {
+                        "messageDelay": -22,
+                        "reliability": 7.833333333333333
+                    },
+                    "Node-3": {
+                        "messageDelay": -9,
+                        "reliability": 8
+                    },
+                    "Node-5": {
+                        "messageDelay": 30,
+                        "reliability": 0.16243700435981745
+                    },
+                    "Node-6": {
+                        "messageDelay": -3,
+                        "reliability": 0.75
+                    },
+                    "Node-9": {
+                        "messageDelay": 9,
+                        "reliability": 23
+                    }
+                },
+                "Node-17": {
+                    "Node-1": {
+                        "messageDelay": 7,
+                        "reliability": 0.3333333333333333
+                    },
+                    "Node-11": {
+                        "messageDelay": 2,
+                        "reliability": -22
+                    },
+                    "Node-15": {
+                        "messageDelay": -17,
+                        "reliability": 5.733333333333333
+                    },
+                    "Node-16": {
+                        "messageDelay": -5,
+                        "reliability": -7
+                    },
+                    "Node-17": {
+                        "messageDelay": 28,
+                        "reliability": 4
+                    },
+                    "Node-18": {
+                        "messageDelay": -10,
+                        "reliability": -0.25
+                    },
+                    "Node-20": {
+                        "messageDelay": 21,
+                        "reliability": -0.6785714285714286
+                    },
+                    "Node-23": {
+                        "messageDelay": -6,
+                        "reliability": 25.75
+                    },
+                    "Node-24": {
+                        "messageDelay": 18,
+                        "reliability": 13.620689655172415
+                    },
+                    "Node-26": {
+                        "messageDelay": 25,
+                        "reliability": 24
+                    },
+                    "Node-28": {
+                        "messageDelay": 15,
+                        "reliability": 24.12
+                    },
+                    "Node-5": {
+                        "messageDelay": -8,
+                        "reliability": 8.633351203256123e-2
+                    },
+                    "Node-6": {
+                        "messageDelay": -14,
+                        "reliability": 0.8474926973480587
+                    },
+                    "Node-8": {
+                        "messageDelay": 3,
+                        "reliability": 0.6720666587533634
+                    }
+                },
+                "Node-4": {
+                    "Node-10": {
+                        "messageDelay": 25,
+                        "reliability": -1.7857142857142858
+                    },
+                    "Node-16": {
+                        "messageDelay": 20,
+                        "reliability": 0.7902042165809163
+                    },
+                    "Node-2": {
+                        "messageDelay": -25,
+                        "reliability": 5
+                    },
+                    "Node-24": {
+                        "messageDelay": -25,
+                        "reliability": 0.13782921091200828
+                    },
+                    "Node-3": {
+                        "messageDelay": 3,
+                        "reliability": 27.72222222222222
+                    },
+                    "Node-5": {
+                        "messageDelay": 26,
+                        "reliability": -0.75
+                    },
+                    "Node-6": {
+                        "messageDelay": 14,
+                        "reliability": -23
                     }
                 },
                 "Node-7": {
-                    "Node-0": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": -5
-                        }
-                    },
                     "Node-1": {
-                        "messageDelay": 2,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 28
-                        }
-                    },
-                    "Node-10": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 133
-                        }
-                    },
-                    "Node-12": {
-                        "messageDelay": -16,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -15
-                        }
+                        "messageDelay": -7,
+                        "reliability": -1.7666666666666666
                     },
                     "Node-13": {
-                        "messageDelay": 26,
-                        "reliability": {
-                            "denominator": 11,
-                            "numerator": 314
-                        }
+                        "messageDelay": -13,
+                        "reliability": 0.7873066204484387
                     },
-                    "Node-14": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 27,
-                            "numerator": 224
-                        }
-                    },
-                    "Node-18": {
-                        "messageDelay": 6,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 119
-                        }
-                    },
-                    "Node-19": {
-                        "messageDelay": -6,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -29
-                        }
-                    },
-                    "Node-22": {
-                        "messageDelay": 21,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": 213
-                        }
-                    },
-                    "Node-23": {
-                        "messageDelay": 29,
-                        "reliability": {
-                            "denominator": 21,
-                            "numerator": -605
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 7,
-                            "numerator": 173
-                        }
-                    },
-                    "Node-28": {
-                        "messageDelay": -23,
-                        "reliability": {
-                            "denominator": 30,
-                            "numerator": 659
-                        }
+                    "Node-24": {
+                        "messageDelay": 30,
+                        "reliability": 20.375
                     },
                     "Node-29": {
-                        "messageDelay": 11,
-                        "reliability": {
-                            "denominator": 6,
-                            "numerator": 157
-                        }
+                        "messageDelay": 28,
+                        "reliability": 4.95
                     },
                     "Node-5": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 6
-                        }
+                        "messageDelay": 20,
+                        "reliability": -0.3333333333333333
                     },
                     "Node-6": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 81
-                        }
+                        "messageDelay": 7,
+                        "reliability": -4
                     },
-                    "Node-7": {
-                        "messageDelay": -12,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -132
-                        }
+                    "Node-8": {
+                        "messageDelay": -10,
+                        "reliability": 0
+                    }
+                },
+                "Node-8": {
+                    "Node-10": {
+                        "messageDelay": 5,
+                        "reliability": 16.03448275862069
                     },
-                    "Node-9": {
-                        "messageDelay": -3,
-                        "reliability": {
-                            "denominator": 18,
-                            "numerator": -253
-                        }
+                    "Node-11": {
+                        "messageDelay": 17,
+                        "reliability": 8.615384615384615
+                    },
+                    "Node-12": {
+                        "messageDelay": -2,
+                        "reliability": -18.4
+                    },
+                    "Node-13": {
+                        "messageDelay": 17,
+                        "reliability": -1.0434782608695652
+                    },
+                    "Node-14": {
+                        "messageDelay": -17,
+                        "reliability": -9.473684210526315
+                    },
+                    "Node-15": {
+                        "messageDelay": 11,
+                        "reliability": -4.117647058823529
+                    },
+                    "Node-18": {
+                        "messageDelay": -21,
+                        "reliability": -29
+                    },
+                    "Node-19": {
+                        "messageDelay": 16,
+                        "reliability": -1.5
+                    },
+                    "Node-21": {
+                        "messageDelay": -4,
+                        "reliability": -1
+                    },
+                    "Node-25": {
+                        "messageDelay": 2,
+                        "reliability": -15
+                    },
+                    "Node-26": {
+                        "messageDelay": 7,
+                        "reliability": 0.9258074207964275
+                    },
+                    "Node-30": {
+                        "messageDelay": 0,
+                        "reliability": 1
+                    },
+                    "Node-6": {
+                        "messageDelay": -27,
+                        "reliability": -0.75
+                    },
+                    "Node-8": {
+                        "messageDelay": 19,
+                        "reliability": 0
                     }
                 },
                 "Node-9": {
-                    "Node-0": {
-                        "messageDelay": 4,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": -379
-                        }
-                    },
-                    "Node-1": {
-                        "messageDelay": 9,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": -11
-                        }
-                    },
                     "Node-10": {
-                        "messageDelay": 14,
-                        "reliability": {
-                            "denominator": 10,
-                            "numerator": 7
-                        }
-                    },
-                    "Node-12": {
                         "messageDelay": -14,
-                        "reliability": {
-                            "denominator": 26,
-                            "numerator": 641
-                        }
-                    },
-                    "Node-13": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": -159
-                        }
+                        "reliability": -22.310344827586206
                     },
                     "Node-14": {
+                        "messageDelay": 28,
+                        "reliability": -1
+                    },
+                    "Node-18": {
                         "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 209
-                        }
-                    },
-                    "Node-15": {
-                        "messageDelay": 24,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -73
-                        }
-                    },
-                    "Node-16": {
-                        "messageDelay": -1,
-                        "reliability": {
-                            "denominator": 4,
-                            "numerator": 29
-                        }
-                    },
-                    "Node-17": {
-                        "messageDelay": 30,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -17
-                        }
+                        "reliability": -7
                     },
                     "Node-2": {
-                        "messageDelay": 28,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": -38
-                        }
+                        "messageDelay": 6,
+                        "reliability": -1
                     },
                     "Node-20": {
-                        "messageDelay": -25,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 8
-                        }
+                        "messageDelay": 2,
+                        "reliability": -19
                     },
                     "Node-22": {
-                        "messageDelay": -2,
-                        "reliability": {
-                            "denominator": 26,
-                            "numerator": -371
-                        }
+                        "messageDelay": -15,
+                        "reliability": 0.34485291520825645
                     },
-                    "Node-25": {
-                        "messageDelay": -19,
-                        "reliability": {
-                            "denominator": 1,
-                            "numerator": 22
-                        }
-                    },
-                    "Node-27": {
-                        "messageDelay": 9,
-                        "reliability": {
-                            "denominator": 22,
-                            "numerator": -335
-                        }
+                    "Node-26": {
+                        "messageDelay": 6,
+                        "reliability": 0.8420900346332297
                     },
                     "Node-28": {
-                        "messageDelay": 19,
-                        "reliability": {
-                            "denominator": 25,
-                            "numerator": -473
-                        }
-                    },
-                    "Node-3": {
-                        "messageDelay": 20,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -40
-                        }
-                    },
-                    "Node-30": {
-                        "messageDelay": -13,
-                        "reliability": {
-                            "denominator": 19,
-                            "numerator": 274
-                        }
-                    },
-                    "Node-5": {
-                        "messageDelay": 26,
-                        "reliability": {
-                            "denominator": 23,
-                            "numerator": -110
-                        }
+                        "messageDelay": 4,
+                        "reliability": 1.6666666666666667
                     },
                     "Node-6": {
-                        "messageDelay": 27,
-                        "reliability": {
-                            "denominator": 3,
-                            "numerator": -34
-                        }
+                        "messageDelay": -7,
+                        "reliability": -0.25
                     },
                     "Node-8": {
-                        "messageDelay": 15,
-                        "reliability": {
-                            "denominator": 13,
-                            "numerator": 225
-                        }
+                        "messageDelay": 12,
+                        "reliability": 0.23529411764705882
                     },
                     "Node-9": {
-                        "messageDelay": 7,
-                        "reliability": {
-                            "denominator": 5,
-                            "numerator": 93
-                        }
+                        "messageDelay": 10,
+                        "reliability": -0.25
                     }
                 }
             }
         }
     ],
-    "seed": -205850612
+    "seed": -1702649618
 }

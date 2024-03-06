@@ -46,7 +46,7 @@ import Test.QuickCheck (Arbitrary (..))
 
 type Delay = Int -- TODO: microseconds, not too fancy to avoid portability issues
 
-newtype Reliability = Reliability Rational
+newtype Reliability = Reliability Double
   deriving stock (Eq, Generic, Ord, Read, Show)
   deriving newtype (Num, Arbitrary, ToJSON, FromJSON)
 
