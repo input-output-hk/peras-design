@@ -193,8 +193,8 @@ FIXME: Only include votes for round r
 ```
 Counting votes for a block from dangling votes and votes on the chain
 ```agda
-  countVotes : Chain → RoundNumber → Block → ℕ
-  countVotes (MkChain bs vs _) r b =
+  countVotes : ChainState → RoundNumber → Block → ℕ
+  countVotes ⟨ MkChain bs vs _ , d ⟩ r b =
     countBlocks bs r b + countDangling vs r b
 ```
 
@@ -220,22 +220,22 @@ The relation `QuorumOnChain` checks whether there is a round-r quorum with respe
 the votes on chain c and dangling votes for a block on chain c.
 
 ```agda
-  data QuorumOnChain : Chain → RoundNumber → Set where
+  data QuorumOnChain : ChainState → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
       → roundNumber r ≡ 0
       → QuorumOnChain c r
 
-    LaterRound : ∀ {c} {r} {b}
+    LaterRound : ∀ {c} {d} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
-      → countVotes c r b ≥ τ
-      → QuorumOnChain c r
+      → countVotes ⟨ c , d ⟩ r b ≥ τ
+      → QuorumOnChain ⟨ c , d ⟩ r
 ```
 
 ```agda
   postulate
-    QuorumOnChain? : ∀ (c : Chain) → (r : RoundNumber) → Dec (QuorumOnChain c r)
+    QuorumOnChain? : ∀ (c : ChainState) → (r : RoundNumber) → Dec (QuorumOnChain c r)
 ```
 
 In a cooldown period there is no voting.
@@ -246,15 +246,15 @@ In a cooldown period there is no voting.
     Last : ∀ {c d r}
       → roundNumber r > 0
       → All (Dangling c) d
-      → QuorumOnChain c (prev r)
+      → QuorumOnChain ⟨ c , d ⟩ (prev r)
       → VoteInRound ⟨ c , d ⟩ r
 
     CooldownIsOver : ∀ {c d r n}
       → n > 0
       → roundNumber r > 0
       → All (Dangling c) d
-      → QuorumOnChain c (MkRoundNumber (roundNumber r ∸ (n * K)))
-      → All (λ { i → ¬ (QuorumOnChain c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
+      → QuorumOnChain ⟨ c , d ⟩ (MkRoundNumber (roundNumber r ∸ (n * K)))
+      → All (λ { i → ¬ (QuorumOnChain ⟨ c , d ⟩ (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
       → VoteInRound ⟨ c , d ⟩ r
 ```
 
@@ -279,8 +279,8 @@ There is not voting in round 0
 ```
 -->
 ```agda
-  round-r-votes : Chain → RoundNumber → ℕ
-  round-r-votes c r = sum (map (countVotes c r) (blocks c))
+  round-r-votes : ChainState → RoundNumber → ℕ
+  round-r-votes ⟨ c , d ⟩ r = sum (map (countVotes ⟨ c , d ⟩ r) (blocks c))
 ```
 
 ### Chain weight
@@ -294,7 +294,7 @@ FIXME: include dangling votes
         s = slotNumber (tip c)
         r = s / T
         rs = filter (VoteInRound? ⟨ c , d ⟩) (map MkRoundNumber (upTo r))
-    in w + (b * sum (map (round-r-votes c) rs))
+    in w + (b * sum (map (round-r-votes ⟨ c , d ⟩) rs))
 ```
 
 ### Chain validity
