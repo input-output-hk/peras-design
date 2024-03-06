@@ -270,12 +270,16 @@ The global state consists of the following fields:
 Broadcasting messages, i.e. updating the global message buffer
 
 ```agda
-    broadcast : Message → Stateᵍ → Stateᵍ
-    broadcast m N =
-      record N {
-        messages = (map (λ { p → ⦅ m , p ⦆ }) parties) ++ messages N ;
-        history = m ∷ history N
-      }
+    data _[_]⇒_ : Stateᵍ → Message → Stateᵍ → Set where
+
+      Broadcast : ∀ {N} {m}
+        → N [ m ]⇒
+            record N {
+              messages =
+                map (λ { p → ⦅ m , p ⦆ }) parties
+                  ++ messages N ;
+              history = m ∷ history N
+            }
 ```
 ## Receive
 
@@ -297,7 +301,7 @@ updating the local block tree and putting the local state back into the global s
             }
 
       corrupt : ∀ {p N} {m}
-          ---------------------
+          -------------------------
         → N [ Corrupt {p} , m ]⇀ N
 ```
 ## Vote
@@ -316,15 +320,15 @@ A party can cast a vote for a block, if
         → isCommitteeMember p (votingRound M) ≡ true
         → VoteInRound ⟨ (bestChain blockTree) (clock M) (tree s) , danglingVotes s ⟩ (votingRound M)
         → (m , s′) ≡ honestVote (clock M) (votingRound M) p s
-        → N ≡ broadcast m M
-          -----------------
+        → M [ m ]⇒ N
+          ----------------------
         → M [ Honest {p} , m ]⇉
           record N {
               stateMap = insert p s′ (stateMap N)
             }
 
       corrupt : ∀ {p N} {m}
-          ---------------------
+          -------------------------
         → N [ Corrupt {p} , m ]⇉ N
 ```
 ## Create
@@ -340,15 +344,15 @@ state.
         → lookup (stateMap M) p ≡ just s
         → isSlotLeader p (clock M) ≡ true
         → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) p s
-        → N ≡ broadcast m M
-          -----------------------------------------
+        → M [ m ]⇒ N -- ≡ broadcast m M
+          ----------------------
         → M [ Honest {p} , m ]↷
           record N {
               stateMap = insert p s′ (stateMap N)
             }
 
       corrupt : ∀ {p N} {m}
-          ---------------------
+          -------------------------
         → N [ Corrupt {p} , m ]↷ N
 ```
 
@@ -366,12 +370,12 @@ The small-step semantics describe the evolution of the global state.
 
       CastVote : ∀ {M N p} {h : Honesty p} {m}
         → M [ h , m ]⇉ N
-          ----------
+          ---------------
         → M ↝ N
 
       CreateBlock : ∀ {M N p} {h : Honesty p} {m}
         → M [ h , m ]↷ N
-          ----------
+          ---------------
         → M ↝ N
 
       NextSlot : ∀ {M}
@@ -456,7 +460,7 @@ In the paper mentioned above this is big-step semantics.
     -- TODO: implement Gossip data type
     postulate
       hist-honestGossipMsgs : ∀ {M N} {m}
-        → N ≡ broadcast m M
+        → M [ m ]⇒ N
         → history N ⊇ history M
 
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
