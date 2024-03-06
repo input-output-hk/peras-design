@@ -23,13 +23,14 @@ open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
 open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain; VoteInRound; ∥_∥)
-open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
+open import Peras.Crypto using (Hash; Hashable; emptyBS; MembershipProof; Signature)
 open import Peras.Block using (Party; PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
 open import Peras.Message renaming (Message to Msg)
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
+open import Data.List.Relation.Binary.Subset.Propositional {A = Vote Hash} renaming (_⊆_ to _⊆̌_) using ()
 
 open Chain public
 open Honesty public
@@ -102,6 +103,7 @@ module _ {block₀ : Block}
                     (allBlocks : T → List Block)
                     (bestChain : Slot → T → Chain)
                     (addVote : T → Vote Block → T)
+                    (danglingVotes : T → List (Vote Hash))
          : Set₁ where
 
     allBlocksUpTo : Slot → T → List Block
@@ -124,6 +126,7 @@ Properties that must hold with respect to blocks and votes
       optimal : ∀ (c : Chain) (t : T) (sl : Slot)
         → ValidChain {block₀} c
         → blocks c ⊆ allBlocksUpTo sl t
+        → votes c ⊆̌ danglingVotes t
         → ∥ c ∥ ≤ ∥ bestChain sl t ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
@@ -141,10 +144,11 @@ The block tree type
       bestChain : Slot → T → Chain
 
       addVote : T → Vote Block → T
+      danglingVotes : T → List (Vote Hash)
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
-                      addVote
+                      addVote danglingVotes
 
   open TreeType
 ```
