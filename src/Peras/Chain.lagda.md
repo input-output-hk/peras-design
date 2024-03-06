@@ -359,11 +359,10 @@ module _ {block₀ : Block}
 ```agda
   data ValidChainState : ChainState → Set where
 
-    Constr : ∀ {c : Chain} {vs : List (Vote Block)}
+    Constr : ∀ {c} {d}
       → ValidChain c
-      → All (λ { v → Dangling v c }) vs
-      → ValidChainState (record { chain = c ; dangling = vs })
-
+      → All (λ { v → Dangling v c }) d
+      → ValidChainState ⟨ c , d ⟩
 ```
 
 #### Properties
