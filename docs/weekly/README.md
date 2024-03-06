@@ -2,6 +2,7 @@
 
 This page groups weekly summaries on the progress of the team.
 
+* [2024-03-01](2024-03-01.md)
 * [2024-02-16](2024-02-16.md)
 * [2024-02-09](2024-02-09.md)
 * [2024-01-26](2024-01-26.md)

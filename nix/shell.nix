@@ -66,7 +66,7 @@ cabalProject:
     export RUSTC_VERSION="$(rustup toolchain list | sed -n -e '/ (default)$/{s/ (default)$//;p}')"
     export PATH="''${CARGO_HOME:-~/.cargo}/bin:$PATH"
     export PATH="''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION/bin/:$PATH"
-    export LD_LIBRARY_PATH="$PWD/peras-rust/target/debug:$PATH"
+    export LD_LIBRARY_PATH="$PWD/peras-rust/target/debug:$LD_LIBRARY_PATH"
   '';
 
   tools = {

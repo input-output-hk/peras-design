@@ -1,6 +1,33 @@
+## 2024-03-05
+
+### Peras IOSim improvements
+
+Further improved validation logic in `peras-iosim` along with the monad stack.
+- Fixed drawing of network topology
+- Switch to using VRF-based random numbers
+- Enumeration type `Invalid` for tracking different kinds of validation failures
+- Exception handling within protocol functions
+- Easy collection of `MonadSay` output
+
+Also, 
+- Revised UML activity diagram, based on feedback from Sandro
+- Fixed LD_LIBRARY_PATH in Nix shell
+
+### On ΔQ
+
+Played a bit over the week-end with existing ΔQ libraries, trying to reproduce the basic charts from the [paper](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/).
+I have tried various codebases:
+* https://github.com/DeltaQ-SD/dqsd-piecewise-poly is supposed to be the latest implementation by Peter, based on [Piecewise polynomials](https://docs.scipy.org/doc/scipy/tutorial/interpolate/splines_and_polynomials.html) implementing the full spectrum of ΔQ language operators (eg. convolution, all-to-finish, any-to-finish). It kind of works but when I tried to generate the CDF at 50 sample points for a distribution built from 5 convolution of a basic transfer function, all the probabilities were set to 0
+* Peter suggested I try https://github.com/DeltaQ-SD/dqsd-wip-jacob which is a reimplementation by an intern but it lacked some basics (eg. `convolve = undefined` in the source) and seemed unfinished. It could be the case some code has not been pushed or merged. It provides some type classes along with a symbolic backend and a polynomials backend to implement ΔQ language semantics
+* I ended up using https://github.com/abailly-iohk/pnsol-deltaq-clone which is historical code from Neil implemented the langauge with step "functions" and random sampling using `statistics`  package. This code works and I was able to produce the following graph:
+
+  ![ΔQ example](/docs/diagrams/deltaq-basic.png)
+
+* There is some code in Agda, Haskell, and Python that's been written by Artjoms in [this repo](https://github.com/DeltaQ-SD/Artjoms) to support a follow-up paper on [Algebraic reasoning](https://iohk.io/en/research/library/papers/algebraic-reasoning-about-timeliness/) but it's unclear what state it's in and I haven't tried to model the examples with it. It seems it supports a numpy-based backend for easy plotting, approximating the distribution with a vector of sample values, plus a Haskell version (slow?)
+
 ## 2024-03-04
 
-### BB - Rewrite of `peras-iosim`
+### Rewrite of `peras-iosim`
 
 A major refactoring and rewrite of `peras-iosim`:
 - Sub-algorithms for Peras protocol are now cleanly separated into pure or monadic functions.
@@ -34,7 +61,7 @@ Next steps:
   * No need for the `PermParties` rule, permutations of the messages are sufficient
   * No need of the `Fold` relation
   * `Progess` does not have to be tracked
-* Added an initial `weight` function for the chain 
+* Added an initial `weight` function for the chain
 
 ### AB on peras-rust
 
@@ -172,7 +199,7 @@ BB fixed some erors in the nix build which is not able to find the `golden` file
 
 ## 2024-02-26
 
-### BB - Simulation experiment
+### Simulation experiment
 
 Tracking and reporting of rollbacks has been added to `peras-iosim`:
 
@@ -205,7 +232,7 @@ Findings from the simulation runs highlight the impracticality of blindly runnin
 
 ## 2024-02-23
 
-### BB - Metric and visualization
+### Metric and visualization
 
 - Added observation of the whole tree of blocks to `peras-iosim`.
 - Revised chain visualization to use tree data type of observed blocks.
@@ -265,7 +292,7 @@ is built.
 
 * Added new property to block tree asserting that equivocal votes can not be added
 
-### BB - Nix maintenance
+### Nix maintenance
 
 - Fixed Nix derivations for Rust-Haskell linkages.
 - Added quickcheck test to CI.
@@ -277,7 +304,7 @@ is built.
 * Refactored `CollisionFree` predicate and adjusted proof for the property that if the global state is collision-free, all previous state have been collision-free as well.
 * Initial model of Peras in Agda (currently in separate branch)
 
-### BB - Peras IOSim
+### Peras IOSim
 
 - Implemented quorum logic in `PseudoPeras` protocol.
 - Fixed orphan JSON instance for bytes.
@@ -328,7 +355,7 @@ Not sure how to handle the dependency between the peras-quickcheck and peras-rus
 
 ## 2024-02-20
 
-### BB - Pseudo-Peras Protocol
+### Pseudo-Peras Protocol
 
 Finished migrating the pseudo-Peras protocol from `random-forks` to `peras-iosim`.
 
@@ -390,7 +417,7 @@ prototype
 
 ## 2024-02-19
 
-### BB - Nix CI and Development Environment
+### Nix CI and Development Environment
 
 Fixed Nix CI and development environment to handle literate Agda and an Agda dependency on `agda2hs`.
 
@@ -457,7 +484,7 @@ Fixed the `commonPrefix` computation: The Agda code was not recursing when the 2
 
 ## 2024-02-16
 
-### BB - Odds & Ends
+### Odds & Ends
 
 - Added CLI interface to `peras_topology`.
 - Refactored and cleanly isolated random-number generation in `peras-iosim`.
@@ -574,10 +601,9 @@ Failures:
 
 Which seems to mean the nodes are not available to observe. Given the number of variables involved the trace took a while to shrink!
 
->>>>>>> ea736c0 (Updated Logbook)
 ## 2024-02-15
 
-### BB - Rust-based generator of randomized network topologies
+### Rust-based generator of randomized network topologies
 
 The [peras\_topology](peras_topology/ReadMe.md) Rust crate contains a rudimentary implementation of a randomized network generator, like that in the `peras-iosim` Haskell package.
 - Reads YAML-formatted `Parameters` describing the network.
@@ -772,7 +798,7 @@ A survey paper about networking in cryptocurrencies: https://arxiv.org/pdf/2008.
 - Refactored relation on global state
 - Proofing property that when there is collision-free state all previous states have been collision-free as well
 
-### BB - IOSim enhancements
+### IOSim enhancements
 
 - Improved faithfulness of slot-leader selection.
 - Refactored to use `MonadRandom` throughout.
@@ -853,14 +879,14 @@ This leads to the interesting question of whether or not the mempool should be o
 
 ## 2024-02-12
 
-### BB - IOSim enhancements
+### IOSim enhancements
 
 1. Enabled optional profiling of Haskell code, via Nix.
 2. Fixed memory leak cause by bug in `io-classes-1.3.1.0`.
 3. Finished provisional algorithm for routing.
 4. Improved visualization of chain forking.
 
-### BB - Haskell package maintenance
+### Haskell package maintenance
 
 1. Separated Haskell files generated by `agda2hs` to separate folders from the Agda source, in the [peras-hs](peras-hs/) package.
 2. Relocated `Peras.Ophans` from `peras-iosim` to `peras-hs`.
@@ -907,7 +933,7 @@ The quality of the Network simulation is important
 
 ## 2024-02-10
 
-### BB - Peras IOSim
+### Peras IOSim
 
 Mostly finished refactoring of `peras-iosim` to incorporate functionality of `random-forks`.
 
@@ -924,7 +950,7 @@ Mostly finished refactoring of `peras-iosim` to incorporate functionality of `ra
 
 ## 2024-02-09
 
-### BB - Peras IOSim
+### Peras IOSim
 
 Continued refactoring of `peras-iosim` to incorporate functionality of `random-forks`.
 
@@ -999,7 +1025,7 @@ First simulation should focus on committee size -> most important number in the 
 
 ## 2024-02-08
 
-### BB - Nix, Agda, and Haskell housekeeping
+### Nix, Agda, and Haskell housekeeping
 
 1. Reconciled Haskell package dependencies.
 2. Switched to IOGX-style flake.
@@ -1106,7 +1132,7 @@ Possible experiment:
 * store the chain following data -> reconstruct the progress of the chain at vartious point in time
 * Is this not what the CF is doing with their Cardano network monitoring project? => ask for more information
 
-### BB - Peras simulation using `IOSim`
+### Peras simulation using `IOSim`
 
 - Began work on `IOSim`-based Peras simulator.
     - A couple of days from now, this will replace the `random-forks` model.
@@ -1131,7 +1157,7 @@ Possible experiment:
 
 ## 2024-02-06
 
-### BB - Simplfied Praos/Peras Simulation/Visualization
+### Simplfied Praos/Peras Simulation/Visualization
 
 - Changes
     - Removed use of `IO`, in order to accommodate `IOSim`.

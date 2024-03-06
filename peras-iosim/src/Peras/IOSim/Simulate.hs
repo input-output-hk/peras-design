@@ -6,11 +6,12 @@ module Peras.IOSim.Simulate (
   simulation,
   writeReport,
   writeTrace,
+  writeSays,
 ) where
 
 import Control.Lens ((&), (.~))
 import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
-import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, traceResult)
+import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, selectTraceEventsSay, traceResult)
 import Control.Monad.Random (evalRandT)
 import Data.Default (def)
 import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
@@ -57,6 +58,12 @@ writeTrace ::
   SimTrace NetworkState ->
   IO ()
 writeTrace filename = writeFile filename . ppTrace
+
+writeSays ::
+  FilePath ->
+  SimTrace NetworkState ->
+  IO ()
+writeSays filename = writeFile filename . unlines . selectTraceEventsSay
 
 writeReport ::
   FilePath ->

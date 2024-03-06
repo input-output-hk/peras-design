@@ -16,6 +16,8 @@ data-files: *.json
 library
   exposed-modules:
     Peras.IOSim.Chain
+    Peras.IOSim.Chain.Types
+    Peras.IOSim.Crypto
     Peras.IOSim.GraphViz
     Peras.IOSim.Hash
     Peras.IOSim.Message.Types
