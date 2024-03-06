@@ -17,10 +17,12 @@ import Peras.Crypto (
   Signature (..),
   VerificationKey (..),
  )
+import Peras.Event (Event, UniqueId (..))
 import Peras.Message (Message, NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
+import Test.QuickCheck.Instances.Time ()
 
 instance Arbitrary NodeId where
   arbitrary =
@@ -66,4 +68,10 @@ instance Arbitrary Chain where
   arbitrary = MkChain <$> arbitrary <*> arbitrary
 
 instance Arbitrary Message where
+  arbitrary = genericArbitrary uniform
+
+instance Arbitrary UniqueId where
+  arbitrary = UniqueId <$> genByteString 8
+
+instance Arbitrary Event where
   arbitrary = genericArbitrary uniform

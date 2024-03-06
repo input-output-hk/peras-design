@@ -25,6 +25,7 @@ import GHC.Generics (Generic)
 import Peras.Block (Block (..), Party (..))
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
+import Peras.Event (Event (..), UniqueId (..))
 import Peras.Message (Message (..), NodeId (..))
 import Text.Read (Read (readPrec))
 
@@ -192,3 +193,21 @@ deriving instance Read Message
 deriving instance Show Message
 instance FromJSON Message
 instance ToJSON Message
+
+deriving stock instance Eq UniqueId
+deriving stock instance Ord UniqueId
+deriving via Bytes instance Read UniqueId
+deriving via Bytes instance Show UniqueId
+deriving via Bytes instance IsString UniqueId
+deriving via Bytes instance FromJSON UniqueId
+deriving via Bytes instance ToJSON UniqueId
+deriving via Bytes instance FromJSONKey UniqueId
+deriving via Bytes instance ToJSONKey UniqueId
+
+deriving stock instance Eq Event
+deriving stock instance Generic Event
+deriving stock instance Ord Event
+deriving stock instance Read Event
+deriving stock instance Show Event
+instance FromJSON Event
+instance ToJSON Event
