@@ -56,6 +56,8 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 
 ### Vote
 
+FIXME: no parametrization
+
 ```agda
 record Vote msg : Set where
   constructor MkVote
@@ -139,13 +141,9 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 ```
 -->
 
-
-### Dangling vote
+### Chain state
 
 ```agda
-data Dangling : Vote Block → Chain → Set where
-
-
 record ChainState : Set where
   field chain : Chain
         dangling : List (Vote Block)
@@ -309,6 +307,7 @@ A chain is valid iff:
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable (Vote _) ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -338,7 +337,20 @@ module _ {block₀ : Block}
             non-empty = NonEmpty.itsNonEmpty
           }
 ```
+#### Dangling vote
 
+```agda
+  data Dangling : Vote Block → Chain → Set where
+
+    C-Dangling : ∀ {r} {v} {c}
+      → let s = r * T in
+        slotNumber (blockHash v) ≥ (s ∸ Lₗ)
+      → slotNumber (blockHash v) ≤ (s ∸ Lₕ)
+      → ¬ (Any (λ { b → (hash v) ∈ (includedVotes b) } ) (blocks c))
+      -- → ¬ (Any (λ { b → () }) (blocks c)) -- no equivocations
+      → Dangling v c
+
+```
 #### Valid Chain state
 
 ```agda
