@@ -139,7 +139,19 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 ```
 -->
 
-#### Chain weight
+
+### Dangling vote
+
+```agda
+data Dangling : Vote Block → Chain → Set where
+
+
+record ChainState : Set where
+  field chain : Chain
+        dangling : List (Vote Block)
+```
+
+### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
 ```agda
@@ -325,6 +337,18 @@ module _ {block₀ : Block}
             votes = map (λ { (MkVote r c m b s) → MkVote r c m (hash b) s }) vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
+```
+
+#### Valid Chain state
+
+```agda
+  data ValidChainState : ChainState → Set where
+
+    Constr : ∀ {c : Chain} {vs : List (Vote Block)}
+      → ValidChain c
+      → All (λ { v → Dangling v c }) vs
+      → ValidChainState (record { chain = c ; dangling = vs })
+
 ```
 
 #### Properties
