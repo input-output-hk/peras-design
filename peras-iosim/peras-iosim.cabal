@@ -77,9 +77,10 @@ test-suite test
     other-modules:    Peras.JsonSpec
                       Paths_peras_iosim
     build-depends:
-                        base >= 4.9 && <5
+                          base >= 4.9 && <5
                   , QuickCheck
                   , hspec
+                  , hspec-golden-aeson
                   , hspec-golden-aeson
                   , peras-iosim
                   , quickcheck-classes

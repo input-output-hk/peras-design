@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -37,9 +38,11 @@ import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
 
 import Data.Aeson as A
+import Test.QuickCheck (Arbitrary (..))
 
 newtype Topology = Topology {connections :: Map NodeId (Set NodeId)}
   deriving stock (Eq, Generic, Ord, Read, Show)
+  deriving newtype (Arbitrary)
 
 instance FromJSON Topology
 instance ToJSON Topology
