@@ -20,7 +20,7 @@ import Control.Lens (
  )
 import Control.Monad (unless, void)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
-import Control.Monad.Class.MonadSay (MonadSay)
+import Control.Monad.Class.MonadSay (MonadSay (say))
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
@@ -153,7 +153,7 @@ startNodes parameters protocol states network =
       . runNode protocol total (states M.! nodeId)
       $ NodeProcess nodeIn nodesOut
 
--- Wait for all nodes to exit.
+-- | Wait for all nodes to exit.
 waitForExits ::
   (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
@@ -228,7 +228,7 @@ routeEnvelope parameters Network{nodesIn} = \case
       if r > messageDelay parameters
         then case outMessage of
           -- FIXME: Implement this.
-          FetchBlock _ -> error "Fetching blocks is not yet implemented."
+          FetchBlock _ -> say "Fetching blocks is not yet implemented."
           -- Forward the message to the appropriate node.
           SendMessage message ->
             do
@@ -254,7 +254,7 @@ routeEnvelope parameters Network{nodesIn} = \case
     activeNodes %= S.delete source
     currentStates %= M.insert source nodeState
 
--- Send a message and mark the destination as active.
+-- | Send a message and mark the destination as active.
 output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
 output destination inChannel inEnvelope =
   do

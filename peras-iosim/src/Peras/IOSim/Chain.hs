@@ -24,6 +24,7 @@ module Peras.IOSim.Chain (
   votesForBlocksOnChain',
   indexChain,
   filterDanglingVotes,
+  filterVotesByRound,
   isBlockOnChain,
   isVoteRecordedOnChain,
   eligibleDanglingVotes,
@@ -219,6 +220,12 @@ filterDanglingVotes :: (Vote Block -> Bool) -> ChainState -> ChainState
 filterDanglingVotes f state =
   state
     { danglingVotes = S.filter (either (const False) f . flip lookupVote state) $ danglingVotes state
+    }
+
+filterVotesByRound :: (Vote Block -> Bool) -> ChainState -> ChainState
+filterVotesByRound f state =
+  state
+    { votesByRound = M.map (M.map $ S.filter (either (const False) f . flip lookupVote state)) $ votesByRound state
     }
 
 blockInWindow :: (Slot, Slot) -> Block -> Bool
