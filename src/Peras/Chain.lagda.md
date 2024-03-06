@@ -145,6 +145,7 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 
 ```agda
 record ChainState : Set where
+  constructor ⟨_,_⟩
   field chain : Chain
         dangling : List (Vote Block)
 ```
@@ -222,32 +223,32 @@ the votes on chain c and dangling votes for a block on chain c.
 In a cooldown period there is no voting.
 
 ```agda
-  data VoteInRound : Chain → RoundNumber → Set where
+  data VoteInRound : ChainState → RoundNumber → Set where
 
-    Last : ∀ {c r}
+    Last : ∀ {c d r}
       → roundNumber r > 0
       → QuorumOnChain c (prev r)
-      → VoteInRound c r
+      → VoteInRound ⟨ c , d ⟩ r
 
-    CooldownIsOver : ∀ {c r n}
+    CooldownIsOver : ∀ {c d r n}
       → n > 0
       → roundNumber r > 0
       → QuorumOnChain c (MkRoundNumber (roundNumber r ∸ (n * K)))
       → All (λ { i → ¬ (QuorumOnChain c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
-      → VoteInRound c r
+      → VoteInRound ⟨ c , d ⟩ r
 ```
 
 There is not voting in round 0
 
 ```agda
-  round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
-  round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
-  round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
+--  round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
+--  round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
+--  round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
 ```
 
 ```agda
   postulate
-    VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
+    VoteInRound? : ∀ (c : ChainState) → (r : RoundNumber) → Dec (VoteInRound c r)
 ```
 <!--
 ```agda
@@ -264,13 +265,15 @@ There is not voting in round 0
 
 ### Chain weight
 
+FIXME: include dangling votes
+
 ```agda
-  ∥_∥ : Chain → ℕ
-  ∥ c ∥ =
+  ∥_∥ : ChainState → ℕ
+  ∥ ⟨ c , d ⟩ ∥ =
     let w = length (blocks c)
         s = slotNumber (tip c)
         r = s / T
-        rs = filter (VoteInRound? c) (map MkRoundNumber (upTo r))
+        rs = filter (VoteInRound? ⟨ c , d ⟩) (map MkRoundNumber (upTo r))
     in w + (b * sum (map (round-r-votes c) rs))
 ```
 
