@@ -1,5 +1,14 @@
 ## 2024-03-06
 
+### Thorough Validation in Peras IOSim
+
+- Implemented validation of incoming chains, blocks, and votes in `peras-iosim`.
+- Discarding of invalid votes when computing chain weight.
+- Detection and discarding of equivocated votes.
+- Construction of `type BlockTree = Data.Tree Block` from `[ChainState]`.
+
+The additional rigorous checking of validity throughout the node's process adds a significant computational burden. We'll need aggressive memoization for some validation-related computations in order to have efficient Haskell and Rust nodes. Naive implementations will call `chainWeight`, `voteInRound`, `quorumOnChain`, and `validVote` repeatedly with the same input; new messages require recomputing small portions of these, but many of the previous computations can be retained. The new indexing in `ChainState` made things quite a bit more efficiently already, but we'll probably have to add memoization to it, too. We need to evaluate appropriate techniques for this because we won't want the memoization table to grow too large over the course of a simulation.
+
 ### AB+BB Pairing
 
 * Worked on refining the `Topology` descriptor and aligning its representation in Rust and Haskell
@@ -46,7 +55,7 @@ Further improved validation logic in `peras-iosim` along with the monad stack.
 
 Also,
 - Revised UML activity diagram, based on feedback from Sandro
-- Fixed LD_LIBRARY_PATH in Nix shell
+- Fixed `LD_LIBRARY_PATH` in Nix shell
 
 ### On ΔQ
 

@@ -53,6 +53,8 @@ data Invalid
   | HashOfUnknownVote
   | VoteReferencesUnknownBlock
   | VoteRecordedMultipleTimes
+  | EquivocatedVote
+  | VoteNeverRecorded
   | VoteNotAllowedInRound
   | VoteOutsideCandidateWindow
   | VoteOutsideInclusionWindow
