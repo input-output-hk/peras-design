@@ -5,15 +5,14 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
-open import Data.Fin using (Fin; fromℕ; zero; suc)
-open import Data.Fin.Properties as Fin using ()
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Unary.Any using (_─_)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _≤ᵇ_; _≤?_; ℕ; _+_; _*_; _∸_)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; ℕ; _+_; _*_; _∸_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -55,11 +54,10 @@ Messages are put into an envelope
 
 ```agda
 record Envelope : Set where
-  constructor ⦅_,_,_⦆
+  constructor ⦅_,_⦆
   field
     msg : Message
     rcv : PartyId
-    cd : Fin 3
 ```
 
 <!--
@@ -97,6 +95,7 @@ module _ {block₀ : Block}
   record IsTreeType {T : Set}
                     (tree₀ : T)
                     (extendTree : T → Block → T)
+                    (newChain : T → Chain → T)
                     (allBlocks : T → List Block)
                     (bestChain : Slot → T → Chain)
          : Set₁ where
@@ -135,11 +134,12 @@ The block tree type
     field
       tree₀ : T
       extendTree : T → Block → T
+      newChain : T → Chain → T
       allBlocks : T → List Block
       bestChain : Slot → T → Chain
 
       is-TreeType : IsTreeType
-                      tree₀ extendTree allBlocks bestChain
+                      tree₀ extendTree newChain allBlocks bestChain
 
   open TreeType
 ```
@@ -147,7 +147,7 @@ The block tree type
 
 ```agda
   record LocalState {A : Set} (blockTree : TreeType A) : Set where
-    constructor MkState
+    constructor ⟪_,_⟫
     field
       tree : A
       danglingVotes : List Vote
@@ -181,14 +181,17 @@ The local state initialized with the block tree
 Honestly updating the local state upon receiving a message
 
 ```agda
-    honestReceive : List Message → Stateˡ → Stateˡ
-    honestReceive msg s = foldr receive s msg
-      where
-        receive : Message → Stateˡ → Stateˡ
-        receive (SomeBlock b) (MkState t d) = MkState ((extendTree blockTree) t b) d
-        receive (NewChain c) s = s -- TODO
-        receive (SomeVote v) (MkState t d) = MkState t (v ∷ d)
-        receive (NextSlot _) s = s -- TODO
+    data _[_]ˡ⇀_ : Stateˡ → Message → Stateˡ → Set where
+
+      VoteReceived : ∀ {v t d}
+        → ⟪ t , d ⟫ [ SomeVote v ]ˡ⇀ ⟪ t , v ∷ d ⟫
+
+      BlockReceived : ∀ {b t d}
+        → ⟪ t , d ⟫ [ SomeBlock b ]ˡ⇀ ⟪ (extendTree blockTree) t b , d ⟫
+
+      ChainReceived : ∀ {c t d}
+        → ∥ ⟨ (bestChain blockTree) (slotNumber (tip c)) t , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
+        → ⟪ t , d ⟫ [ NewChain c ]ˡ⇀ ⟪ (newChain blockTree) t c , d ⟫
 ```
 
 ### Voting honestly
@@ -197,7 +200,7 @@ The vote is for the last block at least L slots old
 
 ```agda
     honestVote : Slot → RoundNumber → PartyId → Stateˡ → Message × Stateˡ
-    honestVote sl r p (MkState tree d) =
+    honestVote sl r p ⟪ tree , d ⟫ =
       let best<L = (bestChain blockTree) (sl ∸ L) tree
           vote =
             record {
@@ -207,14 +210,14 @@ The vote is for the last block at least L slots old
               blockHash = hash (tip best<L) ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-     in SomeVote vote , MkState tree (vote ∷ d)
+     in SomeVote vote , ⟪ tree , vote ∷ d ⟫
 ```
 
 ### Honestly creating a block
 
 ```agda
     honestCreate : Slot → RoundNumber → List Tx → PartyId → Stateˡ → Message × Stateˡ
-    honestCreate sl (record { roundNumber = r }) txs p (MkState tree d) =
+    honestCreate sl (record { roundNumber = r }) txs p ⟪ tree , d ⟫ =
       let best = (bestChain blockTree) (pred sl) tree
           votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
@@ -227,7 +230,7 @@ The vote is for the last block at least L slots old
               payload = txs ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-      in SomeBlock newBlock , MkState ((extendTree blockTree) tree newBlock) d
+      in SomeBlock newBlock , ⟪ (extendTree blockTree) tree newBlock , d ⟫
 ```
 ## Global state
 
@@ -264,23 +267,13 @@ The global state consists of the following fields:
 
 # Network
 
-Retrieving a messages from the global message buffer
-
-```agda
-    retrieve : PartyId → Stateᵍ → List Message × List Envelope
-    retrieve p N =
-        let msgs = filterᵇ (λ {⦅ m , r , d ⦆ → ⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋ }) (messages N)
-            rest = filterᵇ (λ {⦅ m , r , d ⦆ → not (⌊ p ≟ r ⌋ ∧ ⌊ d Fin.≟ zero ⌋) }) (messages N)
-        in map (λ { ⦅ m , _ , _ ⦆ → m }) msgs , rest
-      where open Relation.Binary.Bundles.DecSetoid (StrictTotalOrder.Eq.decSetoid PartyIdO)
-```
 Broadcasting messages, i.e. updating the global message buffer
 
 ```agda
     broadcast : Message → Stateᵍ → Stateᵍ
     broadcast m N =
       record N {
-        messages = (map (λ { p → ⦅ m , p , suc zero ⦆ }) parties) ++ messages N ;
+        messages = (map (λ { p → ⦅ m , p ⦆ }) parties) ++ messages N ;
         history = m ∷ history N
       }
 ```
@@ -290,22 +283,22 @@ A party receives messages from the global state by fetching messages assigned to
 updating the local block tree and putting the local state back into the global state.
 
 ```agda
-    data _[_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
-      honest : ∀ {p N} {s s′ : Stateˡ} {m} {rest}
+      honest : ∀ {p N} {s s′} {m}
         → lookup (stateMap N) p ≡ just s
-        → (m , rest) ≡ retrieve p N
-        → s′ ≡ honestReceive m s
-          ------------------------
-        → N [ Honest {p} ]⇀
+        → (m∈msg : ⦅ m , p ⦆ ∈ messages N)
+        → s [ m ]ˡ⇀ s′
+          ----------------------
+        → N [ Honest {p} , m ]⇀
           record N {
               stateMap = insert p s′ (stateMap N) ;
-              messages = rest
+              messages = messages N ─ m∈msg
             }
 
-      corrupt : ∀ {p N}
+      corrupt : ∀ {p N} {m}
           ---------------------
-        → N [ Corrupt {p} ]⇀ N
+        → N [ Corrupt {p} , m ]⇀ N
 ```
 ## Vote
 
@@ -315,7 +308,7 @@ A party can cast a vote for a block, if
   * the chain is not in a cooldown phase
 
 ```agda
-    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _[_,_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
       honest : ∀ {p M N} {s s′} {m}
         → lookup (stateMap M) p ≡ just s
@@ -325,14 +318,14 @@ A party can cast a vote for a block, if
         → (m , s′) ≡ honestVote (clock M) (votingRound M) p s
         → N ≡ broadcast m M
           -----------------
-        → M [ Honest {p} ]⇉
+        → M [ Honest {p} , m ]⇉
           record N {
               stateMap = insert p s′ (stateMap N)
             }
 
-      corrupt : ∀ {p N}
+      corrupt : ∀ {p N} {m}
           ---------------------
-        → N [ Corrupt {p} ]⇉ N
+        → N [ Corrupt {p} , m ]⇉ N
 ```
 ## Create
 
@@ -341,7 +334,7 @@ block creation messages to the other parties. The local state gets updated in th
 state.
 
 ```agda
-    data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _[_,_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
       honest : ∀ {p M N} {s s′} {m}
         → lookup (stateMap M) p ≡ just s
@@ -349,14 +342,14 @@ state.
         → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) p s
         → N ≡ broadcast m M
           -----------------------------------------
-        → M [ Honest {p} ]↷
+        → M [ Honest {p} , m ]↷
           record N {
               stateMap = insert p s′ (stateMap N)
             }
 
-      corrupt : ∀ {p N}
+      corrupt : ∀ {p N} {m}
           ---------------------
-        → N [ Corrupt {p} ]↷ N
+        → N [ Corrupt {p} , m ]↷ N
 ```
 
 # Small-step semantics
@@ -366,18 +359,18 @@ The small-step semantics describe the evolution of the global state.
 ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {M N p} {h : Honesty p}
-        → M [ h ]⇀ N
+      Deliver : ∀ {M N p} {h : Honesty p} {m}
+        → M [ h , m ]⇀ N
+          ---------------
+        → M ↝ N
+
+      CastVote : ∀ {M N p} {h : Honesty p} {m}
+        → M [ h , m ]⇉ N
           ----------
         → M ↝ N
 
-      CastVote : ∀ {M N p} {h : Honesty p}
-        → M [ h ]⇉ N
-          ----------
-        → M ↝ N
-
-      CreateBlock : ∀ {M N p} {h : Honesty p}
-        → M [ h ]↷ N
+      CreateBlock : ∀ {M N p} {h : Honesty p} {m}
+        → M [ h , m ]↷ N
           ----------
         → M ↝ N
 
@@ -385,13 +378,6 @@ The small-step semantics describe the evolution of the global state.
           ----------------------------
         → M ↝ record M {
                  clock = suc (clock M)
-               }
-
-      Permute : ∀ {N ms}
-        → messages N ↭ ms
-          ---------------
-        → N ↝ record N {
-                 messages = ms
                }
 ```
 
@@ -452,15 +438,15 @@ In the paper mentioned above this is big-step semantics.
 
     -- Receive
 
-    []-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]⇀ N
+    []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
+      → M [ h , m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
     []-hist-common-prefix corrupt x = x
 
-    []⇀-collision-free : ∀ {M N p} {h : Honesty p}
+    []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
-      → M [ h ]⇀ N
+      → M [ h , m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
     []⇀-collision-free cf-N corrupt = cf-N
@@ -473,22 +459,22 @@ In the paper mentioned above this is big-step semantics.
         → N ≡ broadcast m M
         → history N ⊇ history M
 
-    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]↷ N
+    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
+      → M [ h , m ]↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix (honest {m = m} _ _ x x₁) = hist-honestGossipMsgs {m = m} x₁
     []↷-hist-common-prefix corrupt x = x
 
-    []↷-collision-free : ∀ {M N p} {h : Honesty p}
+    []↷-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
-      → M [ h ]↷ N
+      → M [ h , m ]↷ N
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
     postulate
-      []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+      []⇉-collision-free : ∀ {M N p} {h : Honesty p} {m}
         → CollisionFree N
-        → M [ h ]⇉ N
+        → M [ h , m ]⇉ N
         → CollisionFree M
 ```
 -->
@@ -510,7 +496,6 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
     ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
     ↝-collision-free NextSlot (collision-free x) = collision-free x
-    ↝-collision-free (Permute _) (collision-free x) = collision-free x
 ```
 -->
 
