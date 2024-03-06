@@ -22,16 +22,17 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; _∻_; ValidChain; VoteInRound; ∥_∥)
-open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling)
+open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 open import Peras.Block using (Party; PartyId; PartyIdO; Block; Slot; slotNumber; Tx; Honesty)
-open import Peras.Message renaming (Message to Msg)
+open import Peras.Message
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open Chain public
+-- open ChainState public using (⟨_,_⟩)
 open Honesty public
 open MembershipProof public
 open Signature public
@@ -50,9 +51,6 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-```agda
-Message = Msg Block
-```
 Messages are put into an envelope
 
 ```agda
@@ -78,7 +76,7 @@ block₀ denotes the genesis block that is passed in as a module parameter
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (Vote _) ⦄
+         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 ```
@@ -101,7 +99,6 @@ module _ {block₀ : Block}
                     (extendTree : T → Block → T)
                     (allBlocks : T → List Block)
                     (bestChain : Slot → T → Chain)
-                    (addVote : T → Vote Block → T)
          : Set₁ where
 
     allBlocksUpTo : Slot → T → List Block
@@ -121,10 +118,11 @@ Properties that must hold with respect to blocks and votes
       valid : ∀ (t : T) (sl : Slot)
         → ValidChain {block₀} (bestChain sl t)
 
-      optimal : ∀ (c : Chain) (t : T) (sl : Slot)
+      optimal : ∀ (c : Chain) (t : T) (sl : Slot) (d : List Vote)
         → ValidChain {block₀} c
+        → All (Dangling c) d
         → blocks c ⊆ allBlocksUpTo sl t
-        → ∥ c ∥ ≤ ∥ bestChain sl t ∥
+        → ∥ ⟨ c , d ⟩ ∥ ≤ ∥ ⟨ bestChain sl t , d ⟩ ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
         → blocks (bestChain sl t) ⊆ allBlocksUpTo sl t
@@ -140,11 +138,8 @@ The block tree type
       allBlocks : T → List Block
       bestChain : Slot → T → Chain
 
-      addVote : T → Vote Block → T
-
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
-                      addVote
 
   open TreeType
 ```
@@ -155,6 +150,7 @@ The block tree type
     constructor MkState
     field
       tree : A
+      danglingVotes : List Vote
 
   open LocalState
 ```
@@ -189,9 +185,9 @@ Honestly updating the local state upon receiving a message
     honestReceive msg s = foldr receive s msg
       where
         receive : Message → Stateˡ → Stateˡ
-        receive (SomeBlock b) (MkState t) = MkState ((extendTree blockTree) t b)
+        receive (SomeBlock b) (MkState t d) = MkState ((extendTree blockTree) t b) d
         receive (NewChain c) s = s -- TODO
-        receive (SomeVote v) (MkState t) = MkState ((addVote blockTree) t v)
+        receive (SomeVote v) (MkState t d) = MkState t (v ∷ d)
         receive (NextSlot _) s = s -- TODO
 ```
 
@@ -201,24 +197,24 @@ The vote is for the last block at least L slots old
 
 ```agda
     honestVote : Slot → RoundNumber → PartyId → Stateˡ → Message × Stateˡ
-    honestVote sl r p (MkState tree) =
+    honestVote sl r p (MkState tree d) =
       let best<L = (bestChain blockTree) (sl ∸ L) tree
           vote =
             record {
               votingRound = r ;
               creatorId = p ;
               committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
-              blockHash = tip best<L ;
+              blockHash = hash (tip best<L) ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-     in SomeVote vote , MkState ((addVote blockTree) tree vote)
+     in SomeVote vote , MkState tree (vote ∷ d)
 ```
 
 ### Honestly creating a block
 
 ```agda
     honestCreate : Slot → RoundNumber → List Tx → PartyId → Stateˡ → Message × Stateˡ
-    honestCreate sl (record { roundNumber = r }) txs p (MkState tree) =
+    honestCreate sl (record { roundNumber = r }) txs p (MkState tree d) =
       let best = (bestChain blockTree) (pred sl) tree
           votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
@@ -231,7 +227,7 @@ The vote is for the last block at least L slots old
               payload = txs ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-      in SomeBlock newBlock , MkState ((extendTree blockTree) tree newBlock)
+      in SomeBlock newBlock , MkState ((extendTree blockTree) tree newBlock) d
 ```
 ## Global state
 
@@ -325,7 +321,7 @@ A party can cast a vote for a block, if
         → lookup (stateMap M) p ≡ just s
         → clock M ≡ roundNumber (votingRound M) * T
         → isCommitteeMember p (votingRound M) ≡ true
-        → VoteInRound ((bestChain blockTree) (clock M) (tree s)) (votingRound M)
+        → VoteInRound ⟨ (bestChain blockTree) (clock M) (tree s) , danglingVotes s ⟩ (votingRound M)
         → (m , s′) ≡ honestVote (clock M) (votingRound M) p s
         → N ≡ broadcast m M
           -----------------

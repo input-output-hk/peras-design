@@ -9,6 +9,7 @@ open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; co
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
+open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; _$_)
@@ -56,15 +57,13 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 
 ### Vote
 
-FIXME: no parametrization
-
 ```agda
-record Vote msg : Set where
+record Vote : Set where
   constructor MkVote
   field votingRound              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
-        blockHash                : msg
+        blockHash                : Hash
         signature                : Signature
 
 open Vote public
@@ -93,7 +92,7 @@ postulate
 ### Equivocation relation
 
 ```agda
-data _∻_ : Vote Block → Vote Block → Set where
+-- data _∻_ : Vote Block → Vote Block → Set where
 
   -- TODO: add constructor
 ```
@@ -118,7 +117,7 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
-        votes : List (Vote Hash)
+        votes : List Vote
         @0 non-empty : NonEmpty blocks
 
 open Chain public
@@ -147,7 +146,9 @@ tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
 record ChainState : Set where
   constructor ⟨_,_⟩
   field chain : Chain
-        dangling : List (Vote Block)
+        dangling : List Vote
+
+open ChainState public
 ```
 
 ### Chain weight
@@ -159,6 +160,7 @@ open Params ⦃...⦄
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -170,7 +172,7 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 Counting votes for a block from the dangling votes
 ```agda
-  countDangling : List (Vote Hash) → RoundNumber → Block → ℕ
+  countDangling : List Vote → RoundNumber → Block → ℕ
   countDangling vs r b = length $
     filter (λ { v →
       (blockHash v ≟-Hash (hash b)) ×-dec
@@ -194,6 +196,22 @@ Counting votes for a block from dangling votes and votes on the chain
   countVotes : Chain → RoundNumber → Block → ℕ
   countVotes (MkChain bs vs _) r b =
     countBlocks bs r b + countDangling vs r b
+```
+
+### Dangling vote
+
+```agda
+  data Dangling : Chain → Vote → Set where
+
+    C-Dangling : ∀ {r} {v} {b} {c}
+      → let s = r * T in
+        b ∈ blocks c
+      → blockHash v ≡ hash b
+      → slotNumber b ≥ (s ∸ Lₗ)
+      → slotNumber b ≤ (s ∸ Lₕ)
+      → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) } ) (blocks c))
+      -- → ¬ (Any (λ { b → () }) (blocks c)) -- no equivocations
+      → Dangling c v
 ```
 
 ### Quorum
@@ -227,12 +245,14 @@ In a cooldown period there is no voting.
 
     Last : ∀ {c d r}
       → roundNumber r > 0
+      → All (Dangling c) d
       → QuorumOnChain c (prev r)
       → VoteInRound ⟨ c , d ⟩ r
 
     CooldownIsOver : ∀ {c d r n}
       → n > 0
       → roundNumber r > 0
+      → All (Dangling c) d
       → QuorumOnChain c (MkRoundNumber (roundNumber r ∸ (n * K)))
       → All (λ { i → ¬ (QuorumOnChain c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
       → VoteInRound ⟨ c , d ⟩ r
@@ -281,8 +301,8 @@ FIXME: include dangling votes
 
 <!--
 ```agda
-open import Data.List.Relation.Unary.Unique.Propositional {A = Vote Block}
-open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+open import Data.List.Relation.Unary.Unique.Propositional {A = Vote}
+-- open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 open import Relation.Nullary.Negation using (¬_)
 
 import Relation.Binary.PropositionalEquality as PropEq
@@ -290,7 +310,6 @@ open PropEq using (trans)
 
 open Block
 
-open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
@@ -310,7 +329,7 @@ A chain is valid iff:
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (Vote _) ⦄
+         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -326,33 +345,19 @@ module _ {block₀ : Block}
           non-empty = NonEmpty.itsNonEmpty
         }
 
-    Cons : ∀ {vs : List (Vote Block)} {c : Chain} {b : Block}
+    Cons : ∀ {vs : List Vote} {c : Chain} {b : Block}
       → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → Unique vs
-      → ¬ (Equivocation vs)
-      → All (λ { v → blockHash v ∈ blocks c }) vs
-      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
+--      → ¬ (Equivocation vs)
+--      → All (λ { v → blockHash v ∈ blocks c }) vs
+--      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            votes = map (λ { (MkVote r c m b s) → MkVote r c m (hash b) s }) vs ;
+            votes = map (λ { (MkVote r c m b s) → MkVote r c m (b) s }) vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
-```
-#### Dangling vote
-
-```agda
-  data Dangling : Vote Block → Chain → Set where
-
-    C-Dangling : ∀ {r} {v} {c}
-      → let s = r * T in
-        slotNumber (blockHash v) ≥ (s ∸ Lₗ)
-      → slotNumber (blockHash v) ≤ (s ∸ Lₕ)
-      → ¬ (Any (λ { b → (hash v) ∈ (includedVotes b) } ) (blocks c))
-      -- → ¬ (Any (λ { b → () }) (blocks c)) -- no equivocations
-      → Dangling v c
-
 ```
 #### Valid Chain state
 
@@ -361,7 +366,7 @@ module _ {block₀ : Block}
 
     Constr : ∀ {c} {d}
       → ValidChain c
-      → All (λ { v → Dangling v c }) d
+      → All (Dangling c) d
       → ValidChainState ⟨ c , d ⟩
 ```
 
@@ -383,7 +388,7 @@ The last block in a valid chain is always the genesis block.
     → (v : ValidChain c)
     → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
   last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _ _) =
+  last-is-block₀ (Cons {_} {c} {b} _ v _) =
     trans
       (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
       (last-is-block₀ {c} v)
@@ -456,7 +461,7 @@ correctBlocks (MkChain blocks _ _) =
 ```agda
 private
   instance
-    hashVote : Hashable (Vote a)
+    hashVote : Hashable Vote
     hashVote = record
       { hash = λ v →
                  (let record { bytes = s } = signature v
