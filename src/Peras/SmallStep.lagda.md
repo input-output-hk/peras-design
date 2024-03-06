@@ -276,7 +276,7 @@ Broadcasting messages, i.e. updating the global message buffer
         → N [ m ]⇒
             record N {
               messages =
-                map (λ { p → ⦅ m , p ⦆ }) parties
+                map ⦅ m ,_⦆ parties
                   ++ messages N ;
               history = m ∷ history N
             }
@@ -344,7 +344,7 @@ state.
         → lookup (stateMap M) p ≡ just s
         → isSlotLeader p (clock M) ≡ true
         → (m , s′) ≡ honestCreate (clock M) (votingRound M) (txSelection (clock M) p) p s
-        → M [ m ]⇒ N -- ≡ broadcast m M
+        → M [ m ]⇒ N
           ----------------------
         → M [ Honest {p} , m ]↷
           record N {
