@@ -34,9 +34,6 @@ jobs:
     - name: 🏗️ Build `peras-quickcheck`.
       run: |
         nix build --show-trace .#peras-quickcheck-test
-    - name: 🏗️ Build `random-forks`.
-      run: |
-        nix build --show-trace .#random-forks
     - name: 🏗️ Build `peras_rust`.
       run: |
         nix build --show-trace .#peras_rust
