@@ -5,10 +5,13 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat)
+open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat; catMaybes; zip)
 open import Data.List.Membership.Propositional using (_∈_)
-open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
+open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
+open import Data.List.Relation.Unary.All using (All)
+open import Data.Maybe as M using (nothing; just)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
+open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; _$_)
@@ -16,11 +19,14 @@ open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
 
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≢_)
+
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -57,12 +63,12 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 ### Vote
 
 ```agda
-record Vote msg : Set where
+record Vote : Set where
   constructor MkVote
   field votingRound              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
-        blockHash                : msg
+        blockHash                : Hash
         signature                : Signature
 
 open Vote public
@@ -90,10 +96,19 @@ postulate
 
 ### Equivocation relation
 
-```agda
-data _∻_ : Vote Block → Vote Block → Set where
+Equivocal votes are multiple votes by the same party for the same round.
 
-  -- TODO: add constructor
+```agda
+data _∻_ : Vote → Vote → Set where
+
+  Equivocal : ∀ {v₁ v₂}
+    → creatorId v₁ ≡ creatorId v₂
+    → votingRound v₁ ≡ votingRound v₂
+    → v₁ ≢ v₂
+    → v₁ ∻ v₂
+
+open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+
 ```
 <!--
 ```agda
@@ -112,11 +127,12 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
  * The tip of this chain is the head of `blocks`
  * The set of "pending" votes, eg. which have not been included in a `Block`.
 
+TODO: consider an association list for the votes
 ```agda
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
-        votes : List (Vote Hash)
+        votes : List Vote
         @0 non-empty : NonEmpty blocks
 
 open Chain public
@@ -139,7 +155,7 @@ tip (MkChain blks _ non-empty) = head blks ⦃ non-empty ⦄
 ```
 -->
 
-#### Chain weight
+### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
 ```agda
@@ -148,6 +164,7 @@ open Params ⦃...⦄
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -157,32 +174,69 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Hashable ⦃...⦄
 ```
-Counting votes for a block from the dangling votes
 ```agda
-  countDangling : List (Vote Hash) → RoundNumber → Block → ℕ
-  countDangling vs r b = length $
+  import Prelude.AssocList as A
+  open A.Decidable _≟-Hash_
+
+  referencedVote : Chain → Hash → M.Maybe Vote
+  referencedVote c h =
+    let vs = votes c
+    in h ‼ zip (map hash vs) vs
+```
+### Dangling vote
+
+A C-dangling vote
+  * votes for a block in C
+  * is not already referenced by blocks in C
+  * is not an equivocation of a vote referenced by blocks in C
+
+```agda
+  data Dangling : Chain → Vote → Set where
+
+    C-Dangling : ∀ {v} {b} {c} -- {r}
+      → -- let s = r * T in
+        b ∈ blocks c
+      → blockHash v ≡ hash b
+--      → slotNumber b ≥ (s ∸ Lₗ)
+--      → slotNumber b ≤ (s ∸ Lₕ)
+      → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) }) (blocks c))
+      → ¬ (Any (λ { x → Equivocation
+                          (catMaybes $ map (referencedVote c) (includedVotes x))
+                  }) (blocks c))
+      → Dangling c v
+```
+
+```agda
+  DanglingVotes : Chain → List Vote → Set
+  DanglingVotes c d = All (Dangling c) d
+```
+
+### Chain state
+
+```agda
+  record ChainState : Set where
+    constructor ⟨_,_,_⟩
+    field chain : Chain
+          dangling : List Vote
+          prf : DanglingVotes chain dangling
+
+  open ChainState public
+```
+
+Counting votes for a block from votes
+```agda
+  countVotes : List Vote → RoundNumber → Block → ℕ
+  countVotes vs r b = length $
     filter (λ { v →
       (blockHash v ≟-Hash (hash b)) ×-dec
       (votingRound v ≟-RoundNumber r)
       })
     vs
 ```
-Counting votes for a block from the blocks
-FIXME: Only include votes for round r
+Counting votes for a block
 ```agda
-  countBlocks : List Block → RoundNumber → Block → ℕ
-  countBlocks bs (MkRoundNumber r) b = sum $
-    map (λ {x →
-      length $
-        filter (λ {v → v ≟-Hash (hash b)})
-          (includedVotes x)})
-    bs
-```
-Counting votes for a block from dangling votes and votes on the chain
-```agda
-  countVotes : Chain → RoundNumber → Block → ℕ
-  countVotes (MkChain bs vs _) r b =
-    countBlocks bs r b + countDangling vs r b
+  weightOfBlock : ChainState → RoundNumber → Block → ℕ
+  weightOfBlock ⟨ MkChain bs vs _ , d , _ ⟩ r b = countVotes vs r b + countVotes d r b
 ```
 
 ### Quorum
@@ -191,53 +245,56 @@ The relation `QuorumOnChain` checks whether there is a round-r quorum with respe
 the votes on chain c and dangling votes for a block on chain c.
 
 ```agda
-  data QuorumOnChain : Chain → RoundNumber → Set where
+  data QuorumOnChain : ChainState → RoundNumber → Set where
 
     Initial : ∀ {c} {r}
       → roundNumber r ≡ 0
       → QuorumOnChain c r
 
-    LaterRound : ∀ {c} {r} {b}
+    LaterRound : ∀ {c} {d} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
-      → countVotes c r b ≥ τ
-      → QuorumOnChain c r
+      → (p : DanglingVotes c d)
+      → weightOfBlock ⟨ c , d , p ⟩ r b ≥ τ
+      → QuorumOnChain ⟨ c , d , p ⟩ r
 ```
 
 ```agda
   postulate
-    QuorumOnChain? : ∀ (c : Chain) → (r : RoundNumber) → Dec (QuorumOnChain c r)
+    QuorumOnChain? : ∀ (c : ChainState) → (r : RoundNumber) → Dec (QuorumOnChain c r)
 ```
 
 In a cooldown period there is no voting.
 
 ```agda
-  data VoteInRound : Chain → RoundNumber → Set where
+  data VoteInRound : ChainState → RoundNumber → Set where
 
-    Last : ∀ {c r}
+    Last : ∀ {c d r}
       → roundNumber r > 0
-      → QuorumOnChain c (prev r)
-      → VoteInRound c r
+      → (p : DanglingVotes c d)
+      → QuorumOnChain ⟨ c , d , p ⟩ (prev r)
+      → VoteInRound ⟨ c , d , p ⟩ r
 
-    CooldownIsOver : ∀ {c r n}
+    CooldownIsOver : ∀ {c d r n}
       → n > 0
       → roundNumber r > 0
-      → QuorumOnChain c (MkRoundNumber (roundNumber r ∸ (n * K)))
-      → All (λ { i → ¬ (QuorumOnChain c (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
-      → VoteInRound c r
+      → (p : DanglingVotes c d)
+      → QuorumOnChain ⟨ c , d , p ⟩ (MkRoundNumber (roundNumber r ∸ (n * K)))
+      → All (λ { i → ¬ (QuorumOnChain ⟨ c , d , p ⟩ (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
+      → VoteInRound ⟨ c , d , p ⟩ r
 ```
 
 There is not voting in round 0
 
 ```agda
-  round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
-  round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
-  round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
+--  round≡0→¬VoteInRound : ∀ {c : Chain} → {r : RoundNumber} → roundNumber r ≡ 0 → ¬ (VoteInRound c r)
+--  round≡0→¬VoteInRound refl (Last r _) = (n≮n 0) r
+--  round≡0→¬VoteInRound refl (CooldownIsOver _ r _ _) = (n≮n 0) r
 ```
 
 ```agda
   postulate
-    VoteInRound? : ∀ (c : Chain) → (r : RoundNumber) → Dec (VoteInRound c r)
+    VoteInRound? : ∀ (c : ChainState) → (r : RoundNumber) → Dec (VoteInRound c r)
 ```
 <!--
 ```agda
@@ -248,28 +305,32 @@ There is not voting in round 0
 ```
 -->
 ```agda
-  round-r-votes : Chain → RoundNumber → ℕ
-  round-r-votes c r = sum (map (countVotes c r) (blocks c))
+  round-r-votes : ChainState → RoundNumber → ℕ
+  round-r-votes ⟨ c , d , p ⟩ r = sum (map (weightOfBlock ⟨ c , d , p ⟩ r) (blocks c))
+```
+
+```agda
+  v-round : Slot → ⦃ _ : NonZero T ⦄ → RoundNumber
+  v-round s = MkRoundNumber (s / T)
 ```
 
 ### Chain weight
 
 ```agda
-  ∥_∥ : Chain → ℕ
-  ∥ c ∥ =
+  ∥_∥ : ChainState → ℕ
+  ∥ ⟨ c , d , p ⟩ ∥ =
     let w = length (blocks c)
         s = slotNumber (tip c)
         r = s / T
-        rs = filter (VoteInRound? c) (map MkRoundNumber (upTo r))
-    in w + (b * sum (map (round-r-votes c) rs))
+        rs = filter (VoteInRound? ⟨ c , d , p ⟩) (map MkRoundNumber (upTo r))
+    in w + (b * sum (map (round-r-votes ⟨ c , d , p ⟩) rs))
 ```
 
 ### Chain validity
 
 <!--
 ```agda
-open import Data.List.Relation.Unary.Unique.Propositional {A = Vote Block}
-open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+open import Data.List.Relation.Unary.Unique.Propositional {A = Vote}
 open import Relation.Nullary.Negation using (¬_)
 
 import Relation.Binary.PropositionalEquality as PropEq
@@ -277,7 +338,6 @@ open PropEq using (trans)
 
 open Block
 
-open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
@@ -297,6 +357,7 @@ A chain is valid iff:
 ```agda
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -312,19 +373,29 @@ module _ {block₀ : Block}
           non-empty = NonEmpty.itsNonEmpty
         }
 
-    Cons : ∀ {vs : List (Vote Block)} {c : Chain} {b : Block}
+    Cons : ∀ {vs : List Vote} {c : Chain} {b : Block}
       → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → Unique vs
       → ¬ (Equivocation vs)
-      → All (λ { v → blockHash v ∈ blocks c }) vs
-      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
+      → All (λ { v → blockHash v ∈ (map hash (blocks c)) }) vs
+--      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            votes = map (λ { (MkVote r c m b s) → MkVote r c m (hash b) s }) vs ;
+            votes = map (λ { (MkVote r c m b s) → MkVote r c m (b) s }) vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
+```
+#### Valid Chain state
+
+```agda
+  data ValidChainState : ChainState → Set where
+
+    Constr : ∀ {c} {d}
+      → ValidChain c
+      → (p : DanglingVotes c d)
+      → ValidChainState ⟨ c , d , p ⟩
 ```
 
 #### Properties
@@ -345,7 +416,7 @@ The last block in a valid chain is always the genesis block.
     → (v : ValidChain c)
     → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
   last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _ _) =
+  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _) =
     trans
       (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
       (last-is-block₀ {c} v)
@@ -418,7 +489,7 @@ correctBlocks (MkChain blocks _ _) =
 ```agda
 private
   instance
-    hashVote : Hashable (Vote a)
+    hashVote : Hashable Vote
     hashVote = record
       { hash = λ v →
                  (let record { bytes = s } = signature v

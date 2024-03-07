@@ -9,16 +9,16 @@ import Peras.Crypto (Hash (..), Hashable (..))
 newtype RoundNumber = MkRoundNumber {roundNumber :: Natural}
   deriving (Eq)
 
-data Vote msg = MkVote
+data Vote = MkVote
   { votingRound :: RoundNumber
   , creatorId :: PartyId
   , committeeMembershipProof :: MembershipProof
-  , blockHash :: msg
+  , blockHash :: Hash
   , signature :: Signature
   }
   deriving (Eq)
 
-data Chain = MkChain {blocks :: [Block], votes :: [Vote Hash]}
+data Chain = MkChain {blocks :: [Block], votes :: [Vote]}
   deriving (Eq)
 
 tip :: Chain -> Block
@@ -52,5 +52,5 @@ commonPrefix chains =
   listPrefix =
     foldl1Maybe (prefix []) (map (\l -> reverse (blocks l)) chains)
 
-instance Hashable (Vote a) where
+instance Hashable Vote where
   hash = \v -> Hash (bytes (signature v))

@@ -113,12 +113,12 @@ instance Num RoundNumber where
 instance Real RoundNumber where
   toRational (MkRoundNumber i) = toRational i
 
-deriving stock instance Generic v => Generic (Vote v)
-deriving stock instance Ord v => Ord (Vote v)
-deriving stock instance Read v => Read (Vote v)
-deriving stock instance Show v => Show (Vote v)
-instance (Generic v, FromJSON v) => FromJSON (Vote v)
-instance (Generic v, ToJSON v) => ToJSON (Vote v)
+deriving stock instance Generic Vote
+deriving stock instance Ord Vote
+deriving stock instance Read Vote
+deriving stock instance Show Vote
+instance FromJSON Vote
+instance ToJSON Vote
 
 deriving stock instance Generic Chain
 deriving stock instance Ord Chain
@@ -185,10 +185,8 @@ deriving newtype instance ToJSON NodeId
 deriving newtype instance FromJSONKey NodeId
 deriving newtype instance ToJSONKey NodeId
 
-deriving stock instance Eq a => Eq (Message a)
-deriving stock instance Generic a => Generic (Message a)
-deriving stock instance Ord a => Ord (Message a)
-deriving stock instance Read a => Read (Message a)
-deriving stock instance Show a => Show (Message a)
-instance (Generic a, FromJSON a) => FromJSON (Message a)
-instance (Generic a, ToJSON a) => ToJSON (Message a)
+deriving stock instance Generic Message
+deriving instance Read Message
+deriving instance Show Message
+instance FromJSON Message
+instance ToJSON Message
