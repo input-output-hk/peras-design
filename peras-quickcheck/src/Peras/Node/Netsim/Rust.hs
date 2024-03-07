@@ -80,6 +80,11 @@ newtype RustNetwork = RustNetwork {foreignNetwork :: Ptr Netsim}
 
 data Netsim
 
+foreign import capi unsafe "peras.h start_network" c_start_network :: CString -> CString -> Word64 -> IO (Ptr Netsim)
+foreign import capi unsafe "peras.h stop_network" c_stop_network :: Ptr Netsim -> IO ()
+foreign import capi unsafe "peras.h broadcast" c_broadcast :: Ptr Netsim -> Ptr Word8 -> Int -> IO ()
+foreign import capi unsafe "peras.h get_preferred_chain" c_get_preferred_chain :: Ptr Netsim -> CString -> Ptr Word8 -> Int -> IO Int
+
 -- | Start network with given `Topology` and `Parameters` serialised to JSON.
 -- Parameter seed is used to make the internal random generator used in Rust
 -- deterministic.

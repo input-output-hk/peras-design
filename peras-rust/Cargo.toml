@@ -11,9 +11,11 @@ hex = { version = "0.4.3", features = ["serde"] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 serde_yaml = "0.9.31"
-# depend on netsim at bleeding edge for the moment
-# netsim = { git = "https://github.com/input-output-hk/ce-netsim", branch = "main" }
 rand = "0.8.5"
+# depend on netsim at bleeding edge for the moment
+netsim = { git = "https://github.com/input-output-hk/ce-netsim", branch = "main" }
+# depends on peras_topology
+peras_topology = { path = "../peras_topology" }
 
 [build-dependencies]
 cbindgen = "0.26.0"
