@@ -21,7 +21,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling; v-round; _∻_)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_,_⟩; Dangling; v-round; _∻_; DanglingVotes)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
@@ -118,10 +118,13 @@ Properties that must hold with respect to blocks and votes
         → ValidChain {block₀} (bestChain sl d t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot) (d : List Vote)
-        → ValidChain {block₀} c
-        → All (Dangling c) d
+        → let b = bestChain sl d t
+          in
+          ValidChain {block₀} c
+        → (p : DanglingVotes c d)
+        → (pb : DanglingVotes b d)
         → blocks c ⊆ allBlocksUpTo sl t
-        → ∥ ⟨ c , d ⟩ ∥ ≤ ∥ ⟨ bestChain sl d t , d ⟩ ∥
+        → ∥ ⟨ c , d , p ⟩ ∥ ≤ ∥ ⟨ b , d , pb ⟩ ∥
 
       self-contained : ∀ (t : T) (sl : Slot) (d : List Vote)
         → blocks (bestChain sl d t) ⊆ allBlocksUpTo sl t
@@ -228,7 +231,10 @@ votes.
 ```agda
       ChainReceived : ∀ {c t d}
         → let b = (bestChain blockTree) (slotNumber (tip c)) d t
-          in ∥ ⟨ b , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
+          in
+          (pb : DanglingVotes b d)
+        → (pc : DanglingVotes c d)
+        → ∥ ⟨ b , d , pb ⟩ ∥ < ∥ ⟨ c , d , pc ⟩ ∥
         → ⟪ t
           , d
           ⟫ [ NewChain c ]→
@@ -372,13 +378,14 @@ A party can cast a vote for a block, if
       honest : ∀ {m} {p} {lₚ lₚ′} {M}
         → let open Stateᵍ M
               r = v-round clock
-              s = ⟨ (bestChain blockTree) clock (danglingVotes lₚ) (tree lₚ)
-                  , danglingVotes lₚ ⟩
+              c = (bestChain blockTree) clock (danglingVotes lₚ) (tree lₚ)
+              d = danglingVotes lₚ
           in
-          lookup stateMap p ≡ just lₚ
+          (pr : DanglingVotes c d)
+        → lookup stateMap p ≡ just lₚ
         → clock ≡ roundNumber r * T
         → isCommitteeMember p r ≡ true
-        → VoteInRound s r
+        → VoteInRound ⟨ c , d , pr ⟩ r
         → (m , lₚ′) ≡ honestVote clock r p lₚ
           ---------------------------------------
         → M [ Honest {p} , m ]⇉ updateᵍ m p lₚ′ M

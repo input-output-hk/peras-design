@@ -5,9 +5,11 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat)
+open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; concat; catMaybes; zip)
 open import Data.List.Membership.Propositional using (_∈_)
-open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
+open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
+open import Data.List.Relation.Unary.All using (All)
+open import Data.Maybe using (Maybe; nothing; just)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
 open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
@@ -24,7 +26,7 @@ open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; Maybe; lookup; zip; All)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -105,6 +107,8 @@ data _∻_ : Vote → Vote → Set where
     → v₁ ≢ v₂
     → v₁ ∻ v₂
 
+open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+
 ```
 <!--
 ```agda
@@ -123,6 +127,7 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
  * The tip of this chain is the head of `blocks`
  * The set of "pending" votes, eg. which have not been included in a `Block`.
 
+TODO: consider an association list for the votes
 ```agda
 record Chain : Set where
   constructor MkChain
@@ -150,17 +155,6 @@ tip (MkChain blks _ non-empty) = head blks ⦃ non-empty ⦄
 ```
 -->
 
-### Chain state
-
-```agda
-record ChainState : Set where
-  constructor ⟨_,_⟩
-  field chain : Chain
-        dangling : List Vote
-
-open ChainState public
-```
-
 ### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
@@ -180,6 +174,55 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Hashable ⦃...⦄
 ```
+```agda
+  import Prelude.AssocList as A
+  open A.Decidable _≟-Hash_
+
+  referencedVote : Chain → Hash → Maybe Vote
+  referencedVote c h =
+    let vs = votes c
+    in h ‼ zip (map hash vs) vs
+```
+### Dangling vote
+
+A C-dangling vote
+  * votes for a block in C
+  * is not already referenced by blocks in C
+  * is not an equivocation of a vote referenced by blocks in C
+
+```agda
+  data Dangling : Chain → Vote → Set where
+
+    C-Dangling : ∀ {v} {b} {c} -- {r}
+      → -- let s = r * T in
+        b ∈ blocks c
+      → blockHash v ≡ hash b
+--      → slotNumber b ≥ (s ∸ Lₗ)
+--      → slotNumber b ≤ (s ∸ Lₕ)
+      → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) }) (blocks c))
+      → ¬ (Any (λ { x → Equivocation
+                          (catMaybes $ map (referencedVote c) (includedVotes x))
+                  }) (blocks c))
+      → Dangling c v
+```
+
+```agda
+  DanglingVotes : Chain → List Vote → Set
+  DanglingVotes c d = All (Dangling c) d
+```
+
+### Chain state
+
+```agda
+  record ChainState : Set where
+    constructor ⟨_,_,_⟩
+    field chain : Chain
+          dangling : List Vote
+          prf : DanglingVotes chain dangling
+
+  open ChainState public
+```
+
 Counting votes for a block from votes
 ```agda
   countVotes : List Vote → RoundNumber → Block → ℕ
@@ -193,23 +236,7 @@ Counting votes for a block from votes
 Counting votes for a block
 ```agda
   weightOfBlock : ChainState → RoundNumber → Block → ℕ
-  weightOfBlock ⟨ MkChain bs vs _ , d ⟩ r b = countVotes vs r b + countVotes d r b
-```
-
-### Dangling vote
-
-```agda
-  data Dangling : Chain → Vote → Set where
-
-    C-Dangling : ∀ {r} {v} {b} {c}
-      → let s = r * T in
-        b ∈ blocks c
-      → blockHash v ≡ hash b
-      → slotNumber b ≥ (s ∸ Lₗ)
-      → slotNumber b ≤ (s ∸ Lₕ)
-      → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) } ) (blocks c))
-      -- → ¬ (Any (λ { b → () }) (blocks c)) -- no equivocations
-      → Dangling c v
+  weightOfBlock ⟨ MkChain bs vs _ , d , _ ⟩ r b = countVotes vs r b + countVotes d r b
 ```
 
 ### Quorum
@@ -227,8 +254,9 @@ the votes on chain c and dangling votes for a block on chain c.
     LaterRound : ∀ {c} {d} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
-      → weightOfBlock ⟨ c , d ⟩ r b ≥ τ
-      → QuorumOnChain ⟨ c , d ⟩ r
+      → (p : DanglingVotes c d)
+      → weightOfBlock ⟨ c , d , p ⟩ r b ≥ τ
+      → QuorumOnChain ⟨ c , d , p ⟩ r
 ```
 
 ```agda
@@ -243,17 +271,17 @@ In a cooldown period there is no voting.
 
     Last : ∀ {c d r}
       → roundNumber r > 0
-      → All (Dangling c) d
-      → QuorumOnChain ⟨ c , d ⟩ (prev r)
-      → VoteInRound ⟨ c , d ⟩ r
+      → (p : DanglingVotes c d)
+      → QuorumOnChain ⟨ c , d , p ⟩ (prev r)
+      → VoteInRound ⟨ c , d , p ⟩ r
 
     CooldownIsOver : ∀ {c d r n}
       → n > 0
       → roundNumber r > 0
-      → All (Dangling c) d
-      → QuorumOnChain ⟨ c , d ⟩ (MkRoundNumber (roundNumber r ∸ (n * K)))
-      → All (λ { i → ¬ (QuorumOnChain ⟨ c , d ⟩ (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
-      → VoteInRound ⟨ c , d ⟩ r
+      → (p : DanglingVotes c d)
+      → QuorumOnChain ⟨ c , d , p ⟩ (MkRoundNumber (roundNumber r ∸ (n * K)))
+      → All (λ { i → ¬ (QuorumOnChain ⟨ c , d , p ⟩ (MkRoundNumber (roundNumber r ∸ i))) }) (applyUpTo suc (n * K ∸ 2))
+      → VoteInRound ⟨ c , d , p ⟩ r
 ```
 
 There is not voting in round 0
@@ -278,7 +306,7 @@ There is not voting in round 0
 -->
 ```agda
   round-r-votes : ChainState → RoundNumber → ℕ
-  round-r-votes ⟨ c , d ⟩ r = sum (map (weightOfBlock ⟨ c , d ⟩ r) (blocks c))
+  round-r-votes ⟨ c , d , p ⟩ r = sum (map (weightOfBlock ⟨ c , d , p ⟩ r) (blocks c))
 ```
 
 ```agda
@@ -290,12 +318,12 @@ There is not voting in round 0
 
 ```agda
   ∥_∥ : ChainState → ℕ
-  ∥ ⟨ c , d ⟩ ∥ =
+  ∥ ⟨ c , d , p ⟩ ∥ =
     let w = length (blocks c)
         s = slotNumber (tip c)
         r = s / T
-        rs = filter (VoteInRound? ⟨ c , d ⟩) (map MkRoundNumber (upTo r))
-    in w + (b * sum (map (round-r-votes ⟨ c , d ⟩) rs))
+        rs = filter (VoteInRound? ⟨ c , d , p ⟩) (map MkRoundNumber (upTo r))
+    in w + (b * sum (map (round-r-votes ⟨ c , d , p ⟩) rs))
 ```
 
 ### Chain validity
@@ -303,7 +331,6 @@ There is not voting in round 0
 <!--
 ```agda
 open import Data.List.Relation.Unary.Unique.Propositional {A = Vote}
-open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 open import Relation.Nullary.Negation using (¬_)
 
 import Relation.Binary.PropositionalEquality as PropEq
@@ -367,8 +394,8 @@ module _ {block₀ : Block}
 
     Constr : ∀ {c} {d}
       → ValidChain c
-      → All (Dangling c) d
-      → ValidChainState ⟨ c , d ⟩
+      → (p : DanglingVotes c d)
+      → ValidChainState ⟨ c , d , p ⟩
 ```
 
 #### Properties
@@ -402,7 +429,7 @@ The last block in a valid chain is always the genesis block.
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own
 -- but let's make it total.
-foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Maybe a
+foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Haskell.Prelude.Maybe a
 foldl1Maybe f xs =
   foldl (λ m y -> Just (case m of λ where
                              Nothing -> y
@@ -432,7 +459,7 @@ commonPrefix chains =
      Nothing -> []
      (Just bs) -> reverse bs
    where
-     listPrefix : Maybe (List Block)
+     listPrefix : Haskell.Prelude.Maybe (List Block)
      listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (blocks l)) chains)
 
 {-# COMPILE AGDA2HS commonPrefix #-}
