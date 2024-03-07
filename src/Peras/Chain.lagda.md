@@ -170,32 +170,20 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Hashable ⦃...⦄
 ```
-Counting votes for a block from the dangling votes
+Counting votes for a block from votes
 ```agda
-  countDangling : List Vote → RoundNumber → Block → ℕ
-  countDangling vs r b = length $
+  countVotes : List Vote → RoundNumber → Block → ℕ
+  countVotes vs r b = length $
     filter (λ { v →
       (blockHash v ≟-Hash (hash b)) ×-dec
       (roundNr v ≟-RoundNumber r)
       })
     vs
 ```
-Counting votes for a block from the blocks
-FIXME: Only include votes for round r
+Counting votes for a block
 ```agda
-  countBlocks : List Block → RoundNumber → Block → ℕ
-  countBlocks bs (MkRoundNumber r) b = sum $
-    map (λ {x →
-      length $
-        filter (λ {v → v ≟-Hash (hash b)})
-          (includedVotes x)})
-    bs
-```
-Counting votes for a block from dangling votes and votes on the chain
-```agda
-  countVotes : ChainState → RoundNumber → Block → ℕ
-  countVotes ⟨ MkChain bs vs _ , d ⟩ r b =
-    countBlocks bs r b + countDangling vs r b
+  weightOfBlock : ChainState → RoundNumber → Block → ℕ
+  weightOfBlock ⟨ MkChain bs vs _ , d ⟩ r b = countVotes vs r b + countVotes d r b
 ```
 
 ### Dangling vote
@@ -229,7 +217,7 @@ the votes on chain c and dangling votes for a block on chain c.
     LaterRound : ∀ {c} {d} {r} {b}
       → roundNumber r > 0
       → b ∈ blocks c
-      → countVotes ⟨ c , d ⟩ r b ≥ τ
+      → weightOfBlock ⟨ c , d ⟩ r b ≥ τ
       → QuorumOnChain ⟨ c , d ⟩ r
 ```
 
@@ -280,7 +268,7 @@ There is not voting in round 0
 -->
 ```agda
   round-r-votes : ChainState → RoundNumber → ℕ
-  round-r-votes ⟨ c , d ⟩ r = sum (map (countVotes ⟨ c , d ⟩ r) (blocks c))
+  round-r-votes ⟨ c , d ⟩ r = sum (map (weightOfBlock ⟨ c , d ⟩ r) (blocks c))
 ```
 
 ```agda

@@ -92,6 +92,9 @@ Slot = ℕ
 
 ## Block
 
+In addition to a Praos block, there is a field for the
+hashes of included votes.
+
 ```agda
 record Block : Set where
   field slotNumber : Slot

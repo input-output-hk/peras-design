@@ -6,7 +6,7 @@ module Peras.SmallStep where
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
-open import Data.List.Membership.Propositional using (_∈_)
+open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (_─_)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
@@ -18,10 +18,10 @@ open import Function.Base using (_∘_; id)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
-open import Relation.Nullary using (yes; no)
+open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling; v-round)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling; v-round; _∻_)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
@@ -94,7 +94,7 @@ module _ {block₀ : Block}
 ```agda
   record IsTreeType {T : Set}
                     (tree₀ : T)
-                    (extendTree : T → Block → T)
+                    (extendTree : T → Block → List Vote → T)
                     (newChain : T → Chain → T)
                     (allBlocks : T → List Block)
                     (bestChain : Slot → List Vote → T → Chain)
@@ -111,8 +111,8 @@ Properties that must hold with respect to blocks and votes
       instantiated :
         allBlocks tree₀ ≡ block₀ ∷ []
 
-      extendable : ∀ (t : T) (b : Block)
-        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
+      extendable : ∀ (t : T) (b : Block) (vs : List Vote)
+        → allBlocks (extendTree t b vs) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : T) (sl : Slot) (d : List Vote)
         → ValidChain {block₀} (bestChain sl d t)
@@ -133,7 +133,7 @@ The block tree type
 
     field
       tree₀ : T
-      extendTree : T → Block → T
+      extendTree : T → Block → List Vote → T
       newChain : T → Chain → T
       allBlocks : T → List Block
       bestChain : Slot → List Vote → T → Chain
@@ -157,10 +157,10 @@ The block tree type
 # Parameterized module
 
   * blockTree
-  * honesty?
   * slot leader computable predicate
+  * voting committee membership predicate
   * tx selection
-  * hash function
+  * The list of parties
 
 ```agda
   module _ {A : Set}
@@ -181,26 +181,52 @@ The local state initialized with the block tree
 Honestly updating the local state upon receiving a message
 
 ```agda
-    data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
+    open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 
+    data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
+```
+A new vote is added as dangling vote to the local state, when
+  * the vote has not already been seen (on-chain or dangling)
+  * the vote is not an equivocation (on-chain or dangling)
+
+```agda
       VoteReceived : ∀ {v t d}
+        → let s = T * roundNumber (roundNr v)
+              b = (bestChain blockTree) s d t
+          in
+          v ∉ votes b
+        → v ∉ d
+        → ¬ (Equivocation (votes b))
+        → ¬ (Equivocation d)
         → ⟪ t
           , d
           ⟫ [ SomeVote v ]→
           ⟪ t
           , v ∷ d
           ⟫
+```
+A block received is added to the blocktree
+TODO: Is this part of the protcol?
 
+```agda
+{-
       BlockReceived : ∀ {b t d}
         → ⟪ t
           , d
           ⟫ [ SomeBlock b ]→
-          ⟪ (extendTree blockTree) t b
+          ⟪ (extendTree blockTree) t b [] -- No votes, if a block is received
           , d
           ⟫
+-}
+```
+When a chain is received it is added the the blockTree only if it
+is heavier than the current best chain with respect of the dangling
+votes.
 
+```agda
       ChainReceived : ∀ {c t d}
-        → ∥ ⟨ (bestChain blockTree) (slotNumber (tip c)) d t , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
+        → let b = (bestChain blockTree) (slotNumber (tip c)) d t
+          in ∥ ⟨ b , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
         → ⟪ t
           , d
           ⟫ [ NewChain c ]→
@@ -234,6 +260,7 @@ The vote is for the last block at least L slots old
     honestCreate : Slot → RoundNumber → List Tx → PartyId → Stateˡ → Message × Stateˡ
     honestCreate sl (record { roundNumber = r }) txs p ⟪ t , d ⟫ =
       let best = (bestChain blockTree) (pred sl) d t
+          -- TODO: select votes
           votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (roundNr v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
             record {
@@ -245,7 +272,7 @@ The vote is for the last block at least L slots old
               payload = txs ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-      in SomeBlock newBlock , ⟪ (extendTree blockTree) t newBlock , d ⟫
+      in SomeBlock newBlock , ⟪ (extendTree blockTree) t newBlock votes , d ⟫
 ```
 ## Global state
 
