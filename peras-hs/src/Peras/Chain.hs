@@ -6,7 +6,7 @@ import Peras.Crypto (Hash, Hashable, MembershipProof, Signature (bytes))
 
 import Peras.Crypto (Hash (..), Hashable (..))
 
-newtype RoundNumber = RoundNumber {roundNumber :: Natural}
+newtype RoundNumber = MkRoundNumber {roundNumber :: Natural}
   deriving (Eq)
 
 data Vote msg = MkVote
@@ -22,7 +22,7 @@ data Chain = MkChain {blocks :: [Block], votes :: [Vote Hash]}
   deriving (Eq)
 
 tip :: Chain -> Block
-tip (MkChain blocks _) = head blocks
+tip (MkChain blks _) = head blks
 
 foldl1Maybe :: (a -> a -> a) -> [a] -> Maybe a
 foldl1Maybe f xs =
@@ -53,4 +53,4 @@ commonPrefix chains =
     foldl1Maybe (prefix []) (map (\l -> reverse (blocks l)) chains)
 
 instance Hashable (Vote a) where
-  hash v = Hash (bytes (signature v))
+  hash = \v -> Hash (bytes (signature v))
