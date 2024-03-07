@@ -131,7 +131,7 @@ open Chain public
 
 ```agda
 tip : Chain → Block
-tip (MkChain blocks _ non-empty) = head blocks ⦃ non-empty ⦄
+tip (MkChain blks _ non-empty) = head blks ⦃ non-empty ⦄
 ```
 
 <!--
@@ -456,7 +456,7 @@ private
     hashVote = record
       { hash = λ v →
                  (let record { bytes = s } = signature v
-                  in record { bs = s })
+                  in record { hashBytes = s })
       }
 
 {-# COMPILE AGDA2HS hashVote #-}

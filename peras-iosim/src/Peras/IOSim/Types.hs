@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Peras.IOSim.Types (
   ByteSize,
@@ -7,16 +8,18 @@ module Peras.IOSim.Types (
   Rollback (..),
   Vote',
   Message',
+  messageSize,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Vote)
 import Peras.Crypto (Hash)
-import Peras.Message (Message)
+import Peras.Message (Message (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (arbitrary))
 import Test.QuickCheck.Instances.Natural ()
@@ -43,3 +46,11 @@ instance ToJSON Rollback
 
 instance Arbitrary Rollback where
   arbitrary = genericArbitrary uniform
+
+-- | The estimated serialized size of the message, in bytes
+messageSize :: Message' -> Word64
+messageSize = \case
+  NextSlot{} -> 0
+  SomeBlock{} -> 72000 -- full body size at 80% load
+  NewChain{} -> 1000 -- just the size of a header, checkout https://github.com/IntersectMBO/cardano-ledger/blob/master/eras/conway/impl/cddl-files/conway.cddl#L22
+  SomeVote{} -> 300 -- FIXME

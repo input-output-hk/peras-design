@@ -16,12 +16,15 @@ module Peras.IOSim.Node.Types (
   slotLeader,
   stake,
   vrfOutput,
+  rxBytes,
+  txBytes,
 ) where
 
 import Control.Lens (makeLenses)
 import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Set (Set)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
@@ -46,6 +49,8 @@ data NodeState = NodeState
   , _slotLeader :: Bool
   , _committeeMember :: Bool
   , _rollbacks :: [Rollback]
+  , _rxBytes :: Word64
+  , _txBytes :: Word64
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 

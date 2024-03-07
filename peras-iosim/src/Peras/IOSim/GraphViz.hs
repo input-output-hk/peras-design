@@ -14,7 +14,7 @@ import Peras.Block (Block (..))
 import Peras.Chain (RoundNumber (roundNumber), Vote (..))
 import Peras.IOSim.Hash (genesisHash)
 import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
-import Peras.IOSim.Node.Types (committeeMember, downstreams, slotLeader, stake, vrfOutput)
+import Peras.IOSim.Node.Types (committeeMember, downstreams, rxBytes, slotLeader, stake, txBytes, vrfOutput)
 import Peras.Message (NodeId (..))
 
 import qualified Data.Map.Strict as M
@@ -53,6 +53,10 @@ peersGraph networkState =
                 <> show (nodeState ^. slotLeader)
                 <> "|CommitteeMember "
                 <> show (nodeState ^. committeeMember)
+                <> "|Rx/Tx (kB)"
+                <> show (nodeState ^. rxBytes `div` 1024)
+                <> "/"
+                <> show (nodeState ^. txBytes `div` 1024)
           ]
       mkEdge name name' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeIds M.! name, G.ENodeId G.DirectedEdge $ nodeIds M.! name'] mempty
       mkEdges name nodeState = mkEdge name <$> S.toList (nodeState ^. downstreams)

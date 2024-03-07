@@ -52,7 +52,7 @@ instance Arbitrary Block where
     [block{payload = payload'} | payload' <- shrink payload]
 
 instance Arbitrary RoundNumber where
-  arbitrary = RoundNumber <$> arbitrary
+  arbitrary = MkRoundNumber <$> arbitrary
 
 instance Arbitrary b => Arbitrary (Vote b) where
   arbitrary =

@@ -121,7 +121,7 @@ private
     hashBlock = record
       { hash = λ b →
                  (let record { bytes = s } = signature b
-                  in record { bs = s })
+                  in record { hashBytes = s })
       }
 
 {-# COMPILE AGDA2HS hashBlock #-}

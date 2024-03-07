@@ -367,10 +367,10 @@ voteAllowedInRound protocol state MkVote{votingRound} =
     throwError VoteNotAllowedInRound
 
 currentRound :: Protocol -> Slot -> RoundNumber
-currentRound Peras{roundDuration = tt} s = RoundNumber $ s `div` tt
+currentRound Peras{roundDuration = tt} s = MkRoundNumber $ s `div` tt
 
 firstSlotInRound :: Protocol -> RoundNumber -> Slot
-firstSlotInRound Peras{roundDuration = tt} RoundNumber{roundNumber = r} = r * tt
+firstSlotInRound Peras{roundDuration = tt} MkRoundNumber{roundNumber = r} = r * tt
 
 isFirstSlotInRound :: Protocol -> Slot -> Bool
 isFirstSlotInRound Peras{roundDuration = tt} s = s `mod` tt == 0
@@ -395,11 +395,11 @@ chainWeight protocol state =
 
 -- FIXME: The ellipsis in pseudo-code specification likely is incorrect.
 voteInRound :: Protocol -> RoundNumber -> ChainState -> Bool
-voteInRound _ (RoundNumber 0) _ = False
-voteInRound protocol (RoundNumber r) state =
+voteInRound _ (MkRoundNumber 0) _ = False
+voteInRound protocol (MkRoundNumber r) state =
   let
     kk = toInteger $ cooldownDuration protocol
-    quorum = quorumOnChain protocol state . RoundNumber . fromIntegral
+    quorum = quorumOnChain protocol state . MkRoundNumber . fromIntegral
     condition r' = quorum r' && not (quorum $ r' + 1)
    in
     quorum (toInteger r - 1)
