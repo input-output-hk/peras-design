@@ -205,8 +205,9 @@ A new vote is added as dangling vote to the local state, when
           , v ∷ d
           ⟫
 ```
+<!--
 A block received is added to the blocktree
-TODO: Is this part of the protcol?
+TODO: Is this part of the protocol?
 
 ```agda
 {-
@@ -219,6 +220,7 @@ TODO: Is this part of the protcol?
           ⟫
 -}
 ```
+-->
 When a chain is received it is added the the blockTree only if it
 is heavier than the current best chain with respect of the dangling
 votes.
