@@ -185,6 +185,8 @@ deriving newtype instance ToJSON NodeId
 deriving newtype instance FromJSONKey NodeId
 deriving newtype instance ToJSONKey NodeId
 
+deriving stock instance Eq Message
+deriving stock instance Ord Message
 deriving stock instance Generic Message
 deriving instance Read Message
 deriving instance Show Message

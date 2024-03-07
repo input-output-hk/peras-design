@@ -63,7 +63,7 @@ import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeader
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, nodeId, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
-import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote', VoteWithBlock)
+import Peras.IOSim.Types (Coin, Rollback (..), VoteWithBlock)
 import Peras.Message (Message (NewChain, SomeBlock, SomeVote))
 import qualified Peras.Message
 
@@ -85,7 +85,7 @@ nextSlot ::
   Protocol ->
   Slot ->
   Coin ->
-  m [Message']
+  m [Message]
 nextSlot protocol@Peras{..} slotNumber total =
   do
     slot .= slotNumber
@@ -116,7 +116,7 @@ doLeading ::
   MonadState NodeState m =>
   Slot ->
   VrfOutput ->
-  m [Message']
+  m [Message]
 doLeading slotNumber vrf =
   sayInvalid mempty $ do
     block <-
@@ -138,7 +138,7 @@ doVoting ::
   Slot ->
   RoundNumber ->
   VrfOutput ->
-  m [Message']
+  m [Message]
 doVoting protocol slotNumber r vrf =
   sayInvalid mempty $ do
     chainState `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
@@ -161,7 +161,7 @@ newChain ::
   MonadState NodeState m =>
   Protocol ->
   Chain ->
-  m [Message']
+  m [Message]
 newChain protocol proposed =
   sayInvalid mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
@@ -198,7 +198,7 @@ newBlock ::
   MonadState NodeState m =>
   Protocol ->
   Block ->
-  m [Message']
+  m [Message]
 newBlock protocol block =
   sayInvalid mempty $ newBlock protocol block
 
@@ -207,7 +207,7 @@ newBlock' ::
   MonadState NodeState m =>
   Protocol ->
   Block ->
-  m [Message']
+  m [Message]
 newBlock' _ block =
   do
     Peras.Message.MkNodeId z <- use nodeId
@@ -222,16 +222,16 @@ newVote ::
   MonadSay m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote' ->
-  m [Message']
+  Vote ->
+  m [Message]
 newVote = (sayInvalid mempty .) . newVote'
 
 newVote' ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote' ->
-  m [Message']
+  Vote ->
+  m [Message]
 newVote' protocol vote =
   do
     Peras.Message.MkNodeId z <- use nodeId
@@ -250,8 +250,8 @@ newVotes ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  [Vote'] ->
-  m [Message']
+  [Vote] ->
+  m [Message]
 newVotes protocol votes =
   do
     -- FIXME: This results in only the valid votes before the
@@ -313,7 +313,7 @@ addValidVote ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote' ->
+  Vote ->
   m ()
 addValidVote protocol vote =
   do
@@ -327,7 +327,7 @@ addValidVote protocol vote =
 
 checkEquivocation ::
   ChainState ->
-  Vote' ->
+  Vote ->
   Either Invalid ()
 checkEquivocation state vote =
   let
@@ -386,7 +386,7 @@ validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{voting
 -- | "Each vote $v$, with some slot number $s = r * T$, is *referenced by a
 --   unique block* with a slot number s inside the *vote-inclusions window*
 --   $\[s + 1, s + A\]$."
-validInclusion :: Protocol -> ChainState -> Vote' -> Either Invalid ()
+validInclusion :: Protocol -> ChainState -> Vote -> Either Invalid ()
 validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound = r} =
   let
     s = firstSlotInRound protocol r
@@ -399,7 +399,7 @@ validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound
       [] -> throwError VoteNeverRecorded
       _ -> throwError VoteRecordedMultipleTimes
 
-voteAllowedInRound :: Protocol -> ChainState -> Vote msg -> Either Invalid ()
+voteAllowedInRound :: Protocol -> ChainState -> Vote -> Either Invalid ()
 voteAllowedInRound protocol state MkVote{votingRound} =
   unless (voteInRound protocol votingRound state) $
     throwError VoteNotAllowedInRound

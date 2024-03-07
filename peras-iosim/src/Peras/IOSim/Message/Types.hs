@@ -15,8 +15,8 @@ import Peras.Arbitraries ()
 import Peras.Block (Block)
 import Peras.Chain (Chain)
 import Peras.IOSim.Node.Types (NodeState)
-import Peras.IOSim.Types (ByteSize, Message')
-import Peras.Message (NodeId)
+import Peras.IOSim.Types (ByteSize)
+import Peras.Message (Message, NodeId)
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), frequency)
 import Test.QuickCheck.Instances.Time ()
@@ -24,7 +24,7 @@ import Test.QuickCheck.Instances.Time ()
 data InEnvelope
   = InEnvelope
       { origin :: Maybe NodeId
-      , inMessage :: Message'
+      , inMessage :: Message
       }
   | Stop
   deriving stock (Eq, Generic, Ord, Read, Show)
@@ -42,7 +42,7 @@ instance Arbitrary InEnvelope where
 -- TODO: Refactor (or eliminate) when the Agda and QuickCheck code stabilizes.
 data OutMessage
   = FetchBlock Block
-  | SendMessage Message'
+  | SendMessage Message
   deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance FromJSON OutMessage

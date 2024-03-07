@@ -164,7 +164,7 @@ instance Monad m => RunModel Network (RunMonad m) where
     pure $ slot < 50 || not (null prefix)
   postcondition _ _ _ _ = pure True
 
-selectBlocks :: [Message ()] -> [Block]
+selectBlocks :: [Message] -> [Block]
 selectBlocks = mapMaybe $ \case
   SomeBlock b -> Just b
   _other -> Nothing

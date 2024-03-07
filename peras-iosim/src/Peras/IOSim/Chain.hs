@@ -46,7 +46,7 @@ import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
 import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
-import Peras.IOSim.Types (Vote', VoteWithBlock)
+import Peras.IOSim.Types (VoteWithBlock)
 import Peras.Orphans ()
 
 import qualified Data.Map as M
@@ -169,7 +169,7 @@ lookupBlock hash ChainState{blockIndex} =
 lookupVote :: VoteHash -> ChainState -> Either Invalid VoteWithBlock
 lookupVote hash state = resolveBlock state =<< hash `lookupVote'` state
 
-lookupVote' :: VoteHash -> ChainState -> Either Invalid Vote'
+lookupVote' :: VoteHash -> ChainState -> Either Invalid Vote
 lookupVote' hash ChainState{voteIndex} =
   maybe (throwError HashOfUnknownVote) pure $
     hash `M.lookup` voteIndex
@@ -189,7 +189,7 @@ isBlockOnChain = flip S.notMember . danglingBlocks
 isVoteRecordedOnChain :: ChainState -> VoteHash -> Bool
 isVoteRecordedOnChain = flip S.notMember . danglingVotes
 
-resolveBlock :: ChainState -> Vote' -> Either Invalid VoteWithBlock
+resolveBlock :: ChainState -> Vote -> Either Invalid VoteWithBlock
 resolveBlock state vote =
   do
     block <- blockHash vote `lookupBlock` state
@@ -203,7 +203,7 @@ resolveBlocksOnChain state =
 votesRecordedOnChain :: Chain -> Either Invalid [VoteWithBlock]
 votesRecordedOnChain = resolveBlocksOnChain <=< indexChain
 
-votesRecordedOnChain' :: Chain -> Either Invalid [Vote']
+votesRecordedOnChain' :: Chain -> Either Invalid [Vote]
 votesRecordedOnChain' chain =
   do
     state <- indexChain chain
@@ -218,7 +218,7 @@ votesForBlocksOnChain chain =
     mapM (resolveBlock state) . M.elems $
       M.filter ((`S.member` hashes) . blockHash) (voteIndex state)
 
-votesForBlocksOnChain' :: Chain -> Either Invalid [Vote']
+votesForBlocksOnChain' :: Chain -> Either Invalid [Vote]
 votesForBlocksOnChain' chain =
   do
     state <- indexChain chain
@@ -252,14 +252,14 @@ blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotN
 blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
 blocksInWindow window = filter (blockInWindow window) . blocks
 
-voteOnChain :: Chain -> Vote' -> Bool
+voteOnChain :: Chain -> Vote -> Bool
 voteOnChain MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
 
-voteOnChain' :: Chain -> Vote' -> Bool
+voteOnChain' :: Chain -> Vote -> Bool
 voteOnChain' MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
 
 blockOnChain :: Chain -> Block -> Bool
 blockOnChain MkChain{blocks} block = any ((== hashBlock block) . hashBlock) blocks
 
-voteRecorded :: Chain -> Vote msg -> [Block]
+voteRecorded :: Chain -> Vote -> [Block]
 voteRecorded MkChain{blocks} vote = filter ((hashVote vote `elem`) . includedVotes) blocks
