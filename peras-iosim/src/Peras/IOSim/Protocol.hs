@@ -38,7 +38,6 @@ import Control.Monad.IOSim.Orphans ()
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
-import Debug.Trace
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.IOSim.Chain (
@@ -61,11 +60,10 @@ import Peras.IOSim.Chain (
 import Peras.IOSim.Chain.Types (ChainState (preferredChain, voteIndex))
 import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeadership, proveMembership, signBlock, signVote, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
-import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, nodeId, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
+import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
 import Peras.IOSim.Types (Coin, Rollback (..), VoteWithBlock)
 import Peras.Message (Message (NewChain, SomeBlock, SomeVote))
-import qualified Peras.Message
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -76,8 +74,8 @@ uses' l f = uses l f >>= liftEither
 (%#=) :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e a) -> m ()
 l %#= f = uses l f >>= either throwError (l .=)
 
-sayInvalid :: MonadSay m => a -> ExceptT Invalid m a -> m a
-sayInvalid d x = runExceptT x >>= either ((>> pure d) . say . show) pure
+sayInvalid :: MonadSay m => String -> a -> ExceptT Invalid m a -> m a
+sayInvalid p d x = runExceptT x >>= either ((>> pure d) . say . (p <>) . (" " <>) . show) pure
 
 nextSlot ::
   MonadSay m =>
@@ -118,7 +116,7 @@ doLeading ::
   VrfOutput ->
   m [Message]
 doLeading slotNumber vrf =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.doLeading" mempty $ do
     block <-
       Block slotNumber
         <$> use owner
@@ -140,7 +138,7 @@ doVoting ::
   VrfOutput ->
   m [Message]
 doVoting protocol slotNumber r vrf =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.doVoting" mempty $ do
     chainState `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
       >>= \case
         block : _ -> do
@@ -150,10 +148,8 @@ doVoting protocol slotNumber r vrf =
               <*> pure (proveMembership vrf ())
               <*> pure (hashBlock block)
               <*> pure (signVote vrf ())
-          message <- newBlock' protocol block
           addValidVote protocol vote
-          --        pure $ SomeVote vote : message
-          pure $ message <> [SomeVote vote]
+          pure [SomeVote vote]
         [] -> pure mempty
 
 newChain ::
@@ -163,7 +159,7 @@ newChain ::
   Chain ->
   m [Message]
 newChain protocol proposed =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.newChain" mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
     notEquivocated <- chainState `uses` (((/= Left EquivocatedVote) .) . checkEquivocation)
     let proposed' = proposed{votes = filter notEquivocated $ votes proposed}
@@ -200,7 +196,7 @@ newBlock ::
   Block ->
   m [Message]
 newBlock protocol block =
-  sayInvalid mempty $ newBlock protocol block
+  sayInvalid "Peras.IOSim.Protocol.newBlock" mempty $ newBlock' protocol block
 
 newBlock' ::
   MonadError Invalid m =>
@@ -210,8 +206,7 @@ newBlock' ::
   m [Message]
 newBlock' _ block =
   do
-    Peras.Message.MkNodeId z <- use nodeId
-    chainState `uses` lookupBlock (trace (z <> " REC " <> show (hashBlock block)) hashBlock block)
+    chainState `uses` lookupBlock (hashBlock block)
       >>= \case
         Right _ -> pure mempty
         Left _ -> do
@@ -224,7 +219,7 @@ newVote ::
   Protocol ->
   Vote ->
   m [Message]
-newVote = (sayInvalid mempty .) . newVote'
+newVote = (sayInvalid "Peras.IOSim.Protocol.newVote" mempty .) . newVote'
 
 newVote' ::
   MonadError Invalid m =>
@@ -234,17 +229,16 @@ newVote' ::
   m [Message]
 newVote' protocol vote =
   do
-    Peras.Message.MkNodeId z <- use nodeId
-    chainState `uses` lookupVote (trace (z <> " REF " <> show (blockHash vote)) hashVote vote)
+    chainState `uses` lookupVote (hashVote vote)
       >>= \case
         Right _ -> pure mempty
         Left _ -> do
+          addValidVote protocol vote
           chainState `uses` lookupBlock (blockHash vote)
             >>= \case
-              Right _ -> trace "  FOUND" pure ()
-              Left _ -> error "  NOT FOUND"
-          addValidVote protocol vote
-          pure [SomeVote vote]
+              Right block -> pure [SomeBlock block, SomeVote vote]
+              Left HashOfUnknownBlock -> pure [SomeVote vote] -- FIXME: Ideally, we should request the block from the peers.
+              Left e -> throwError e
 
 newVotes ::
   MonadError Invalid m =>

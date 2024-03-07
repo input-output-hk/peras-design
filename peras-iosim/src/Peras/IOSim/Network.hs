@@ -224,7 +224,7 @@ routeEnvelope parameters Network{nodesIn} = \case
       lastTime %= max timestamp
       (r, gen) <- networkRandom `uses` uniformR (0, 1)
       networkRandom .= gen
-      -- FIXME: This is an approximation.
+      -- FIXME: This is an approximation, and it results of occasional reordering of messages.
       if r > messageDelay parameters
         then case outMessage of
           -- FIXME: Implement this.
