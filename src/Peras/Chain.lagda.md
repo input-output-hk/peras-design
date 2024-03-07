@@ -208,7 +208,7 @@ A C-dangling vote
 
 ```agda
   DanglingVotes : Chain → List Vote → Set
-  DanglingVotes c d = All (Dangling c) d
+  DanglingVotes = All ∘ Dangling
 ```
 
 ### Chain state
@@ -387,17 +387,6 @@ module _ {block₀ : Block}
             non-empty = NonEmpty.itsNonEmpty
           }
 ```
-#### Valid Chain state
-
-```agda
-  data ValidChainState : ChainState → Set where
-
-    Constr : ∀ {c} {d}
-      → ValidChain c
-      → (p : DanglingVotes c d)
-      → ValidChainState ⟨ c , d , p ⟩
-```
-
 #### Properties
 
 For a valid chain we can show, that the blocks are non-empty without relying on the
