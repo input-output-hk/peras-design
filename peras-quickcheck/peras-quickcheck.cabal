@@ -95,7 +95,6 @@ library
                       peras-iosim,
                       quickcheck-dynamic,
                       random,
-                      random-forks,
                       text
 
     -- Directories containing source files.
