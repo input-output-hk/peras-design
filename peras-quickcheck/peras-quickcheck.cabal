@@ -66,6 +66,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules: Peras.NetworkModel
+                     Peras.Network.Netsim
                      Peras.NodeModel
                      Peras.Node.Netsim
                      Peras.Node.Netsim.Rust

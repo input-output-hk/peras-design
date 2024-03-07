@@ -26,8 +26,9 @@ import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol (activeSlotCoefficient))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
+import Peras.Network.Netsim (runPropInNetSim)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
-import Test.Hspec (Spec)
+import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
@@ -36,14 +37,20 @@ import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
 import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
-spec =
+spec = do
   -- those tests are a bit slow...
-  modifyMaxSuccess (const 50) $ prop "Chain progress" prop_chain_progress
+  modifyMaxSuccess (const 50) $
+    describe "IOSim Network" $
+      prop "Chain progress" (prop_chain_progress propIOSimNetwork)
 
-prop_chain_progress :: Property
-prop_chain_progress =
+  modifyMaxSuccess (const 20) $
+    describe "Netsim Network" $
+      prop "Chain progress" (prop_chain_progress propNetsimNetwork)
+
+prop_chain_progress :: (Actions Network -> Property) -> Property
+prop_chain_progress runProp =
   within 50000000 $ -- FIXME: Is `within` working in the multi-threaded environment?
-    forAllDL chainProgress propNetworkModel
+    forAllDL chainProgress runProp
 
 chainProgress :: DL Network ()
 chainProgress = do
@@ -54,12 +61,17 @@ chainProgress = do
     chains <- forM nodeIds (action . ObserveBestChain)
     void $ action $ ChainsHaveCommonPrefix chains
 
-propNetworkModel :: Actions Network -> Property
-propNetworkModel actions =
-  property $
-    runPropInIOSim $ do
-      _ <- runActions actions
-      assert True
+propIOSimNetwork :: Actions Network -> Property
+propIOSimNetwork actions =
+  property $ runPropInIOSim $ do
+    _ <- runActions actions
+    assert True
+
+propNetsimNetwork :: Actions Network -> Property
+propNetsimNetwork actions =
+  property $ runPropInNetSim $ do
+    _ <- runActions actions
+    assert True
 
 runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
 runPropInIOSim p = do
