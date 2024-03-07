@@ -42,7 +42,7 @@ jobs:
         nix build --show-trace .#peras_topology
   simulate-hs:
     name: Run simulations
-    runs-on: self-hosted
+    runs-on: [ubuntu-latest-4-cores, self-hosted]
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
   tests:
     if: true
     name: Run tests
-    runs-on: self-hosted
+    runs-on: [ubuntu-latest-4-cores, self-hosted]
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
