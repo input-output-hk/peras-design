@@ -5,6 +5,52 @@
 * Refactoring of how dangling votes are handled in Agda: Rather than delegating the dangling votes to the blocktree (abstract data type), they are kept explicitly in the local state and taken into account when needed
   * This helps with the separation of local state and what is considered on chain, i.e. in the blocktree
 
+### Peras Netsim-based Simulation
+
+Finished work on tallying rx/tx bytes per node in the IOSim network
+simulation. This won't be anywhere near accurate right now as we don't
+really receive and sned blocks, but just want to make sure we tracks
+these and display them.
+
+Getting back to work on peras-rust, now want to integrate netsim library and model a network of nodes in order to pass the `NetworkModelSpec` test
+Looking at the [fastbft](https://github.com/input-output-hk/ce-fastbft) prototype to get some inspiration on how netsim is used there
+
+Got sidetracked fixing some discrepancy between local environment
+using agda2hs 1.3 which is unreleased, vs. Nix/CI which uses
+1.2. There were also a bunch of generated types that were not
+up-to-date anymore which lead to more fixes in the code.
+
+Then ran into disk storage shortage again for CI, and had to `nix-garbage-collect -d` to reclaim some space, plus spend some time to fix it in the longer run.
+This page list some configuration tweaks to enable auto-optimization which I Shall try to setup: https://nixos.wiki/wiki/Storage_optimization
+
+```
+nix.optimise.automatic = true;
+nix.optimise.dates = [ "03:45" ];
+```
+
+Seems like the option I want is [min-free](https://nixos.org/manual/nix/stable/command-ref/conf-file#conf-min-free) as the others are relevant for nixOS only
+
+Configured nix to have min-free of 1GB and then had to reload daemon
+
+```
+sudo launchctl stop org.nixos.nix-daemon
+sudo launchctl start org.nixos.nix-daemon
+```
+
+Worked out top-down as usual:
+* Implemented the haskell side of the netsim network interface,
+  defining an IO `Simulator` structure, then the Haskell wrappers and
+  ultimately the C stubs. Main question at this stage was about
+  marshalling more complex data structures, eg `Topology` and
+  `Parameters` between Haskell and C/Rust, now settling for
+  ToJSON/FromJSON conversions but this is slow and cumbersome so we
+  might want a better way to share the data structure, probably
+  defining senseible `Storable` instances that could cross the FFI
+  boundary easily
+* Then implemented the Rust side, starting from the `foreign "C"` functions exposed by the library and started implementing lifecycles functions
+* Main concern is how to properly construct the simulation's network and manage the nodes. `ce-fastbft` uses an [actor library](https://github.com/actix/actix) to handle the dispatching of messages which seems like a good idea, so I probably would want to move the `NodeHandle` to be a proper actor. I need to build the links between nodes according to the `Topology` and `Parameters` given by the test driver
+* A next hurdle will be to retrieve a node's best chain on demand, which implies access to the node's internal states => store it as part of the `Idle` messages returned by a node when it's done processing
+
 ## 2024-03-06
 
 ### Thorough Validation in Peras IOSim
@@ -14,7 +60,18 @@
 - Detection and discarding of equivocated votes.
 - Construction of `type BlockTree = Data.Tree Block` from `[ChainState]`.
 
-The additional rigorous checking of validity throughout the node's process adds a significant computational burden. We'll need aggressive memoization for some validation-related computations in order to have efficient Haskell and Rust nodes. Naive implementations will call `chainWeight`, `voteInRound`, `quorumOnChain`, and `validVote` repeatedly with the same input; new messages require recomputing small portions of these, but many of the previous computations can be retained. The new indexing in `ChainState` made things quite a bit more efficiently already, but we'll probably have to add memoization to it, too. We need to evaluate appropriate techniques for this because we won't want the memoization table to grow too large over the course of a simulation.
+The additional rigorous checking of validity throughout the node's
+process adds a significant computational burden. We'll need aggressive
+memoization for some validation-related computations in order to have
+efficient Haskell and Rust nodes. Naive implementations will call
+`chainWeight`, `voteInRound`, `quorumOnChain`, and `validVote`
+repeatedly with the same input; new messages require recomputing small
+portions of these, but many of the previous computations can be
+retained. The new indexing in `ChainState` made things quite a bit
+more efficiently already, but we'll probably have to add memoization
+to it, too. We need to evaluate appropriate techniques for this
+because we won't want the memoization table to grow too large over the
+course of a simulation.
 
 ### AB+BB Pairing
 
