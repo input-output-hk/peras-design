@@ -121,10 +121,10 @@ Properties that must hold with respect to blocks and votes
         → let b = bestChain sl d t
           in
           ValidChain {block₀} c
-        → (p : DanglingVotes c d)
+        → (pc : DanglingVotes c d)
         → (pb : DanglingVotes b d)
         → blocks c ⊆ allBlocksUpTo sl t
-        → ∥ ⟨ c , d , p ⟩ ∥ ≤ ∥ ⟨ b , d , pb ⟩ ∥
+        → ∥ ⟨ c , d , pc ⟩ ∥ ≤ ∥ ⟨ b , d , pb ⟩ ∥
 
       self-contained : ∀ (t : T) (sl : Slot) (d : List Vote)
         → blocks (bestChain sl d t) ⊆ allBlocksUpTo sl t

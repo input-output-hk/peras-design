@@ -1,3 +1,10 @@
+## 2024-03-07
+
+### YH Agda formalization
+
+* Refactoring of how dangling votes are handled in Agda: Rather than delegating the dangling votes to the blocktree (abstract data type), they are kept explicitly in the local state and taken into account when needed
+  * This helps with the separation of local state and what is considered on chain, i.e. in the blocktree
+
 ## 2024-03-06
 
 ### Thorough Validation in Peras IOSim
