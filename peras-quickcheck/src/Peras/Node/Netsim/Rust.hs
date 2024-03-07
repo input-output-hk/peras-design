@@ -80,19 +80,17 @@ data RustNetwork = RustNetwork
 
 data Netsim
 
-foreign import capi unsafe "peras.h start_network" c_start_network :: CString -> CString -> Word64 -> IO (Ptr Netsim)
+foreign import capi unsafe "peras.h start_network" c_start_network :: CString -> CString -> IO (Ptr Netsim)
 foreign import capi unsafe "peras.h stop_network" c_stop_network :: Ptr Netsim -> IO ()
 foreign import capi unsafe "peras.h broadcast" c_broadcast :: Ptr Netsim -> Ptr Word8 -> Int -> IO ()
 foreign import capi unsafe "peras.h get_preferred_chain" c_get_preferred_chain :: Ptr Netsim -> CString -> Ptr Word8 -> Int -> IO Int
 
 -- | Start network with given `Topology` and `Parameters` serialised to JSON.
--- Parameter seed is used to make the internal random generator used in Rust
--- deterministic.
-startNetwork :: ByteString -> ByteString -> Word64 -> IO RustNetwork
-startNetwork topology parameters seed =
+startNetwork :: ByteString -> ByteString -> IO RustNetwork
+startNetwork topology parameters =
   withCString (Text.unpack $ decodeUtf8 topology) $ \ctopology ->
     withCString (Text.unpack $ decodeUtf8 parameters) $ \cparams ->
-      RustNetwork <$> newIORef 0 <*> c_start_network ctopology cparams seed
+      RustNetwork <$> newIORef 0 <*> c_start_network ctopology cparams
 
 broadcast :: RustNetwork -> ByteString -> IO ()
 broadcast RustNetwork{foreignNetwork} bytes =

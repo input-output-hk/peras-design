@@ -24,11 +24,10 @@ pub unsafe extern "C" fn start_node(
         node_id,
         NodeParameters {
             node_stake,
-            total_stake,
             ..Default::default()
         },
     );
-    let handle = node.start();
+    let handle = node.start(total_stake);
     Box::new(PerasNode {
         handle: Box::new(handle),
     })

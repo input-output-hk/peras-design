@@ -8,7 +8,7 @@ use std::hash::Hash;
 #[derive(Debug, Eq, Clone, Hash, PartialEq)]
 #[allow(non_snake_case)]
 pub struct NodeId {
-    nodeId: String,
+    pub nodeId: String,
 }
 
 impl std::fmt::Display for NodeId {

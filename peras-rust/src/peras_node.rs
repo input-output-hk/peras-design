@@ -51,18 +51,30 @@ pub enum OutEnvelope {
     },
 }
 
+#[derive(Debug, Clone)]
+pub struct ProtocolParameters {
+    pub active_coefficient: f64,
+}
+
+impl Default for ProtocolParameters {
+    fn default() -> Self {
+        ProtocolParameters {
+            active_coefficient: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct NodeParameters {
     pub node_stake: u64,
-    pub total_stake: u64,
-    pub active_coefficient: f64,
+    pub protocol_parameters: ProtocolParameters,
 }
 
 impl Default for NodeParameters {
     fn default() -> Self {
         NodeParameters {
             node_stake: 10,
-            total_stake: 100,
-            active_coefficient: 0.1,
+            protocol_parameters: ProtocolParameters::default(),
         }
     }
 }
@@ -90,11 +102,11 @@ impl Node {
         }
     }
 
-    pub fn start(self) -> NodeHandle {
+    pub fn start(self, total_stake: u64) -> NodeHandle {
         let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
         let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
 
-        let thread = thread::spawn(move || work(self, rx_in, tx_out));
+        let thread = thread::spawn(move || work(self, total_stake, rx_in, tx_out));
 
         NodeHandle {
             sender: tx_in,
@@ -104,15 +116,20 @@ impl Node {
     }
 
     // FIXME: why is the slot number not involved in the leadership selection?
-    fn is_slot_leader(&mut self, _slot: u64) -> bool {
-        let stake_ratio =
-            (self.parameters.node_stake as f64) / (self.parameters.total_stake as f64);
-        let prob = 1.0 - (1.0 - self.parameters.active_coefficient).powf(stake_ratio);
+    fn is_slot_leader(&mut self, total_stake: u64) -> bool {
+        let stake_ratio = (self.parameters.node_stake as f64) / (total_stake as f64);
+        let prob =
+            1.0 - (1.0 - self.parameters.protocol_parameters.active_coefficient).powf(stake_ratio);
         self.seed.gen_bool(prob)
     }
 }
 
-fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
+fn work(
+    mut node: Node,
+    total_stake: u64,
+    rx_in: Receiver<InEnvelope>,
+    tx_out: Sender<OutEnvelope>,
+) {
     loop {
         let recv = rx_in.recv();
         match recv {
@@ -121,7 +138,7 @@ fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>
                 origin: _,
                 in_id: _,
                 in_message: Message::NextSlot(slot),
-            }) => match handle_slot(slot, &mut node) {
+            }) => match handle_slot(slot, total_stake, &mut node) {
                 Some(out) => tx_out.send(out).expect("Failed to send message"),
                 None => (),
             },
@@ -139,8 +156,8 @@ fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>
     }
 }
 
-fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
-    if node.is_slot_leader(slot) {
+fn handle_slot(slot: u64, total_stake: u64, node: &mut Node) -> Option<OutEnvelope> {
+    if node.is_slot_leader(total_stake) {
         let mut signature = [0u8; 8];
         node.seed.fill_bytes(&mut signature);
         let mut leadership_proof = [0u8; 8];
@@ -253,7 +270,7 @@ mod tests {
     #[test]
     fn returns_idle_after_processing_tick() {
         let node = Node::new("N1".into(), Default::default());
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         handle.send(InEnvelope::SendMessage {
             origin: None,
@@ -281,8 +298,9 @@ mod tests {
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake(slot: u64) {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let mut node = Node::new("N1".into(), params);
 
@@ -293,12 +311,13 @@ mod tests {
     fn node_is_slot_leader_every_other_slot_given_coefficient_is_0_5_and_node_has_all_stake() {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 0.5,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 0.5,
+            },
         };
         let mut node = Node::new("N1".into(), params);
         let schedule = (0..10000)
-            .map(|n| node.is_slot_leader(n))
+            .map(|n| node.is_slot_leader(100))
             .filter(|b| *b)
             .count();
 
@@ -309,8 +328,9 @@ mod tests {
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_half_the_stake() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let mut node = Node::new("N1".into(), params);
 
@@ -327,13 +347,12 @@ mod tests {
     fn node_is_slot_leader_every_3_slots_given_coefficient_is_0_5_and_node_has_half_the_stake() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 0.5,
+            protocol_parameters: ProtocolParameters::default(),
         };
         let mut node = Node::new("N1".into(), params);
 
         let schedule = (0..10000)
-            .map(|n| node.is_slot_leader(n))
+            .map(|n| node.is_slot_leader(100))
             .filter(|b| *b)
             .count();
 
@@ -344,11 +363,12 @@ mod tests {
     fn produce_a_block_when_node_is_leader() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let node = Node::new("N1".into(), params);
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
@@ -382,11 +402,12 @@ mod tests {
     fn grow_best_chain_from_the_head() {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let node = Node::new("N1".into(), params);
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {

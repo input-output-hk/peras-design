@@ -34,8 +34,8 @@ withSimulatedNetwork k = do
 
 startNetwork :: Topology -> StdGen -> IO (Simulator IO)
 startNetwork topology seed = do
-  let u64 = fst $ genWord64 seed
-  network <- Rust.startNetwork (marshall topology) (marshall parameters) u64
+  let randomSeed = fst $ genWord64 seed
+  network <- Rust.startNetwork (marshall topology) (marshall $ parameters{randomSeed})
   pure $ mkSimulator network
  where
   mkSimulator network@RustNetwork{tick} =

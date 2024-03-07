@@ -4,12 +4,10 @@ pub type Currency = u64;
 
 pub type Slot = u64;
 
-pub type Seed = u64;
-
 #[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
 #[allow(non_snake_case)]
 pub struct Parameters {
-    pub randomSeed: Seed,
+    pub randomSeed: u64,
     pub endSlot: Slot,
     pub peerCount: usize,
     pub downstreamCount: usize,

@@ -14,13 +14,12 @@ pub struct PerasNetwork {
 pub unsafe extern "C" fn start_network(
     topology: *const c_char,
     parameters: *const c_char,
-    seed: u64,
 ) -> Box<PerasNetwork> {
     let topo_str = CStr::from_ptr(topology).to_str().unwrap().into();
     let topology = serde_json::from_str(topo_str).unwrap();
     let params_str = CStr::from_ptr(parameters).to_str().unwrap().into();
     let parameters = serde_json::from_str(params_str).unwrap();
-    let network: Network = Network::new(&topology, &parameters, seed);
+    let network: Network = Network::new(&topology, &parameters);
     let handle = network.start();
     Box::new(PerasNetwork {
         handle: Box::new(handle),

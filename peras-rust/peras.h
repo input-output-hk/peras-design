@@ -54,8 +54,7 @@ void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
  * The seed is used to initialize the random number generator.
  */
 struct PerasNetwork *start_network(const char *topology,
-                                   const char *parameters,
-                                   uint64_t seed);
+                                   const char *parameters);
 
 /**
  * Creates and starts a new Peras node
