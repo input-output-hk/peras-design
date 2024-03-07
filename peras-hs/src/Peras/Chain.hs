@@ -53,4 +53,4 @@ commonPrefix chains =
     foldl1Maybe (prefix []) (map (\l -> reverse (blocks l)) chains)
 
 instance Hashable (Vote a) where
-  hash = \v -> Hash (bytes (signature v))
+  hash v = Hash (bytes (signature v))
