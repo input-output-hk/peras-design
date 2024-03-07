@@ -467,9 +467,6 @@
             "nodeState": {
                 "_chainState": {
                     "blockIndex": {},
-                    "blockTree": {
-                        "tag": "Genesis"
-                    },
                     "danglingBlocks": [],
                     "danglingVotes": [],
                     "preferredChain": {
@@ -479,26 +476,15 @@
                     "voteIndex": {},
                     "votesByRound": {}
                 },
-                "_clock": "1864-06-06T04:50:35.747223131231Z",
+                "_clock": "1864-04-25T00:23:22.467182340616Z",
                 "_committeeMember": true,
                 "_downstreams": [
-                    "Node-1",
-                    "Node-10",
-                    "Node-13",
-                    "Node-14",
-                    "Node-15",
                     "Node-17",
                     "Node-18",
-                    "Node-19",
                     "Node-20",
-                    "Node-21",
-                    "Node-22",
-                    "Node-23",
-                    "Node-24",
                     "Node-25",
-                    "Node-26",
                     "Node-28",
-                    "Node-29",
+                    "Node-6",
                     "Node-8"
                 ],
                 "_initialSeed": -3,
@@ -506,150 +492,201 @@
                 "_owner": 14,
                 "_rollbacks": [
                     {
-                        "atSlot": 20,
-                        "blocks": 3,
-                        "fromWeight": -1.6666666666666667,
-                        "slots": 9,
-                        "toWeight": -15.8
-                    },
-                    {
-                        "atSlot": 25,
-                        "blocks": 2,
-                        "fromWeight": -9.5,
-                        "slots": 0,
-                        "toWeight": 0.2693818714164816
-                    },
-                    {
-                        "atSlot": 15,
-                        "blocks": 26,
-                        "fromWeight": 29,
-                        "slots": 12,
-                        "toWeight": -15
-                    },
-                    {
-                        "atSlot": 24,
-                        "blocks": 24,
-                        "fromWeight": -0.19047619047619047,
-                        "slots": 13,
-                        "toWeight": 7.769230769230769
-                    },
-                    {
-                        "atSlot": 25,
-                        "blocks": 11,
-                        "fromWeight": -8,
-                        "slots": 23,
-                        "toWeight": 1.5
+                        "atSlot": 14,
+                        "blocks": 6,
+                        "fromWeight": 13.11111111111111,
+                        "slots": 1,
+                        "toWeight": 3
                     },
                     {
                         "atSlot": 21,
-                        "blocks": 21,
-                        "fromWeight": 5,
-                        "slots": 16,
-                        "toWeight": -3.2222222222222223
+                        "blocks": 2,
+                        "fromWeight": -9.733333333333333,
+                        "slots": 0,
+                        "toWeight": -0.75
                     },
                     {
-                        "atSlot": 23,
+                        "atSlot": 5,
+                        "blocks": 1,
+                        "fromWeight": 0.5261876704519143,
+                        "slots": 13,
+                        "toWeight": -3
+                    },
+                    {
+                        "atSlot": 5,
+                        "blocks": 22,
+                        "fromWeight": 0.9333921333283156,
+                        "slots": 12,
+                        "toWeight": 11
+                    },
+                    {
+                        "atSlot": 3,
+                        "blocks": 25,
+                        "fromWeight": 29.5,
+                        "slots": 13,
+                        "toWeight": -3
+                    },
+                    {
+                        "atSlot": 15,
+                        "blocks": 25,
+                        "fromWeight": 0.4345580223423754,
+                        "slots": 11,
+                        "toWeight": 0.6666666666666666
+                    },
+                    {
+                        "atSlot": 4,
+                        "blocks": 8,
+                        "fromWeight": -18,
+                        "slots": 24,
+                        "toWeight": 13
+                    },
+                    {
+                        "atSlot": 29,
                         "blocks": 14,
-                        "fromWeight": 0.6363636363636364,
-                        "slots": 18,
+                        "fromWeight": -0.6,
+                        "slots": 16,
+                        "toWeight": -10
+                    },
+                    {
+                        "atSlot": 17,
+                        "blocks": 27,
+                        "fromWeight": 22,
+                        "slots": 24,
+                        "toWeight": 0.48485830128906326
+                    },
+                    {
+                        "atSlot": 15,
+                        "blocks": 18,
+                        "fromWeight": -24.529411764705884,
+                        "slots": 11,
+                        "toWeight": -1
+                    },
+                    {
+                        "atSlot": 24,
+                        "blocks": 13,
+                        "fromWeight": 6.714285714285714,
+                        "slots": 29,
                         "toWeight": 12
                     },
                     {
                         "atSlot": 23,
-                        "blocks": 29,
-                        "fromWeight": 28.620689655172413,
+                        "blocks": 3,
+                        "fromWeight": 0.5,
+                        "slots": 29,
+                        "toWeight": 0.3440646839881212
+                    },
+                    {
+                        "atSlot": 6,
+                        "blocks": 17,
+                        "fromWeight": 0.4,
                         "slots": 21,
-                        "toWeight": 0.442214117099041
+                        "toWeight": -0.6666666666666666
                     },
                     {
-                        "atSlot": 9,
-                        "blocks": 6,
-                        "fromWeight": -0.26666666666666666,
-                        "slots": 6,
-                        "toWeight": -0.6
-                    },
-                    {
-                        "atSlot": 11,
-                        "blocks": 6,
-                        "fromWeight": 17.9,
-                        "slots": 4,
-                        "toWeight": 0.4827824899774915
-                    },
-                    {
-                        "atSlot": 0,
-                        "blocks": 4,
-                        "fromWeight": 26.666666666666668,
-                        "slots": 25,
-                        "toWeight": -0.3333333333333333
-                    },
-                    {
-                        "atSlot": 18,
-                        "blocks": 15,
-                        "fromWeight": 18.31578947368421,
-                        "slots": 24,
-                        "toWeight": 0.3921518152076473
-                    },
-                    {
-                        "atSlot": 17,
-                        "blocks": 0,
-                        "fromWeight": -18.36,
+                        "atSlot": 12,
+                        "blocks": 12,
+                        "fromWeight": -0.5,
                         "slots": 7,
-                        "toWeight": -22
-                    },
-                    {
-                        "atSlot": 21,
-                        "blocks": 21,
-                        "fromWeight": 0.8459904885068888,
-                        "slots": 14,
-                        "toWeight": -13.25
-                    },
-                    {
-                        "atSlot": 7,
-                        "blocks": 10,
-                        "fromWeight": -30,
-                        "slots": 18,
-                        "toWeight": -1
-                    },
-                    {
-                        "atSlot": 1,
-                        "blocks": 24,
-                        "fromWeight": -17,
-                        "slots": 22,
-                        "toWeight": 6.93953101924194e-2
-                    },
-                    {
-                        "atSlot": 21,
-                        "blocks": 27,
-                        "fromWeight": 0.6,
-                        "slots": 15,
-                        "toWeight": -11.909090909090908
+                        "toWeight": 0.6904191595909065
                     },
                     {
                         "atSlot": 26,
-                        "blocks": 25,
-                        "fromWeight": 0.4,
-                        "slots": 0,
-                        "toWeight": 0.29545618516854044
+                        "blocks": 8,
+                        "fromWeight": 1.3791113925471832e-2,
+                        "slots": 19,
+                        "toWeight": 0.813708422222797
                     },
                     {
-                        "atSlot": 4,
-                        "blocks": 12,
-                        "fromWeight": 0.9964166804410123,
-                        "slots": 13,
+                        "atSlot": 2,
+                        "blocks": 6,
+                        "fromWeight": -12.758620689655173,
+                        "slots": 11,
+                        "toWeight": 2.5
+                    },
+                    {
+                        "atSlot": 30,
+                        "blocks": 29,
+                        "fromWeight": 6.666666666666667,
+                        "slots": 0,
+                        "toWeight": -5.866666666666666
+                    },
+                    {
+                        "atSlot": 27,
+                        "blocks": 22,
+                        "fromWeight": 8,
+                        "slots": 15,
+                        "toWeight": 0.5275868000195989
+                    },
+                    {
+                        "atSlot": 3,
+                        "blocks": 2,
+                        "fromWeight": -6.25,
+                        "slots": 20,
+                        "toWeight": 12.76
+                    },
+                    {
+                        "atSlot": 7,
+                        "blocks": 13,
+                        "fromWeight": 2.5,
+                        "slots": 16,
+                        "toWeight": 0.3333333333333333
+                    },
+                    {
+                        "atSlot": 24,
+                        "blocks": 8,
+                        "fromWeight": 0.6,
+                        "slots": 2,
+                        "toWeight": 1.4545454545454546
+                    },
+                    {
+                        "atSlot": 25,
+                        "blocks": 9,
+                        "fromWeight": -22.77777777777778,
+                        "slots": 29,
+                        "toWeight": -21.24137931034483
+                    },
+                    {
+                        "atSlot": 0,
+                        "blocks": 13,
+                        "fromWeight": -0.75,
+                        "slots": 28,
+                        "toWeight": 0.42492907982811245
+                    },
+                    {
+                        "atSlot": 28,
+                        "blocks": 27,
+                        "fromWeight": 22,
+                        "slots": 20,
+                        "toWeight": -5.5
+                    },
+                    {
+                        "atSlot": 8,
+                        "blocks": 2,
+                        "fromWeight": 0.12963973626828118,
+                        "slots": 0,
                         "toWeight": 1.6666666666666667
                     },
                     {
-                        "atSlot": 11,
-                        "blocks": 2,
-                        "fromWeight": 15.909090909090908,
-                        "slots": 7,
-                        "toWeight": 0.4630224062323911
+                        "atSlot": 19,
+                        "blocks": 24,
+                        "fromWeight": 2.8076923076923075,
+                        "slots": 5,
+                        "toWeight": -1
+                    },
+                    {
+                        "atSlot": 0,
+                        "blocks": 9,
+                        "fromWeight": 20,
+                        "slots": 14,
+                        "toWeight": 0
                     }
                 ],
-                "_slot": 15,
-                "_slotLeader": false,
-                "_stake": 18,
-                "_vrfOutput": -22.035714285714285
+                "_rxBytes": 16574974,
+                "_slot": 14,
+                "_slotLeader": true,
+                "_stake": 17,
+                "_txBytes": 12561270,
+                "_vrfOutput": -26
             },
             "source": "Node-21",
             "tag": "Exit",
@@ -999,9 +1036,6 @@
             "nodeState": {
                 "_chainState": {
                     "blockIndex": {},
-                    "blockTree": {
-                        "tag": "Genesis"
-                    },
                     "danglingBlocks": [],
                     "danglingVotes": [],
                     "preferredChain": {
@@ -1011,125 +1045,82 @@
                     "voteIndex": {},
                     "votesByRound": {}
                 },
-                "_clock": "1864-04-25T16:48:23.7637201846Z",
+                "_clock": "1864-04-20T13:37:45.024991179285Z",
                 "_committeeMember": false,
                 "_downstreams": [
-                    "Node-18"
+                    "Node-10",
+                    "Node-17",
+                    "Node-20",
+                    "Node-21",
+                    "Node-23",
+                    "Node-24",
+                    "Node-25",
+                    "Node-26",
+                    "Node-27",
+                    "Node-3",
+                    "Node-7",
+                    "Node-8"
                 ],
                 "_initialSeed": -1,
                 "_nodeId": "Node-25",
                 "_owner": 23,
                 "_rollbacks": [
                     {
-                        "atSlot": 18,
-                        "blocks": 12,
-                        "fromWeight": 0.8598907092782097,
-                        "slots": 9,
-                        "toWeight": 17.066666666666666
-                    },
-                    {
-                        "atSlot": 20,
-                        "blocks": 22,
-                        "fromWeight": 0.5667479624114566,
-                        "slots": 1,
-                        "toWeight": 25.4
-                    },
-                    {
-                        "atSlot": 18,
-                        "blocks": 19,
-                        "fromWeight": 10.4,
-                        "slots": 30,
-                        "toWeight": -13.772727272727273
-                    },
-                    {
-                        "atSlot": 4,
-                        "blocks": 16,
-                        "fromWeight": -0.25,
-                        "slots": 3,
-                        "toWeight": -27.72222222222222
-                    },
-                    {
-                        "atSlot": 11,
-                        "blocks": 18,
-                        "fromWeight": 13.666666666666666,
-                        "slots": 26,
-                        "toWeight": 28.666666666666668
-                    },
-                    {
-                        "atSlot": 27,
-                        "blocks": 13,
-                        "fromWeight": -6.310344827586207,
-                        "slots": 27,
-                        "toWeight": -4
-                    },
-                    {
-                        "atSlot": 7,
-                        "blocks": 0,
-                        "fromWeight": 1.5,
-                        "slots": 26,
-                        "toWeight": -13.6
-                    },
-                    {
-                        "atSlot": 25,
-                        "blocks": 11,
-                        "fromWeight": -18,
-                        "slots": 3,
-                        "toWeight": -10.80952380952381
-                    },
-                    {
-                        "atSlot": 0,
-                        "blocks": 9,
-                        "fromWeight": -1.3333333333333333,
-                        "slots": 20,
-                        "toWeight": 0.9823821897657593
-                    },
-                    {
-                        "atSlot": 22,
-                        "blocks": 26,
-                        "fromWeight": 0.9042958407227276,
-                        "slots": 5,
-                        "toWeight": 17.8
-                    },
-                    {
-                        "atSlot": 9,
-                        "blocks": 27,
-                        "fromWeight": 2.5,
+                        "atSlot": 29,
+                        "blocks": 10,
+                        "fromWeight": 23.666666666666668,
                         "slots": 11,
-                        "toWeight": 14.818181818181818
-                    },
-                    {
-                        "atSlot": 5,
-                        "blocks": 28,
-                        "fromWeight": 0.7184089618188162,
-                        "slots": 22,
-                        "toWeight": 15.411764705882353
-                    },
-                    {
-                        "atSlot": 7,
-                        "blocks": 23,
-                        "fromWeight": 14.0625,
-                        "slots": 18,
-                        "toWeight": 22
-                    },
-                    {
-                        "atSlot": 6,
-                        "blocks": 2,
-                        "fromWeight": 0.3333333333333333,
-                        "slots": 16,
-                        "toWeight": 2
+                        "toWeight": 0.3197552490617138
                     },
                     {
                         "atSlot": 15,
-                        "blocks": 9,
-                        "fromWeight": -22.75,
-                        "slots": 16,
+                        "blocks": 18,
+                        "fromWeight": 2.3043478260869565,
+                        "slots": 30,
+                        "toWeight": 7.296296296296297
+                    },
+                    {
+                        "atSlot": 10,
+                        "blocks": 19,
+                        "fromWeight": -2,
+                        "slots": 0,
+                        "toWeight": 1.5
+                    },
+                    {
+                        "atSlot": 1,
+                        "blocks": 12,
+                        "fromWeight": -5.884615384615385,
+                        "slots": 24,
                         "toWeight": -22
+                    },
+                    {
+                        "atSlot": 24,
+                        "blocks": 7,
+                        "fromWeight": 0.152335053059533,
+                        "slots": 15,
+                        "toWeight": 23.857142857142858
+                    },
+                    {
+                        "atSlot": 12,
+                        "blocks": 3,
+                        "fromWeight": 0.4700384257786283,
+                        "slots": 11,
+                        "toWeight": -0.6
+                    },
+                    {
+                        "atSlot": 1,
+                        "blocks": 21,
+                        "fromWeight": -7.035714285714286,
+                        "slots": 17,
+                        "toWeight": -1
                     }
                 ],
-                "_slot": 1,
+                "_rxBytes": 16260500,
+                "_slot": 10,
                 "_slotLeader": false,
-                "_stake": -17,
-                "_vrfOutput": -10.2
+                "_stake": 3,
+                "_txBytes": 5579561,
+                "_vrfOutput": 10.25
             },
             "source": "Node-13",
             "tag": "Exit",

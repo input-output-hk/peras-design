@@ -18,7 +18,6 @@ packages:
   peras-hs
   peras-iosim
   peras-quickcheck
-  random-forks
 
 tests: True
 test-show-details: direct
