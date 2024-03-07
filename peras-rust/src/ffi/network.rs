@@ -11,7 +11,7 @@ pub struct PerasNetwork {
 /// Creates a new network with the given topology and parameters and starts it.
 /// The seed is used to initialize the random number generator.
 #[no_mangle]
-pub unsafe fn start_network(
+pub unsafe extern "C" fn start_network(
     topology: *const c_char,
     parameters: *const c_char,
     seed: u64,
@@ -29,13 +29,13 @@ pub unsafe fn start_network(
 
 /// Stops the given Peras network
 #[no_mangle]
-pub unsafe fn stop_network(network: &mut PerasNetwork) {
+pub unsafe extern "C" fn stop_network(network: &mut PerasNetwork) {
     network.handle.stop()
 }
 
 /// Broadcasts a message to all nodes in the network
 #[no_mangle]
-pub unsafe fn broadcast(network: &mut PerasNetwork, buf: *const u8, len: usize) {
+pub unsafe extern "C" fn broadcast(network: &mut PerasNetwork, buf: *const u8, len: usize) {
     // make a slice
     let bytes = std::slice::from_raw_parts(buf, len);
     // unmarshall message
@@ -56,7 +56,7 @@ pub unsafe fn broadcast(network: &mut PerasNetwork, buf: *const u8, len: usize) 
 ///
 /// If the buffer is too small, the function returns the required buffer size.
 #[no_mangle]
-pub unsafe fn get_preferred_chain(
+pub unsafe extern "C" fn get_preferred_chain(
     network: &mut PerasNetwork,
     node_id: *const c_char,
     buf: *mut u8,

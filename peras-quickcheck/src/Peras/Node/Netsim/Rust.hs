@@ -13,9 +13,9 @@ module Peras.Node.Netsim.Rust (
   receiveMessage,
 
   -- * Network operations
-  RustNetwork,
+  RustNetwork (RustNetwork, tick),
   startNetwork,
-  tick,
+  broadcast,
   preferredChain,
   stopNetwork,
 )
@@ -26,15 +26,12 @@ import Data.Bits ((.<<.))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (toForeignPtr0)
-import Foreign (Ptr, Storable, Word64, Word8, free, mallocBytes, peekArray, withForeignPtr)
-import Foreign.C (CInt, CString, withCString)
-import Foreign.Storable (Storable (..))
-import Peras.Chain (Chain)
-import Peras.IOSim.Network.Types (Topology)
-import Peras.IOSim.Protocol.Types (Protocol)
-import Peras.IOSim.Simulate.Types (Parameters)
+import Data.IORef (IORef, newIORef)
+import qualified Data.Text as Text
+import Data.Text.Encoding (decodeUtf8)
+import Foreign (Ptr, Word64, Word8, free, mallocBytes, peekArray, withForeignPtr)
+import Foreign.C (CString, withCString)
 import Peras.Message (NodeId (..))
-import System.Random (StdGen)
 
 newtype RustNode = RustNode {foreignNode :: Ptr PerasNode}
 
@@ -76,7 +73,10 @@ receiveMessage RustNode{foreignNode} = do
     len <- c_receive_message foreignNode ptr bufferSize
     BS.pack <$> peekArray len ptr
 
-newtype RustNetwork = RustNetwork {foreignNetwork :: Ptr Netsim}
+data RustNetwork = RustNetwork
+  { tick :: IORef Word64
+  , foreignNetwork :: Ptr Netsim
+  }
 
 data Netsim
 
@@ -89,13 +89,24 @@ foreign import capi unsafe "peras.h get_preferred_chain" c_get_preferred_chain :
 -- Parameter seed is used to make the internal random generator used in Rust
 -- deterministic.
 startNetwork :: ByteString -> ByteString -> Word64 -> IO RustNetwork
-startNetwork parameters topology seed = undefined
+startNetwork topology parameters seed =
+  withCString (Text.unpack $ decodeUtf8 topology) $ \ctopology ->
+    withCString (Text.unpack $ decodeUtf8 parameters) $ \cparams ->
+      RustNetwork <$> newIORef 0 <*> c_start_network ctopology cparams seed
 
-tick :: RustNetwork -> IO ()
-tick RustNetwork{foreignNetwork} = undefined
+broadcast :: RustNetwork -> ByteString -> IO ()
+broadcast RustNetwork{foreignNetwork} bytes =
+  let (foreignPtr, len) = toForeignPtr0 bytes
+   in withForeignPtr foreignPtr $ \ptr ->
+        c_broadcast foreignNetwork ptr len
 
 preferredChain :: RustNetwork -> NodeId -> IO ByteString
-preferredChain = undefined
+preferredChain RustNetwork{foreignNetwork} MkNodeId{nodeId} =
+  bracket (mallocBytes bufferSize) free $ \ptr -> do
+    len <- withCString nodeId $ \cstr ->
+      c_get_preferred_chain foreignNetwork cstr ptr bufferSize
+    BS.pack <$> peekArray len ptr
 
 stopNetwork :: RustNetwork -> IO ()
-stopNetwork = undefined
+stopNetwork RustNetwork{foreignNetwork} =
+  c_stop_network foreignNetwork

@@ -1,14 +1,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Peras.Network.Netsim where
 
 import Control.Exception (finally)
 import Control.Monad.Random (genWord64, mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (..))
+import Data.IORef (modifyIORef', readIORef)
 import Peras.IOSim.Network (randomTopology)
 import Peras.IOSim.Network.Types (Topology)
+import Peras.Message (Message (NextSlot))
 import Peras.NetworkModel (RunMonad (..), Simulator (..), parameters)
 import Peras.Node.Netsim (marshall, runTest, unmarshall)
+import Peras.Node.Netsim.Rust (RustNetwork (..))
 import qualified Peras.Node.Netsim.Rust as Rust
 import System.Random (StdGen)
 import Test.QuickCheck (Property, Testable, ioProperty)
@@ -31,12 +35,15 @@ withSimulatedNetwork k = do
 startNetwork :: Topology -> StdGen -> IO (Simulator IO)
 startNetwork topology seed = do
   let u64 = fst $ genWord64 seed
-  network <- Rust.startNetwork (marshall parameters) (marshall topology) u64
+  network <- Rust.startNetwork (marshall topology) (marshall parameters) u64
   pure $ mkSimulator network
  where
-  mkSimulator network =
+  mkSimulator network@RustNetwork{tick} =
     Simulator
-      { step = Rust.tick network
+      { step = do
+          modifyIORef' tick (+ 1)
+          slot <- fromIntegral <$> readIORef tick
+          Rust.broadcast network (marshall $ NextSlot @() slot)
       , preferredChain = fmap unmarshall . Rust.preferredChain network
       , stop = Rust.stopNetwork network
       }
