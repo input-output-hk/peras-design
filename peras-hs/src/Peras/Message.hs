@@ -6,8 +6,8 @@ import Peras.Chain (Chain, Vote)
 newtype NodeId = MkNodeId {nodeId :: String}
   deriving (Eq, Ord, Read, Show)
 
-data Message a
+data Message
   = NextSlot Slot
   | SomeBlock Block
   | NewChain Chain
-  | SomeVote (Vote a)
+  | SomeVote Vote

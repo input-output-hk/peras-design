@@ -9,7 +9,7 @@ open import Data.List using (length; sum; upTo; applyUpTo; filterᵇ; filter; co
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.Maybe using (Maybe; nothing; just)
+open import Data.Maybe as M using (nothing; just)
 open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
 open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
@@ -26,7 +26,7 @@ open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; Maybe; lookup; zip; All)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -65,7 +65,7 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 ```agda
 record Vote : Set where
   constructor MkVote
-  field roundNr                  : RoundNumber
+  field votingRound              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
         blockHash                : Hash
@@ -103,7 +103,7 @@ data _∻_ : Vote → Vote → Set where
 
   Equivocal : ∀ {v₁ v₂}
     → creatorId v₁ ≡ creatorId v₂
-    → roundNr v₁ ≡ roundNr v₂
+    → votingRound v₁ ≡ votingRound v₂
     → v₁ ≢ v₂
     → v₁ ∻ v₂
 
@@ -178,7 +178,7 @@ module _ ⦃ _ : Hashable Block ⦄
   import Prelude.AssocList as A
   open A.Decidable _≟-Hash_
 
-  referencedVote : Chain → Hash → Maybe Vote
+  referencedVote : Chain → Hash → M.Maybe Vote
   referencedVote c h =
     let vs = votes c
     in h ‼ zip (map hash vs) vs
@@ -229,7 +229,7 @@ Counting votes for a block from votes
   countVotes vs r b = length $
     filter (λ { v →
       (blockHash v ≟-Hash (hash b)) ×-dec
-      (roundNr v ≟-RoundNumber r)
+      (votingRound v ≟-RoundNumber r)
       })
     vs
 ```
@@ -429,7 +429,7 @@ The last block in a valid chain is always the genesis block.
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own
 -- but let's make it total.
-foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Haskell.Prelude.Maybe a
+foldl1Maybe : ∀ {a : Set} -> (a -> a -> a) -> List a -> Maybe a
 foldl1Maybe f xs =
   foldl (λ m y -> Just (case m of λ where
                              Nothing -> y
@@ -459,7 +459,7 @@ commonPrefix chains =
      Nothing -> []
      (Just bs) -> reverse bs
    where
-     listPrefix : Haskell.Prelude.Maybe (List Block)
+     listPrefix : Maybe (List Block)
      listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (blocks l)) chains)
 
 {-# COMPILE AGDA2HS commonPrefix #-}

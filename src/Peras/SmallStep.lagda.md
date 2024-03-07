@@ -194,7 +194,7 @@ A new vote is added as dangling vote to the local state, when
 
 ```agda
       VoteReceived : ∀ {v t d}
-        → let s = T * roundNumber (roundNr v)
+        → let s = T * roundNumber (votingRound v)
               b = (bestChain blockTree) s d t
           in
           v ∉ votes b
@@ -253,7 +253,7 @@ The vote is for the last block at least L slots old
       let best<L = (bestChain blockTree) (sl ∸ L) d t
           vote =
             record {
-              roundNr = r ;
+              votingRound = r ;
               creatorId = p ;
               committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
               blockHash = hash (tip best<L) ;
@@ -269,7 +269,7 @@ The vote is for the last block at least L slots old
     honestCreate sl (record { roundNumber = r }) txs p ⟪ t , d ⟫ =
       let best = (bestChain blockTree) (pred sl) d t
           -- TODO: select votes
-          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (roundNr v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
+          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
             record {
               slotNumber = sl ;

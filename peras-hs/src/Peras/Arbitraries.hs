@@ -6,7 +6,6 @@ module Peras.Arbitraries where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (..))
@@ -54,7 +53,7 @@ instance Arbitrary Block where
 instance Arbitrary RoundNumber where
   arbitrary = MkRoundNumber <$> arbitrary
 
-instance Arbitrary b => Arbitrary (Vote b) where
+instance Arbitrary Vote where
   arbitrary =
     MkVote
       <$> arbitrary
@@ -66,5 +65,5 @@ instance Arbitrary b => Arbitrary (Vote b) where
 instance Arbitrary Chain where
   arbitrary = MkChain <$> arbitrary <*> arbitrary
 
-instance (Generic b, Arbitrary b) => Arbitrary (Message b) where
+instance Arbitrary Message where
   arbitrary = genericArbitrary uniform
