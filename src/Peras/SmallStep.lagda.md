@@ -341,12 +341,16 @@ A party can cast a vote for a block, if
     data _[_,_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
       honest : ∀ {m} {p} {lₚ lₚ′} {M}
-        → let open Stateᵍ M in
+        → let open Stateᵍ M
+              r = v-round clock
+              s = ⟨ (bestChain blockTree) clock (danglingVotes lₚ) (tree lₚ)
+                  , danglingVotes lₚ ⟩
+          in
           lookup stateMap p ≡ just lₚ
-        → clock ≡ roundNumber (v-round clock) * T
-        → isCommitteeMember p (v-round clock) ≡ true
-        → VoteInRound ⟨ (bestChain blockTree) clock (danglingVotes lₚ) (tree lₚ) , danglingVotes lₚ ⟩ (v-round clock)
-        → (m , lₚ′) ≡ honestVote clock (v-round clock) p lₚ
+        → clock ≡ roundNumber r * T
+        → isCommitteeMember p r ≡ true
+        → VoteInRound s r
+        → (m , lₚ′) ≡ honestVote clock r p lₚ
           ---------------------------------------
         → M [ Honest {p} , m ]⇉ updateᵍ m p lₚ′ M
 
@@ -364,11 +368,14 @@ state.
     data _[_,_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
       honest : ∀ {m} {p} {lₚ lₚ′} {M}
-        → let open Stateᵍ M in
+        → let open Stateᵍ M
+              r = v-round clock
+              txs = txSelection clock p
+          in
           lookup stateMap p ≡ just lₚ
         → isSlotLeader p clock ≡ true
-        → (m , lₚ′) ≡ honestCreate clock (v-round clock) (txSelection clock p) p lₚ
-          ----------------------
+        → (m , lₚ′) ≡ honestCreate clock r txs p lₚ
+          -----------------------------------------
         → M [ Honest {p} , m ]↷ updateᵍ m p lₚ′ M
 
       corrupt : ∀ {p N} {m}
