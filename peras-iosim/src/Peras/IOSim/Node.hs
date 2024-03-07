@@ -111,8 +111,8 @@ runNode protocol total state NodeProcess{..} =
                         do
                           lift $ threadDelay 1000000
                           nextSlot protocol slot total
-                      SomeVote vote -> newVote vote
-                      SomeBlock _ -> error "Block transport is not supported."
+                      SomeVote vote -> newVote protocol vote
+                      SomeBlock _ -> say "Block transport is not supported." >> pure mempty
                       NewChain chain -> newChain protocol chain
                   bestChain <- chainState `uses` preferredChain
                   atomically' $
