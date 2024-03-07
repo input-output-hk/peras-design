@@ -28,7 +28,7 @@ import Control.Monad.State (StateT, execStateT, lift)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Chain (Chain (blocks), Vote (..))
+import Peras.Chain (Chain (blocks))
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
@@ -224,7 +224,7 @@ routeEnvelope parameters Network{nodesIn} = \case
       lastTime %= max timestamp
       (r, gen) <- networkRandom `uses` uniformR (0, 1)
       networkRandom .= gen
-      -- FIXME: This is an approximation.
+      -- FIXME: This is an approximation, and it results of occasional reordering of messages.
       if r > messageDelay parameters
         then case outMessage of
           -- FIXME: Implement this.
@@ -240,7 +240,7 @@ routeEnvelope parameters Network{nodesIn} = \case
                     tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
                     [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
                     _ -> pure ()
-                SomeVote vote -> votesSeen %= M.insert (hashVote vote) (vote{blockHash = hashBlock $ blockHash vote})
+                SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
                 _ -> pure ()
               -- Forward the message.
               output destination (nodesIn M.! destination) $ InEnvelope (pure source) message

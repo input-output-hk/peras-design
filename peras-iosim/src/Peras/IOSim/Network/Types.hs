@@ -57,7 +57,7 @@ data NetworkState = NetworkState
   , _chainsSeen :: Map NodeId Chain
   -- ^ The latest "best" seen by nodes
   , _blocksSeen :: Map Hash (Set Block)
-  , _votesSeen :: Map VoteHash (Vote Hash)
+  , _votesSeen :: Map VoteHash Vote
   , _currentStates :: Map NodeId NodeState
   , _pending :: [OutEnvelope]
   , _networkRandom :: StdGen

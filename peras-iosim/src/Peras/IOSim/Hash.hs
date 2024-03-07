@@ -9,9 +9,9 @@ module Peras.IOSim.Hash (
   hashTip,
 ) where
 
-import Peras.Block as Block
-import Peras.Chain as Chain
-import Peras.Crypto as Crypto
+import Peras.Block as Block (Block (signature))
+import Peras.Chain as Chain (Vote (signature))
+import Peras.Crypto as Crypto (Hash (Hash), Signature (bytes))
 
 type BlockHash = Hash
 
@@ -27,5 +27,5 @@ hashTip (block : _) = hashBlock block
 
 type VoteHash = Hash
 
-hashVote :: Vote msg -> VoteHash
+hashVote :: Vote -> VoteHash
 hashVote = Crypto.Hash . Crypto.bytes . Chain.signature

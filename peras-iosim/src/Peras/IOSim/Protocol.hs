@@ -5,23 +5,24 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.Protocol (
-  newChain,
-  nextSlot,
   candidateWindow,
+  chainWeight,
+  currentRound,
+  firstSlotInRound,
   inclusionWindow,
-  roundNumber,
+  isFirstSlotInRound,
+  newBlock,
+  newChain,
   newVote,
+  nextSlot,
+  quorumOnChain,
+  roundNumber,
+  validCandidate,
   validChain,
+  validInclusion,
   validPraos,
   validVote,
-  validCandidate,
-  validInclusion,
-  quorumOnChain,
   voteInRound,
-  chainWeight,
-  isFirstSlotInRound,
-  firstSlotInRound,
-  currentRound,
 ) where
 
 import Control.Lens (Lens', use, uses, (%=), (&), (.=))
@@ -33,12 +34,14 @@ import Control.Monad.Except (
   liftEither,
   runExceptT,
  )
+import Control.Monad.IOSim.Orphans ()
 import Control.Monad.State (MonadState)
 import Data.Function (on)
 import Data.List (partition)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.IOSim.Chain (
+  addBlock,
   addChain,
   addVote,
   appendBlock,
@@ -46,6 +49,7 @@ import Peras.IOSim.Chain (
   eligibleDanglingVotes,
   filterDanglingVotes,
   isBlockOnChain,
+  lookupBlock,
   lookupRoundForChain,
   lookupVote,
   preferChain,
@@ -58,8 +62,8 @@ import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeader
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
-import Peras.IOSim.Types (Coin, Message', Rollback (..), Vote')
-import Peras.Message (Message (NewChain, SomeVote))
+import Peras.IOSim.Types (Coin, Rollback (..), VoteWithBlock)
+import Peras.Message (Message (NewChain, SomeBlock, SomeVote))
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -70,8 +74,8 @@ uses' l f = uses l f >>= liftEither
 (%#=) :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e a) -> m ()
 l %#= f = uses l f >>= either throwError (l .=)
 
-sayInvalid :: MonadSay m => a -> ExceptT Invalid m a -> m a
-sayInvalid d x = runExceptT x >>= either ((>> pure d) . say . show) pure
+sayInvalid :: MonadSay m => String -> a -> ExceptT Invalid m a -> m a
+sayInvalid p d x = runExceptT x >>= either ((>> pure d) . say . (p <>) . (" " <>) . show) pure
 
 nextSlot ::
   MonadSay m =>
@@ -79,7 +83,7 @@ nextSlot ::
   Protocol ->
   Slot ->
   Coin ->
-  m [Message']
+  m [Message]
 nextSlot protocol@Peras{..} slotNumber total =
   do
     slot .= slotNumber
@@ -110,9 +114,9 @@ doLeading ::
   MonadState NodeState m =>
   Slot ->
   VrfOutput ->
-  m [Message']
+  m [Message]
 doLeading slotNumber vrf =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.doLeading" mempty $ do
     block <-
       Block slotNumber
         <$> use owner
@@ -132,9 +136,9 @@ doVoting ::
   Slot ->
   RoundNumber ->
   VrfOutput ->
-  m [Message']
+  m [Message]
 doVoting protocol slotNumber r vrf =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.doVoting" mempty $ do
     chainState `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
       >>= \case
         block : _ -> do
@@ -142,7 +146,7 @@ doVoting protocol slotNumber r vrf =
             MkVote r
               <$> use owner
               <*> pure (proveMembership vrf ())
-              <*> pure block
+              <*> pure (hashBlock block)
               <*> pure (signVote vrf ())
           addValidVote protocol vote
           pure [SomeVote vote]
@@ -153,9 +157,9 @@ newChain ::
   MonadState NodeState m =>
   Protocol ->
   Chain ->
-  m [Message']
+  m [Message]
 newChain protocol proposed =
-  sayInvalid mempty $ do
+  sayInvalid "Peras.IOSim.Protocol.newChain" mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
     notEquivocated <- chainState `uses` (((/= Left EquivocatedVote) .) . checkEquivocation)
     let proposed' = proposed{votes = filter notEquivocated $ votes proposed}
@@ -185,41 +189,68 @@ newChain protocol proposed =
         chainState %#= addChain proposed'
         newVotes protocol $ Peras.Chain.votes proposed'
 
+newBlock ::
+  MonadSay m =>
+  MonadState NodeState m =>
+  Protocol ->
+  Block ->
+  m [Message]
+newBlock protocol block =
+  sayInvalid "Peras.IOSim.Protocol.newBlock" mempty $ newBlock' protocol block
+
+newBlock' ::
+  MonadError Invalid m =>
+  MonadState NodeState m =>
+  Protocol ->
+  Block ->
+  m [Message]
+newBlock' _ block =
+  do
+    chainState `uses` lookupBlock (hashBlock block)
+      >>= \case
+        Right _ -> pure mempty
+        Left _ -> do
+          chainState %#= addBlock block
+          pure [SomeBlock block]
+
 newVote ::
   MonadSay m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote Block ->
-  m [Message']
-newVote = (sayInvalid mempty .) . newVote'
+  Vote ->
+  m [Message]
+newVote = (sayInvalid "Peras.IOSim.Protocol.newVote" mempty .) . newVote'
 
 newVote' ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote Block ->
-  m [Message']
+  Vote ->
+  m [Message]
 newVote' protocol vote =
-  chainState `uses` lookupVote (hashVote vote)
-    >>= \case
-      Right _ -> pure mempty
-      Left _ -> do
-        addValidVote protocol vote
-        pure [SomeVote vote]
+  do
+    chainState `uses` lookupVote (hashVote vote)
+      >>= \case
+        Right _ -> pure mempty
+        Left _ -> do
+          addValidVote protocol vote
+          chainState `uses` lookupBlock (blockHash vote)
+            >>= \case
+              Right block -> pure [SomeBlock block, SomeVote vote]
+              Left HashOfUnknownBlock -> pure [SomeVote vote] -- FIXME: Ideally, we should request the block from the peers.
+              Left e -> throwError e
 
 newVotes ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  [Vote'] ->
-  m [Message']
+  [Vote] ->
+  m [Message]
 newVotes protocol votes =
   do
-    state <- use chainState
-    votes' <- liftEither $ mapM (resolveBlock state) votes
     -- FIXME: This results in only the valid votes before the
     --        the first invalid vote.
-    concat <$> mapM (newVote' protocol) votes'
+    concat <$> mapM (newVote' protocol) votes
 
 isSlotLeader ::
   Double ->
@@ -266,7 +297,7 @@ discardExpiredVotes ::
   ChainState
 discardExpiredVotes protocol@Peras{voteMaximumAge = aa} now =
   filterDanglingVotes $
-    \vote ->
+    \(vote, _) ->
       let
         s = firstSlotInRound protocol $ votingRound vote
        in
@@ -276,20 +307,21 @@ addValidVote ::
   MonadError Invalid m =>
   MonadState NodeState m =>
   Protocol ->
-  Vote Block ->
+  Vote ->
   m ()
 addValidVote protocol vote =
   do
     state <- use chainState
+    block <- liftEither $ snd <$> resolveBlock state vote
     liftEither $ do
       checkEquivocation state vote
-      validCandidateWindow protocol vote
-    state' <- liftEither $ addVote vote state
+      validCandidateWindow protocol (vote, block)
+    state' <- liftEither $ addVote (vote, block) state
     chainState .= state'
 
 checkEquivocation ::
   ChainState ->
-  Vote msg ->
+  Vote ->
   Either Invalid ()
 checkEquivocation state vote =
   let
@@ -320,25 +352,25 @@ validPraos MkChain{blocks} =
 
 -- | A valid vote votes for a block whose slot is in the vote-candidate window
 --   and if it is referenced by a unique block in the vote-inclusion window.
-validVote :: Protocol -> ChainState -> Vote Block -> Either Invalid ()
-validVote protocol state vote =
+validVote :: Protocol -> ChainState -> VoteWithBlock -> Either Invalid ()
+validVote protocol state (vote, block) =
   do
     -- FIXME: Also check signatures and proofs.
-    validCandidate protocol state vote
+    validCandidate protocol state (vote, block)
     validInclusion protocol state vote
     voteAllowedInRound protocol state vote
 
 -- | "Each vote $v$, with some slot number $s = r * T$, votes for a block with
 --   slot number in the *voting-candidate window* $\[s - L_low, s - L_high\]$
 --   *on the chain*.
-validCandidate :: Protocol -> ChainState -> Vote Block -> Either Invalid ()
-validCandidate protocol state vote@MkVote{blockHash = block} =
+validCandidate :: Protocol -> ChainState -> VoteWithBlock -> Either Invalid ()
+validCandidate protocol state (vote, block) =
   if isBlockOnChain state (hashBlock block)
-    then validCandidateWindow protocol vote
+    then validCandidateWindow protocol (vote, block)
     else throwError VoteNeverRecorded
 
-validCandidateWindow :: Protocol -> Vote Block -> Either Invalid ()
-validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} MkVote{votingRound = r, blockHash = Block{slotNumber}} =
+validCandidateWindow :: Protocol -> VoteWithBlock -> Either Invalid ()
+validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{votingRound = r}, Block{slotNumber}) =
   let
     s = firstSlotInRound protocol r
    in
@@ -348,7 +380,7 @@ validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} MkVote{votingR
 -- | "Each vote $v$, with some slot number $s = r * T$, is *referenced by a
 --   unique block* with a slot number s inside the *vote-inclusions window*
 --   $\[s + 1, s + A\]$."
-validInclusion :: Protocol -> ChainState -> Vote msg -> Either Invalid ()
+validInclusion :: Protocol -> ChainState -> Vote -> Either Invalid ()
 validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound = r} =
   let
     s = firstSlotInRound protocol r
@@ -361,7 +393,7 @@ validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound
       [] -> throwError VoteNeverRecorded
       _ -> throwError VoteRecordedMultipleTimes
 
-voteAllowedInRound :: Protocol -> ChainState -> Vote msg -> Either Invalid ()
+voteAllowedInRound :: Protocol -> ChainState -> Vote -> Either Invalid ()
 voteAllowedInRound protocol state MkVote{votingRound} =
   unless (voteInRound protocol votingRound state) $
     throwError VoteNotAllowedInRound

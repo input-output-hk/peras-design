@@ -6,9 +6,8 @@ module Peras.IOSim.Types (
   ByteSize,
   Coin,
   Rollback (..),
-  Vote',
-  Message',
   messageSize,
+  VoteWithBlock,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -18,7 +17,6 @@ import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Vote)
-import Peras.Crypto (Hash)
 import Peras.Message (Message (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (arbitrary))
@@ -28,9 +26,7 @@ type Coin = Int
 
 type ByteSize = Word
 
-type Message' = Message Block
-
-type Vote' = Vote Hash
+type VoteWithBlock = (Vote, Block)
 
 data Rollback = Rollback
   { atSlot :: Slot
@@ -48,7 +44,7 @@ instance Arbitrary Rollback where
   arbitrary = genericArbitrary uniform
 
 -- | The estimated serialized size of the message, in bytes
-messageSize :: Message' -> Word64
+messageSize :: Message -> Word64
 messageSize = \case
   NextSlot{} -> 0
   SomeBlock{} -> 72000 -- full body size at 80% load

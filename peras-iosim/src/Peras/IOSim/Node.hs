@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.IOSim.Node (
   NodeProcess (..),
@@ -17,9 +16,10 @@ module Peras.IOSim.Node (
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Lens (use, uses, (%=), (.=))
-import Control.Monad.Class.MonadSay
+import Control.Monad.Class.MonadSay (MonadSay (..))
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
+import Control.Monad.IOSim.Orphans ()
 import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
 import Control.Monad.State (
   MonadState (get),
@@ -34,7 +34,7 @@ import Peras.IOSim.Chain.Types (preferredChain)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
 import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId, rxBytes, txBytes)
-import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
+import Peras.IOSim.Protocol (newBlock, newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin, messageSize)
@@ -81,9 +81,6 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure 0
     <*> pure 0
 
-instance MonadSay m => MonadSay (StateT s m) where
-  say = lift . say
-
 runNode ::
   forall m.
   MonadDelay m =>
@@ -114,7 +111,7 @@ runNode protocol total state NodeProcess{..} =
                           lift $ threadDelay 1000000
                           nextSlot protocol slot total
                       SomeVote vote -> newVote protocol vote
-                      SomeBlock _ -> say "Block transport is not supported." >> pure mempty
+                      SomeBlock block -> newBlock protocol block
                       NewChain chain -> newChain protocol chain
                   rxBytes %= (+ messageSize inMessage)
                   bestChain <- chainState `uses` preferredChain

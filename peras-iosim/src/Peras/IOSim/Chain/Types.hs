@@ -10,9 +10,8 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..))
-import Peras.Chain (Chain (..), RoundNumber)
+import Peras.Chain (Chain (..), RoundNumber, Vote)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
-import Peras.IOSim.Types (Vote')
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
 
@@ -25,7 +24,7 @@ type BlockTree = T.Forest Block
 data ChainState = ChainState
   { preferredChain :: Chain
   , blockIndex :: M.Map BlockHash Block
-  , voteIndex :: M.Map VoteHash Vote'
+  , voteIndex :: M.Map VoteHash Vote
   , danglingBlocks :: S.Set BlockHash
   , danglingVotes :: S.Set VoteHash
   , votesByRound :: M.Map RoundNumber (M.Map BlockHash (S.Set VoteHash))
