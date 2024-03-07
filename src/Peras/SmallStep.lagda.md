@@ -8,7 +8,7 @@ open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (_─_)
+open import Data.List.Relation.Unary.Any using (Any; _─_)
 open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
 open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
@@ -21,7 +21,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_,_⟩; Dangling; v-round; _∻_; DanglingVotes)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_,_⟩; Dangling; v-round; DanglingVotes; _∻_)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
@@ -184,8 +184,6 @@ The local state initialized with the block tree
 Honestly updating the local state upon receiving a message
 
 ```agda
-    open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
-
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
 ```
 A new vote is added as dangling vote to the local state, when
@@ -199,8 +197,8 @@ A new vote is added as dangling vote to the local state, when
           in
           v ∉ votes b
         → v ∉ d
-        → ¬ (Equivocation (votes b))
-        → ¬ (Equivocation d)
+        → ¬ (Any (v ∻_) (votes b))
+        → ¬ (Any (v ∻_) d)
         → ⟪ t
           , d
           ⟫ [ SomeVote v ]→

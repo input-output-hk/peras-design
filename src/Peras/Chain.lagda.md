@@ -101,14 +101,18 @@ Equivocal votes are multiple votes by the same party for the same round.
 ```agda
 data _∻_ : Vote → Vote → Set where
 
-  Equivocal : ∀ {v₁ v₂}
+  Equivocation : ∀ {v₁ v₂}
     → creatorId v₁ ≡ creatorId v₂
     → votingRound v₁ ≡ votingRound v₂
     → v₁ ≢ v₂
     → v₁ ∻ v₂
+```
 
-open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+```agda
+NonEquivocation : Vote → Vote → Set
+NonEquivocation v₁ v₂ = ¬ (v₁ ∻ v₂)
 
+open import Data.List.Relation.Unary.AllPairs.Core NonEquivocation renaming (AllPairs to NoEquivocations) public
 ```
 <!--
 ```agda
@@ -200,9 +204,9 @@ A C-dangling vote
 --      → slotNumber b ≥ (s ∸ Lₗ)
 --      → slotNumber b ≤ (s ∸ Lₕ)
       → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) }) (blocks c))
-      → ¬ (Any (λ { x → Equivocation
+      → All (λ { x → NoEquivocations
                           (catMaybes $ map (referencedVote c) (includedVotes x))
-                  }) (blocks c))
+                  }) (blocks c)
       → Dangling c v
 ```
 
@@ -377,7 +381,7 @@ module _ {block₀ : Block}
       → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → Unique vs
-      → ¬ (Equivocation vs)
+      → NoEquivocations vs
       → All (λ { v → blockHash v ∈ (map hash (blocks c)) }) vs
 --      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
       → ValidChain
