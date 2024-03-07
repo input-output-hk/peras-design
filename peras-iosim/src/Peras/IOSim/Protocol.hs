@@ -269,6 +269,9 @@ isCommitteeMember ::
   Coin ->
   Bool
 isCommitteeMember pCommitteeLottery' _total vrf staked =
+  -- FIXME: This isn't faithful to the "Settle It Already" document,
+  --        which implies that one block-producer can have several
+  --        votes on the committee.
   let p = 1 - (1 - pCommitteeLottery') ^ staked
    in committeMemberRandom vrf <= p
 
