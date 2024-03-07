@@ -9,6 +9,7 @@ module Peras.IOSim.Types (
   Vote',
   Message',
   messageSize,
+  VoteWithBlock,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -19,6 +20,7 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Vote)
 import Peras.Crypto (Hash)
+import Peras.IOSim.Hash (BlockHash)
 import Peras.Message (Message (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (arbitrary))
@@ -28,9 +30,11 @@ type Coin = Int
 
 type ByteSize = Word
 
-type Message' = Message Block
+type Message' = Message BlockHash
 
 type Vote' = Vote Hash
+
+type VoteWithBlock = (Vote', Block)
 
 data Rollback = Rollback
   { atSlot :: Slot

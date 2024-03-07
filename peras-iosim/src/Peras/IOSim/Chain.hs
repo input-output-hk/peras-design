@@ -3,37 +3,37 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Chain (
+  Invalid (..),
+  addBlock,
   addChain,
+  addVote,
+  appendBlock,
+  blockInWindow,
+  blockOnChain,
   blockTree,
   blockTrees,
-  preferChain,
-  lookupVote,
-  lookupVote',
+  blocksInWindow,
+  eligibleDanglingVotes,
+  filterDanglingVotes,
+  filterVotesByRound,
+  indexChain,
+  isBlockOnChain,
+  isVoteRecordedOnChain,
   lookupBlock,
   lookupRound,
   lookupRoundForChain,
-  blocksInWindow,
-  blockInWindow,
-  voteOnChain,
-  voteOnChain',
-  Invalid (..),
-  voteRecorded,
-  blockOnChain,
+  lookupVote',
+  lookupVote,
+  preferChain,
   resolveBlock,
   resolveBlocksOnChain,
-  votesRecordedOnChain,
-  votesRecordedOnChain',
-  votesForBlocksOnChain,
+  voteOnChain',
+  voteOnChain,
+  voteRecorded,
   votesForBlocksOnChain',
-  indexChain,
-  filterDanglingVotes,
-  filterVotesByRound,
-  isBlockOnChain,
-  isVoteRecordedOnChain,
-  eligibleDanglingVotes,
-  appendBlock,
-  addBlock,
-  addVote,
+  votesForBlocksOnChain,
+  votesRecordedOnChain',
+  votesRecordedOnChain,
 ) where
 
 import Control.Monad (filterM, unless, (<=<))
@@ -46,7 +46,7 @@ import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
 import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
-import Peras.IOSim.Types (Vote')
+import Peras.IOSim.Types (Vote', VoteWithBlock)
 import Peras.Orphans ()
 
 import qualified Data.Map as M
@@ -140,22 +140,20 @@ addBlock block state =
                   danglingBlocks state
             }
 
-addVote :: Vote Block -> ChainState -> Either Invalid ChainState
-addVote vote state =
+addVote :: VoteWithBlock -> ChainState -> Either Invalid ChainState
+addVote (vote, block) state =
   if hashVote vote `M.member` voteIndex state
     then pure state
     else
       let
-        block = blockHash vote
         bhash = hashBlock block
-        vote' = vote{blockHash = bhash}
-        vhash = hashVote vote'
+        vhash = hashVote vote
         r = votingRound vote
        in
         pure
           state
             { blockIndex = M.insert (hashBlock block) block $ blockIndex state
-            , voteIndex = M.insert vhash vote' $ voteIndex state
+            , voteIndex = M.insert vhash vote $ voteIndex state
             , danglingBlocks =
                 (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
                   danglingBlocks state
@@ -168,7 +166,7 @@ lookupBlock hash ChainState{blockIndex} =
   maybe (throwError HashOfUnknownBlock) pure $
     hash `M.lookup` blockIndex
 
-lookupVote :: VoteHash -> ChainState -> Either Invalid (Vote Block)
+lookupVote :: VoteHash -> ChainState -> Either Invalid VoteWithBlock
 lookupVote hash state = resolveBlock state =<< hash `lookupVote'` state
 
 lookupVote' :: VoteHash -> ChainState -> Either Invalid Vote'
@@ -191,18 +189,18 @@ isBlockOnChain = flip S.notMember . danglingBlocks
 isVoteRecordedOnChain :: ChainState -> VoteHash -> Bool
 isVoteRecordedOnChain = flip S.notMember . danglingVotes
 
-resolveBlock :: ChainState -> Vote' -> Either Invalid (Vote Block)
+resolveBlock :: ChainState -> Vote' -> Either Invalid VoteWithBlock
 resolveBlock state vote =
   do
     block <- blockHash vote `lookupBlock` state
-    pure vote{blockHash = block}
+    pure (vote, block)
 
-resolveBlocksOnChain :: ChainState -> Either Invalid [Vote Block]
+resolveBlocksOnChain :: ChainState -> Either Invalid [VoteWithBlock]
 resolveBlocksOnChain state =
   mapM (resolveBlock state) . M.elems $
     M.withoutKeys (voteIndex state) (danglingVotes state)
 
-votesRecordedOnChain :: Chain -> Either Invalid [Vote Block]
+votesRecordedOnChain :: Chain -> Either Invalid [VoteWithBlock]
 votesRecordedOnChain = resolveBlocksOnChain <=< indexChain
 
 votesRecordedOnChain' :: Chain -> Either Invalid [Vote']
@@ -212,7 +210,7 @@ votesRecordedOnChain' chain =
     pure . M.elems $
       M.withoutKeys (voteIndex state) (danglingVotes state)
 
-votesForBlocksOnChain :: Chain -> Either Invalid [Vote Block]
+votesForBlocksOnChain :: Chain -> Either Invalid [VoteWithBlock]
 votesForBlocksOnChain chain =
   do
     state <- indexChain chain
@@ -236,13 +234,13 @@ eligibleDanglingVotes state =
       . S.toList
       $ danglingVotes state
 
-filterDanglingVotes :: (Vote Block -> Bool) -> ChainState -> ChainState
+filterDanglingVotes :: (VoteWithBlock -> Bool) -> ChainState -> ChainState
 filterDanglingVotes f state =
   state
     { danglingVotes = S.filter (either (const False) f . flip lookupVote state) $ danglingVotes state
     }
 
-filterVotesByRound :: (Vote Block -> Bool) -> ChainState -> ChainState
+filterVotesByRound :: (VoteWithBlock -> Bool) -> ChainState -> ChainState
 filterVotesByRound f state =
   state
     { votesByRound = M.map (M.map $ S.filter (either (const False) f . flip lookupVote state)) $ votesByRound state
@@ -254,8 +252,8 @@ blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotN
 blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
 blocksInWindow window = filter (blockInWindow window) . blocks
 
-voteOnChain :: Chain -> Vote Block -> Bool
-voteOnChain MkChain{blocks} MkVote{blockHash} = any ((== hashBlock blockHash) . hashBlock) blocks
+voteOnChain :: Chain -> Vote' -> Bool
+voteOnChain MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
 
 voteOnChain' :: Chain -> Vote' -> Bool
 voteOnChain' MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
