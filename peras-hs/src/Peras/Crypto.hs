@@ -2,7 +2,7 @@ module Peras.Crypto where
 
 import Data.ByteString
 
-newtype Hash = Hash {bs :: ByteString}
+newtype Hash = Hash {hashBytes :: ByteString}
   deriving (Eq)
 
 class Hashable a where

@@ -98,20 +98,20 @@ deriving newtype instance FromJSONKey RoundNumber
 deriving newtype instance ToJSONKey RoundNumber
 
 instance Enum RoundNumber where
-  toEnum = RoundNumber . toEnum
-  fromEnum (RoundNumber i) = fromEnum i
+  toEnum = MkRoundNumber . toEnum
+  fromEnum (MkRoundNumber i) = fromEnum i
 instance Integral RoundNumber where
-  RoundNumber i `quotRem` RoundNumber j = bimap RoundNumber RoundNumber $ i `quotRem` j
-  toInteger (RoundNumber i) = toInteger i
+  MkRoundNumber i `quotRem` MkRoundNumber j = bimap MkRoundNumber MkRoundNumber $ i `quotRem` j
+  toInteger (MkRoundNumber i) = toInteger i
 instance Num RoundNumber where
-  RoundNumber i + RoundNumber j = RoundNumber $ i + j
-  RoundNumber i - RoundNumber j = RoundNumber $ i - j
-  RoundNumber i * RoundNumber j = RoundNumber $ i * j
-  abs (RoundNumber i) = RoundNumber $ abs i
-  signum (RoundNumber i) = RoundNumber $ signum i
-  fromInteger = RoundNumber . fromInteger
+  MkRoundNumber i + MkRoundNumber j = MkRoundNumber $ i + j
+  MkRoundNumber i - MkRoundNumber j = MkRoundNumber $ i - j
+  MkRoundNumber i * MkRoundNumber j = MkRoundNumber $ i * j
+  abs (MkRoundNumber i) = MkRoundNumber $ abs i
+  signum (MkRoundNumber i) = MkRoundNumber $ signum i
+  fromInteger = MkRoundNumber . fromInteger
 instance Real RoundNumber where
-  toRational (RoundNumber i) = toRational i
+  toRational (MkRoundNumber i) = toRational i
 
 deriving stock instance Generic v => Generic (Vote v)
 deriving stock instance Ord v => Ord (Vote v)

@@ -23,7 +23,7 @@ postulate
 {-# COMPILE GHC _isInfixOf_ = BS.isInfixOf #-}
 
 record Hash : Set where
-  field bs : ByteString
+  field hashBytes : ByteString
 
 open Hash public
 

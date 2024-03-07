@@ -16,7 +16,7 @@ module Peras.IOSim.Node (
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
-import Control.Lens (use, uses, (.=))
+import Control.Lens (use, uses, (%=), (.=))
 import Control.Monad.Class.MonadSay
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
@@ -33,11 +33,11 @@ import Numeric.Natural (Natural)
 import Peras.IOSim.Chain.Types (preferredChain)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId)
+import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId, rxBytes, txBytes)
 import Peras.IOSim.Protocol (newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
-import Peras.IOSim.Types (Coin)
+import Peras.IOSim.Types (Coin, messageSize)
 import Peras.Message (Message (..), NodeId)
 
 import qualified Data.Map.Strict as M
@@ -78,6 +78,8 @@ initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
     <*> pure False
     <*> pure False
     <*> pure mempty
+    <*> pure 0
+    <*> pure 0
 
 instance MonadSay m => MonadSay (StateT s m) where
   say = lift . say
@@ -114,11 +116,13 @@ runNode protocol total state NodeProcess{..} =
                       SomeVote vote -> newVote protocol vote
                       SomeBlock _ -> say "Block transport is not supported." >> pure mempty
                       NewChain chain -> newChain protocol chain
+                  rxBytes %= (+ messageSize inMessage)
                   bestChain <- chainState `uses` preferredChain
                   atomically' $
                     do
                       mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages
                       writeTQueue outgoing $ Idle now nodeId' bestChain
+                  txBytes %= (\bs -> bs + (sum (messageSize <$> messages) * fromIntegral (length downstreams')))
                   clock .= now
                   go
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
