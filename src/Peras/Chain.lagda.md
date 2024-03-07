@@ -26,7 +26,7 @@ open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All)
+open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; _,_; _×_)
 {-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
 ```
 -->
@@ -382,12 +382,20 @@ module _ {block₀ : Block}
       → ValidChain c
       → Unique vs
       → NoEquivocations vs
-      → All (λ { v → blockHash v ∈ (map hash (blocks c)) }) vs
---      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
+      → All (λ { v →
+               Any (λ { x →
+                   hash v ∈ includedVotes x × slotNumber x > roundNumber (votingRound v) * T
+                 }) (blocks c)
+            }) vs
+      → All (λ { v →
+               Any (λ { x →
+                   blockHash v ≡ hash x × slotNumber x < (roundNumber (votingRound v) * T) ∸ L
+                 }) (blocks c)
+            }) vs
       → ValidChain
           record {
             blocks = b ∷ blocks c ;
-            votes = map (λ { (MkVote r c m b s) → MkVote r c m (b) s }) vs ;
+            votes = vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
 ```
@@ -409,7 +417,7 @@ The last block in a valid chain is always the genesis block.
     → (v : ValidChain c)
     → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
   last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _) =
+  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _ _) =
     trans
       (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
       (last-is-block₀ {c} v)
