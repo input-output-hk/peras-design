@@ -17,6 +17,9 @@ open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
 
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≢_)
+
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
@@ -91,10 +94,17 @@ postulate
 
 ### Equivocation relation
 
+Equivocal votes are multiple votes by the same party for the same round.
+
 ```agda
 data _∻_ : Vote → Vote → Set where
 
-  -- TODO: add constructor
+  Equivocal : ∀ {v₁ v₂}
+    → creatorId v₁ ≡ creatorId v₂
+    → roundNr v₁ ≡ roundNr v₂
+    → v₁ ≢ v₂
+    → v₁ ∻ v₂
+
 ```
 <!--
 ```agda
