@@ -1,5 +1,35 @@
 ## 2024-03-07
 
+### Impact of Uneven Distribution of Stake
+
+Here is a rough analysis of the effect of staking centralization and multi-pool operation upon the Peras committee size.
+
+Let's say that we set the lottery probability under the assumptions of 22.8e15 lovelace being staked equally by 3029 stake pools so that the committee size is 200. The formula for the probability that a stake pool will be on the committee is $p_\text{committee} = 1 - (1 - p_\text{lottery})^\text{stake}$, where $p_\text{lottery} = 9.103828801926284 \cdot 10^{-15}$ is the probability that the holder of a single lovelace will be elected to the committee and $\text{stake}$ is the number of lovelace the pool has staked.
+
+The actual staking distribution is not uniform over stakepools. If we use historical data from epoch 469, the mean committee size would be 173.3. So, the uneven staking levels reduce the committee size by 13%.
+
+However, some multi-pool operators run many stake pools. Binance, for instance, runs several dozen pools. Using the data at https://www.statista.com/statistics/1279280/cardano-ada-biggest-staking-pool-groups/, we compute that number of unique operators in the committee would reduce its mean size to just 76.6, where the multi-pool operators control 13.9 votes and the single-pool operators control 62.9 votes.
+
+|   pool   |       votes        |
+|----------|--------------------|
+| SPO      |  62.92786759845929 |
+| Binance  | 30.489730311076144 |
+| New      |  7.882970991288584 |
+| Adalite  |   9.32793551428378 |
+| 1PCT     |  9.973457954408731 |
+| New Girl |   5.53677941289975 |
+| MS       |  5.646352580388863 |
+| Etoro    |  6.114357535725741 |
+| Emurgo   |  5.838590839441291 |
+| EVE      |  5.022310339902703 |
+| New Guy  |    5.3873765779532 |
+| Wave     |  4.834000742214385 |
+| LEO      |   3.95591191080253 |
+| CCV      | 2.8533879053049582 |
+| Bloom    | 2.8009939694400066 |
+
+Thus, the concentration of coins in multi-pool staking operations radically shrinks the committee size.
+
 ### YH Agda formalization
 
 * Refactoring of how dangling votes are handled in Agda: Rather than delegating the dangling votes to the blocktree (abstract data type), they are kept explicitly in the local state and taken into account when needed
@@ -50,6 +80,11 @@ Worked out top-down as usual:
 * Then implemented the Rust side, starting from the `foreign "C"` functions exposed by the library and started implementing lifecycles functions
 * Main concern is how to properly construct the simulation's network and manage the nodes. `ce-fastbft` uses an [actor library](https://github.com/actix/actix) to handle the dispatching of messages which seems like a good idea, so I probably would want to move the `NodeHandle` to be a proper actor. I need to build the links between nodes according to the `Topology` and `Parameters` given by the test driver
 * A next hurdle will be to retrieve a node's best chain on demand, which implies access to the node's internal states => store it as part of the `Idle` messages returned by a node when it's done processing
+
+### Peras IOSim Improvements
+
+* Implemented handling `SomeBlock` message.
+* Revised to use the latest version of the `Vote` and `Message` types.
 
 ## 2024-03-06
 
