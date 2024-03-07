@@ -21,12 +21,15 @@ module Peras.NetworkModel where
 import Control.Monad (replicateM_)
 import Control.Monad.Reader (MonadReader, ReaderT, ask)
 import Control.Monad.Trans (MonadTrans (..))
+import Data.Default (def)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..), commonPrefix)
+import Peras.IOSim.Protocol.Types (Protocol (..))
+import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Gen, choose, elements, frequency, tabulate)
@@ -174,3 +177,22 @@ deliverableAt at m@(delay, msg) =
   if at >= delay
     then Right msg
     else Left m
+
+protocol :: Protocol
+protocol = def{activeSlotCoefficient = defaultActiveSlotCoefficient}
+
+defaultActiveSlotCoefficient :: Double
+defaultActiveSlotCoefficient = 0.05
+
+parameters :: Parameters
+parameters =
+  Parameters
+    { randomSeed = 12345
+    , peerCount = 10
+    , downstreamCount = 3
+    , totalStake = Nothing
+    , maximumStake = 1000
+    , endSlot = 1000
+    , messageDelay = 350_000
+    , experiment = Nothing
+    }

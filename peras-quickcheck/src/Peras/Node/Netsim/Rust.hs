@@ -5,11 +5,19 @@
 
 -- | FFI interface to a node in Rust
 module Peras.Node.Netsim.Rust (
+  -- * Single Node operations
   RustNode,
   startNode,
   stopNode,
   sendMessage,
   receiveMessage,
+
+  -- * Network operations
+  RustNetwork,
+  startNetwork,
+  tick,
+  preferredChain,
+  stopNetwork,
 )
 where
 
@@ -18,9 +26,15 @@ import Data.Bits ((.<<.))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (toForeignPtr0)
-import Foreign (Ptr, Word8, free, mallocBytes, peekArray, withForeignPtr)
-import Foreign.C (CString, withCString)
+import Foreign (Ptr, Storable, Word64, Word8, free, mallocBytes, peekArray, withForeignPtr)
+import Foreign.C (CInt, CString, withCString)
+import Foreign.Storable (Storable (..))
+import Peras.Chain (Chain)
+import Peras.IOSim.Network.Types (Topology)
+import Peras.IOSim.Protocol.Types (Protocol)
+import Peras.IOSim.Simulate.Types (Parameters)
 import Peras.Message (NodeId (..))
+import System.Random (StdGen)
 
 newtype RustNode = RustNode {foreignNode :: Ptr PerasNode}
 
@@ -61,3 +75,22 @@ receiveMessage RustNode{foreignNode} = do
   bracket (mallocBytes bufferSize) free $ \ptr -> do
     len <- c_receive_message foreignNode ptr bufferSize
     BS.pack <$> peekArray len ptr
+
+newtype RustNetwork = RustNetwork {foreignNetwork :: Ptr Netsim}
+
+data Netsim
+
+-- | Start network with given `Topology` and `Parameters` serialised to JSON.
+-- Parameter seed is used to make the internal random generator used in Rust
+-- deterministic.
+startNetwork :: ByteString -> ByteString -> Word64 -> IO RustNetwork
+startNetwork parameters topology seed = undefined
+
+tick :: RustNetwork -> IO ()
+tick RustNetwork{foreignNetwork} = undefined
+
+preferredChain :: RustNetwork -> NodeId -> IO ByteString
+preferredChain = undefined
+
+stopNetwork :: RustNetwork -> IO ()
+stopNetwork = undefined

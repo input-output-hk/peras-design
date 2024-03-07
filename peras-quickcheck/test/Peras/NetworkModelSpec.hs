@@ -23,11 +23,9 @@ import Peras.Chain (Chain (..))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
 import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
-import Peras.IOSim.Protocol.Types (Protocol (activeSlotCoefficient))
-import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
 import Peras.Network.Netsim (runPropInNetSim)
-import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
+import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), parameters, protocol, runMonad)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
@@ -114,22 +112,3 @@ runWithState stateVar act = do
   (res, st') <- runStateT act st
   atomically $ writeTVar stateVar st'
   pure res
-
-protocol :: Protocol
-protocol = def{activeSlotCoefficient = defaultActiveSlotCoefficient}
-
-defaultActiveSlotCoefficient :: Double
-defaultActiveSlotCoefficient = 0.05
-
-parameters :: Parameters
-parameters =
-  Parameters
-    { randomSeed = 12345
-    , peerCount = 10
-    , downstreamCount = 3
-    , totalStake = Nothing
-    , maximumStake = 1000
-    , endSlot = 1000
-    , messageDelay = 350_000
-    , experiment = Nothing
-    }
