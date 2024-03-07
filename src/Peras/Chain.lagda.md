@@ -60,7 +60,7 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 ```agda
 record Vote : Set where
   constructor MkVote
-  field votingRound              : RoundNumber
+  field roundNr                  : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
         blockHash                : Hash
@@ -92,7 +92,7 @@ postulate
 ### Equivocation relation
 
 ```agda
--- data _∻_ : Vote Block → Vote Block → Set where
+data _∻_ : Vote → Vote → Set where
 
   -- TODO: add constructor
 ```
@@ -176,7 +176,7 @@ Counting votes for a block from the dangling votes
   countDangling vs r b = length $
     filter (λ { v →
       (blockHash v ≟-Hash (hash b)) ×-dec
-      (votingRound v ≟-RoundNumber r)
+      (roundNr v ≟-RoundNumber r)
       })
     vs
 ```
@@ -283,9 +283,12 @@ There is not voting in round 0
   round-r-votes ⟨ c , d ⟩ r = sum (map (countVotes ⟨ c , d ⟩ r) (blocks c))
 ```
 
-### Chain weight
+```agda
+  v-round : Slot → ⦃ _ : NonZero T ⦄ → RoundNumber
+  v-round s = MkRoundNumber (s / T)
+```
 
-FIXME: include dangling votes
+### Chain weight
 
 ```agda
   ∥_∥ : ChainState → ℕ
@@ -302,7 +305,7 @@ FIXME: include dangling votes
 <!--
 ```agda
 open import Data.List.Relation.Unary.Unique.Propositional {A = Vote}
--- open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
+open import Data.List.Relation.Unary.AllPairs.Core _∻_ renaming (AllPairs to Equivocation)
 open import Relation.Nullary.Negation using (¬_)
 
 import Relation.Binary.PropositionalEquality as PropEq
@@ -349,8 +352,8 @@ module _ {block₀ : Block}
       → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → Unique vs
---      → ¬ (Equivocation vs)
---      → All (λ { v → blockHash v ∈ blocks c }) vs
+      → ¬ (Equivocation vs)
+      → All (λ { v → blockHash v ∈ (map hash (blocks c)) }) vs
 --      → All (λ { v → slotNumber (blockHash v) < (roundNumber (votingRound v) * T) ∸ L }) vs
       → ValidChain
           record {
@@ -388,7 +391,7 @@ The last block in a valid chain is always the genesis block.
     → (v : ValidChain c)
     → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
   last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v _) =
+  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _) =
     trans
       (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
       (last-is-block₀ {c} v)

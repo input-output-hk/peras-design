@@ -21,7 +21,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling)
+open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ChainState; ⟨_,_⟩; Dangling; v-round)
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
@@ -97,7 +97,7 @@ module _ {block₀ : Block}
                     (extendTree : T → Block → T)
                     (newChain : T → Chain → T)
                     (allBlocks : T → List Block)
-                    (bestChain : Slot → T → Chain)
+                    (bestChain : Slot → List Vote → T → Chain)
          : Set₁ where
 
     allBlocksUpTo : Slot → T → List Block
@@ -114,17 +114,17 @@ Properties that must hold with respect to blocks and votes
       extendable : ∀ (t : T) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      valid : ∀ (t : T) (sl : Slot)
-        → ValidChain {block₀} (bestChain sl t)
+      valid : ∀ (t : T) (sl : Slot) (d : List Vote)
+        → ValidChain {block₀} (bestChain sl d t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : Slot) (d : List Vote)
         → ValidChain {block₀} c
         → All (Dangling c) d
         → blocks c ⊆ allBlocksUpTo sl t
-        → ∥ ⟨ c , d ⟩ ∥ ≤ ∥ ⟨ bestChain sl t , d ⟩ ∥
+        → ∥ ⟨ c , d ⟩ ∥ ≤ ∥ ⟨ bestChain sl d t , d ⟩ ∥
 
-      self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ allBlocksUpTo sl t
+      self-contained : ∀ (t : T) (sl : Slot) (d : List Vote)
+        → blocks (bestChain sl d t) ⊆ allBlocksUpTo sl t
 ```
 The block tree type
 
@@ -136,7 +136,7 @@ The block tree type
       extendTree : T → Block → T
       newChain : T → Chain → T
       allBlocks : T → List Block
-      bestChain : Slot → T → Chain
+      bestChain : Slot → List Vote → T → Chain
 
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
@@ -190,7 +190,7 @@ Honestly updating the local state upon receiving a message
         → ⟪ t , d ⟫ [ SomeBlock b ]ˡ⇀ ⟪ (extendTree blockTree) t b , d ⟫
 
       ChainReceived : ∀ {c t d}
-        → ∥ ⟨ (bestChain blockTree) (slotNumber (tip c)) t , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
+        → ∥ ⟨ (bestChain blockTree) (slotNumber (tip c)) d t , d ⟩ ∥ < ∥ ⟨ c , d ⟩ ∥
         → ⟪ t , d ⟫ [ NewChain c ]ˡ⇀ ⟪ (newChain blockTree) t c , d ⟫
 ```
 
@@ -200,26 +200,26 @@ The vote is for the last block at least L slots old
 
 ```agda
     honestVote : Slot → RoundNumber → PartyId → Stateˡ → Message × Stateˡ
-    honestVote sl r p ⟪ tree , d ⟫ =
-      let best<L = (bestChain blockTree) (sl ∸ L) tree
+    honestVote sl r p ⟪ t , d ⟫ =
+      let best<L = (bestChain blockTree) (sl ∸ L) d t
           vote =
             record {
-              votingRound = r ;
+              roundNr = r ;
               creatorId = p ;
               committeeMembershipProof = record { proofM = emptyBS } ; -- FIXME
               blockHash = hash (tip best<L) ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-     in SomeVote vote , ⟪ tree , vote ∷ d ⟫
+     in SomeVote vote , ⟪ t , vote ∷ d ⟫
 ```
 
 ### Honestly creating a block
 
 ```agda
     honestCreate : Slot → RoundNumber → List Tx → PartyId → Stateˡ → Message × Stateˡ
-    honestCreate sl (record { roundNumber = r }) txs p ⟪ tree , d ⟫ =
-      let best = (bestChain blockTree) (pred sl) tree
-          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (votingRound v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
+    honestCreate sl (record { roundNumber = r }) txs p ⟪ t , d ⟫ =
+      let best = (bestChain blockTree) (pred sl) d t
+          votes = filterᵇ (λ { v → r ≤ᵇ ((roundNumber (roundNr v)) + L) } ) (votes best) -- TODO: check expired, preferred chain, equivocation
           newBlock =
             record {
               slotNumber = sl ;
@@ -230,7 +230,7 @@ The vote is for the last block at least L slots old
               payload = txs ;
               signature = record { bytes = emptyBS } -- FIXME
             }
-      in SomeBlock newBlock , ⟪ (extendTree blockTree) tree newBlock , d ⟫
+      in SomeBlock newBlock , ⟪ (extendTree blockTree) t newBlock , d ⟫
 ```
 ## Global state
 
@@ -244,10 +244,6 @@ The global state consists of the following fields:
 * Current slot of the system
 ```agda
         clock : Slot
-```
-* Current voting round
-```agda
-        votingRound : RoundNumber
 ```
 * Map with local state per party
 ```agda
@@ -263,6 +259,13 @@ The global state consists of the following fields:
 ```
 ```agda
     open Stateᵍ public
+```
+
+#### Voting Round
+
+```agda
+    votingRound : Stateᵍ → RoundNumber
+    votingRound N = v-round (clock N)
 ```
 
 # Network
@@ -316,9 +319,9 @@ A party can cast a vote for a block, if
 
       honest : ∀ {p M N} {s s′} {m}
         → lookup (stateMap M) p ≡ just s
-        → clock M ≡ roundNumber (votingRound M) * T
+        → clock M ≡ roundNumber (v-round (clock M)) * T
         → isCommitteeMember p (votingRound M) ≡ true
-        → VoteInRound ⟨ (bestChain blockTree) (clock M) (tree s) , danglingVotes s ⟩ (votingRound M)
+        → VoteInRound ⟨ (bestChain blockTree) (clock M) (danglingVotes s) (tree s) , danglingVotes s ⟩ (votingRound M)
         → (m , s′) ≡ honestVote (clock M) (votingRound M) p s
         → M [ m ]⇒ N
           ----------------------
