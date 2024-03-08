@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,8 +27,10 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain (..))
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
+import Peras.Event (UniqueId (UniqueId))
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.Message (Message (..), NodeId (..))
+import Peras.Orphans ()
 import Test.QuickCheck (choose, tabulate)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (..), HasVariables, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost)
@@ -98,6 +101,9 @@ instance MonadTrans RunMonad where
 
 type instance Realized (RunMonad m) a = a
 
+dummyId :: UniqueId
+dummyId = UniqueId "00000000"
+
 instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
   perform NodeModel{slot} action _context =
     case action of
@@ -110,7 +116,7 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
       Node{sendMessage, receiveMessage} <- ask
       -- tick the node
       lift $ do
-        sendMessage (InEnvelope Nothing $ NextSlot $ slot + k)
+        sendMessage (InEnvelope Nothing dummyId $ NextSlot $ slot + k)
         -- collect outgoing messages until Idle
         waitForIdle receiveMessage []
 
@@ -118,7 +124,7 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
       receive >>= \case
         Idle{} -> pure acc
         OutEnvelope
-          { outMessage = SendMessage (NewChain (MkChain (b : _) _))
+          { outMessage = NewChain (MkChain (b : _) _)
           } -> waitForIdle receive (b : acc)
         _other -> waitForIdle receive acc
 

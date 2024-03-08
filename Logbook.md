@@ -1,3 +1,13 @@
+## 2024-03-08
+
+### Message Interface and Event Logging
+
+- Adga types for messages and events are now essentially faithful to the chain-sync protocol.
+- Implemented event logging in `peras-iosim` using the `contra-trace` approach.
+    - All sending and receiving messsages are logged.
+    - Arbitrary JSON can also be logged.
+    - The CLI can either collect or discard events.
+
 ## 2024-03-07
 
 ### Impact of Uneven Distribution of Stake

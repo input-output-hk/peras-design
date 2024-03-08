@@ -24,7 +24,7 @@ import Test.QuickCheck.Instances.Natural ()
 
 type Coin = Int
 
-type ByteSize = Word
+type ByteSize = Word64
 
 type VoteWithBlock = (Vote, Block)
 

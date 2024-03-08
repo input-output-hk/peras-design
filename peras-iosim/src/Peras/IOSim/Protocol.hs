@@ -36,11 +36,13 @@ import Control.Monad.Except (
  )
 import Control.Monad.IOSim.Orphans ()
 import Control.Monad.State (MonadState)
+import Control.Tracer (Tracer)
 import Data.Function (on)
 import Data.List (partition)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (Hash))
+import Peras.Event (Event)
 import Peras.IOSim.Chain (
   addBlock,
   addChain,
@@ -81,11 +83,12 @@ sayInvalid p d x = runExceptT x >>= either ((>> pure d) . say . (p <>) . (" " <>
 nextSlot ::
   MonadSay m =>
   MonadState NodeState m =>
+  Tracer m Event ->
   Protocol ->
   Slot ->
   Coin ->
   m [Message]
-nextSlot protocol@Peras{..} slotNumber total =
+nextSlot _tracer protocol@Peras{..} slotNumber total =
   do
     slot .= slotNumber
     chainState %= discardExpiredVotes protocol slotNumber
@@ -156,10 +159,11 @@ doVoting protocol slotNumber r vrf =
 newChain ::
   MonadSay m =>
   MonadState NodeState m =>
+  Tracer m Event ->
   Protocol ->
   Chain ->
   m [Message]
-newChain protocol proposed =
+newChain _tracer protocol proposed =
   sayInvalid "Peras.IOSim.Protocol.newChain" mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
     notEquivocated <- chainState `uses` (((/= Left EquivocatedVote) .) . checkEquivocation)
@@ -193,10 +197,11 @@ newChain protocol proposed =
 newBlock ::
   MonadSay m =>
   MonadState NodeState m =>
+  Tracer m Event ->
   Protocol ->
   Block ->
   m [Message]
-newBlock protocol block =
+newBlock _tracer protocol block =
   sayInvalid "Peras.IOSim.Protocol.newBlock" mempty $ newBlock' protocol block
 
 newBlock' ::
@@ -217,10 +222,11 @@ newBlock' _ block =
 newVote ::
   MonadSay m =>
   MonadState NodeState m =>
+  Tracer m Event ->
   Protocol ->
   Vote ->
   m [Message]
-newVote = (sayInvalid "Peras.IOSim.Protocol.newVote" mempty .) . newVote'
+newVote _tracer = (sayInvalid "Peras.IOSim.Protocol.newVote" mempty .) . newVote'
 
 newVote' ::
   MonadError Invalid m =>

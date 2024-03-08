@@ -7,7 +7,8 @@ use crate::{
     block::Block,
     chain::{empty_chain, Chain},
     crypto,
-    message::{Message, NodeId, OutMessage},
+    event::UniqueId,
+    message::{Message, NodeId},
 };
 use chrono::{DateTime, Utc};
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
@@ -23,6 +24,7 @@ pub enum InEnvelope {
     #[serde(rename = "InEnvelope")]
     SendMessage {
         origin: Option<NodeId>,
+        in_id: UniqueId,
         in_message: Message,
     },
 }
@@ -43,7 +45,8 @@ pub enum OutEnvelope {
         timestamp: DateTime<Utc>,
         source: String,
         destination: String,
-        out_message: OutMessage,
+        out_id: UniqueId,
+        out_message: Message,
         bytes: u32,
     },
 }
@@ -116,6 +119,7 @@ fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>
             Ok(InEnvelope::Stop) => return,
             Ok(InEnvelope::SendMessage {
                 origin: _,
+                in_id: _,
                 in_message: Message::NextSlot(slot),
             }) => match handle_slot(slot, &mut node) {
                 Some(out) => tx_out.send(out).expect("Failed to send message"),
@@ -161,7 +165,8 @@ fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
             timestamp: Utc::now(),
             source: node.node_id.clone(),
             destination: node.node_id.clone(), // FIXME this does not make sense
-            out_message: OutMessage::SendMessage(Message::NewChain(node.best_chain.clone())),
+            out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+            out_message: Message::NewChain(node.best_chain.clone()),
             bytes: 0,
         })
     } else {
@@ -252,6 +257,7 @@ mod tests {
 
         handle.send(InEnvelope::SendMessage {
             origin: None,
+            in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
             in_message: Message::NextSlot(1),
         });
 
@@ -347,6 +353,7 @@ mod tests {
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
+                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
                 in_message: Message::NextSlot(i),
             })
         }
@@ -360,7 +367,8 @@ mod tests {
                 timestamp: _,
                 source: _,
                 destination: _,
-                out_message: OutMessage::SendMessage(Message::NewChain(chain)),
+                out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                out_message: Message::NewChain(chain),
                 bytes: _,
             } => {
                 println!("got chain {:?}", serde_json::to_string(&chain));
@@ -383,6 +391,7 @@ mod tests {
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
+                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
                 in_message: Message::NextSlot(i),
             })
         }
