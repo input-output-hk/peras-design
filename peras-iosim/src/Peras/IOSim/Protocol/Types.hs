@@ -2,8 +2,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Peras.IOSim.Protocol.Types (
-  Protocol (..),
   Invalid (..),
+  Protocol (..),
 ) where
 
 import Control.Exception (Exception (..))

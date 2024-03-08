@@ -6,8 +6,8 @@ module Peras.IOSim.Types (
   ByteSize,
   Coin,
   Rollback (..),
-  messageSize,
   VoteWithBlock,
+  messageSize,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)

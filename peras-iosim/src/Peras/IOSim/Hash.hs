@@ -1,13 +1,13 @@
 -- FIXME: Migrate to Agda.
 
 module Peras.IOSim.Hash (
-  hashBlock,
-  hashVote,
-  genesisHash,
-  BodyHash,
   BlockHash,
+  BodyHash,
   VoteHash,
+  genesisHash,
+  hashBlock,
   hashTip,
+  hashVote,
 ) where
 
 import Peras.Block as Block (Block (signature))

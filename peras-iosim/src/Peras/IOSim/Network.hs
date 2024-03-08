@@ -6,7 +6,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module Peras.IOSim.Network where
+module Peras.IOSim.Network (
+  emptyTopology,
+  randomTopology,
+  connectNode,
+  createNetwork,
+  runNetwork,
+  stepToIdle,
+  startNodes,
+) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, STM, TQueue, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)

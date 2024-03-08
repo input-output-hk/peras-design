@@ -1,15 +1,15 @@
 module Peras.IOSim.Crypto (
   VrfOutput,
-  nextVrf,
-  randomBytes,
-  uniformRandom,
   VrfUsage (..),
+  committeMemberRandom,
+  nextVrf,
+  proveLeadership,
+  proveMembership,
+  randomBytes,
   signBlock,
   signVote,
-  proveMembership,
-  proveLeadership,
-  committeMemberRandom,
   slotLeaderRandom,
+  uniformRandom,
 ) where
 
 import Peras.Crypto (LeadershipProof (LeadershipProof), MembershipProof (MembershipProof), Signature (Signature))

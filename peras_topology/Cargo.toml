@@ -10,6 +10,3 @@ rand_chacha = "0.3.1"
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
 serde_yaml = "0.9.31"
-
-[registries]
-crates-io = { protocol = "sparse" }
