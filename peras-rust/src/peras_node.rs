@@ -79,6 +79,7 @@ impl Default for NodeParameters {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Node {
     node_id: NodeId,
     parameters: NodeParameters,
@@ -102,11 +103,13 @@ impl Node {
         }
     }
 
-    pub fn start(self, total_stake: u64) -> NodeHandle {
+    pub fn start(&self, total_stake: u64) -> NodeHandle {
         let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
         let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
 
-        let thread = thread::spawn(move || work(self, total_stake, rx_in, tx_out));
+        let mut node1 = self.clone();
+
+        let thread = thread::spawn(move || node1.work(total_stake, rx_in, tx_out));
 
         NodeHandle {
             sender: tx_in,
@@ -115,46 +118,39 @@ impl Node {
         }
     }
 
-    // FIXME: why is the slot number not involved in the leadership selection?
     fn is_slot_leader(&mut self, total_stake: u64) -> bool {
         let stake_ratio = (self.parameters.node_stake as f64) / (total_stake as f64);
         let prob =
             1.0 - (1.0 - self.parameters.protocol_parameters.active_coefficient).powf(stake_ratio);
         self.seed.gen_bool(prob)
     }
-}
 
-fn work(
-    mut node: Node,
-    total_stake: u64,
-    rx_in: Receiver<InEnvelope>,
-    tx_out: Sender<OutEnvelope>,
-) {
-    loop {
-        let recv = rx_in.recv();
-        match recv {
-            Ok(InEnvelope::Stop) => return,
-            Ok(InEnvelope::SendMessage {
-                origin: _,
-                in_id: _,
-                in_message: Message::NextSlot(slot),
-            }) => match handle_slot(slot, total_stake, &mut node) {
-                Some(out) => tx_out.send(out).expect("Failed to send message"),
-                None => (),
-            },
-            Ok(_) => (),
-            Err(err) => panic!("Error while receiving message {err}"),
+    fn work(&mut self, total_stake: u64, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
+        loop {
+            let recv = rx_in.recv();
+            match recv {
+                Ok(InEnvelope::Stop) => return,
+                Ok(InEnvelope::SendMessage {
+                    origin: _,
+                    in_id: _,
+                    in_message: Message::NextSlot(slot),
+                }) => match self.handle_slot(slot, total_stake) {
+                    Some(out) => tx_out.send(out).expect("Failed to send message"),
+                    None => (),
+                },
+                Ok(_) => (),
+                Err(err) => panic!("Error while receiving message {err}"),
+            }
+
+            tx_out
+                .send(OutEnvelope::Idle {
+                    timestamp: Utc::now(),
+                    source: self.node_id.clone(),
+                    best_chain: self.best_chain.clone(),
+                })
+                .expect("Failed to send Idle message")
         }
-
-        tx_out
-            .send(OutEnvelope::Idle {
-                timestamp: Utc::now(),
-                source: node.node_id.clone(),
-                best_chain: node.best_chain.clone(),
-            })
-            .expect("Failed to send Idle message")
     }
-}
 
 fn handle_slot(slot: u64, total_stake: u64, node: &mut Node) -> Option<OutEnvelope> {
     if node.is_slot_leader(total_stake) {
@@ -352,7 +348,7 @@ mod tests {
         let mut node = Node::new("N1".into(), params);
 
         let schedule = (0..10000)
-            .map(|n| node.is_slot_leader(100))
+            .map(|_| node.is_slot_leader(100))
             .filter(|b| *b)
             .count();
 

@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct PerasNetwork PerasNetwork;
+typedef struct Network Network;
 
 /**
  * Opaque representation of a Peras node for foreign use
@@ -28,7 +28,7 @@ typedef struct PerasNode PerasNode;
 /**
  * Broadcasts a message to all nodes in the network
  */
-void broadcast(struct PerasNetwork *network, const uint8_t *buf, uintptr_t len);
+void broadcast(struct Network *network, const uint8_t *buf, uintptr_t len);
 
 /**
  * Return the current preferred chain for given node
@@ -38,7 +38,7 @@ void broadcast(struct PerasNetwork *network, const uint8_t *buf, uintptr_t len);
  *
  * If the buffer is too small, the function returns the required buffer size.
  */
-uintptr_t get_preferred_chain(struct PerasNetwork *network,
+uintptr_t get_preferred_chain(struct Network *network,
                               const char *node_id,
                               uint8_t *buf,
                               uintptr_t len);
@@ -53,8 +53,7 @@ void send_message(struct PerasNode *node, const uint8_t *buf, uintptr_t len);
  * Creates a new network with the given topology and parameters and starts it.
  * The seed is used to initialize the random number generator.
  */
-struct PerasNetwork *start_network(const char *topology,
-                                   const char *parameters);
+struct Network *start_network(const char *topology, const char *parameters);
 
 /**
  * Creates and starts a new Peras node
@@ -67,7 +66,7 @@ struct PerasNode *start_node(const char *node_id,
 /**
  * Stops the given Peras network
  */
-void stop_network(struct PerasNetwork *network);
+void stop_network(struct Network *network);
 
 void stop_node(struct PerasNode *node);
 

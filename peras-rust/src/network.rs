@@ -32,7 +32,7 @@ pub struct NodeInterface {
     /// The node's handle, if it is running
     node_handle: Option<NodeHandle>,
     /// The socket for sending and receiving messages
-    edges: SimSocket<Message>,
+    socket: SimSocket<Message>,
 }
 
 pub struct Network {
@@ -56,14 +56,13 @@ impl Network {
 
         let mut seed = StdRng::seed_from_u64(parameters.randomSeed);
 
-        let nodes = topology
+        let mut nodes = topology
             .connections
             .iter()
             .map(|(nodeId, _)| {
                 let iface = make_node(
                     &nodeId.nodeId,
                     &mut context,
-                    &topology.connections.get(nodeId).unwrap(),
                     parameters,
                     &protocol,
                     &mut seed,
@@ -81,7 +80,28 @@ impl Network {
         }
     }
 
-    pub fn start(&self) -> NetworkHandle {
+    pub fn start(&mut self) {
+        // start all nodes
+        for (node_id, iface) in self.nodes.iter_mut() {
+            let node_handle = iface.node.start(self.parameters.maximumStake);
+            iface.node_handle = Some(node_handle);
+        }
+    }
+
+    pub(crate) fn stop(&mut self) {
+        // stop all nodes in then network
+        for (_, iface) in self.nodes.iter_mut() {
+            if let Some(handle) = &mut iface.node_handle {
+                handle.stop();
+            }
+        }
+    }
+
+    pub(crate) fn broadcast(&self, msg: Message) {
+        todo!()
+    }
+
+    pub(crate) fn get_preferred_chain(&self, node_id: &str) -> Chain {
         todo!()
     }
 }
@@ -89,7 +109,6 @@ impl Network {
 fn make_node(
     node_id: &String,
     context: &mut Ctx,
-    edges: &HashSet<NodeId>,
     parameters: &Parameters,
     protocol: &ProtocolParameters,
     seed: &mut StdRng,
@@ -115,24 +134,6 @@ fn make_node(
     NodeInterface {
         node,
         node_handle: None,
-        edges: socket,
-    }
-}
-
-pub struct NetworkHandle {
-    thread: Option<JoinHandle<()>>,
-}
-
-impl NetworkHandle {
-    pub(crate) fn stop(&self) {
-        todo!()
-    }
-
-    pub(crate) fn broadcast(&self, msg: Message) {
-        todo!()
-    }
-
-    pub(crate) fn get_preferred_chain(&self, node_id: &str) -> Chain {
-        todo!()
+        socket,
     }
 }
