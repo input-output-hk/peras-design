@@ -121,7 +121,7 @@ runNetwork parameters protocol states network@Network{..} initialState =
         -- Notify a node to stop.
         notifyStop destination nodeIn = output destination nodeIn Stop
         -- Receive and send messages.
-        loop :: MonadDelay m => MonadSay m => StateT NetworkState m ()
+        loop :: StateT NetworkState m ()
         loop =
           do
             stepToIdle parameters network
@@ -138,7 +138,7 @@ runNetwork parameters protocol states network@Network{..} initialState =
       loop
 
 startNodes ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
   Parameters ->
   Protocol ->
   M.Map NodeId NodeState ->
@@ -160,7 +160,7 @@ startNodes parameters protocol states network =
 
 -- | Wait for all nodes to exit.
 waitForExits ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
   Network m ->
   StateT NetworkState m ()
@@ -184,7 +184,7 @@ flush q =
 -- | Advance the network up to one single slot.
 -- This function loops until all nodes are idle
 stepToIdle ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
   Network m ->
   StateT NetworkState m ()
@@ -199,7 +199,7 @@ stepToIdle parameters network = do
       stop <- lastSlot `uses` (>= endSlot parameters)
       unless stop $
         uncurry notifySlot `mapM_` M.toList nodesIn
-      lift $ threadDelay 1000000
+      lift $ threadDelay 1_000_000
       -- FIXME: Assume that pending messages are received in the next slot.
       mapM_ route =<< use pending
       pending .= mempty
@@ -218,7 +218,7 @@ stepToIdle parameters network = do
 
 -- | Dispatch a single message through the network.
 routeEnvelope ::
-  (Monad m, MonadSTM m, MonadSay m) =>
+  (MonadSTM m, MonadSay m) =>
   Parameters ->
   Network m ->
   OutEnvelope ->

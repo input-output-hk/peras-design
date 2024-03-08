@@ -4,6 +4,7 @@ module Peras.IOSim.Hash (
   hashBlock,
   hashVote,
   genesisHash,
+  BodyHash,
   BlockHash,
   VoteHash,
   hashTip,
@@ -24,6 +25,8 @@ genesisHash = Hash mempty
 hashTip :: [Block] -> BlockHash
 hashTip [] = genesisHash
 hashTip (block : _) = hashBlock block
+
+type BodyHash = Hash
 
 type VoteHash = Hash
 

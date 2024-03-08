@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -94,7 +95,7 @@ runNode ::
   NodeProcess m ->
   m ()
 runNode protocol total state NodeProcess{..} =
-  let go :: MonadDelay m => MonadSTM m => MonadSay m => MonadTime m => StateT NodeState m ()
+  let go :: StateT NodeState m ()
       go =
         do
           let atomically' = lift . atomically
@@ -109,11 +110,12 @@ runNode protocol total state NodeProcess{..} =
                     case inMessage of
                       NextSlot slot ->
                         do
-                          lift $ threadDelay 1000000
+                          lift $ threadDelay 1_000_000
                           nextSlot protocol slot total
                       SomeVote vote -> newVote protocol vote
-                      SomeBlock block -> newBlock protocol block
+                      RollForward block -> newBlock protocol block
                       NewChain chain -> newChain protocol chain
+                      _ -> say ("Message not handled: " <> show inMessage) >> pure mempty
                   rxBytes %= (+ messageSize inMessage)
                   bestChain <- chainState `uses` preferredChain
                   atomically' $

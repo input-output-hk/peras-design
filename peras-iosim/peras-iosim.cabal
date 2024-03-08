@@ -52,7 +52,10 @@ library
     , random
   default-extensions:  StrictData
   default-language: Haskell2010
-  ghc-options:      -Wall -Wunused-packages
+  ghc-options: 
+    -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints -Widentities
+    -Wunused-packages -Werror
 
 executable peras-iosim
   hs-source-dirs:   app
@@ -66,7 +69,10 @@ executable peras-iosim
     , process
     , temporary
     , yaml
-  ghc-options:      -Wall -Wunused-packages
+  ghc-options:
+      -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+      -Wincomplete-record-updates -Wredundant-constraints -Widentities
+      -Wunused-packages -Werror
   default-language: Haskell2010
 
 test-suite test
@@ -79,14 +85,16 @@ test-suite test
                       Paths_peras_iosim
     build-depends:
                     base >= 4.9 && <5
-                  , QuickCheck
                   , hspec
                   , hspec-golden-aeson
                   , hspec-golden-aeson
                   , peras-iosim
-                  , quickcheck-classes
 
     build-tool-depends:
        hspec-discover:hspec-discover
 
-    ghc-options: -rtsopts -threaded
+    ghc-options:
+      -rtsopts -threaded
+      -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
+      -Wincomplete-record-updates -Wredundant-constraints -Widentities
+      -Wunused-packages -Werror

@@ -35,6 +35,7 @@ data VrfUsage
   | VrfMembershipProof
   | VrfBlockSignature
   | VrfVoteSignature
+  | VrfBodyHash
   deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
 uniformRandom ::

@@ -3,5 +3,5 @@ peerCount: 1
 downstreamCount: 0
 totalStake: 1000
 maximumStake: 1000
-messageDelay: 0.35
+messageDelay: 350000
 endSlot: 1000

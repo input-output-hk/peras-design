@@ -4,6 +4,7 @@
             "bestChain": {
                 "blocks": [
                     {
+                        "bodyHash": "6e00e4ed6c70c012",
                         "creatorId": 6,
                         "includedVotes": [
                             "2ff8f5001f5186a5",
@@ -37,34 +38,11 @@
                         ],
                         "leadershipProof": "ec4d1c372fcfc143",
                         "parentBlock": "71e536d6abb42e99",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "6e00e4ed6c70c012",
+                        "signature": "d6cc7b80498f30dc",
                         "slotNumber": 19
                     },
                     {
+                        "bodyHash": "5f6879c9f460a477",
                         "creatorId": 30,
                         "includedVotes": [
                             "7664f00dd7774754",
@@ -88,15 +66,11 @@
                         ],
                         "leadershipProof": "1d85e08ca346e2cf",
                         "parentBlock": "4aaf8873ea7fc68e",
-                        "payload": [
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "5f6879c9f460a477",
+                        "signature": "230b7be7e045d082",
                         "slotNumber": 21
                     },
                     {
+                        "bodyHash": "a029133a14905214",
                         "creatorId": 5,
                         "includedVotes": [
                             "22d6fcde430b2e5b",
@@ -132,73 +106,22 @@
                         ],
                         "leadershipProof": "1ca790d38503309a",
                         "parentBlock": "eeedb0faf7261342",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "a029133a14905214",
+                        "signature": "ba7e40d48cc6e6e1",
                         "slotNumber": 8
                     },
                     {
+                        "bodyHash": "8a917d4b33dd54aa",
                         "creatorId": 29,
                         "includedVotes": [
                             "0e16173fc589c797"
                         ],
                         "leadershipProof": "98378eaa3afeeed2",
                         "parentBlock": "3cbf4d8f8f9131c1",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "8a917d4b33dd54aa",
+                        "signature": "b784507629b2d949",
                         "slotNumber": 1
                     },
                     {
+                        "bodyHash": "2322735bffd8371b",
                         "creatorId": 23,
                         "includedVotes": [
                             "a602066be03e25e8",
@@ -214,42 +137,11 @@
                         ],
                         "leadershipProof": "6073f3fcaecbd937",
                         "parentBlock": "3f236fe8ba6c44e0",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "2322735bffd8371b",
+                        "signature": "3e4ee0b60b257dc6",
                         "slotNumber": 25
                     },
                     {
+                        "bodyHash": "17831eb08d095ff5",
                         "creatorId": 20,
                         "includedVotes": [
                             "71e047b505ea395b",
@@ -270,28 +162,11 @@
                         ],
                         "leadershipProof": "7d151ec44a314b1f",
                         "parentBlock": "cba49982bae02cda",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "17831eb08d095ff5",
+                        "signature": "f08c389ac4c307f7",
                         "slotNumber": 2
                     },
                     {
+                        "bodyHash": "d75f0bcd46362ee0",
                         "creatorId": 0,
                         "includedVotes": [
                             "3642152430239a0d",
@@ -308,32 +183,7 @@
                         ],
                         "leadershipProof": "9a1d114dae8c54b9",
                         "parentBlock": "0fb4c9a485fe813b",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "d75f0bcd46362ee0",
+                        "signature": "37e722ee364b03d0",
                         "slotNumber": 17
                     }
                 ],
@@ -696,6 +546,7 @@
             "bestChain": {
                 "blocks": [
                     {
+                        "bodyHash": "f08230df9afc00d2",
                         "creatorId": 5,
                         "includedVotes": [
                             "54d8f94b1f8124fa",
@@ -727,52 +578,22 @@
                         ],
                         "leadershipProof": "62d4f9e131bffa5a",
                         "parentBlock": "25db427332156a9c",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "f08230df9afc00d2",
+                        "signature": "26252831ef996494",
                         "slotNumber": 4
                     },
                     {
+                        "bodyHash": "fcb97d6a825109a8",
                         "creatorId": 21,
                         "includedVotes": [
                             "ba35ecb29b00e97f"
                         ],
                         "leadershipProof": "8ee3febc65a89d2f",
                         "parentBlock": "42b5e9675d92f2b1",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "fcb97d6a825109a8",
+                        "signature": "f689b20319299faa",
                         "slotNumber": 8
                     },
                     {
+                        "bodyHash": "0c733974a3d0b8d4",
                         "creatorId": 25,
                         "includedVotes": [
                             "f6c117a4cd8d73cb",
@@ -804,24 +625,11 @@
                         ],
                         "leadershipProof": "f15373bfc5a0fd16",
                         "parentBlock": "00c19aed7a9facec",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "0c733974a3d0b8d4",
+                        "signature": "ccf1bc81f946a46f",
                         "slotNumber": 29
                     },
                     {
+                        "bodyHash": "761f3bfe3b73c3d8",
                         "creatorId": 16,
                         "includedVotes": [
                             "bb9ba5b394c4f7c1",
@@ -835,32 +643,11 @@
                         ],
                         "leadershipProof": "c34bdf3b284542df",
                         "parentBlock": "cc004ed8fc26b651",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "761f3bfe3b73c3d8",
+                        "signature": "b4e983ce94672715",
                         "slotNumber": 6
                     },
                     {
+                        "bodyHash": "49746774d2828576",
                         "creatorId": 10,
                         "includedVotes": [
                             "3511ea2356547341",
@@ -888,20 +675,11 @@
                         ],
                         "leadershipProof": "3ac5709ef94756f5",
                         "parentBlock": "23d29067697be952",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "49746774d2828576",
+                        "signature": "483bbd75e79b637c",
                         "slotNumber": 16
                     },
                     {
+                        "bodyHash": "41d51c7358dca4e9",
                         "creatorId": 1,
                         "includedVotes": [
                             "c888cef85c454b53",
@@ -916,20 +694,7 @@
                         ],
                         "leadershipProof": "a04f0aa782d29f99",
                         "parentBlock": "b025ebbb4479d851",
-                        "payload": [
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            [],
-                            []
-                        ],
-                        "signature": "41d51c7358dca4e9",
+                        "signature": "0bce03b6b976d2ca",
                         "slotNumber": 13
                     }
                 ],
@@ -959,14 +724,30 @@
             "destination": "Node-27",
             "outMessage": {
                 "contents": {
-                    "contents": {
-                        "blockHash": "8097975d0df03786",
-                        "committeeMembershipProof": "3102da3489b25c24",
-                        "creatorId": 25,
-                        "signature": "bfce63fb0870cdac",
-                        "votingRound": 18
-                    },
-                    "tag": "SomeVote"
+                    "contents": [
+                        "bfce63fb0870cdac",
+                        "a3f19e2e2c7465fb",
+                        "ac345051d5ddd585",
+                        "b7105c4480a3a7c5",
+                        "085ef81558754ec3",
+                        "7580638ff1e4667d",
+                        "91185c61ee7bbf1d",
+                        "f08979bccf5250fa",
+                        "81bad26599e929b0",
+                        "8a5a157f6651601c",
+                        "12311967a333e74f",
+                        "6f4406ba693d22ac",
+                        "809d35ad010b1a15",
+                        "b3cea85ec1e98726",
+                        "054df22a861688c8",
+                        "5c151a26daeedd4e",
+                        "b1ba14b50b77d618",
+                        "07e8fbe585b63f98",
+                        "db7c0a1a18038b5c",
+                        "6fda3b4180691ad4",
+                        "3d84ab0a5b07a75e"
+                    ],
+                    "tag": "FetchBlocks"
                 },
                 "tag": "SendMessage"
             },

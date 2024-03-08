@@ -40,6 +40,7 @@ import Data.Function (on)
 import Data.List (partition)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
+import Peras.Crypto (Hash (Hash))
 import Peras.IOSim.Chain (
   addBlock,
   addChain,
@@ -58,12 +59,12 @@ import Peras.IOSim.Chain (
   voteRecorded,
  )
 import Peras.IOSim.Chain.Types (ChainState (preferredChain, voteIndex))
-import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, nextVrf, proveLeadership, proveMembership, signBlock, signVote, slotLeaderRandom)
+import Peras.IOSim.Crypto (VrfOutput, VrfUsage (VrfBodyHash), committeMemberRandom, nextVrf, proveLeadership, proveMembership, randomBytes, signBlock, signVote, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock, hashTip, hashVote)
 import Peras.IOSim.Node.Types (NodeState, chainState, committeeMember, owner, rollbacks, slot, slotLeader, stake, vrfOutput)
 import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
 import Peras.IOSim.Types (Coin, Rollback (..), VoteWithBlock)
-import Peras.Message (Message (NewChain, SomeBlock, SomeVote))
+import Peras.Message (Message (NewChain, RollForward, SomeVote))
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -123,8 +124,8 @@ doLeading slotNumber vrf =
         <*> uses chainState (hashTip . Peras.Chain.blocks . preferredChain)
         <*> uses' chainState eligibleDanglingVotes
         <*> pure (proveLeadership vrf ())
-        <*> pure mempty
         <*> pure (signBlock vrf ())
+        <*> pure (Hash $ randomBytes VrfBodyHash vrf)
     chainState %#= appendBlock block
     -- FIXME: Implement `prefixCutoffWeight` logic.
     chainState `uses` (pure . NewChain . preferredChain)
@@ -176,7 +177,7 @@ newChain protocol proposed =
               (prefix, suffix) ->
                 let
                   atSlot = if null prefix then 0 else slotNumber $ head prefix
-                  slots = on (-) fromIntegral (slotNumber $ head suffix) atSlot
+                  slots = slotNumber (head suffix) - atSlot
                   blocks = fromIntegral $ length suffix
                  in
                   rollbacks %= (Rollback{..} :)
@@ -211,7 +212,7 @@ newBlock' _ block =
         Right _ -> pure mempty
         Left _ -> do
           chainState %#= addBlock block
-          pure [SomeBlock block]
+          pure [RollForward block]
 
 newVote ::
   MonadSay m =>
@@ -236,7 +237,7 @@ newVote' protocol vote =
           addValidVote protocol vote
           chainState `uses` lookupBlock (blockHash vote)
             >>= \case
-              Right block -> pure [SomeBlock block, SomeVote vote]
+              Right block -> pure [RollForward block, SomeVote vote]
               Left HashOfUnknownBlock -> pure [SomeVote vote] -- FIXME: Ideally, we should request the block from the peers.
               Left e -> throwError e
 
@@ -280,8 +281,8 @@ candidateWindow ::
   Slot ->
   (Slot, Slot)
 candidateWindow Peras{votingWindow} s =
-  ( s - min s (fromIntegral $ fst votingWindow)
-  , s - min s (fromIntegral $ snd votingWindow)
+  ( s - min s (fst votingWindow)
+  , s - min s (snd votingWindow)
   )
 
 inclusionWindow ::
@@ -289,7 +290,7 @@ inclusionWindow ::
   Slot ->
   (Slot, Slot)
 inclusionWindow Peras{voteMaximumAge} s =
-  ( s - min s (fromIntegral voteMaximumAge)
+  ( s - min s voteMaximumAge
   , s - min s 1
   )
 

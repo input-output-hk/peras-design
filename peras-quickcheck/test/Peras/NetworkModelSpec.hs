@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -116,5 +117,5 @@ parameters =
     , totalStake = Nothing
     , maximumStake = 1000
     , endSlot = 1000
-    , messageDelay = 0.35
+    , messageDelay = 350_000
     }
