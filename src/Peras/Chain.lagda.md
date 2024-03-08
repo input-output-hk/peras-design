@@ -417,24 +417,32 @@ property in `non-empty` of the `Chain`.
 
 ```agda
   instance
-    itsNonEmptyChain : ∀ {c : Chain} → {ValidPraosChain c} → NonEmpty (blocks c)
-    itsNonEmptyChain {MkChain (x ∷ _) _ _} = NonEmpty.itsNonEmpty
+    itsNonEmptyPraosChain : ∀ {c : Chain} → {ValidPraosChain c} → NonEmpty (blocks c)
+    itsNonEmptyPraosChain {MkChain (x ∷ _) _ _} = NonEmpty.itsNonEmpty
 ```
 
 The last block in a valid chain is always the genesis block.
 
 ```agda
-  last-is-block₀ : ∀ {c : Chain}
+  last-is-block₀-Praos : ∀ {c : Chain}
     → (v : ValidPraosChain c)
-    → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
-  last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v) =
+    → last (blocks c) ⦃ itsNonEmptyPraosChain {c} {v} ⦄ ≡ block₀
+  last-is-block₀-Praos Genesis = refl
+  last-is-block₀-Praos (Cons {_} {c} {b} _ v) =
     trans
-      (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
-      (last-is-block₀ {c} v)
+      (drop-head (blocks c) b ⦃ itsNonEmptyPraosChain {c} {v} ⦄)
+      (last-is-block₀-Praos {c} v)
     where
       drop-head : ∀ {A : Set} → (c : List A) → (b : A) → ⦃ _ : NonEmpty c ⦄ → last (b ∷ c) ≡ last c
       drop-head (_ ∷ _) _ ⦃ NonEmpty.itsNonEmpty ⦄ = refl
+
+  validPraos : ∀ {c} → ValidChain c → ValidPraosChain c
+  validPraos (VotesCondition x _ _ _ _) = x
+
+  last-is-block₀ : ∀ {c : Chain}
+    → (v : ValidChain c)
+    → last (blocks c) ⦃ itsNonEmptyPraosChain {c} {validPraos v} ⦄ ≡ block₀
+  last-is-block₀ (VotesCondition x _ _ _ _) = last-is-block₀-Praos x
 ```
 
 <!--
