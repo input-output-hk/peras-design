@@ -19,10 +19,3 @@ pub enum Message {
     FetchBlocks(Vec<Hash>),
     SomeBlock(BlockBody),
 }
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(tag = "tag", content = "contents")]
-pub enum OutMessage {
-    FetchBlock(Block),
-    SendMessage(Message),
-}

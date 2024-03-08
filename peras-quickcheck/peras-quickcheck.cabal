@@ -135,6 +135,7 @@ test-suite peras-quickcheck-test
                   , QuickCheck
                   , bytestring
                   , containers
+                  , contra-tracer
                   , data-default
                   , hspec
                   , io-classes

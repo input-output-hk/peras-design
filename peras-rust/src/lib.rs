@@ -1,6 +1,7 @@
 mod block;
 mod chain;
 mod crypto;
+mod event;
 mod message;
 mod peras_node;
 

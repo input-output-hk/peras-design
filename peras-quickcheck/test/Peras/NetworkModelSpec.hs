@@ -15,6 +15,7 @@ import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', t
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (..))
 import Control.Monad.State (StateT (..))
+import Control.Tracer (nullTracer)
 import Data.Default (def)
 import Data.Functor (void)
 import qualified Data.Map as Map
@@ -84,7 +85,7 @@ runPropInIOSim p = do
     network <- createNetwork topology
     let initState :: NetworkState = def & networkRandom .~ gen'' & currentStates .~ states
     networkState <- newTVarIO initState
-    runWithState networkState $ startNodes parameters protocol states network
+    runWithState networkState $ startNodes nullTracer parameters protocol states network
     pure $
       Simulator
         { step = runWithState networkState $ stepToIdle parameters network

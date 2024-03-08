@@ -6,7 +6,7 @@ import Data.ByteString (ByteString)
 import Data.Time (UTCTime)
 import Peras.Message (Message, NodeId)
 
-newtype UniqueId = UniqueId ByteString
+newtype UniqueId = UniqueId {uniqueId :: ByteString}
 
 data Event
   = Send

@@ -28,18 +28,20 @@ import Control.Monad.State (
   StateT,
   evalStateT,
  )
+import Control.Tracer (Tracer, natTracer, traceWith)
 import Data.Default (def)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Peras.Event (Event (..))
 import Peras.IOSim.Chain.Types (preferredChain)
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
 import Peras.IOSim.Network.Types (Topology (..))
 import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId, rxBytes, txBytes)
 import Peras.IOSim.Protocol (newBlock, newChain, newVote, nextSlot)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin, messageSize)
-import Peras.Message (Message (..), NodeId)
+import Peras.Message (Message (..), NodeId (MkNodeId))
 
 import Data.Map (keysSet)
 import qualified Data.Map.Strict as M
@@ -89,41 +91,58 @@ runNode ::
   MonadSay m =>
   MonadSTM m =>
   MonadTime m =>
+  Tracer m Event ->
   Protocol ->
   Coin ->
   NodeState ->
   NodeProcess m ->
   m ()
-runNode protocol total state NodeProcess{..} =
-  let go :: StateT NodeState m ()
-      go =
+runNode tracer protocol total state NodeProcess{..} =
+  let go :: Int -> StateT NodeState m ()
+      go i =
         do
           let atomically' = lift . atomically
-          nodeId' <- use nodeId
+              tracer' = natTracer lift tracer
+          nodeId'@(MkNodeId name) <- use nodeId
           downstreams' <- downstreams `uses` S.toList
           now <- lift getCurrentTime
           atomically' (readTQueue incoming)
             >>= \case
               InEnvelope{..} ->
                 do
+                  (flip . maybe $ pure ()) origin $
+                    \origin' -> traceWith tracer' $ Receive inId now origin' nodeId' inMessage
                   messages <-
                     case inMessage of
                       NextSlot slot ->
                         do
                           lift $ threadDelay 1_000_000
-                          nextSlot protocol slot total
-                      SomeVote vote -> newVote protocol vote
-                      RollForward block -> newBlock protocol block
-                      NewChain chain -> newChain protocol chain
+                          nextSlot tracer' protocol slot total
+                      SomeVote vote -> newVote tracer' protocol vote
+                      RollForward block -> newBlock tracer' protocol block
+                      NewChain chain -> newChain tracer' protocol chain
                       _ -> say ("Message not handled: " <> show inMessage) >> pure mempty
                   rxBytes %= (+ messageSize inMessage)
                   bestChain <- chainState `uses` preferredChain
+                  let out message outId j =
+                        OutEnvelope
+                          { timestamp = now
+                          , source = nodeId'
+                          , outMessage = message
+                          , outId = mkUniqueId (name, j)
+                          , bytes = messageSize message
+                          , destination = outId
+                          }
+                      outEvent OutEnvelope{..} = Send outId now source destination outMessage
+                      outEvent _ = error "impossible"
+                      outs = zipWith id (concatMap (flip fmap downstreams' . out) messages) [i ..]
                   atomically' $
                     do
-                      mapM_ (\message' -> mapM_ (writeTQueue outgoing . OutEnvelope now nodeId' (SendMessage message') 0) downstreams') messages
+                      mapM_ (writeTQueue outgoing) outs
                       writeTQueue outgoing $ Idle now nodeId' bestChain
+                  mapM_ (traceWith tracer' . outEvent) outs
                   txBytes %= (\bs -> bs + (sum (messageSize <$> messages) * fromIntegral (length downstreams')))
                   clock .= now
-                  go
+                  go $ i + length outs
               Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
-   in go `evalStateT` state
+   in go 0 `evalStateT` state

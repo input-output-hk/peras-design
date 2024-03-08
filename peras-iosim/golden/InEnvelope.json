@@ -1,6 +1,7 @@
 {
     "samples": [
         {
+            "inId": "7b59d123541bfc93",
             "inMessage": {
                 "contents": {
                     "blockHash": "3a2fde89afd179d0",
@@ -11,10 +12,11 @@
                 },
                 "tag": "SomeBlock"
             },
-            "origin": "Node-17",
+            "origin": "Node-12",
             "tag": "InEnvelope"
         },
         {
+            "inId": "144b93bb7914a92f",
             "inMessage": {
                 "contents": {
                     "bodyHash": "95d28bb9890e240c",
@@ -50,10 +52,11 @@
                 },
                 "tag": "RollForward"
             },
-            "origin": null,
+            "origin": "Node-30",
             "tag": "InEnvelope"
         },
         {
+            "inId": "2c6ab3a724c8f1cb",
             "inMessage": {
                 "contents": {
                     "blocks": [
@@ -248,10 +251,11 @@
                 },
                 "tag": "NewChain"
             },
-            "origin": "Node-30",
+            "origin": null,
             "tag": "InEnvelope"
         },
         {
+            "inId": "d63dfdb809674f77",
             "inMessage": {
                 "contents": {
                     "blockHash": "2c8bccfad798da49",
@@ -262,10 +266,11 @@
                 },
                 "tag": "SomeVote"
             },
-            "origin": "Node-22",
+            "origin": "Node-5",
             "tag": "InEnvelope"
         },
         {
+            "inId": "2bfdaed8c6625695",
             "inMessage": {
                 "contents": [
                     "11c60247176e210e",
@@ -274,7 +279,7 @@
                 ],
                 "tag": "FetchVotes"
             },
-            "origin": "Node-16",
+            "origin": null,
             "tag": "InEnvelope"
         }
     ],

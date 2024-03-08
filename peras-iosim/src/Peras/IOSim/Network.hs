@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -29,17 +30,19 @@ import Control.Lens (
  )
 import Control.Monad (unless, void)
 import Control.Monad.Class.MonadFork (MonadFork (forkIO))
-import Control.Monad.Class.MonadSay (MonadSay (say))
+import Control.Monad.Class.MonadSay (MonadSay)
 import Control.Monad.Class.MonadTime (MonadTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
 import Control.Monad.State (StateT, execStateT, lift)
+import Control.Tracer (Tracer)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
 import Peras.Chain (Chain (blocks))
+import Peras.Event (Event, UniqueId (..))
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.IOSim.Network.Types (
   Delay,
   Network (..),
@@ -116,13 +119,14 @@ runNetwork ::
   MonadSay m =>
   MonadSTM m =>
   MonadTime m =>
+  Tracer m Event ->
   Parameters ->
   Protocol ->
   M.Map NodeId NodeState ->
   Network m ->
   NetworkState ->
   m NetworkState
-runNetwork parameters protocol states network@Network{..} initialState =
+runNetwork tracer parameters protocol states network@Network{..} initialState =
   flip execStateT (initialState & currentStates .~ states) $
     do
       let
@@ -141,18 +145,19 @@ runNetwork parameters protocol states network@Network{..} initialState =
                 waitForExits parameters network
               else loop
       -- Start the node processes.
-      startNodes parameters protocol states network
+      startNodes tracer parameters protocol states network
       -- Run the network.
       loop
 
 startNodes ::
   (MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
+  Tracer m Event ->
   Parameters ->
   Protocol ->
   M.Map NodeId NodeState ->
   Network m ->
   StateT NetworkState m ()
-startNodes parameters protocol states network =
+startNodes tracer parameters protocol states network =
   mapM_ forkNode $ M.toList nodesIn
  where
   Network{nodesIn, nodesOut} = network
@@ -163,7 +168,7 @@ startNodes parameters protocol states network =
     void
       . lift
       . forkIO
-      . runNode protocol total (states M.! nodeId)
+      . runNode tracer protocol total (states M.! nodeId)
       $ NodeProcess nodeIn nodesOut
 
 -- | Wait for all nodes to exit.
@@ -217,16 +222,17 @@ stepToIdle parameters network = do
       mapM_ route received
       stepToIdle parameters network
  where
+  nextSlotId = UniqueId "000000"
   Network{nodesIn, nodesOut} = network
   route = routeEnvelope parameters network
   -- Notify a node of the next slot.
   notifySlot destination nodeIn =
-    output destination nodeIn . InEnvelope Nothing . NextSlot
+    output destination nodeIn . InEnvelope Nothing nextSlotId . NextSlot
       =<< use lastSlot
 
 -- | Dispatch a single message through the network.
 routeEnvelope ::
-  (MonadSTM m, MonadSay m) =>
+  MonadSTM m =>
   Parameters ->
   Network m ->
   OutEnvelope ->
@@ -239,24 +245,19 @@ routeEnvelope parameters Network{nodesIn} = \case
       networkRandom .= gen
       -- FIXME: This is an approximation, and it results of occasional reordering of messages.
       if r > messageDelay parameters
-        then case outMessage of
-          -- FIXME: Implement this.
-          FetchBlock _ -> say "Fetching blocks is not yet implemented."
-          -- Forward the message to the appropriate node.
-          SendMessage message ->
-            do
-              -- FIXME: Awkwardly peek at the chain.
-              case message of
-                NewChain chain -> do
-                  chainsSeen %= M.insert source chain
-                  case blocks chain of
-                    tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
-                    [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
-                    _ -> pure ()
-                SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
+        then do
+          -- FIXME: Awkwardly peek at the chain.
+          case outMessage of
+            NewChain chain -> do
+              chainsSeen %= M.insert source chain
+              case blocks chain of
+                tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
+                [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
                 _ -> pure ()
-              -- Forward the message.
-              output destination (nodesIn M.! destination) $ InEnvelope (pure source) message
+            SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
+            _ -> pure ()
+          -- Forward the message.
+          output destination (nodesIn M.! destination) $ InEnvelope (pure source) outId outMessage
         else pending %= (out :)
   Idle{..} -> do
     lastTime %= max timestamp

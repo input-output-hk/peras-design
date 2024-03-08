@@ -720,38 +720,46 @@
             "timestamp": "1864-04-21T20:05:37.162748602378Z"
         },
         {
-            "bytes": 9,
+            "bytes": 1904976,
             "destination": "Node-27",
+            "outId": "cf01d103d21a7352",
             "outMessage": {
                 "contents": {
-                    "contents": [
-                        "bfce63fb0870cdac",
-                        "a3f19e2e2c7465fb",
-                        "ac345051d5ddd585",
-                        "b7105c4480a3a7c5",
-                        "085ef81558754ec3",
-                        "7580638ff1e4667d",
-                        "91185c61ee7bbf1d",
-                        "f08979bccf5250fa",
-                        "81bad26599e929b0",
-                        "8a5a157f6651601c",
-                        "12311967a333e74f",
-                        "6f4406ba693d22ac",
-                        "809d35ad010b1a15",
-                        "b3cea85ec1e98726",
-                        "054df22a861688c8",
-                        "5c151a26daeedd4e",
-                        "b1ba14b50b77d618",
-                        "07e8fbe585b63f98",
-                        "db7c0a1a18038b5c",
-                        "6fda3b4180691ad4",
-                        "3d84ab0a5b07a75e"
+                    "bodyHash": "bf9b18dcbf47a66f",
+                    "creatorId": 27,
+                    "includedVotes": [
+                        "1654b3a6a0bda13d",
+                        "9b7722e76c703107",
+                        "46b3ab7e32a0093e",
+                        "f061c66140f7bd6c",
+                        "ca7aa5f8ab14139c",
+                        "9a940cc868437b2e",
+                        "f8f395b93eb1e98e",
+                        "a81c55c260183463",
+                        "61a39f3eb36d5391",
+                        "54f7b15ba202b25e",
+                        "295f803562ea3177",
+                        "9988c87ef2a19356",
+                        "a8e405571f11c6f8",
+                        "ba5c25437875156d",
+                        "1e0cafb6369e1ce4",
+                        "e6a2942fbed2780c",
+                        "d53f475ab845be28",
+                        "faaaa2bcc5d949aa",
+                        "3ef73a36749239bd",
+                        "e70ca203d04ad228",
+                        "0fd6f39dbfca3fd6",
+                        "3676313d8291f226",
+                        "c017e22d6eea8888"
                     ],
-                    "tag": "FetchBlocks"
+                    "leadershipProof": "f5e4450514c8c03b",
+                    "parentBlock": "c946101c65ff565d",
+                    "signature": "c81e3df8775b92cc",
+                    "slotNumber": 12
                 },
-                "tag": "SendMessage"
+                "tag": "RollBack"
             },
-            "source": "Node-4",
+            "source": "Node-8",
             "tag": "OutEnvelope",
             "timestamp": "1864-04-24T17:08:15.27123842066Z"
         },

@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.IOSim.Simulate (
   simulate,
   simulation,
+  writeEvents,
   writeReport,
   writeSays,
   writeTrace,
@@ -11,9 +13,11 @@ module Peras.IOSim.Simulate (
 
 import Control.Lens ((&), (.~))
 import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
-import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, selectTraceEventsSay, traceResult)
+import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, selectTraceEventsDynamic, selectTraceEventsSay, traceM, traceResult)
 import Control.Monad.Random (evalRandT)
+import Control.Tracer (Tracer (Tracer), emit)
 import Data.Default (def)
+import Peras.Event (Event)
 import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
 import Peras.IOSim.Network.Types (NetworkState, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
@@ -25,12 +29,15 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 
 simulation ::
+  forall s.
   Parameters ->
   Protocol ->
   IOSim s NetworkState
 simulation parameters@Parameters{..} protocol =
   do
     let (gen, gen') = split $ mkStdGen randomSeed
+        tracer :: Tracer (IOSim s) Event
+        tracer = Tracer $ emit traceM
     now <- getCurrentTime
     -- FIXME: Read the topology and node states from files.
     (topology, states) <-
@@ -40,7 +47,7 @@ simulation parameters@Parameters{..} protocol =
           states' <- initializeNodes parameters now topology'
           pure (topology', states')
     network <- createNetwork topology
-    runNetwork parameters protocol states network $
+    runNetwork tracer parameters protocol states network $
       def & networkRandom .~ gen'
 
 simulate ::
@@ -64,6 +71,16 @@ writeSays ::
   SimTrace NetworkState ->
   IO ()
 writeSays filename = writeFile filename . unlines . selectTraceEventsSay
+
+writeEvents ::
+  FilePath ->
+  SimTrace NetworkState ->
+  IO ()
+writeEvents filename =
+  LBS8.writeFile filename
+    . LBS8.unlines
+    . fmap A.encode
+    . (selectTraceEventsDynamic :: SimTrace NetworkState -> [Event])
 
 writeReport ::
   FilePath ->

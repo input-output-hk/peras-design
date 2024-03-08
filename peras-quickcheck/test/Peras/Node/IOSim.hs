@@ -14,6 +14,7 @@ import Control.Monad.Class.MonadTimer.SI (MonadDelay, MonadFork, MonadTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (runReaderT))
+import Control.Tracer (nullTracer)
 import Data.Default (def)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
@@ -42,7 +43,7 @@ initialiseNodeEnv = do
   nodeProcess <- NodeProcess <$> newTQueueIO <*> newTQueueIO
   let (nodeState, _) = flip runRand gen $ initializeNode parameters now (MkNodeId "N1") (Set.singleton $ MkNodeId "N2")
   -- FIXME: it's annoying to have threads running out of control
-  threadId <- forkIO $ runNode protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
+  threadId <- forkIO $ runNode nullTracer protocol (fromMaybe (maximumStake parameters) $ totalStake parameters) nodeState nodeProcess
   pure (threadId, nodeProcess, toInteger (nodeState ^. stake) % toInteger (fromMaybe (maximumStake parameters) $ totalStake parameters))
 
 protocol :: Protocol
