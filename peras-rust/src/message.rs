@@ -13,7 +13,7 @@ pub enum Message {
     NewChain(Chain),
     SomeVote(Vote),
     FetchVotes(Vec<Hash>),
-    FollowChain(Block),
+    FollowChain(Hash),
     RollForward(Block),
     RollBack(Block),
     FetchBlocks(Vec<Hash>),
