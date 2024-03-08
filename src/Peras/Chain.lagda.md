@@ -366,11 +366,12 @@ module _ {block₀ : Block}
          where
 
   open Hashable ⦃...⦄
-
-  data ValidChain : Chain → Set where
+```
+```agda
+  data ValidPraosChain : Chain → Set where
 
     Genesis :
-      ValidChain
+      ValidPraosChain
         record {
           blocks = block₀ ∷ [] ;
           votes = [] ;
@@ -379,25 +380,35 @@ module _ {block₀ : Block}
 
     Cons : ∀ {vs : List Vote} {c : Chain} {b : Block}
       → parentBlock b ≡ hash (tip c)
-      → ValidChain c
-      → Unique vs
-      → NoEquivocations vs
-      → All (λ { v →
-               Any (λ { x →
-                   hash v ∈ includedVotes x × slotNumber x > roundNumber (votingRound v) * T
-                 }) (blocks c)
-            }) vs
-      → All (λ { v →
-               Any (λ { x →
-                   blockHash v ≡ hash x × slotNumber x < (roundNumber (votingRound v) * T) ∸ L
-                 }) (blocks c)
-            }) vs
-      → ValidChain
+      → ValidPraosChain c
+      → ValidPraosChain
           record {
             blocks = b ∷ blocks c ;
             votes = vs ;
             non-empty = NonEmpty.itsNonEmpty
           }
+```
+```agda
+  data ValidChain : Chain → Set where
+
+    VotesCondition : ∀ {c : Chain}
+      → ValidPraosChain c
+      → let bs = blocks c
+            vs = votes c
+        in
+        Unique vs
+      → NoEquivocations vs
+      → All (λ { v →
+               Any (λ { x →
+                   hash v ∈ includedVotes x × slotNumber x > roundNumber (votingRound v) * T
+                 }) bs
+            }) vs
+      → All (λ { v →
+               Any (λ { x →
+                   blockHash v ≡ hash x × slotNumber x < (roundNumber (votingRound v) * T) ∸ L
+                 }) bs
+            }) vs
+      → ValidChain c
 ```
 #### Properties
 
@@ -406,7 +417,7 @@ property in `non-empty` of the `Chain`.
 
 ```agda
   instance
-    itsNonEmptyChain : ∀ {c : Chain} → {ValidChain c} → NonEmpty (blocks c)
+    itsNonEmptyChain : ∀ {c : Chain} → {ValidPraosChain c} → NonEmpty (blocks c)
     itsNonEmptyChain {MkChain (x ∷ _) _ _} = NonEmpty.itsNonEmpty
 ```
 
@@ -414,10 +425,10 @@ The last block in a valid chain is always the genesis block.
 
 ```agda
   last-is-block₀ : ∀ {c : Chain}
-    → (v : ValidChain c)
+    → (v : ValidPraosChain c)
     → last (blocks c) ⦃ itsNonEmptyChain {c} {v} ⦄ ≡ block₀
   last-is-block₀ Genesis = refl
-  last-is-block₀ (Cons {_} {c} {b} _ v _ _ _ _) =
+  last-is-block₀ (Cons {_} {c} {b} _ v) =
     trans
       (drop-head (blocks c) b ⦃ itsNonEmptyChain {c} {v} ⦄)
       (last-is-block₀ {c} v)
