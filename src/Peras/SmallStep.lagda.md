@@ -25,7 +25,6 @@ open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteIn
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
-open import Peras.Message
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
@@ -50,8 +49,14 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
+Messages for sending and receiving blocks, votes and chains
+```agda
+data Message : Set where
+  BlockMsg : Block → Message
+  VoteMsg : Vote → Message
+  ChainMsg : Chain → Message
+```
 Messages are put into an envelope
-
 ```agda
 record Envelope : Set where
   constructor ⦅_,_⦆
@@ -59,7 +64,6 @@ record Envelope : Set where
     message : Message
     partyId : PartyId
 ```
-
 <!--
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
@@ -202,7 +206,7 @@ A new vote is added as dangling vote to the local state, when
         → ¬ (Any (v ∻_) d)
         → ⟪ t
           , d
-          ⟫ [ SomeVote v ]→
+          ⟫ [ VoteMsg v ]→
           ⟪ t
           , v ∷ d
           ⟫
@@ -236,7 +240,7 @@ votes.
         → ∥ ⟨ b , d , pb ⟩ ∥ < ∥ ⟨ c , d , pc ⟩ ∥
         → ⟪ t
           , d
-          ⟫ [ NewChain c ]→
+          ⟫ [ ChainMsg c ]→
           ⟪ (newChain blockTree) t c
           , d
           ⟫
@@ -344,7 +348,7 @@ A party can cast a vote for a block, if
         → isCommitteeMember p r ≡ true
         → VoteInRound ⟨ c , d , pr ⟩ r
           ---------------------------------------------------------
-        → M [ Honest {p} ]⇉ updateᵍ (SomeVote v) p ⟪ t , v ∷ d ⟫ M
+        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) p ⟪ t , v ∷ d ⟫ M
 
       corrupt : ∀ {p N}
           ---------------------
@@ -385,7 +389,7 @@ state.
           lookup stateMap p ≡ just ⟪ t , d ⟫
         → isSlotLeader p clock ≡ true
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (RollForward b) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
       corrupt : ∀ {p N}
@@ -454,7 +458,7 @@ In the paper mentioned above this is big-step semantics.
 
       collision-free : ∀ {b₁ b₂ : Block}
         → All
-          (λ { (m₁ , m₂) → m₁ ≡ RollForward b₁ → m₂ ≡ RollForward b₂ →
+          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
                (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
