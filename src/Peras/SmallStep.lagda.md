@@ -56,8 +56,8 @@ Messages are put into an envelope
 record Envelope : Set where
   constructor ⦅_,_⦆
   field
-    msg : Message
-    rcv : PartyId
+    message : Message
+    partyId : PartyId
 ```
 
 <!--
@@ -179,7 +179,7 @@ The local state initialized with the block tree
 ```agda
     Stateˡ = LocalState blockTree
 ```
-### Honest update
+### State update
 
 Updating the local state upon receiving a message
 
@@ -265,19 +265,7 @@ The global state consists of the following fields:
 ```agda
         history : List Message
 ```
-```agda
-    update : PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    update p s N =
-      record N {
-        stateMap = insert p s (stateMap N)
-      }
-      where open Stateᵍ
-```
-
-# Network
-
-Broadcasting messages, i.e. updating the global message buffer
-
+Updating global state
 ```agda
     updateᵍ : Message → PartyId → Stateˡ → Stateᵍ → Stateᵍ
     updateᵍ m p l ⟦ c , s , ms , hs ⟧ =
@@ -286,14 +274,15 @@ Broadcasting messages, i.e. updating the global message buffer
           , map ⦅ m ,_⦆ parties ++ ms
           , m ∷ hs
           ⟧
-
+```
+Ticking the global clock
+```agda
     tick : Stateᵍ → Stateᵍ
     tick M =
       record M {
         clock = suc (clock M)
       }
       where open Stateᵍ
-
 ```
 ## Receive
 
@@ -450,9 +439,12 @@ In the paper mentioned above this is big-step semantics.
 
 # Collision free predicate
 
+<!--
 ```agda
     open Stateᵍ
-
+```
+-->
+```agda
     data CollisionFree (N : Stateᵍ) : Set where
 
       collision-free : ∀ {b₁ b₂ : Block}
