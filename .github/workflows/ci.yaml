@@ -87,10 +87,13 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🔬 Test with `peras-hs-tests`
+    - name: 🔬 Test with `peras-hs-test`
       run: |
-        nix run .#test
-    - name: 🔬 Test with `peras-quickcheck-tests`
+        nix run .#peras-hs-test
+    - name: 🔬 Test with `peras-iosim-test`
+      run: |
+        nix run .#peras-iosim-test
+    - name: 🔬 Test with `peras-quickcheck-test`
       run: |
         nix build .#peras_rust -o peras_rust
         export DYLD_LIBRARY_PATH="$PWD/peras_rust/lib"
