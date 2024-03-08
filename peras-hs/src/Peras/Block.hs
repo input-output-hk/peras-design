@@ -20,9 +20,12 @@ data Block = Block
   , parentBlock :: Hash
   , includedVotes :: [Hash]
   , leadershipProof :: LeadershipProof
-  , payload :: [Tx]
   , signature :: Signature
+  , bodyHash :: Hash
   }
+  deriving (Eq)
+
+data BlockBody = BlockBody {blockHash :: Hash, payload :: [Tx]}
   deriving (Eq)
 
 instance Hashable Block where

@@ -95,6 +95,8 @@ Slot = ℕ
 In addition to a Praos block, there is a field for the
 hashes of included votes.
 
+**Note**: What we name `Block` is actually a block _Header_, we use `BlockBody` to contain the payload.
+
 ```agda
 record Block : Set where
   field slotNumber : Slot
@@ -102,15 +104,23 @@ record Block : Set where
         parentBlock : Hash
         includedVotes : List Hash
         leadershipProof : LeadershipProof
-        payload : List Tx
         signature : Signature
+        bodyHash : Hash
 
 open Block public
+
+record BlockBody : Set where
+  field blockHash : Hash
+        payload : List Tx
+
+open BlockBody public
+
 ```
 
 <!--
 ```agda
 {-# COMPILE AGDA2HS Block deriving Eq #-}
+{-# COMPILE AGDA2HS BlockBody deriving Eq #-}
 ```
 -->
 

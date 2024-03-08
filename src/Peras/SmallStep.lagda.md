@@ -75,6 +75,7 @@ block₀ denotes the genesis block that is passed in as a module parameter
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable Vote ⦄
+         ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          where
 ```
@@ -367,20 +368,24 @@ state.
                        v → r ≤ᵇ (roundNumber (votingRound v) + L)
                      } )
                      (votes c) -- TODO: more conditions
+              body = record {
+                  blockHash = hash txs ;
+                  payload = txs
+                  }
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
                     parentBlock = hash (tip c) ;
                     includedVotes = map hash vs ;
                     leadershipProof = record { proof = emptyBS } ; -- FIXME
-                    payload = txs ;
+                    bodyHash = blockHash body ;
                     signature = record { bytes = emptyBS } -- FIXME
                   }
           in
           lookup stateMap p ≡ just ⟪ t , d ⟫
         → isSlotLeader p clock ≡ true
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (SomeBlock b) p
+        → M [ Honest {p} ]↷ updateᵍ (RollForward b) p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
       corrupt : ∀ {p N}
@@ -449,7 +454,7 @@ In the paper mentioned above this is big-step semantics.
 
       collision-free : ∀ {b₁ b₂ : Block}
         → All
-          (λ { (m₁ , m₂) → m₁ ≡ SomeBlock b₁ → m₂ ≡ SomeBlock b₂ →
+          (λ { (m₁ , m₂) → m₁ ≡ RollForward b₁ → m₂ ≡ RollForward b₂ →
                (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N

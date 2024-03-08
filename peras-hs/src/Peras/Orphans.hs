@@ -22,7 +22,7 @@ import Data.Bifunctor (bimap)
 import Data.Default (Default (..))
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
-import Peras.Block (Block (..), Party (..))
+import Peras.Block (Block (..), BlockBody (..), Party (..))
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
 import Peras.Event (Event (..), UniqueId (..))
@@ -84,8 +84,13 @@ deriving stock instance Read Block
 deriving stock instance Show Block
 instance FromJSON Block
 instance ToJSON Block
-instance FromJSONKey Block
-instance ToJSONKey Block
+
+deriving stock instance Generic BlockBody
+deriving stock instance Ord BlockBody
+deriving stock instance Read BlockBody
+deriving stock instance Show BlockBody
+instance FromJSON BlockBody
+instance ToJSON BlockBody
 
 -- Orphans for `Peras.Chain`.
 
