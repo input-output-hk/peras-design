@@ -1,11 +1,13 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     sync::{Arc, Mutex},
     thread::{self, JoinHandle},
     time::Duration,
 };
 
-use netsim::{Bandwidth, HasBytesSize, NodePolicy, SimConfiguration, SimContext, SimSocket};
+use netsim::{
+    Bandwidth, HasBytesSize, NodePolicy, SimConfiguration, SimContext, SimId, SimSocket, TryRecv,
+};
 use peras_topology::{
     network::{NodeId, Topology},
     parameters::Parameters,
@@ -14,8 +16,9 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
     chain::{empty_chain, Chain},
-    message::Message,
-    peras_node::{InEnvelope, Node, NodeHandle, NodeParameters, ProtocolParameters},
+    event::UniqueId,
+    message::{Message, OutMessage},
+    peras_node::{InEnvelope, Node, NodeHandle, NodeParameters, OutEnvelope, ProtocolParameters},
 };
 
 type Ctx = netsim::SimContext<Message>;
@@ -34,6 +37,8 @@ pub struct NodeInterface {
     dispatcher: Option<JoinHandle<()>>,
     /// The socket for sending and receiving messages
     socket: Arc<Mutex<SimSocket<Message>>>,
+    /// The socket's id
+    socket_id: SimId,
 }
 
 pub struct Network {
@@ -83,15 +88,32 @@ impl Network {
 
     pub fn start(&mut self) {
         // start all nodes
-        for (node_id, iface) in self.nodes.iter_mut() {
-            let mut node_handle = iface.node.start(self.parameters.maximumStake);
-            let socket = Arc::clone(&iface.socket);
-            let node_id_1 = node_id.clone();
-            // start dispatching thread for each node
-            let dispatcher = thread::spawn(move || {
-                receive_and_forward_loop(node_id_1, socket, &mut node_handle)
-            });
-            iface.dispatcher = Some(dispatcher);
+        let mut threads = self
+            .nodes
+            .iter()
+            .map(|(node_id, iface)| {
+                let mut node_handle = iface.node.start(self.parameters.maximumStake);
+                let socket = Arc::clone(&iface.socket);
+                let node_id_1 = node_id.clone();
+                let downstreams = self
+                    .topology
+                    .connections
+                    .get(&node_id_1)
+                    .unwrap()
+                    .iter()
+                    .map(|(nid, n)| self.nodes.get(nid).unwrap().socket_id.clone())
+                    .collect();
+                // start dispatching thread for each node
+                thread::spawn(move || {
+                    receive_and_forward_loop(node_id_1, socket, downstreams, &mut node_handle)
+                })
+            })
+            .collect::<Vec<_>>();
+        // can't mutate the NodeInterface while iterating at the same
+        // time iterator would need to be mutable and we need to borrow it again
+        // to retrieve all downstream peers
+        for (_, iface) in self.nodes.iter_mut() {
+            iface.dispatcher = Some(threads.pop().unwrap());
         }
     }
 
@@ -123,28 +145,58 @@ impl Network {
 fn receive_and_forward_loop(
     node_id: NodeId,
     sim_socket: Arc<Mutex<SimSocket<Message>>>,
+    downstreams: Vec<SimId>,
     node_handle: &mut NodeHandle,
 ) {
     let mut no_msg_count = 0;
     loop {
         thread::sleep(Duration::from_millis(no_msg_count));
         let mut socket = sim_socket.lock().unwrap();
+        // handle messages that are sent to the node from the network
         match socket.try_recv() {
-            netsim::TryRecv::Some((from, msg)) => {
+            TryRecv::Some((from, msg)) => {
                 no_msg_count = 0;
                 node_handle.send(InEnvelope::SendMessage {
                     origin: None,
+                    in_id: UniqueId::new(&msg),
                     in_message: msg,
                 });
             }
-            netsim::TryRecv::NoMsg => {
+            TryRecv::NoMsg => {
                 if no_msg_count < 10 {
                     no_msg_count += 1;
                 };
                 continue;
             }
-            netsim::TryRecv::Disconnected => {
+            TryRecv::Disconnected => {
                 break;
+            }
+        }
+        // pull messages from the node and send them to the network
+        while let Some(envelope) = node_handle.try_receive() {
+            match envelope {
+                OutEnvelope::SendMessage {
+                    out_message,
+                    timestamp: _,
+                    source: _,
+                    destination: _,
+                    bytes: _,
+                    out_id: _,
+                } => {
+                    downstreams.iter().for_each(|id| {
+                        socket
+                            .send_to(*id, out_message.clone())
+                            .expect("send failed");
+                    });
+                }
+                OutEnvelope::Idle {
+                    timestamp: _,
+                    source: _,
+                    best_chain,
+                } => {
+                    node_handle.current_best_chain = best_chain;
+                }
+                _ => {}
             }
         }
     }
@@ -181,5 +233,6 @@ fn make_node(
         node,
         dispatcher: None,
         socket: Arc::clone(&socket_mutex),
+        socket_id,
     }
 }

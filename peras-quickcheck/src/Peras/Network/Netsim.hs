@@ -44,7 +44,7 @@ startNetwork topology seed = do
       { step = do
           modifyIORef' tick (+ 1)
           slot <- fromIntegral <$> readIORef tick
-          Rust.broadcast network (marshall $ NextSlot @() slot)
+          Rust.broadcast network (marshall $ NextSlot slot)
       , preferredChain = fmap unmarshall . Rust.preferredChain network
       , stop = Rust.stopNetwork network
       }

@@ -6,7 +6,7 @@ use crate::crypto::Hash;
 
 pub type NodeId = String;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 #[serde(tag = "tag", content = "contents")]
 pub enum Message {
     NextSlot(Slot),

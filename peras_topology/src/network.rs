@@ -51,9 +51,9 @@ pub struct NodeLink {
     reliability: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Topology {
-    connections: HashMap<NodeId, HashMap<NodeId, NodeLink>>,
+    pub connections: HashMap<NodeId, HashMap<NodeId, NodeLink>>,
 }
 
 impl Topology {

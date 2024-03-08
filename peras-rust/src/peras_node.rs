@@ -92,6 +92,7 @@ pub struct NodeHandle {
     sender: Sender<InEnvelope>,
     receiver: Receiver<OutEnvelope>,
     thread: Option<JoinHandle<()>>,
+    pub current_best_chain: Chain,
 }
 
 impl Node {
@@ -118,6 +119,7 @@ impl Node {
             sender: tx_in,
             receiver: rx_out,
             thread: Some(thread),
+            current_best_chain: empty_chain(),
         }
     }
 
@@ -155,38 +157,40 @@ impl Node {
         }
     }
 
-fn handle_slot(slot: u64, total_stake: u64, node: &mut Node) -> Option<OutEnvelope> {
-    if node.is_slot_leader(total_stake) {
-        let mut signature = [0u8; 8];
-        node.seed.fill_bytes(&mut signature);
-        let mut leadership_proof = [0u8; 8];
-        node.seed.fill_bytes(&mut leadership_proof);
-        let new_block = Block {
-            slot_number: slot,
-            creator_id: 1,
-            parent_block: crypto::Hash {
-                hash: [0, 0, 0, 0, 0, 0, 0, 0],
-            },
-            included_votes: vec![],
-            leadership_proof: crypto::LeadershipProof {
-                proof: leadership_proof,
-            },
-            signature: crypto::Signature { signature },
-            body_hash: crypto::Hash {
-                hash: [0, 0, 0, 0, 0, 0, 0, 0],
-            },
-        };
-        node.best_chain.blocks.insert(0, new_block);
-        Some(OutEnvelope::SendMessage {
-            timestamp: Utc::now(),
-            source: node.node_id.clone(),
-            destination: node.node_id.clone(), // FIXME this does not make sense
-            out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
-            out_message: Message::NewChain(node.best_chain.clone()),
-            bytes: 0,
-        })
-    } else {
-        None
+    fn handle_slot(&mut self, slot: u64, total_stake: u64) -> Option<OutEnvelope> {
+        if self.is_slot_leader(total_stake) {
+            let mut signature = [0u8; 8];
+            self.seed.fill_bytes(&mut signature);
+            let mut leadership_proof = [0u8; 8];
+            self.seed.fill_bytes(&mut leadership_proof);
+            let new_block = Block {
+                slot_number: slot,
+                creator_id: 1,
+                parent_block: crypto::Hash {
+                    hash: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
+                included_votes: vec![],
+                leadership_proof: crypto::LeadershipProof {
+                    proof: leadership_proof,
+                },
+                signature: crypto::Signature { signature },
+                body_hash: crypto::Hash {
+                    hash: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
+            };
+            self.best_chain.blocks.insert(0, new_block);
+            let msg = Message::NewChain(self.best_chain.clone());
+            Some(OutEnvelope::SendMessage {
+                timestamp: Utc::now(),
+                source: self.node_id.clone(),
+                destination: self.node_id.clone(), // FIXME this does not make sense
+                out_id: UniqueId::new::<_>(&msg),
+                out_message: msg,
+                bytes: 0,
+            })
+        } else {
+            None
+        }
     }
 }
 
@@ -274,7 +278,9 @@ mod tests {
 
         handle.send(InEnvelope::SendMessage {
             origin: None,
-            in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+            in_id: UniqueId {
+                unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+            },
             in_message: Message::NextSlot(1),
         });
 
@@ -373,7 +379,9 @@ mod tests {
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
-                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                in_id: UniqueId {
+                    unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
                 in_message: Message::NextSlot(i),
             })
         }
@@ -387,7 +395,7 @@ mod tests {
                 timestamp: _,
                 source: _,
                 destination: _,
-                out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                out_id: _,
                 out_message: Message::NewChain(chain),
                 bytes: _,
             } => {
@@ -412,7 +420,9 @@ mod tests {
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
-                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                in_id: UniqueId {
+                    unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
                 in_message: Message::NextSlot(i),
             })
         }
