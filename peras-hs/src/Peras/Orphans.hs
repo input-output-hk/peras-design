@@ -22,9 +22,10 @@ import Data.Bifunctor (bimap)
 import Data.Default (Default (..))
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
-import Peras.Block (Block (..), Party (..))
+import Peras.Block (Block (..), BlockBody (..), Party (..))
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
+import Peras.Event (Event (..), UniqueId (..))
 import Peras.Message (Message (..), NodeId (..))
 import Text.Read (Read (readPrec))
 
@@ -83,8 +84,13 @@ deriving stock instance Read Block
 deriving stock instance Show Block
 instance FromJSON Block
 instance ToJSON Block
-instance FromJSONKey Block
-instance ToJSONKey Block
+
+deriving stock instance Generic BlockBody
+deriving stock instance Ord BlockBody
+deriving stock instance Read BlockBody
+deriving stock instance Show BlockBody
+instance FromJSON BlockBody
+instance ToJSON BlockBody
 
 -- Orphans for `Peras.Chain`.
 
@@ -192,3 +198,21 @@ deriving instance Read Message
 deriving instance Show Message
 instance FromJSON Message
 instance ToJSON Message
+
+deriving stock instance Eq UniqueId
+deriving stock instance Ord UniqueId
+deriving via Bytes instance Read UniqueId
+deriving via Bytes instance Show UniqueId
+deriving via Bytes instance IsString UniqueId
+deriving via Bytes instance FromJSON UniqueId
+deriving via Bytes instance ToJSON UniqueId
+deriving via Bytes instance FromJSONKey UniqueId
+deriving via Bytes instance ToJSONKey UniqueId
+
+deriving stock instance Eq Event
+deriving stock instance Generic Event
+deriving stock instance Ord Event
+deriving stock instance Read Event
+deriving stock instance Show Event
+instance FromJSON Event
+instance ToJSON Event

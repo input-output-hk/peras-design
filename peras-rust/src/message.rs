@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::block::{Block, Slot};
-use crate::chain::Chain;
+use crate::block::{Block, BlockBody, Slot};
+use crate::chain::{Chain,Vote};
+use crate::crypto::Hash;
 
 pub type NodeId = String;
 
@@ -9,8 +10,14 @@ pub type NodeId = String;
 #[serde(tag = "tag", content = "contents")]
 pub enum Message {
     NextSlot(Slot),
-    SomeBlock(Block),
     NewChain(Chain),
+    SomeVote(Vote),
+    FetchVotes(Vec<Hash>),
+    FollowChain(Hash),
+    RollForward(Block),
+    RollBack(Block),
+    FetchBlocks(Vec<Hash>),
+    SomeBlock(BlockBody),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

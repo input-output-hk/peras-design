@@ -27,6 +27,9 @@ $(HSDIR)/src/Peras/SmallStep.hs: src/Peras/SmallStep.lagda.md
 $(HSDIR)/src/Peras/Chain.hs: src/Peras/Chain.lagda.md
 	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
+$(HSDIR)/src/Peras/Block.hs: src/Peras/Block.lagda.md
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+
 .PHONY : clean veryclean
 clean:
 	@echo "Removing .agdai files"

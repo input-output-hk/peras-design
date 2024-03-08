@@ -1,13 +1,9 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Peras.OrphansSpec where
+module Peras.IOSim.Network.TypesSpec where
 
-import Paths_peras_hs (getDataDir)
-import Peras.Arbitraries ()
-import Peras.Block (Block)
-import Peras.Chain (Chain)
-import Peras.Event (Event)
-import Peras.Orphans ()
+import Paths_peras_iosim (getDataDir)
+import Peras.IOSim.Network.Types (Topology)
 import Test.Aeson.GenericSpecs (
   GoldenDirectoryOption (..),
   Proxy (Proxy),
@@ -22,5 +18,4 @@ spec =
   do
     goldenDir <- runIO getDataDir
     let settings = defaultSettings{goldenDirectoryOption = CustomDirectoryName goldenDir}
-    roundtripAndGoldenSpecsWithSettings settings (Proxy @Chain)
-    roundtripAndGoldenSpecsWithSettings settings (Proxy @Event)
+    roundtripAndGoldenSpecsWithSettings settings (Proxy @Topology)

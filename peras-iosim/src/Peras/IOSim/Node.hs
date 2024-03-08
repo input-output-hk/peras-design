@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -40,6 +41,7 @@ import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin, messageSize)
 import Peras.Message (Message (..), NodeId)
 
+import Data.Map (keysSet)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
@@ -56,7 +58,7 @@ initializeNodes ::
   Topology ->
   m (M.Map NodeId NodeState)
 initializeNodes parameters now Topology{connections} =
-  sequence $ initializeNode parameters now `M.mapWithKey` connections
+  sequence $ initializeNode parameters now `M.mapWithKey` (keysSet <$> connections)
 
 initializeNode ::
   MonadRandom m =>
@@ -93,7 +95,7 @@ runNode ::
   NodeProcess m ->
   m ()
 runNode protocol total state NodeProcess{..} =
-  let go :: MonadDelay m => MonadSTM m => MonadSay m => MonadTime m => StateT NodeState m ()
+  let go :: StateT NodeState m ()
       go =
         do
           let atomically' = lift . atomically
@@ -108,11 +110,12 @@ runNode protocol total state NodeProcess{..} =
                     case inMessage of
                       NextSlot slot ->
                         do
-                          lift $ threadDelay 1000000
+                          lift $ threadDelay 1_000_000
                           nextSlot protocol slot total
                       SomeVote vote -> newVote protocol vote
-                      SomeBlock block -> newBlock protocol block
+                      RollForward block -> newBlock protocol block
                       NewChain chain -> newChain protocol chain
+                      _ -> say ("Message not handled: " <> show inMessage) >> pure mempty
                   rxBytes %= (+ messageSize inMessage)
                   bestChain <- chainState `uses` preferredChain
                   atomically' $

@@ -5,8 +5,8 @@ module Peras.IOSim.Simulate (
   simulate,
   simulation,
   writeReport,
-  writeTrace,
   writeSays,
+  writeTrace,
 ) where
 
 import Control.Lens ((&), (.~))

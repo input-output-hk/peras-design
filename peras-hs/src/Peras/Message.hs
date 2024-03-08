@@ -1,13 +1,19 @@
 module Peras.Message where
 
-import Peras.Block (Block, Slot)
+import Peras.Block (Block, BlockBody, Slot)
 import Peras.Chain (Chain, Vote)
+import Peras.Crypto (Hash)
 
 newtype NodeId = MkNodeId {nodeId :: String}
   deriving (Eq, Ord, Read, Show)
 
 data Message
   = NextSlot Slot
-  | SomeBlock Block
   | NewChain Chain
   | SomeVote Vote
+  | FetchVotes [Hash]
+  | FollowChain Hash
+  | RollForward Block
+  | RollBack Block
+  | FetchBlocks [Hash]
+  | SomeBlock BlockBody

@@ -2,7 +2,7 @@ use crate::parameters::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::Hash;
 
 #[derive(Debug, Eq, Clone, Hash, PartialEq)]
@@ -44,9 +44,16 @@ pub fn MkNodeId(node_id: &str) -> NodeId {
     }
 }
 
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeLink {
+    message_delay: i64,
+    reliability: f64,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Topology {
-    connections: HashMap<NodeId, HashSet<NodeId>>,
+    connections: HashMap<NodeId, HashMap<NodeId, NodeLink>>,
 }
 
 impl Topology {
@@ -57,21 +64,26 @@ impl Topology {
     }
 }
 
-fn set_singleton<T: Eq + Hash>(item: T) -> HashSet<T> {
-    let mut set = HashSet::new();
-    set.insert(item);
-    set
+fn map_singleton<K: Eq + Hash, V>(key: K, value: V) -> HashMap<K, V> {
+    let mut map = HashMap::new();
+    map.insert(key, value);
+    map
 }
 
 // FIXME: Consider revising memory allocation.
-pub fn connect_node(upstream: &NodeId, downstream: &NodeId, topology: &mut Topology) {
+pub fn connect_node(delay: i64, upstream: &NodeId, downstream: &NodeId, topology: &mut Topology) {
+    let base_link = NodeLink {
+        message_delay: delay,
+        reliability: 1.0,
+    };
+
     topology
         .connections
         .entry(upstream.clone())
         .and_modify(|v| {
-            v.insert(downstream.clone());
+            v.insert(downstream.clone(), base_link.clone());
         })
-        .or_insert(set_singleton(downstream.clone()));
+        .or_insert(map_singleton(downstream.clone(), base_link.clone()));
 }
 
 pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology {
@@ -82,6 +94,7 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
         })
         .collect();
     fn random_connect(
+        delay: i64,
         r: &mut impl Rng,
         upstream: &NodeId,
         downstreams: Vec<NodeId>,
@@ -91,10 +104,11 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
         let mut candidates = downstreams.clone();
         candidates.retain(|x| x != upstream);
         let chosen = candidates.choose_multiple(r, m);
-        chosen.for_each(|downstream| connect_node(upstream, downstream, t));
+        chosen.for_each(|downstream| connect_node(delay, upstream, downstream, t));
     }
     node_ids.iter().for_each(|upstream| {
         random_connect(
+            parameters.messageDelay,
             rng,
             upstream,
             node_ids.clone(),
@@ -103,4 +117,34 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
         )
     });
     topology
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{fs::File, io::BufReader, path::Path};
+
+    #[derive(Debug, Deserialize, Serialize)]
+    struct Golden<T> {
+        samples: Vec<T>,
+    }
+
+    #[test]
+    fn can_deserialize_topology_from_json() {
+        let curfile = file!();
+        // FIXME: having hardcoded relative path is not great for maintainability
+        // and portability
+        let golden_path = Path::new(curfile)
+            .parent()
+            .unwrap()
+            .join("../../peras-iosim/golden/Topology.json");
+        let golden_file = File::open(golden_path).expect("Unable to open file");
+        let reader = BufReader::new(golden_file);
+        let result: Result<Golden<Topology>, _> = serde_json::from_reader(reader);
+
+        if let Err(err) = result {
+            println!("{}", err);
+            assert!(false);
+        }
+    }
 }

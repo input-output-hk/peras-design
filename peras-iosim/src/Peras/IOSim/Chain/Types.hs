@@ -2,8 +2,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Peras.IOSim.Chain.Types (
-  ChainState (..),
   BlockTree,
+  ChainState (..),
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)

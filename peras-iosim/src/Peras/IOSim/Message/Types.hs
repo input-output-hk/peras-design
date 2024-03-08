@@ -3,8 +3,8 @@
 
 module Peras.IOSim.Message.Types (
   InEnvelope (..),
-  OutMessage (..),
   OutEnvelope (..),
+  OutMessage (..),
 ) where
 
 import Control.Monad.Class.MonadTime (UTCTime)

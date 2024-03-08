@@ -4,20 +4,20 @@
 
 module Peras.IOSim.Node.Types (
   NodeState (NodeState),
+  chainState,
   clock,
   committeeMember,
   downstreams,
-  nodeId,
-  rollbacks,
-  owner,
-  chainState,
   initialSeed,
+  nodeId,
+  owner,
+  rollbacks,
+  rxBytes,
   slot,
   slotLeader,
   stake,
-  vrfOutput,
-  rxBytes,
   txBytes,
+  vrfOutput,
 ) where
 
 import Control.Lens (makeLenses)

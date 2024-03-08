@@ -15,5 +15,5 @@ pub struct Parameters {
     pub downstreamCount: usize,
     pub totalStake: Option<Currency>,
     pub maximumStake: Currency,
-    pub messageDelay: f64,
+    pub messageDelay: i64,
 }

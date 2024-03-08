@@ -8,7 +8,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (..))
+import Peras.Block (Block (..), BlockBody (..))
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
 import Peras.Crypto (
   Hash (..),
@@ -17,10 +17,12 @@ import Peras.Crypto (
   Signature (..),
   VerificationKey (..),
  )
+import Peras.Event (Event, UniqueId (..))
 import Peras.Message (Message, NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
+import Test.QuickCheck.Instances.Time ()
 
 instance Arbitrary NodeId where
   arbitrary =
@@ -47,7 +49,12 @@ genByteString n = BS.pack <$> vectorOf n arbitrary
 
 instance Arbitrary Block where
   arbitrary = genericArbitrary uniform
-  shrink block@Block{payload} =
+  shrink block@Block{includedVotes} =
+    [block{includedVotes = includedVotes'} | includedVotes' <- shrink includedVotes]
+
+instance Arbitrary BlockBody where
+  arbitrary = genericArbitrary uniform
+  shrink block@BlockBody{payload} =
     [block{payload = payload'} | payload' <- shrink payload]
 
 instance Arbitrary RoundNumber where
@@ -66,4 +73,10 @@ instance Arbitrary Chain where
   arbitrary = MkChain <$> arbitrary <*> arbitrary
 
 instance Arbitrary Message where
+  arbitrary = genericArbitrary uniform
+
+instance Arbitrary UniqueId where
+  arbitrary = UniqueId <$> genByteString 8
+
+instance Arbitrary Event where
   arbitrary = genericArbitrary uniform

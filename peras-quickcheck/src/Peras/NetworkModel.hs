@@ -166,7 +166,7 @@ instance Monad m => RunModel Network (RunMonad m) where
 
 selectBlocks :: [Message] -> [Block]
 selectBlocks = mapMaybe $ \case
-  SomeBlock b -> Just b
+  RollForward b -> Just b
   _other -> Nothing
 
 deliverableAt :: Slot -> (Slot, a) -> Either (Slot, a) a

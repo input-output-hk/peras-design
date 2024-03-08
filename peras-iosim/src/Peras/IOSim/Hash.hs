@@ -1,12 +1,13 @@
 -- FIXME: Migrate to Agda.
 
 module Peras.IOSim.Hash (
-  hashBlock,
-  hashVote,
-  genesisHash,
   BlockHash,
+  BodyHash,
   VoteHash,
+  genesisHash,
+  hashBlock,
   hashTip,
+  hashVote,
 ) where
 
 import Peras.Block as Block (Block (signature))
@@ -24,6 +25,8 @@ genesisHash = Hash mempty
 hashTip :: [Block] -> BlockHash
 hashTip [] = genesisHash
 hashTip (block : _) = hashBlock block
+
+type BodyHash = Hash
 
 type VoteHash = Hash
 

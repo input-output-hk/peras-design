@@ -19,11 +19,11 @@ spec :: Spec
 spec = do
   describe "Read/Show instances" $ do
     it "can read a simple Chain" $ do
-      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", payload = [], signature = \"00000100\"}], votes = []}"
+      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", signature = \"00000100\", bodyHash = \"00000000\"}], votes = []}"
 
           c =
             MkChain
-              { blocks = [Block{slotNumber = 1, creatorId = 1, parentBlock = "00000000", includedVotes = [], leadershipProof = "01000101", payload = [], signature = "00000100"}]
+              { blocks = [Block{slotNumber = 1, creatorId = 1, parentBlock = "00000000", includedVotes = [], leadershipProof = "01000101", bodyHash = "00000000", signature = "00000100"}]
               , votes = []
               }
        in v `shouldBe` c
@@ -54,8 +54,8 @@ sampleChains =
   , chain1
   ]
 
-block1 = Block{slotNumber = 49, creatorId = 1, parentBlock = "", includedVotes = [], leadershipProof = "f2a6ab5f8122", payload = [], signature = "06f34b7da9fd"}
-block2 = Block{slotNumber = 44, creatorId = 2, parentBlock = "", includedVotes = [], leadershipProof = "0faf57e3c126", payload = [], signature = "c63cff5266ee"}
+block1 = Block{slotNumber = 49, creatorId = 1, parentBlock = "", includedVotes = [], leadershipProof = "f2a6ab5f8122", bodyHash = "12345678", signature = "06f34b7da9fd"}
+block2 = Block{slotNumber = 44, creatorId = 2, parentBlock = "", includedVotes = [], leadershipProof = "0faf57e3c126", bodyHash = "12345678", signature = "c63cff5266ee"}
 
 chain1 =
   MkChain

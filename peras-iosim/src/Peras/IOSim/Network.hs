@@ -1,11 +1,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module Peras.IOSim.Network where
+module Peras.IOSim.Network (
+  emptyTopology,
+  randomTopology,
+  connectNode,
+  createNetwork,
+  runNetwork,
+  stepToIdle,
+  startNodes,
+) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, STM, TQueue, atomically)
 import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
@@ -32,6 +41,7 @@ import Peras.Chain (Chain (blocks))
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), OutMessage (..))
 import Peras.IOSim.Network.Types (
+  Delay,
   Network (..),
   NetworkState,
   Topology (..),
@@ -43,6 +53,7 @@ import Peras.IOSim.Network.Types (
   lastTime,
   networkRandom,
   pending,
+  reliableLink,
   votesSeen,
  )
 import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
@@ -58,7 +69,7 @@ import qualified Data.Set as S
 emptyTopology ::
   [NodeId] ->
   Topology
-emptyTopology = Topology . M.fromList . fmap (,S.empty)
+emptyTopology = Topology . M.fromList . fmap (,mempty)
 
 randomTopology ::
   MonadRandom m =>
@@ -72,16 +83,18 @@ randomTopology Parameters{..} =
           j <- (js !!) <$> getRandomR (0, length js - 1)
           (j :) <$> choose (n - 1) (j `delete` js)
       randomConnects i topology =
-        foldr (connectNode (nodeIds !! i) . (nodeIds !!)) topology
+        foldr (connectNode messageDelay (nodeIds !! i) . (nodeIds !!)) topology
           <$> choose downstreamCount (i `delete` [0 .. peerCount - 1])
    in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
+  Delay ->
   NodeId ->
   NodeId ->
   Topology ->
   Topology
-connectNode upstream downstream = Topology . M.insertWith (<>) upstream (S.singleton downstream) . connections
+connectNode messageDelay upstream downstream =
+  Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageDelay)) . connections
 
 createNetwork ::
   MonadSTM m =>
@@ -116,7 +129,7 @@ runNetwork parameters protocol states network@Network{..} initialState =
         -- Notify a node to stop.
         notifyStop destination nodeIn = output destination nodeIn Stop
         -- Receive and send messages.
-        loop :: MonadDelay m => MonadSay m => StateT NetworkState m ()
+        loop :: StateT NetworkState m ()
         loop =
           do
             stepToIdle parameters network
@@ -133,7 +146,7 @@ runNetwork parameters protocol states network@Network{..} initialState =
       loop
 
 startNodes ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
   Parameters ->
   Protocol ->
   M.Map NodeId NodeState ->
@@ -155,7 +168,7 @@ startNodes parameters protocol states network =
 
 -- | Wait for all nodes to exit.
 waitForExits ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
   Network m ->
   StateT NetworkState m ()
@@ -179,7 +192,7 @@ flush q =
 -- | Advance the network up to one single slot.
 -- This function loops until all nodes are idle
 stepToIdle ::
-  (Monad m, MonadSTM m, MonadSay m, MonadDelay m) =>
+  (MonadSTM m, MonadSay m, MonadDelay m) =>
   Parameters ->
   Network m ->
   StateT NetworkState m ()
@@ -194,7 +207,7 @@ stepToIdle parameters network = do
       stop <- lastSlot `uses` (>= endSlot parameters)
       unless stop $
         uncurry notifySlot `mapM_` M.toList nodesIn
-      lift $ threadDelay 1000000
+      lift $ threadDelay 1_000_000
       -- FIXME: Assume that pending messages are received in the next slot.
       mapM_ route =<< use pending
       pending .= mempty
@@ -213,7 +226,7 @@ stepToIdle parameters network = do
 
 -- | Dispatch a single message through the network.
 routeEnvelope ::
-  (Monad m, MonadSTM m, MonadSay m) =>
+  (MonadSTM m, MonadSay m) =>
   Parameters ->
   Network m ->
   OutEnvelope ->
@@ -222,7 +235,7 @@ routeEnvelope parameters Network{nodesIn} = \case
   out@OutEnvelope{..} ->
     do
       lastTime %= max timestamp
-      (r, gen) <- networkRandom `uses` uniformR (0, 1)
+      (r, gen) <- networkRandom `uses` uniformR (0, 1_000_000)
       networkRandom .= gen
       -- FIXME: This is an approximation, and it results of occasional reordering of messages.
       if r > messageDelay parameters
