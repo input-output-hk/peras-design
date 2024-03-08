@@ -19,7 +19,7 @@ spec :: Spec
 spec = do
   describe "Read/Show instances" $ do
     it "can read a simple Chain" $ do
-      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", bodyHash = \"00000000\", signature = \"00000100\"}], votes = []}"
+      let v = read @Chain "MkChain {blocks = [Block {slotNumber = 1, creatorId = 1, parentBlock = \"00000000\", includedVotes = [], leadershipProof = \"01000101\", signature = \"00000100\", bodyHash = \"00000000\"}], votes = []}"
 
           c =
             MkChain

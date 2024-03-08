@@ -25,6 +25,13 @@ pub struct Block {
     pub parent_block: Hash,
     pub included_votes: Vec<Hash>,
     pub leadership_proof: LeadershipProof,
-    pub payload: Vec<Tx>,
     pub signature: Signature,
+    pub body_hash: Hash,
+}
+
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize)]
+#[serde(tag = "tag", rename_all = "camelCase")]
+pub struct BlockBody {
+    pub block_hash: Hash,
+    pub payload: Vec<Tx>,
 }

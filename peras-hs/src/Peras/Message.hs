@@ -12,7 +12,7 @@ data Message
   | NewChain Chain
   | SomeVote Vote
   | FetchVotes [Hash]
-  | FollowChain Block
+  | FollowChain Hash
   | RollForward Block
   | RollBack Block
   | FetchBlocks [Hash]

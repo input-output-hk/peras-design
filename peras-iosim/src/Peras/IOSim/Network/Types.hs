@@ -6,21 +6,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Peras.IOSim.Network.Types (
+  Delay,
   Network (..),
   NetworkState,
-  Topology (..),
-  Delay,
   Reliability (..),
+  Topology (..),
   activeNodes,
   blocksSeen,
   chainsSeen,
-  votesSeen,
-  networkRandom,
   currentStates,
   lastSlot,
   lastTime,
+  networkRandom,
   pending,
   reliableLink,
+  votesSeen,
 ) where
 
 import Control.Concurrent.Class.MonadSTM.TQueue (TQueue)

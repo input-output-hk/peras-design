@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Peras.Node.IOSim where
 
@@ -57,7 +57,7 @@ parameters =
     , totalStake = Just 1000
     , maximumStake = 1000
     , endSlot = 1000
-    , messageDelay = 0.35
+    , messageDelay = 350_000
     }
 
 runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property

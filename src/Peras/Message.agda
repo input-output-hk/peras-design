@@ -39,7 +39,7 @@ data Message : Set where
   FetchVotes : List Hash → Message
 
   -- | Follow upstream chain from some point (could be genesis).
-  FollowChain : Block → Message
+  FollowChain : Hash → Message
 
   -- | Some new block is added on top of the best chain.
   RollForward : Block → Message

@@ -6,8 +6,8 @@ module Peras.IOSim.Types (
   ByteSize,
   Coin,
   Rollback (..),
-  messageSize,
   VoteWithBlock,
+  messageSize,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -50,3 +50,4 @@ messageSize = \case
   SomeBlock{} -> 72000 -- full body size at 80% load
   NewChain{} -> 1000 -- just the size of a header, checkout https://github.com/IntersectMBO/cardano-ledger/blob/master/eras/conway/impl/cddl-files/conway.cddl#L22
   SomeVote{} -> 300 -- FIXME
+  _ -> 300 -- FIXME

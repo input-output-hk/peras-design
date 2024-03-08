@@ -151,8 +151,10 @@ fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
             leadership_proof: crypto::LeadershipProof {
                 proof: leadership_proof,
             },
-            payload: vec![],
             signature: crypto::Signature { signature },
+            body_hash: crypto::Hash {
+                hash: [0, 0, 0, 0, 0, 0, 0, 0],
+            },
         };
         node.best_chain.blocks.insert(0, new_block);
         Some(OutEnvelope::SendMessage {
