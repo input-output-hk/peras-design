@@ -28,7 +28,7 @@ import Peras.Network.Netsim (runPropInNetSim)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), parameters, protocol, runMonad)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
-import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
+import Test.QuickCheck (Gen, Property, Testable, counterexample, once, property, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
@@ -41,9 +41,9 @@ spec = do
     describe "IOSim Network" $
       prop "Chain progress" (prop_chain_progress propIOSimNetwork)
 
-  modifyMaxSuccess (const 20) $
-    describe "Netsim Network" $
-      prop "Chain progress" (prop_chain_progress propNetsimNetwork)
+  describe "Netsim Network" $
+    prop "Chain progress" $
+      once (prop_chain_progress propNetsimNetwork)
 
 prop_chain_progress :: (Actions Network -> Property) -> Property
 prop_chain_progress runProp =

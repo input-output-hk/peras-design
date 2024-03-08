@@ -88,6 +88,7 @@ pub struct Node {
 }
 
 pub struct NodeHandle {
+    node_id: NodeId,
     sender: Sender<InEnvelope>,
     receiver: Receiver<OutEnvelope>,
     thread: Option<JoinHandle<()>>,
@@ -104,6 +105,7 @@ impl Node {
     }
 
     pub fn start(&self, total_stake: u64) -> NodeHandle {
+        println!("Starting node {}", self.node_id);
         let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
         let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
 
@@ -112,6 +114,7 @@ impl Node {
         let thread = thread::spawn(move || node1.work(total_stake, rx_in, tx_out));
 
         NodeHandle {
+            node_id: self.node_id.clone(),
             sender: tx_in,
             receiver: rx_out,
             thread: Some(thread),
@@ -189,6 +192,7 @@ fn handle_slot(slot: u64, total_stake: u64, node: &mut Node) -> Option<OutEnvelo
 
 impl NodeHandle {
     pub fn stop(&mut self) {
+        println!("Stopping node {}", self.node_id);
         if self.thread.as_ref().map_or(false, |t| t.is_finished()) {
             return;
         }

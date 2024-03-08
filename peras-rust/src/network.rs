@@ -12,7 +12,7 @@ use peras_topology::{
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
-    chain::Chain,
+    chain::{empty_chain, Chain},
     message::Message,
     peras_node::{Node, NodeHandle, NodeParameters, ProtocolParameters},
 };
@@ -56,7 +56,7 @@ impl Network {
 
         let mut seed = StdRng::seed_from_u64(parameters.randomSeed);
 
-        let mut nodes = topology
+        let nodes = topology
             .connections
             .iter()
             .map(|(nodeId, _)| {
@@ -98,11 +98,20 @@ impl Network {
     }
 
     pub(crate) fn broadcast(&self, msg: Message) {
-        todo!()
+        println!("Broadcasting message: {:?}", msg);
+        // broadcast the message to all nodes in the network
+        // we trick the node into thinking it's receiving a message from the network
+        // by sending it to itself
+        for (_, iface) in self.nodes.iter() {
+            iface
+                .socket
+                .send_to(iface.socket.id(), msg.clone())
+                .expect("send failed");
+        }
     }
 
     pub(crate) fn get_preferred_chain(&self, node_id: &str) -> Chain {
-        todo!()
+        empty_chain()
     }
 }
 
