@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
-    thread::JoinHandle,
+    sync::{Arc, Mutex},
+    thread::{self, JoinHandle},
     time::Duration,
 };
 
@@ -32,7 +33,7 @@ pub struct NodeInterface {
     /// The node's handle, if it is running
     node_handle: Option<NodeHandle>,
     /// The socket for sending and receiving messages
-    socket: SimSocket<Message>,
+    socket: Arc<Mutex<SimSocket<Message>>>,
 }
 
 pub struct Network {
@@ -85,6 +86,10 @@ impl Network {
         for (node_id, iface) in self.nodes.iter_mut() {
             let node_handle = iface.node.start(self.parameters.maximumStake);
             iface.node_handle = Some(node_handle);
+            let socket = Arc::clone(&iface.socket);
+            let node_id_1 = node_id.clone();
+            // start dispatching thread for each node
+            let receiver = thread::spawn(move || receive_and_forward_loop(node_id_1, socket));
         }
     }
 
@@ -103,15 +108,39 @@ impl Network {
         // we trick the node into thinking it's receiving a message from the network
         // by sending it to itself
         for (_, iface) in self.nodes.iter() {
-            iface
-                .socket
-                .send_to(iface.socket.id(), msg.clone())
-                .expect("send failed");
+            let sock = iface.socket.lock().unwrap();
+            sock.send_to(sock.id(), msg.clone()).expect("send failed");
         }
     }
 
     pub(crate) fn get_preferred_chain(&self, node_id: &str) -> Chain {
         empty_chain()
+    }
+}
+
+fn receive_and_forward_loop(node_id: NodeId, sim_socket: Arc<Mutex<SimSocket<Message>>>) {
+    let mut no_msg_count = 0;
+    loop {
+        thread::sleep(Duration::from_millis(no_msg_count));
+        let mut socket = sim_socket.lock().unwrap();
+        match socket.try_recv() {
+            netsim::TryRecv::Some((from, msg)) => {
+                no_msg_count = 0;
+                println!(
+                    "Node {} received message from {}: {:?}",
+                    node_id.nodeId, from, msg
+                );
+            }
+            netsim::TryRecv::NoMsg => {
+                if no_msg_count < 10 {
+                    no_msg_count += 1;
+                };
+                continue;
+            }
+            netsim::TryRecv::Disconnected => {
+                break;
+            }
+        }
     }
 }
 
@@ -123,8 +152,10 @@ fn make_node(
     seed: &mut StdRng,
 ) -> NodeInterface {
     let socket = context.open().unwrap();
+    let socket_id = socket.id();
+    let socket_mutex = Arc::new(Mutex::new(socket));
     context.set_node_policy(
-        socket.id(),
+        socket_id,
         NodePolicy {
             bandwidth_down: Bandwidth::bits_per(u64::MAX, Duration::from_secs(1)),
             bandwidth_up: Bandwidth::bits_per(u64::MAX, Duration::from_secs(1)),
@@ -143,6 +174,6 @@ fn make_node(
     NodeInterface {
         node,
         node_handle: None,
-        socket,
+        socket: Arc::clone(&socket_mutex),
     }
 }
