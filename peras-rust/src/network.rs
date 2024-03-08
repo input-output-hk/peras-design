@@ -15,7 +15,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use crate::{
     chain::{empty_chain, Chain},
     message::Message,
-    peras_node::{Node, NodeHandle, NodeParameters, ProtocolParameters},
+    peras_node::{InEnvelope, Node, NodeHandle, NodeParameters, ProtocolParameters},
 };
 
 type Ctx = netsim::SimContext<Message>;
@@ -31,7 +31,7 @@ pub struct NodeInterface {
     /// The node's state
     node: Node,
     /// The node's handle, if it is running
-    node_handle: Option<NodeHandle>,
+    dispatcher: Option<JoinHandle<()>>,
     /// The socket for sending and receiving messages
     socket: Arc<Mutex<SimSocket<Message>>>,
 }
@@ -84,22 +84,24 @@ impl Network {
     pub fn start(&mut self) {
         // start all nodes
         for (node_id, iface) in self.nodes.iter_mut() {
-            let node_handle = iface.node.start(self.parameters.maximumStake);
-            iface.node_handle = Some(node_handle);
+            let mut node_handle = iface.node.start(self.parameters.maximumStake);
             let socket = Arc::clone(&iface.socket);
             let node_id_1 = node_id.clone();
             // start dispatching thread for each node
-            let receiver = thread::spawn(move || receive_and_forward_loop(node_id_1, socket));
+            let dispatcher = thread::spawn(move || {
+                receive_and_forward_loop(node_id_1, socket, &mut node_handle)
+            });
+            iface.dispatcher = Some(dispatcher);
         }
     }
 
     pub(crate) fn stop(&mut self) {
         // stop all nodes in then network
-        for (_, iface) in self.nodes.iter_mut() {
-            if let Some(handle) = &mut iface.node_handle {
-                handle.stop();
-            }
-        }
+        // for (_, iface) in self.nodes.iter_mut() {
+        //     if let Some(handle) = &mut iface.node_handle {
+        //         handle.stop();
+        //     }
+        // }
     }
 
     pub(crate) fn broadcast(&self, msg: Message) {
@@ -118,7 +120,11 @@ impl Network {
     }
 }
 
-fn receive_and_forward_loop(node_id: NodeId, sim_socket: Arc<Mutex<SimSocket<Message>>>) {
+fn receive_and_forward_loop(
+    node_id: NodeId,
+    sim_socket: Arc<Mutex<SimSocket<Message>>>,
+    node_handle: &mut NodeHandle,
+) {
     let mut no_msg_count = 0;
     loop {
         thread::sleep(Duration::from_millis(no_msg_count));
@@ -126,10 +132,10 @@ fn receive_and_forward_loop(node_id: NodeId, sim_socket: Arc<Mutex<SimSocket<Mes
         match socket.try_recv() {
             netsim::TryRecv::Some((from, msg)) => {
                 no_msg_count = 0;
-                println!(
-                    "Node {} received message from {}: {:?}",
-                    node_id.nodeId, from, msg
-                );
+                node_handle.send(InEnvelope::SendMessage {
+                    origin: None,
+                    in_message: msg,
+                });
             }
             netsim::TryRecv::NoMsg => {
                 if no_msg_count < 10 {
@@ -173,7 +179,7 @@ fn make_node(
 
     NodeInterface {
         node,
-        node_handle: None,
+        dispatcher: None,
         socket: Arc::clone(&socket_mutex),
     }
 }
