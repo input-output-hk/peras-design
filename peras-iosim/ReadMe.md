@@ -11,10 +11,11 @@ $ cabal run exe:peras-iosim -- --help
 peras-iosim: simulate Peras protocol
 
 Usage: peras-iosim [--version] --parameter-file FILE --protocol-file FILE 
-                   [--trace-file FILE] [--result-file FILE] 
-                   [--network-dot-file FILE] [--network-png-file FILE] 
-                   [--network-svg-file FILE] [--chain-dot-file FILE] 
-                   [--chain-png-file FILE] [--chain-svg-file FILE]
+                   [--trace-file FILE] [--say-file FILE] [--event-file FILE] 
+                   [--result-file FILE] [--network-dot-file FILE] 
+                   [--network-png-file FILE] [--network-svg-file FILE] 
+                   [--chain-dot-file FILE] [--chain-png-file FILE] 
+                   [--chain-svg-file FILE]
 
   This command-line tool simulates and visualizes Peras protocol simulations.
 
@@ -24,6 +25,8 @@ Available options:
   --parameter-file FILE    Path to YAML file with simulation parameters.
   --protocol-file FILE     Path to YAML file with protocol parameters.
   --trace-file FILE        Path to output text file for simulation trace.
+  --say-file FILE          Path to output text file for `Say` messages.
+  --event-file FILE        Path to output JSON array file for simulation events.
   --result-file FILE       Path to output JSON file for simulation results.
   --network-dot-file FILE  Path to output GraphViz .dot file of network
                            visualizaton.
@@ -37,7 +40,6 @@ Available options:
                            Requires `GraphViz` executable.
   --chain-svg-file FILE    Path to output SVG file of chain visualizaton.
                            Requires `GraphViz` executable.
-
 ```
 
 
