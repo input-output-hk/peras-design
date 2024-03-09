@@ -1,3 +1,29 @@
+## 2024-03-09
+
+### "Split-Brain" Experiment
+
+This first ["split-brain" experiment](peras-iosim/analysis/split-brain/ReadMe.md) with `peras-iosim` involves running a network of 100 nodes with fivefold connectivity for 15 minutes, but where nodes are partitioned into two non-communicating sets between the 5th and 10th minute. The nodes quickly establish consensus after genesis, but split into two long-lived forks after the 5th minute; shortly after the 10th minute, one of the forks is abandoned as consensus is reestablished.
+
+Nodes are divided into two "parities" determined by whether the hash of their name is an even or odd number. When the network is partitioned, only nodes of the same parity are allowed to communicate with each other: see [`Peras.IOSIM.Experiment.splitBrain`](peras-iosim/src/Peras/IOSim/Experiment.hs).
+
+| Metric                                              | Blocks | Slots  |
+|-----------------------------------------------------|-------:|-------:|
+| Length of discarded chain at slot 1000              |     75 |  1000  |
+| Length of dominant chain at slot 1000               |     66 |  1000  |
+| Number of blocks in discarded chain after slot 1000 |    1-3 | 18-137 |
+| Number of blocks afters slot 1000 to reach quorum   |     18 |   304  |
+
+
+![Forking and reestablishment of quorum in Peras split-brain experiment](https://ipfs.io/ipfs/QmXmYdLpVa65zNfrHf15wEQ6SjSALwiRFoaX1NvvcAkYvy)
+
+Findings:
+1. The complexity of the forking, voting, and cool-down in the Peras results highlights the need for capable visualization and analysis tools.
+2. The voting boost can impede the reestablishment of consensus after a network partition is restored.
+3. It would be convenient to be able to start a simulation from an existing chain, instead of from genesis.
+4. VRF-based randomization make it easier to compare simulations with different parameters. 
+5. Even though `peras-iosim` runs aren't particularly fast, we probably don't need to parallelize them because typical experiments involve many executions of simulations, which means we can take advantage of CPU resources simply by running those different scenarios in parallel.
+6. The memory footprint of `peras-iosim` is small (less than 100 MB) if tracing is turned off; with tracing, it is about twenty times that, but still modest.
+
 ## 2024-03-08
 
 ### Message Interface and Event Logging

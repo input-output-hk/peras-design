@@ -46,7 +46,7 @@ simulation parameters@Parameters{..} protocol =
           topology' <- randomTopology parameters
           states' <- initializeNodes parameters now topology'
           pure (topology', states')
-    network <- createNetwork topology
+    network <- createNetwork experiment topology
     runNetwork tracer parameters protocol states network $
       def & networkRandom .~ gen'
 

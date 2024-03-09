@@ -1,0 +1,9 @@
+activeSlotCoefficient: 0.10
+roundDuration: 50
+pCommitteeLottery: 0.00021
+votingBoost: 0.25
+votingWindow: [150, 1]
+votingQuorum: 7
+voteMaximumAge: 100
+cooldownDuration: 4
+prefixCutoffWeight:  10000000

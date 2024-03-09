@@ -59,6 +59,7 @@ parameters =
     , maximumStake = 1000
     , endSlot = 1000
     , messageDelay = 350_000
+    , experiment = Nothing
     }
 
 runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property

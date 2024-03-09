@@ -82,7 +82,7 @@ runPropInIOSim p = do
     let (topology, gen') = runRand (randomTopology parameters) gen
     now <- getCurrentTime
     let (states, gen'') = runRand (initializeNodes parameters now topology) gen'
-    network <- createNetwork topology
+    network <- createNetwork Nothing topology
     let initState :: NetworkState = def & networkRandom .~ gen'' & currentStates .~ states
     networkState <- newTVarIO initState
     runWithState networkState $ startNodes nullTracer parameters protocol states network
@@ -119,4 +119,5 @@ parameters =
     , maximumStake = 1000
     , endSlot = 1000
     , messageDelay = 350_000
+    , experiment = Nothing
     }

@@ -33,6 +33,7 @@ import GHC.Generics (Generic)
 import Peras.Block (Block, Slot)
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash)
+import Peras.IOSim.Experiment (Veto)
 import Peras.IOSim.Hash (VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (NodeState)
@@ -75,6 +76,7 @@ instance ToJSON Topology
 data Network m = Network
   { nodesIn :: Map NodeId (TQueue m InEnvelope)
   , nodesOut :: TQueue m OutEnvelope
+  , veto :: Veto
   }
   deriving stock (Generic)
 
