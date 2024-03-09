@@ -1,0 +1,10 @@
+randomSeed: 13234
+peerCount: 100
+downstreamCount: 5
+maximumStake: 1000
+messageDelay: 350000
+endSlot: 1500
+experiment:
+  tag: SplitBrain
+  experimentStart: 500
+  experimentFinish: 1000

@@ -41,6 +41,7 @@ import Data.List (delete)
 import Data.Maybe (fromMaybe)
 import Peras.Chain (Chain (blocks))
 import Peras.Event (Event, UniqueId (..))
+import Peras.IOSim.Experiment
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.IOSim.Network.Types (
@@ -101,12 +102,14 @@ connectNode messageDelay upstream downstream =
 
 createNetwork ::
   MonadSTM m =>
+  Maybe Experiment ->
   Topology ->
   m (Network m)
-createNetwork Topology{connections} =
+createNetwork experiment Topology{connections} =
   do
     nodesIn <- mapM (const newTQueueIO) connections
     nodesOut <- newTQueueIO
+    let veto = maybe noVeto experimentFactory experiment
     pure Network{..}
 
 -- TODO: Replace this centralized router with a performant decentralized
@@ -237,28 +240,30 @@ routeEnvelope ::
   Network m ->
   OutEnvelope ->
   StateT NetworkState m ()
-routeEnvelope parameters Network{nodesIn} = \case
+routeEnvelope parameters Network{nodesIn, veto} = \case
   out@OutEnvelope{..} ->
     do
+      now <- use lastSlot
       lastTime %= max timestamp
       (r, gen) <- networkRandom `uses` uniformR (0, 1_000_000)
       networkRandom .= gen
-      -- FIXME: This is an approximation, and it results of occasional reordering of messages.
-      if r > messageDelay parameters
-        then do
-          -- FIXME: Awkwardly peek at the chain.
-          case outMessage of
-            NewChain chain -> do
-              chainsSeen %= M.insert source chain
-              case blocks chain of
-                tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
-                [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
-                _ -> pure ()
-            SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
-            _ -> pure ()
-          -- Forward the message.
-          output destination (nodesIn M.! destination) $ InEnvelope (pure source) outId outMessage
-        else pending %= (out :)
+      unless (veto out now) $
+        -- FIXME: This is an approximation, and it results of occasional reordering of messages.
+        if r > messageDelay parameters
+          then do
+            -- FIXME: Awkwardly peek at the chain.
+            case outMessage of
+              NewChain chain -> do
+                chainsSeen %= M.insert source chain
+                case blocks chain of
+                  tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
+                  [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
+                  _ -> pure ()
+              SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
+              _ -> pure ()
+            -- Forward the message.
+            output destination (nodesIn M.! destination) $ InEnvelope (pure source) outId outMessage
+          else pending %= (out :)
   Idle{..} -> do
     lastTime %= max timestamp
     activeNodes %= S.delete source
