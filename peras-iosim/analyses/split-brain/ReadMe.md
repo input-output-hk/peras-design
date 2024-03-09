@@ -60,7 +60,7 @@ experiment:
 
 ## Execution
 
-Run the experiment in a Nix shell with the [experiment.sh](experimeht.sh) script:
+Run the experiment in a Nix shell with the [experiment.sh](experiment.sh) script:
 
 ```console
 $ nix develop
@@ -99,15 +99,12 @@ Network: normal
 
 The `result-*.json` files contain the final states of the simulations and the `chain-*.{dot,png,svg}` files visualize the resulting block tree. Here are archived results:
 
-|                                 | Normal Praos | Split Praos | Normal Peras | Split Peras |
-|---------------------------------|--------------|-------------|--------------|-------------|
-| Results                         | [result-praos-normal.json](https://ipfs.io/ipfs/QmdbfyV2d6iDSqqp7GrbQiNTrUZiwRE6E676PN94n9wxoQ) | [result-praos-split.json](https://ipfs.io/ipfs/QmZ2YJT3bFB3Jsc2Pa8ABaaEum5vPR35crLTnuhznZsA4m) | [result-peras-normal.json](https://ipfs.io/ipfs/QmZwQ83UvnnvGrRxsoVKUSuBDDJEXZoSzyqhWwFBisVEyg) |
-[result-peras-split.json](https://ipfs.io/ipfs/QmVxYWVHCKhrSvu5rrZMTmC4SdsMRzZ5hce32Bmk2mNpyq) |
-| Graphviz file                   | [chain-praos-normal.dot](https://ipfs.io/ipfs/QmQFMsPP8H5Ab8jtBiANYUXeacf8wt4UC8o1zhc2RZJ9Ky) | [chain-praos-split.dot](https://ipfs.io/ipfs/QmZEwYXsjhUznS2TYHwxGzgyBkDSiJnYJPr7TNAfjYdsWa) | [chain-peras-normal.dot](https://ipfs.io/ipfs/Qmbdu7xiQ9kJHbheQCxZXE9zVmBMLCuCCtjsLnfht2RQXi) |
-[chain-peras-split.dot](https://ipfs.io/ipfs/Qmf2qVfcD5ug6TF5HdNPAFpDnZkosRcZ3SKrnsywV1Jtxi) |
-| PNG file (low resolution)       | [chain-praos-normal.png](https://ipfs.io/ipfs/QmT2t4UGcrUrTBSjNCC9MMqtwH1scoE5SCe6Wvd6PF16FT) | [chain-praos-split.png](https://ipfs.io/ipfs/QmcfhBuPV2pht2Yfm9dwYqcqdrS3dh6fWVaZ6MbYxDYuyL) | [chain-peras-normal.png](https://ipfs.io/ipfs/QmNds5SBK8QiYd1PiRCmFT5PK5HMxgeuiLXiL4nMbSr8Wb) |
-[chain-peras-split.png](https://ipfs.io/ipfs/QmZcTfENLsmFKbwfir8HN1SmzsyjoBVQSQg3eiUwKYdgMx) |
-| SVG file (high high resolution) | [chain-praos-normal.svg](https://ipfs.io/ipfs/QmefJ5zBw4cPMK75NC9pFQYkzSWbhN1vTFpqQuuKpGFm54) | [chain-praos-split.svg](https://ipfs.io/ipfs/QmQeVPQgiBdeEzHpr18dQTeo9ovZmSSsug4BetsnAuUoHR) | [chain-peras-normal.svg](https://ipfs.io/ipfs/QmRxG2VvrjNpv1t55Su2sbbvuuR6SkhibLLUhaLEubUV8L) | [chain-peras-split.svg](https://ipfs.io/ipfs/QmYkET8rbRZwhNg5bUWvrkyhu9QFwc3yrsW1Fkrtbcrz14) |
+|                                 | Normal Praos                                                                                    | Split Praos                                                                                    | Normal Peras                                                                                    | Split Peras                                                                                    |
+|---------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| Results                         | [result-praos-normal.json](https://ipfs.io/ipfs/QmdbfyV2d6iDSqqp7GrbQiNTrUZiwRE6E676PN94n9wxoQ) | [result-praos-split.json](https://ipfs.io/ipfs/QmZ2YJT3bFB3Jsc2Pa8ABaaEum5vPR35crLTnuhznZsA4m) | [result-peras-normal.json](https://ipfs.io/ipfs/QmZwQ83UvnnvGrRxsoVKUSuBDDJEXZoSzyqhWwFBisVEyg) | [result-peras-split.json](https://ipfs.io/ipfs/QmVxYWVHCKhrSvu5rrZMTmC4SdsMRzZ5hce32Bmk2mNpyq) |
+| Graphviz file                   | [chain-praos-normal.dot](https://ipfs.io/ipfs/QmQFMsPP8H5Ab8jtBiANYUXeacf8wt4UC8o1zhc2RZJ9Ky)   | [chain-praos-split.dot](https://ipfs.io/ipfs/QmZEwYXsjhUznS2TYHwxGzgyBkDSiJnYJPr7TNAfjYdsWa)   | [chain-peras-normal.dot](https://ipfs.io/ipfs/Qmbdu7xiQ9kJHbheQCxZXE9zVmBMLCuCCtjsLnfht2RQXi)   | [chain-peras-split.dot](https://ipfs.io/ipfs/Qmf2qVfcD5ug6TF5HdNPAFpDnZkosRcZ3SKrnsywV1Jtxi)   |
+| PNG file (low resolution)       | [chain-praos-normal.png](https://ipfs.io/ipfs/QmT2t4UGcrUrTBSjNCC9MMqtwH1scoE5SCe6Wvd6PF16FT)   | [chain-praos-split.png](https://ipfs.io/ipfs/QmcfhBuPV2pht2Yfm9dwYqcqdrS3dh6fWVaZ6MbYxDYuyL)   | [chain-peras-normal.png](https://ipfs.io/ipfs/QmNds5SBK8QiYd1PiRCmFT5PK5HMxgeuiLXiL4nMbSr8Wb)   | [chain-peras-split.png](https://ipfs.io/ipfs/QmZcTfENLsmFKbwfir8HN1SmzsyjoBVQSQg3eiUwKYdgMx)   |
+| SVG file (high high resolution) | [chain-praos-normal.svg](https://ipfs.io/ipfs/QmefJ5zBw4cPMK75NC9pFQYkzSWbhN1vTFpqQuuKpGFm54)   | [chain-praos-split.svg](https://ipfs.io/ipfs/QmQeVPQgiBdeEzHpr18dQTeo9ovZmSSsug4BetsnAuUoHR)   | [chain-peras-normal.svg](https://ipfs.io/ipfs/QmRxG2VvrjNpv1t55Su2sbbvuuR6SkhibLLUhaLEubUV8L)   | [chain-peras-split.svg](https://ipfs.io/ipfs/QmYkET8rbRZwhNg5bUWvrkyhu9QFwc3yrsW1Fkrtbcrz14)   |
 
 
 ## Results
