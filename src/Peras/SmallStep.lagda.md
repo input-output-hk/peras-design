@@ -579,3 +579,21 @@ When the current state is collision free, previous states were so too
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
 ```
 -->
+
+# Forging free predicate
+
+```agda
+    open Block
+
+    -- TODO: fix `Honesty` predicate
+    postulate
+      HonestBlock : Block → Set
+
+    data ForgingFree (N : Stateᵍ) : Set where
+
+      forging-free : ∀ {M : Stateᵍ} {b} {p}
+        → M [ Corrupt {p} ]↷ N
+        → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
+            → m ∈ history M }) (history N)
+        → ForgingFree N
+```
