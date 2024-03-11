@@ -1,0 +1,33 @@
+@startuml
+title Design 5. Constrained Fetching
+
+StIdle : client has agency
+[*] --> StIdle : BeginSession
+ 
+StNextHeader : server has agency
+StReceiveHeader : client has agency
+StIdle --> StNextHeader : FetchBlocks
+StNextHeader --> StReceiveHeader : RollForward
+StNextHeader --> StReceiveHeader : RollBack
+StReceiveHeader --> StIdle : Cancel
+StReceiveHeader --> StNextHeader : NextHeader
+
+StNextVotes : server has agency
+StReceiveVote : client has agency
+StReceiveHeader --> StNextVotes : FetchVotes
+StNextVotes --> StReceiveVote : SomeVote
+StReceiveVote --> StNextVotes : NextVote
+StReceiveVote --> StNextHeader : NextHeader
+StReceiveVote --> StIdle : Cancel
+
+StNextBodies : server has agency
+StReceiveBody : client has agency
+StReceiveHeader --> StNextBodies : FetchBlocks
+StNextBodies --> StReceiveBody : SomeBody
+StReceiveBody --> StNextBodies : NextVote
+StReceiveBody --> StNextHeader : NextHeader
+StReceiveBody --> StIdle : Cancel
+
+StIdle --> [*] : EndSession
+
+@enduml

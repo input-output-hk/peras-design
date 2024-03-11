@@ -1,0 +1,24 @@
+@startuml
+title Design 1. Simple Handoffs between Client and Server
+
+StIdle : client has agency
+
+[*] --> StIdle : BeginSession
+StIdle --> [*] : EndSession
+
+StNextHeader : server has agency
+StIdle --> StNextHeader : FetchChain
+StNextHeader --> StIdle : RollForward
+StNextHeader --> StIdle : RollBack
+note right of StNextHeader : A new `FetchChain` message\nmust be sent each time a new\nblock is requested.
+StNextVote : server has agency
+StIdle --> StNextVote : FetchVotes
+StNextVote --> StIdle : SomeVote
+note right of StNextVote : We limit `FetchVotes` to\nfetching a single vote.
+
+StNextBody : server has agency
+StIdle --> StNextBody : FetchBlocks
+StNextBody --> StIdle : SomeBlock
+note right of StNextBody : We limit `FetchBlocks` to\nfetching a single body.
+
+@enduml
