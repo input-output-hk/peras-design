@@ -49,6 +49,7 @@ pub enum OutEnvelope {
         out_message: Message,
         bytes: u32,
     },
+    Stopped(String),
 }
 
 #[derive(Debug, Clone)]
@@ -134,7 +135,12 @@ impl Node {
         loop {
             let recv = rx_in.recv();
             match recv {
-                Ok(InEnvelope::Stop) => return,
+                Ok(InEnvelope::Stop) => {
+                    tx_out
+                        .send(OutEnvelope::Stopped(self.node_id.clone()))
+                        .expect("Failed to send message");
+                    return;
+                }
                 Ok(InEnvelope::SendMessage {
                     origin: _,
                     in_id: _,
@@ -188,10 +194,6 @@ impl Node {
                 signature: crypto::Signature { signature },
                 body_hash: crypto::Hash { hash: body_hash },
             };
-            println!(
-                "Node {} is slot leader, forged new block {:?}",
-                self.node_id, &new_block
-            );
             self.best_chain.blocks.insert(0, new_block);
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
@@ -213,9 +215,10 @@ impl Node {
 
         if new_length > cur_length {
             println!(
-                "Node {} adopting new chain: {:?}",
+                "Node {} adopting new chain: {:?}, length: {}",
                 self.node_id,
-                &chain.blocks.get(0).unwrap().body_hash
+                &chain.blocks.get(0).unwrap().body_hash,
+                chain.blocks.len()
             );
             self.best_chain = chain;
             let msg = Message::NewChain(self.best_chain.clone());
@@ -250,8 +253,10 @@ impl NodeHandle {
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
-        let str = format!("sending failed {:?}", msg);
-        self.sender.send(msg).expect(&*str);
+        match self.sender.send(msg) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
     }
 
     /// Non blocking receiving of a message from the node

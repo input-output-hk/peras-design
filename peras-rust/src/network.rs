@@ -33,8 +33,6 @@ impl HasBytesSize for Message {
 pub struct NodeInterface {
     /// The node's state
     node: Node,
-    /// The node's handle, if it is running
-    dispatcher: Option<JoinHandle<()>>,
     /// The socket for sending and receiving messages
     socket: Arc<Mutex<SimSocket<Message>>>,
     /// The socket's id
@@ -56,7 +54,7 @@ pub enum Control {
 }
 
 pub struct NetworkHandle {
-    thread: JoinHandle<()>,
+    thread: Option<JoinHandle<()>>,
     network: Arc<Mutex<Network>>,
 }
 
@@ -136,42 +134,50 @@ impl Network {
                 })
             })
             .collect::<Vec<_>>();
-        // can't mutate the NodeInterface while iterating at the same
-        // time iterator would need to be mutable and we need to borrow it again
-        // to retrieve all downstream peers
-        for (_, iface) in self.nodes.iter_mut() {
-            iface.dispatcher = Some(threads.pop().unwrap());
-        }
 
         // FIXME shared network state is usually a recipe for deadlocks
         let network = Arc::new(Mutex::new(self));
         let network_shared = Arc::clone(&network);
 
         // start the control loop
-        let thread = thread::spawn(move || {
-            for control in rx {
-                let mut network = network_shared.lock().unwrap();
-                match control {
-                    Control::BestChain(node_id, chain) => {
-                        network.chains.insert(node_id, chain);
+        let thread = thread::spawn(move || loop {
+            let recv = rx.recv();
+            match recv {
+                Ok(control) => {
+                    let mut network = network_shared.lock().unwrap();
+                    match control {
+                        Control::BestChain(node_id, chain) => {
+                            network.chains.insert(node_id, chain);
+                        }
+                        Control::Stopped(node_id) => {
+                            println!("Node {} notified stopped", &node_id);
+                            network.nodes.remove(&node_id);
+                            if network.nodes.is_empty() {
+                                println!("No more alive nodes");
+                                return;
+                            }
+                        }
                     }
-                    Control::Stopped(node_id) => {
-                        network.nodes.remove(&node_id);
-                    }
+                }
+                Err(err) => {
+                    println!("Error in control loop: {:?}", err);
                 }
             }
         });
 
-        NetworkHandle { thread, network }
+        NetworkHandle {
+            thread: Some(thread),
+            network,
+        }
     }
 }
 
 impl NetworkHandle {
     pub fn stop(&mut self) {
         // stop all nodes
-        for (_, iface) in self.network.lock().unwrap().nodes.iter_mut() {
-            iface.dispatcher.take().unwrap().join().unwrap();
-        }
+        self.broadcast(Message::Stop);
+        // stop the control loop
+        self.thread.take().unwrap().join().unwrap();
     }
 
     pub fn broadcast(&self, msg: Message) {
@@ -211,7 +217,10 @@ fn receive_and_forward_loop(
         let mut socket = sim_socket.lock().unwrap();
         // handle messages that are sent to the node from the network
         match socket.try_recv() {
-            TryRecv::Some((from, msg)) => {
+            TryRecv::Some((_, Message::Stop)) => {
+                node_handle.send(InEnvelope::Stop);
+            }
+            TryRecv::Some((_, msg)) => {
                 no_msg_count = 0;
                 node_handle.send(InEnvelope::SendMessage {
                     origin: None,
@@ -254,7 +263,11 @@ fn receive_and_forward_loop(
                     tx.send(Control::BestChain(node_id.clone(), best_chain))
                         .expect("send failed");
                 }
-                _ => {}
+                OutEnvelope::Stopped(node_id) => {
+                    println!("Node {} stopped", &node_id);
+                    tx.send(Control::Stopped(NodeId { nodeId: node_id }))
+                        .expect("send failed");
+                }
             }
         }
     }
@@ -289,7 +302,6 @@ fn make_node(
 
     NodeInterface {
         node,
-        dispatcher: None,
         socket: Arc::clone(&socket_mutex),
         socket_id,
     }

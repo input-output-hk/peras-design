@@ -9,7 +9,10 @@ pub type NodeId = String;
 #[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 #[serde(tag = "tag", content = "contents")]
 pub enum Message {
+    // control messages
+    Stop,
     NextSlot(Slot),
+    // actual protocol messages
     NewChain(Chain),
     SomeVote(Vote),
     FetchVotes(Vec<Hash>),
