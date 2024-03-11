@@ -1,5 +1,44 @@
 ## 2024-03-11
 
+### Designs for sync protocol
+
+1. [Simple handoffs between client and server](docs/diagrams/protocol-1.puml)
+    - ➕ Closely corresponds to Agda Message
+    - ➕ Client could use blocking calls to tidily process messages
+    - ➖ `FetchChain` does not stream, so another `FetchChain` request must be made for each subsequent block header in the new chain
+    - ➖ Cannot handle `FetchVotes` or `FetchBlocks` when multiple hashes are provided, so all queries must be singletons
+2. [Messy multiplexing](docs/diagrams/protocol-2.puml)
+    - ➕ Similar to how we currently use incoming and outgoing STM channels
+    - ➖ Incoming messages won't be in any particular order
+    - ➖ Client needs to correlate what they received to what they are waiting for, and why - maybe use futures or promises with closures
+3. [Sequential mini-protocols](docs/diagrams/protocol-3.puml)
+    - ➕ Reminiscent of the production Ouroboros design
+    - ➖ Client needs to `Cancel` and re-query when they want a different type of information
+4. Parallel mini-protocols
+    - ➕ Separate threads for each type of sync (header, vote, block)
+    - ➖ Client needs to orchestrate intra-thread communication
+5. [Constrained fetching](docs/diagrams/protocol-5.puml)
+    - ➕ Supports the most common use case of fetching votes and bodies right after a new header is received
+    - ➕ Reduces to a request/replies protocol if the protcol's state machine is erased or implicit
+
+| Design 1 | Design 2 | Design 3 | Design 5 |
+|----------|----------|----------|----------|
+| ![Simple handoffs](https://ipfs.io/ipfs/QmZXS1ogRWhuzs3Aacc3nYKbVEnXeskjLJhAgfkwV589Y7) | ![Multiplexing](https://ipfs.io/ipfs/QmRp1J1J4DnrRdsroGkFfYcHiw9bjcYu7Do5s846W1GqSD) | ![Mini-protocols](https://ipfs.io/ipfs/QmanJd2cw28YfQybAhTWWRdBw132ADrsewiff1pLfFL74W) | ![Constrained fetching](https://ipfs.io/ipfs/QmfAak9BGBfu52k477NJQbqSyUqdTzRitaqhhisTQkf21A) |
+
+These highlight some key issues:
+- FetchVotes and `FetchBlocks` trigger multiple responses, as `FetchChain` may also do.
+- Three types of information are being queried (headers, votes, blocks) in only a semi-predictable sequence.
+- The DoS attack surface somewhat depends upon when the node yields agency to its peers.
+- Pull-based protocols involve more communication than push-based ones.
+
+A simple request/replies protocol would avoid this complexity:
+- If we abandon the idea of a typed protocol based on a state machine, we can just have one request receive many replies.
+- That's quite similar to the fifth design, but with no Next* request
+- We can similarly abandon the notion of when the client or server has agency.
+- If the client sends a new request before the stream of responses to the previous request is complete, then responses will be multiplexed.
+
+The state-machine representation of Ouroboros and its handling of agency were for proof and security that maybe aren't in scope for Peras prototyping.
+
 ### Team sync
 
 Interesting metrics for Peras:

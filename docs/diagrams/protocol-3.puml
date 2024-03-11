@@ -1,0 +1,39 @@
+@startuml
+title Design 3. Sequential Mini-Protocols
+
+StIdle : client has agency
+
+[*] --> StIdle : BeginSession
+StIdle --> [*] : EndSession
+
+state headers {
+  StNextHeader : server has agency
+  StReceiveHeaders : client has agency
+  StNextHeader --> StReceiveHeaders : RollForward
+  StNextHeader --> StReceiveHeaders : RollBack
+  StReceiveHeaders --> StNextHeader : More
+}
+StIdle --> StNextHeader : FetchChain
+StReceiveHeaders --> StIdle : Cancel
+
+state votes {
+  StNextVotes : server has agency
+  StReceiveVote : client has agency
+  StNextVotes --> StReceiveVote : SomeVote
+  StReceiveVote --> StNextVotes : More
+}
+StIdle --> StNextVotes : FetchVotes
+StNextVotes --> StIdle : NotFound
+StReceiveVote --> StIdle : Cancel
+
+state bodies {
+  StNextBodies : server has agency
+  StReceiveBody : client has agency
+  StNextBodies --> StReceiveBody : SomeBlock
+  StReceiveBody --> StNextBodies : More
+}
+StIdle --> StNextBodies : FetchBlocks
+StNextBodies --> StIdle : NotFound
+StReceiveBody --> StIdle : Cancel
+
+@enduml
