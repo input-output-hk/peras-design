@@ -143,6 +143,14 @@ impl Node {
                     Some(out) => tx_out.send(out).expect("Failed to send message"),
                     None => (),
                 },
+                Ok(InEnvelope::SendMessage {
+                    origin: _,
+                    in_id: _,
+                    in_message: Message::NewChain(chain),
+                }) => match self.handle_new_chain(chain) {
+                    Some(out) => tx_out.send(out).expect("Failed to send message"),
+                    None => (),
+                },
                 Ok(_) => (),
                 Err(err) => panic!("Error while receiving message {err}"),
             }
@@ -198,6 +206,35 @@ impl Node {
             None
         }
     }
+
+    fn handle_new_chain(&mut self, chain: Chain) -> Option<OutEnvelope> {
+        let new_length = chain.blocks.len();
+        let cur_length = self.best_chain.blocks.len();
+
+        if new_length > cur_length {
+            println!(
+                "Node {} adopting new chain: {:?}",
+                self.node_id,
+                &chain.blocks.get(0).unwrap().body_hash
+            );
+            self.best_chain = chain;
+            let msg = Message::NewChain(self.best_chain.clone());
+            Some(OutEnvelope::SendMessage {
+                timestamp: Utc::now(),
+                source: self.node_id.clone(),
+                destination: self.node_id.clone(), // FIXME this does not make sense
+                out_id: UniqueId::new(&msg),
+                out_message: msg,
+                bytes: 0,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn best_chain(&self) -> Chain {
+        self.best_chain.clone()
+    }
 }
 
 impl NodeHandle {
@@ -213,7 +250,8 @@ impl NodeHandle {
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
-        self.sender.send(msg).expect("sending failed");
+        let str = format!("sending failed {:?}", msg);
+        self.sender.send(msg).expect(&*str);
     }
 
     /// Non blocking receiving of a message from the node
