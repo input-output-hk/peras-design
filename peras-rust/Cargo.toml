@@ -22,7 +22,10 @@ cbindgen = "0.26.0"
 
 [lib]
 name = "peras_rust"
-crate-type = [ "cdylib", "staticlib"]
+crate-type = [ "lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "peras"
 
 [dev-dependencies]
 fake = "2.9.2"

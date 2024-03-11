@@ -15,3 +15,17 @@ pub struct Parameters {
     pub maximumStake: Currency,
     pub messageDelay: i64,
 }
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Parameters {
+            randomSeed: 12345,
+            peerCount: 10,
+            downstreamCount: 3,
+            totalStake: None,
+            maximumStake: 1000,
+            endSlot: 1000,
+            messageDelay: 350000,
+        }
+    }
+}

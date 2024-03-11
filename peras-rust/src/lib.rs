@@ -1,11 +1,11 @@
-mod block;
-mod chain;
-mod crypto;
-mod event;
-mod ffi;
-mod message;
-mod network;
-mod peras_node;
+pub mod block;
+pub mod chain;
+pub mod crypto;
+pub mod event;
+pub mod ffi;
+pub mod message;
+pub mod network;
+pub mod peras_node;
 
 /// For testing purpose, must be at the toplevel
 #[cfg(test)]

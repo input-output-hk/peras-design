@@ -159,7 +159,7 @@ impl Node {
                 .send(OutEnvelope::Idle {
                     timestamp: Utc::now(),
                     source: self.node_id.clone(),
-                    best_chain: self.best_chain.clone(),
+                    best_chain: self.best_chain(),
                 })
                 .expect("Failed to send Idle message")
         }

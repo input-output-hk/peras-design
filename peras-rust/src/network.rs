@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{mpsc::Sender, Arc, Mutex},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -47,6 +47,17 @@ pub struct Network {
     seed: StdRng,
     context: Ctx,
     nodes: HashMap<NodeId, NodeInterface>,
+    chains: HashMap<NodeId, Chain>,
+}
+
+pub enum Control {
+    BestChain(NodeId, Chain),
+    Stopped(NodeId),
+}
+
+pub struct NetworkHandle {
+    thread: JoinHandle<()>,
+    network: Arc<Mutex<Network>>,
 }
 
 impl Network {
@@ -62,7 +73,7 @@ impl Network {
 
         let mut seed = StdRng::seed_from_u64(parameters.randomSeed);
 
-        let nodes = topology
+        let nodes: HashMap<NodeId, NodeInterface> = topology
             .connections
             .iter()
             .map(|(nodeId, _)| {
@@ -77,16 +88,24 @@ impl Network {
             })
             .collect();
 
+        let chains = nodes
+            .iter()
+            .map(|(node_id, _)| (node_id.clone(), empty_chain()))
+            .collect();
+
         Network {
             topology: topology.clone(),
             parameters: parameters.clone(),
             seed,
             context,
             nodes,
+            chains,
         }
     }
 
-    pub fn start(&mut self) {
+    pub fn start(mut self) -> NetworkHandle {
+        // creat communication channels with sub threads
+        let (tx, rx) = std::sync::mpsc::channel();
         // start all nodes
         let mut threads = self
             .nodes
@@ -95,6 +114,8 @@ impl Network {
                 let mut node_handle = iface.node.start(self.parameters.maximumStake);
                 let socket = Arc::clone(&iface.socket);
                 let node_id_1 = node_id.clone();
+                let tx_new = tx.clone();
+
                 let downstreams = self
                     .topology
                     .connections
@@ -105,7 +126,13 @@ impl Network {
                     .collect();
                 // start dispatching thread for each node
                 thread::spawn(move || {
-                    receive_and_forward_loop(node_id_1, socket, downstreams, &mut node_handle)
+                    receive_and_forward_loop(
+                        node_id_1,
+                        socket,
+                        downstreams,
+                        &mut node_handle,
+                        &tx_new,
+                    )
                 })
             })
             .collect::<Vec<_>>();
@@ -115,29 +142,59 @@ impl Network {
         for (_, iface) in self.nodes.iter_mut() {
             iface.dispatcher = Some(threads.pop().unwrap());
         }
+
+        // FIXME shared network state is usually a recipe for deadlocks
+        let network = Arc::new(Mutex::new(self));
+        let network_shared = Arc::clone(&network);
+
+        // start the control loop
+        let thread = thread::spawn(move || {
+            for control in rx {
+                let mut network = network_shared.lock().unwrap();
+                match control {
+                    Control::BestChain(node_id, chain) => {
+                        network.chains.insert(node_id, chain);
+                    }
+                    Control::Stopped(node_id) => {
+                        network.nodes.remove(&node_id);
+                    }
+                }
+            }
+        });
+
+        NetworkHandle { thread, network }
+    }
+}
+
+impl NetworkHandle {
+    pub fn stop(&mut self) {
+        // stop all nodes
+        for (_, iface) in self.network.lock().unwrap().nodes.iter_mut() {
+            iface.dispatcher.take().unwrap().join().unwrap();
+        }
     }
 
-    pub(crate) fn stop(&mut self) {
-        // stop all nodes in then network
-        // for (_, iface) in self.nodes.iter_mut() {
-        //     if let Some(handle) = &mut iface.node_handle {
-        //         handle.stop();
-        //     }
-        // }
-    }
-
-    pub(crate) fn broadcast(&self, msg: Message) {
+    pub fn broadcast(&self, msg: Message) {
         // broadcast the message to all nodes in the network
         // we trick the node into thinking it's receiving a message from the network
         // by sending it to itself
-        for (_, iface) in self.nodes.iter() {
+        let network = self.network.lock().unwrap();
+        println!("Broadcasting message: {:?}", msg);
+        for (_, iface) in network.nodes.iter() {
             let sock = iface.socket.lock().unwrap();
             sock.send_to(sock.id(), msg.clone()).expect("send failed");
         }
     }
 
-    pub(crate) fn get_preferred_chain(&self, node_id: &str) -> Chain {
-        empty_chain()
+    pub fn get_preferred_chain(&self, node_id: &str) -> Chain {
+        let network = self.network.lock().unwrap();
+        network
+            .chains
+            .get(&NodeId {
+                nodeId: node_id.to_string(),
+            })
+            .unwrap()
+            .clone()
     }
 }
 
@@ -146,6 +203,7 @@ fn receive_and_forward_loop(
     sim_socket: Arc<Mutex<SimSocket<Message>>>,
     downstreams: Vec<SimId>,
     node_handle: &mut NodeHandle,
+    tx: &Sender<Control>,
 ) {
     let mut no_msg_count = 0;
     loop {
@@ -193,7 +251,8 @@ fn receive_and_forward_loop(
                     source: _,
                     best_chain,
                 } => {
-                    node_handle.current_best_chain = best_chain;
+                    tx.send(Control::BestChain(node_id.clone(), best_chain))
+                        .expect("send failed");
                 }
                 _ => {}
             }
