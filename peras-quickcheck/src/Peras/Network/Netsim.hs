@@ -1,9 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Peras.Network.Netsim where
 
 import Control.Exception (finally)
+import Control.Monad.Class.MonadTimer (threadDelay)
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (..))
 import Data.IORef (modifyIORef', readIORef)
@@ -44,6 +46,7 @@ startNetwork topology seed = do
       { step = do
           modifyIORef' tick (+ 1)
           slot <- fromIntegral <$> readIORef tick
+          threadDelay 10_000
           Rust.broadcast network (marshall $ NextSlot slot)
       , preferredChain = fmap unmarshall . Rust.preferredChain network
       , stop = Rust.stopNetwork network
