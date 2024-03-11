@@ -57,7 +57,6 @@ pub unsafe extern "C" fn get_preferred_chain(
 ) -> usize {
     let node_id = CStr::from_ptr(node_id).to_str().unwrap().into();
     let chain = network.get_preferred_chain(node_id);
-    println!("Chain: {:?}", chain);
     let chain_bytes = serde_json::to_vec(&chain).unwrap();
     let size = chain_bytes.len();
     if len < size {

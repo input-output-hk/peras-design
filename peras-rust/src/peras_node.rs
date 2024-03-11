@@ -107,7 +107,6 @@ impl Node {
     }
 
     pub fn start(&self, total_stake: u64) -> NodeHandle {
-        println!("Starting node {}", self.node_id);
         let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
         let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
 
@@ -214,12 +213,6 @@ impl Node {
         let cur_length = self.best_chain.blocks.len();
 
         if new_length > cur_length {
-            println!(
-                "Node {} adopting new chain: {:?}, length: {}",
-                self.node_id,
-                &chain.blocks.get(0).unwrap().body_hash,
-                chain.blocks.len()
-            );
             self.best_chain = chain;
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
@@ -242,7 +235,6 @@ impl Node {
 
 impl NodeHandle {
     pub fn stop(&mut self) {
-        println!("Stopping node {}", self.node_id);
         if self.thread.as_ref().map_or(false, |t| t.is_finished()) {
             return;
         }

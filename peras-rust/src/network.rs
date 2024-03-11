@@ -150,10 +150,8 @@ impl Network {
                             network.chains.insert(node_id, chain);
                         }
                         Control::Stopped(node_id) => {
-                            println!("Node {} notified stopped", &node_id);
                             network.nodes.remove(&node_id);
                             if network.nodes.is_empty() {
-                                println!("No more alive nodes");
                                 return;
                             }
                         }
@@ -185,7 +183,6 @@ impl NetworkHandle {
         // we trick the node into thinking it's receiving a message from the network
         // by sending it to itself
         let network = self.network.lock().unwrap();
-        println!("Broadcasting message: {:?}", msg);
         for (_, iface) in network.nodes.iter() {
             let sock = iface.socket.lock().unwrap();
             sock.send_to(sock.id(), msg.clone()).expect("send failed");
@@ -232,7 +229,6 @@ fn receive_and_forward_loop(
                 if no_msg_count < 10 {
                     no_msg_count += 1;
                 };
-                continue;
             }
             TryRecv::Disconnected => {
                 break;
@@ -264,7 +260,6 @@ fn receive_and_forward_loop(
                         .expect("send failed");
                 }
                 OutEnvelope::Stopped(node_id) => {
-                    println!("Node {} stopped", &node_id);
                     tx.send(Control::Stopped(NodeId { nodeId: node_id }))
                         .expect("send failed");
                 }
