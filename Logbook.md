@@ -1,3 +1,33 @@
+## 2024-03-11
+
+### Team sync
+
+Interesting metrics for Peras:
+* Fraction of the time (chain) spent in cooldown period
+* Forks statistics
+* What fraction of cast votes reached the slot leader?
+* How many votes expired?
+
+### AB - Rust node [#64](https://github.com/input-output-hk/peras-design/pull/64)
+
+There's a problem with the way `netsim` defines the `Socket` interface and how _we_ model network interactions:
+* At the node level we have an `InEnvelope` and `OutEnvelope` data strutcures that represent respectively incoming messages and outgoing messages
+* At the network level, one is transformed into the other
+* .... but a `Socket` in netsim has only one type of `Message`s transported!
+
+Catch-up Rust code with changes in main, back to sane state: The network runs and some messages are dispatched but we don't observe any chain being formed.
+
+Now propagates `NewChain` messages to downstream peers and adopt chains when receiving it!
+* Seems like spawning many many threads without stopping them is not a good idea as the test fails with thread spawn failing! Not very surprising as the `stop()` method for network is commented out...
+* Successfully stops nodes, but the test fails. Adding `noShrinking` helps to avoid endless loop and shows the problem is pretty simple: We always retrieve an empty chain from all nodes which fails the condition for the test
+
+Got a working praos rust node that passes one instance of the NetworkModel test.
+* The inner workings are quite complicated as there are a lot of different threads interacting through queues and netsim sockets.
+* Need to move to `actix` framework to simplify the nodes code and let them use directly the `netsim` socket instead of having to handle rx/tx queueus.
+
+Now the `NetworkModelSpec` tests pass: I had to introduce a delay for each `tick` in the driver's side to prevent the queueues from being flooded and give time to each node to react.
+This should be replaced by better queue discipline, applying back pressure to the caller when they are full.
+
 ## 2024-03-09
 
 ### "Split-Brain" Experiment
@@ -20,7 +50,7 @@ Findings:
 1. The complexity of the forking, voting, and cool-down in the Peras results highlights the need for capable visualization and analysis tools.
 2. The voting boost can impede the reestablishment of consensus after a network partition is restored.
 3. It would be convenient to be able to start a simulation from an existing chain, instead of from genesis.
-4. VRF-based randomization make it easier to compare simulations with different parameters. 
+4. VRF-based randomization make it easier to compare simulations with different parameters.
 5. Even though `peras-iosim` runs aren't particularly fast, we probably don't need to parallelize them because typical experiments involve many executions of simulations, which means we can take advantage of CPU resources simply by running those different scenarios in parallel.
 6. The memory footprint of `peras-iosim` is small (less than 100 MB) if tracing is turned off; with tracing, it is about twenty times that, but still modest.
 
@@ -33,6 +63,26 @@ Findings:
     - All sending and receiving messsages are logged.
     - Arbitrary JSON can also be logged.
     - The CLI can either collect or discard events.
+
+### AB - Rust Node
+
+Struggling with the handling of random seed for network generation and execution.
+* When we create the network, we pass `Parameters` which contain a `u64` seed, and also another `seed` which does not make sense.
+* This `u64` needs to be transformed into a `StdGen` in order to be useful for generating data, but we cannot change the type of `randomSeed` in `Parameters` because it needs to be serialisable.
+
+The model for `Socket` in netsim is UDP rather than TCP, eg. not connection oriented but message oriented -> no need to connect nodes
+
+Do I really need to separate the `Node` from teh `NodeHandle`?
+* Tried to get rid of the split between `Node` and  `NodeHandle` but got stuck again by the thread spawn issue: The `self` referenced needs to be `move`d and this makes it unusable afterwards.
+
+Seems like [actix](https://github.com/actix/actix) is really the way to go for serious actor-like modelling
+* Will try to have a first crude version of the Netsim-based network working and then refactor to use actix.
+
+Running the test now does not crash but eats up 500% CPU!
+* Seems like it works, I can see the nodes starting/stopping and the
+  message being broadcast but of course nothing happens because the
+  nodes don't receive the message! I need to actually wire the socket
+  handling in the network code.
 
 ## 2024-03-07
 
