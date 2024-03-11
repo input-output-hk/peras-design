@@ -324,12 +324,20 @@ updating the local block tree and putting the local state back into the global s
           , as
           ⟧
 
-      corrupt : ∀ {p N M} {m}
-        → let open Stateᵍ
-          in
-          history M ≡ history N
-          ------------------------
-        → M [ Corrupt {p} , m ]⇀ N
+      corrupt : ∀ {p c s ms ms′ hs as as′} {m}
+          ------------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} , m ]⇀
+          ⟦ c
+          , s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 ## Vote
 
@@ -364,12 +372,20 @@ A party can cast a vote for a block, if
           ---------------------------------------------------------
         → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) p ⟪ t , v ∷ d ⟫ M
 
-      corrupt : ∀ {p N M}
-        → let open Stateᵍ
-          in
-          history M ≡ history N
-          ---------------------
-        → M [ Corrupt {p} ]⇉ N
+      corrupt : ∀ {p c s ms ms′ hs as as′}
+          --------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} ]⇉
+          ⟦ c
+          , s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 ## Create
 
@@ -409,12 +425,20 @@ state.
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
-      corrupt : ∀ {p N M}
-        → let open Stateᵍ
-          in
-          history M ≡ history N
-          --------------------
-        → M [ Corrupt {p} ]↷ N
+      corrupt : ∀ {p c s ms ms′ hs as as′}
+          --------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} ]↷
+          ⟦ c
+          , s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 
 # Small-step semantics
@@ -506,20 +530,18 @@ In the paper mentioned above this is big-step semantics.
 
     -- Receive
 
-    postulate
-      []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
-        → M [ h , m ]⇀ N
-        → history M ⊆ₘ history N
-    -- []-hist-common-prefix (honest _ _ _) x = x
-    -- []-hist-common-prefix (corrupt _) x = x
+    []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
+      → M [ h , m ]⇀ N
+      → history M ⊆ₘ history N
+    []-hist-common-prefix (honest _ _ _) x = x
+    []-hist-common-prefix corrupt x = x
 
-    postulate
-      []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
-        → CollisionFree N
-        → M [ h , m ]⇀ N
-        → CollisionFree M
-    -- []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    -- []⇀-collision-free cf-N (corrupt _) = cf-N
+    []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
+      → CollisionFree N
+      → M [ h , m ]⇀ N
+      → CollisionFree M
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    []⇀-collision-free (collision-free {b₁} {b₂} x) corrupt = collision-free {b₁ = b₁} {b₂ = b₂} x
 
     -- Create
 
