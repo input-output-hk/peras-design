@@ -169,10 +169,14 @@ The block tree type
   * voting committee membership predicate
   * tx selection
   * The list of parties
+  * AdversarialState₀ is the initial adversarial state
+
 
 ```agda
   module _ {A : Set}
            {blockTree : TreeType A}
+           {AdversarialState : Set}
+           {adversarialsState₀ : AdversarialState}
            {isSlotLeader : PartyId → Slot → Bool}
            {isCommitteeMember : PartyId → RoundNumber → Bool}
            {txSelection : Slot → PartyId → List Tx}
@@ -249,7 +253,7 @@ votes.
 
 ```agda
     record Stateᵍ : Set where
-      constructor ⟦_,_,_,_⟧
+      constructor ⟦_,_,_,_,_⟧
       field
 ```
 The global state consists of the following fields:
@@ -270,14 +274,19 @@ The global state consists of the following fields:
 ```agda
         history : List Message
 ```
+* Adversarial state
+```agda
+        adversarialState : AdversarialState
+```
 Updating global state
 ```agda
     updateᵍ : Message → PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateᵍ m p l ⟦ c , s , ms , hs ⟧ =
+    updateᵍ m p l ⟦ c , s , ms , hs , as ⟧ =
           ⟦ c
           , insert p l s
           , map ⦅ m ,_⦆ parties ++ ms
           , m ∷ hs
+          , as
           ⟧
 ```
 Ticking the global clock
@@ -297,7 +306,7 @@ updating the local block tree and putting the local state back into the global s
 ```agda
     data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
-      honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs}
+      honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
         → (m∈ms : ⦅ m , p ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
@@ -306,16 +315,21 @@ updating the local block tree and putting the local state back into the global s
           , s
           , ms
           , hs
+          , as
           ⟧ [ Honest {p} , m ]⇀
           ⟦ c
           , insert p lₚ′ s
           , ms ─ m∈ms
           , hs
+          , as
           ⟧
 
-      corrupt : ∀ {p N} {m}
-          -------------------------
-        → N [ Corrupt {p} , m ]⇀ N
+      corrupt : ∀ {p N M} {m}
+        → let open Stateᵍ
+          in
+          history M ≡ history N
+          ------------------------
+        → M [ Corrupt {p} , m ]⇀ N
 ```
 ## Vote
 
@@ -350,9 +364,12 @@ A party can cast a vote for a block, if
           ---------------------------------------------------------
         → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) p ⟪ t , v ∷ d ⟫ M
 
-      corrupt : ∀ {p N}
+      corrupt : ∀ {p N M}
+        → let open Stateᵍ
+          in
+          history M ≡ history N
           ---------------------
-        → N [ Corrupt {p} ]⇉ N
+        → M [ Corrupt {p} ]⇉ N
 ```
 ## Create
 
@@ -392,9 +409,12 @@ state.
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
-      corrupt : ∀ {p N}
-          ---------------------
-        → N [ Corrupt {p} ]↷ N
+      corrupt : ∀ {p N M}
+        → let open Stateᵍ
+          in
+          history M ≡ history N
+          --------------------
+        → M [ Corrupt {p} ]↷ N
 ```
 
 # Small-step semantics
@@ -486,18 +506,20 @@ In the paper mentioned above this is big-step semantics.
 
     -- Receive
 
-    []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
-      → M [ h , m ]⇀ N
-      → history M ⊆ₘ history N
-    []-hist-common-prefix (honest _ _ _) x = x
-    []-hist-common-prefix corrupt x = x
+    postulate
+      []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
+        → M [ h , m ]⇀ N
+        → history M ⊆ₘ history N
+    -- []-hist-common-prefix (honest _ _ _) x = x
+    -- []-hist-common-prefix (corrupt _) x = x
 
-    []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
-      → CollisionFree N
-      → M [ h , m ]⇀ N
-      → CollisionFree M
-    []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    []⇀-collision-free cf-N corrupt = cf-N
+    postulate
+      []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
+        → CollisionFree N
+        → M [ h , m ]⇀ N
+        → CollisionFree M
+    -- []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    -- []⇀-collision-free cf-N (corrupt _) = cf-N
 
     -- Create
 
