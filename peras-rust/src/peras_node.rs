@@ -163,28 +163,34 @@ impl Node {
             self.seed.fill_bytes(&mut signature);
             let mut leadership_proof = [0u8; 8];
             self.seed.fill_bytes(&mut leadership_proof);
+            let mut body_hash = [0u8; 8];
+            self.seed.fill_bytes(&mut body_hash);
+            let parent_hash = match self.best_chain.blocks.first() {
+                Some(b) => b.body_hash.clone(),
+                None => Block::genesis_hash(),
+            };
             let new_block = Block {
                 slot_number: slot,
                 creator_id: 1,
-                parent_block: crypto::Hash {
-                    hash: [0, 0, 0, 0, 0, 0, 0, 0],
-                },
+                parent_block: parent_hash,
                 included_votes: vec![],
                 leadership_proof: crypto::LeadershipProof {
                     proof: leadership_proof,
                 },
                 signature: crypto::Signature { signature },
-                body_hash: crypto::Hash {
-                    hash: [0, 0, 0, 0, 0, 0, 0, 0],
-                },
+                body_hash: crypto::Hash { hash: body_hash },
             };
+            println!(
+                "Node {} is slot leader, forged new block {:?}",
+                self.node_id, &new_block
+            );
             self.best_chain.blocks.insert(0, new_block);
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
                 timestamp: Utc::now(),
                 source: self.node_id.clone(),
                 destination: self.node_id.clone(), // FIXME this does not make sense
-                out_id: UniqueId::new::<_>(&msg),
+                out_id: UniqueId::new(&msg),
                 out_message: msg,
                 bytes: 0,
             })

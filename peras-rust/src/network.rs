@@ -127,7 +127,6 @@ impl Network {
     }
 
     pub(crate) fn broadcast(&self, msg: Message) {
-        println!("Broadcasting message: {:?}", msg);
         // broadcast the message to all nodes in the network
         // we trick the node into thinking it's receiving a message from the network
         // by sending it to itself

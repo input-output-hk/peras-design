@@ -29,6 +29,14 @@ pub struct Block {
     pub body_hash: Hash,
 }
 
+impl Block {
+    pub fn genesis_hash() -> Hash {
+        Hash {
+            hash: [0, 0, 0, 0, 0, 0, 0, 0],
+        }
+    }
+}
+
 #[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize, Hash)]
 #[serde(tag = "tag", rename_all = "camelCase")]
 pub struct BlockBody {
