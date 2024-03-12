@@ -546,11 +546,50 @@ In the paper mentioned above this is big-step semantics.
 
     -- Create
 
-    -- TODO: implement Gossip data type
-    postulate
-      []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-        → M [ h ]↷ N
-        → history M ⊆ₘ history N
+    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → M [ h ]↷ N
+      → history M ⊆ₘ history N
+    []↷-hist-common-prefix (honest {p} {t} {d} {M} _ _) =
+      let r = roundNumber (v-round (clock M))
+          txs = txSelection (clock M) p
+          c = (bestChain blockTree) (pred (clock M)) d t
+          vs = filterᵇ (λ {
+                   v → r ≤ᵇ (roundNumber (votingRound v) + L)
+                 } )
+                 (votes c)
+          body = record {
+              blockHash = hash txs ;
+              payload = txs
+              }
+          b = record {
+                slotNumber = clock M ;
+                creatorId = p ;
+                parentBlock = hash (tip c) ;
+                includedVotes = map hash vs ;
+                leadershipProof = record { proof = emptyBS } ;
+                bodyHash = blockHash body ;
+                signature = record { bytes = emptyBS }
+              }
+       in xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix corrupt x₁ = x₁
+
+    []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → M [ h ]⇉ N
+      → history M ⊆ₘ history N
+    []⇉-hist-common-prefix {M} (honest {p} {t} {d} {M} _ _ _ _ _) =
+      let r = v-round (clock M)
+          b = (bestChain blockTree) ((clock M) ∸ L) d t
+          v = record {
+                votingRound = r ;
+                creatorId = p ;
+                committeeMembershipProof =
+                  record { proofM = emptyBS } ;
+                blockHash = hash (tip b) ;
+                signature =
+                  record { bytes = emptyBS }
+              }
+      in xs⊆x∷xs (history M) (VoteMsg v)
+    []⇉-hist-common-prefix corrupt x₁ = x₁
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
@@ -558,11 +597,11 @@ In the paper mentioned above this is big-step semantics.
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
-    postulate
-      []⇉-collision-free : ∀ {M N p} {h : Honesty p}
-        → CollisionFree N
-        → M [ h ]⇉ N
-        → CollisionFree M
+    []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → M [ h ]⇉ N
+      → CollisionFree M
+    []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
 ```
 -->
 
