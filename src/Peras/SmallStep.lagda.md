@@ -325,7 +325,8 @@ updating the local block tree and putting the local state back into the global s
           , as
           ⟧
 
-      corrupt : ∀ {p c s ms ms′ hs as as′} {m}
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ} {m}
+        → ms ↭ ms′
           ------------------------------------
         → ⟦ c
           , s
@@ -334,7 +335,7 @@ updating the local block tree and putting the local state back into the global s
           , as
           ⟧ [ Corrupt {p} , m ]⇀
           ⟦ c
-          , s
+          , insert p lₚ s
           , ms′
           , hs
           , as′
@@ -373,7 +374,8 @@ A party can cast a vote for a block, if
           ---------------------------------------------------------
         → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) 0 p ⟪ t , v ∷ d ⟫ M
 
-      corrupt : ∀ {p c s ms ms′ hs as as′}
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
+        → ms ↭ ms′
           --------------------------------
         → ⟦ c
           , s
@@ -382,7 +384,7 @@ A party can cast a vote for a block, if
           , as
           ⟧ [ Corrupt {p} ]⇉
           ⟦ c
-          , s
+          , insert p lₚ s
           , ms′
           , hs
           , as′
@@ -426,7 +428,8 @@ state.
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
-      corrupt : ∀ {p c s ms ms′ hs as as′}
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
+        → ms ↭ ms′
           --------------------------------
         → ⟦ c
           , s
@@ -435,7 +438,7 @@ state.
           , as
           ⟧ [ Corrupt {p} ]↷
           ⟦ c
-          , s
+          , insert p lₚ s
           , ms′
           , hs
           , as′
@@ -535,14 +538,14 @@ In the paper mentioned above this is big-step semantics.
       → M [ h , m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
-    []-hist-common-prefix corrupt x = x
+    []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
       → M [ h , m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    []⇀-collision-free (collision-free {b₁} {b₂} x) corrupt = collision-free {b₁ = b₁} {b₂ = b₂} x
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
 
     -- Create
 
@@ -571,7 +574,7 @@ In the paper mentioned above this is big-step semantics.
                 signature = record { bytes = emptyBS }
               }
        in xs⊆x∷xs (history M) (BlockMsg b)
-    []↷-hist-common-prefix corrupt x₁ = x₁
+    []↷-hist-common-prefix (corrupt _) x₁ = x₁
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
@@ -589,7 +592,7 @@ In the paper mentioned above this is big-step semantics.
                   record { bytes = emptyBS }
               }
       in xs⊆x∷xs (history M) (VoteMsg v)
-    []⇉-hist-common-prefix corrupt x₁ = x₁
+    []⇉-hist-common-prefix (corrupt _) x₁ = x₁
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N

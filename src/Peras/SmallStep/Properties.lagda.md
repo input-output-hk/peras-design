@@ -52,7 +52,10 @@ module _ {block₀ : Block}
       open TreeType
       open Stateᵍ
 ```
-### Knowledge propagation lemma
+### Knowledge propagation
+
+The lemma describes how knowledge is propagated between honest parties in the system.
+TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (allVotes blockTree) t₂`
 
 ```agda
       postulate
