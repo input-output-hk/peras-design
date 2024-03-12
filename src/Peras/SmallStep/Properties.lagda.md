@@ -7,7 +7,7 @@ module Peras.SmallStep.Properties where
 open import Data.Bool using (Bool)
 open import Data.List using (List)
 open import Data.Maybe using (just)
-open import Data.Nat using (ℕ; _∸_; _<_; _*_)
+open import Data.Nat using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
@@ -72,9 +72,36 @@ module _ {block₀ : Block}
       open import Data.Sum using (_⊎_; inj₁; inj₂)
       open import Peras.Chain
 ```
+## Chain growth
+
+```agda
+      postulate
+        luckySlots : ℕ
+
+      postulate
+        chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+          → {p₁ p₂ : PartyId}
+          → {c₁ c₂ : Chain}
+          → {d₁ d₂ : List Vote}
+          → {pr₁ : DanglingVotes c₁ d₁}
+          → {pr₂ : DanglingVotes c₂ d₂}
+          → {t₁ t₂ : A}
+          → {w : ℕ}
+          → N₀ ↝ N₁
+          → N₁ ↝ N₂
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
+          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
+          → luckySlots ≥ w
+          → c₁ ≡ (bestChain blockTree) ((clock N₁) ∸ 1) d₁ t₁
+          → c₂ ≡ (bestChain blockTree) ((clock N₂) ∸ 1) d₂ t₂
+          → (∥ ⟨ c₁ , d₁ , pr₁ ⟩ ∥ + w) ≤ ∥ ⟨ c₂ , d₂ , pr₂ ⟩ ∥
+```
+
 ## Chain quality
 
-## Chain growth
+```agda
+
+```
 
 ## Common prefix
 
@@ -92,7 +119,11 @@ module _ {block₀ : Block}
           → CollisionFree N
           -- → IsHonest p N
           → let sl = clock N
-          in (prune k ((bestChain blockTree) (sl ∸ 1) d t)) ⪯ c
-           ⊎ (Σ[ sl′ ∈ Slot ] ((sl′ < k) × (superSlots < 2 * adversarialSlots)))
+            in (prune k ((bestChain blockTree) (sl ∸ 1) d t)) ⪯ c
+             ⊎ (Σ[ sl′ ∈ Slot ] ((sl′ < k) × (superSlots < 2 * adversarialSlots)))
 ```
 ## Timed common prefix
+
+```agda
+
+```
