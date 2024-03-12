@@ -20,7 +20,7 @@ let
     cargoLock = {
       lockFile = ../peras-rust/Cargo.lock;
       outputHashes = {
-        "netsim-0.1.0" = "sha256-KjS9pwXCEqU2x0W8OAD53Pc/YirXS5+Upq0nvDgZ2rA=";
+        "netsim-0.1.0" = "sha256-lx+lLOp85XUUOxyN6AetjnG4v+bgQVjMY0iZHMEDPeY=";
       };
     };
     buildInputs = [ peras_topology ];

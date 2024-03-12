@@ -13,7 +13,7 @@ serde_json = "1.0.113"
 serde_yaml = "0.9.31"
 rand = "0.8.5"
 # depend on netsim at bleeding edge for the moment
-netsim = { git = "https://github.com/bwbush/ce-netsim", branch = "main" }
+netsim = { git = "https://github.com/input-output-hk/ce-netsim", branch = "main" }
 # depends on peras_topology
 peras_topology = { path = "../peras_topology" }
 
