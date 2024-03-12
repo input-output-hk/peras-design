@@ -159,6 +159,24 @@ tip (MkChain blks _ non-empty) = head blks ⦃ non-empty ⦄
 ```
 -->
 
+### Chain prefix
+
+```agda
+data _⪯_ : Chain → Chain → Set where
+
+  Prefix : ∀ {c₁ c₂ c₃ : Chain}
+    → blocks c₁ ++ blocks c₃ ≡ blocks c₂
+    → votes c₁ ++ votes c₃ ≡ votes c₂
+    → c₁ ⪯ c₂
+```
+
+### Chain pruning
+
+```agda
+prune : Slot → Chain → Chain
+prune sl c = c -- TODO: {b ← c | slot b ≤ sl}.
+```
+
 ### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters

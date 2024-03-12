@@ -59,10 +59,11 @@ data Message : Set where
 Messages are put into an envelope
 ```agda
 record Envelope : Set where
-  constructor ⦅_,_⦆
+  constructor ⦅_,_,_⦆
   field
-    message : Message
     partyId : PartyId
+    message : Message
+    delay : ℕ
 ```
 <!--
 ```agda
@@ -280,11 +281,11 @@ The global state consists of the following fields:
 ```
 Updating global state
 ```agda
-    updateᵍ : Message → PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateᵍ m p l ⟦ c , s , ms , hs , as ⟧ =
+    updateᵍ : Message → ℕ → PartyId → Stateˡ → Stateᵍ → Stateᵍ
+    updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
           ⟦ c
           , insert p l s
-          , map ⦅ m ,_⦆ parties ++ ms
+          , map ⦅_, m , d ⦆ parties ++ ms
           , m ∷ hs
           , as
           ⟧
@@ -308,7 +309,7 @@ updating the local block tree and putting the local state back into the global s
 
       honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
-        → (m∈ms : ⦅ m , p ⦆ ∈ ms)
+        → (m∈ms : ⦅ 0 , m , p ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
           ------------------------
         → ⟦ c
@@ -370,7 +371,7 @@ A party can cast a vote for a block, if
         → isCommitteeMember p r ≡ true
         → VoteInRound ⟨ c , d , pr ⟩ r
           ---------------------------------------------------------
-        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) p ⟪ t , v ∷ d ⟫ M
+        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) 0 p ⟪ t , v ∷ d ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′}
           --------------------------------
@@ -422,7 +423,7 @@ state.
           lookup stateMap p ≡ just ⟪ t , d ⟫
         → isSlotLeader p clock ≡ true
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′}
