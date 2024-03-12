@@ -74,28 +74,38 @@ module _ {block₀ : Block}
 ```
 ## Chain growth
 
+The chain growth property informally says that in each period, the best chain of any honest
+party will increase at least by a number that is proportional to the number of lucky slots in
+that period.
+
 ```agda
       postulate
-        luckySlots : ℕ
+        luckySlots : Slot × Slot → ℕ
 
       postulate
         chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {c₁ c₂ : Chain}
-          → {d₁ d₂ : List Vote} -- d₁ ⊆ d₂ ?
+          → {d₁ d₂ : List Vote}
+          → {pr₁ : DanglingVotes c₁ d₁}
+          → {pr₂ : DanglingVotes c₂ d₂}
           → {t₁ t₂ : A}
           → {w : ℕ}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
           → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
           → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
-          → luckySlots ≥ w
+          → luckySlots (clock N₁ , clock N₂) ≥ w
           → c₁ ≡ ((bestChain blockTree) ((clock N₁) ∸ 1) d₁ t₁)
           → c₂ ≡ ((bestChain blockTree) ((clock N₂) ∸ 1) d₂ t₂)
-          → ∣ c₁ ∣ + w ≤ ∣ c₂ ∣
+          → ∥ ⟨ c₁ , d₁ , pr₁ ⟩ ∥ + w ≤ ∥ ⟨ c₂ , d₂ , pr₂ ⟩ ∥
 ```
 
 ## Chain quality
+
+The chain quality property informally says that within any chunk of consecutive blocks in an
+honest party's best chain, there is an honest share of blocks. This share is proportional to
+the difference between the number of honest and adversarial slots.
 
 ```agda
 
@@ -103,10 +113,13 @@ module _ {block₀ : Block}
 
 ## Common prefix
 
+The common prefix property informally says that during the execution of the protocol the
+chains of honest parties will always be a common prefix of each other.
+
 ```agda
       postulate
-        superSlots : ℕ
-        adversarialSlots : ℕ
+        superSlots : Slot × Slot → ℕ
+        adversarialSlots : Slot × Slot → ℕ
 
       postulate
         common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
@@ -118,7 +131,7 @@ module _ {block₀ : Block}
           -- → IsHonest p N
           → let sl = clock N
             in (prune k ((bestChain blockTree) (sl ∸ 1) d t)) ⪯ c
-             ⊎ (Σ[ sl′ ∈ Slot ] ((sl′ < k) × (superSlots < 2 * adversarialSlots)))
+             ⊎ (Σ[ sl′ ∈ Slot ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix
 
