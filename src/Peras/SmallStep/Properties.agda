@@ -16,7 +16,8 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 
 module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (Vote Block) ⦄
+         ⦃ _ : Hashable Vote ⦄
+         ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -25,6 +26,8 @@ module _ {block₀ : Block}
 
   module _ {A : Set}
            (blockTree : TreeType A)
+           {AdversarialState : Set}
+           (adversarialState₀ : AdversarialState)
            (isSlotLeader : PartyId → Slot → Bool)
            (isCommitteeMember : PartyId → RoundNumber → Bool)
            (txSelection : Slot → PartyId → List Tx)
@@ -32,7 +35,7 @@ module _ {block₀ : Block}
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟨_,_⟩)
+    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟪_,_⟫)
 
     module _ ⦃ N₀ : Stateᵍ ⦄ where
 
@@ -41,26 +44,14 @@ module _ {block₀ : Block}
 
       -- knowledge propagation
       postulate
-        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+        lemma1 : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
+          → {d₁ d₂ : List Vote}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
-          → lookup (stateMap N₁) p₁ ≡ just ⟨ p₁ , t₁ ⟩
-          → lookup (stateMap N₁) p₂ ≡ just ⟨ p₂ , t₂ ⟩
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
+          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
           → clock N₁ ≡ clock N₂
           → (allBlocks blockTree) t₁ ⊆ (allBlocks blockTree) t₂
 
-    {- From the paper:
-
-    Proof sketch. Our main observation is that at any point in time a block is in the tree of p1, it is
-    either also already in p2’s tree or to be delivered at the next delivery transition.
-
-    Blocks can be added when an honest party wins the right to bake a block, in which case they will immediately
-    send the block to all other parties and thus fulfill the invariant, or they can be added by an
-    adversary and thereby delivered to an honest party by a delivery event, in which case it will be
-    delivered to all other honest parties in the following delivery slot (by our network assumption).
-
-    This is in particular true when p1 and p2 is at Ready, which means that after the delivery
-    transition p2 will know all the blocks that p1 knew before.
-    -}
