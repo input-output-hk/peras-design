@@ -501,6 +501,11 @@ In the paper mentioned above this is big-step semantics.
     open Stateᵍ
 ```
 -->
+
+Rather than assuming a global axiom on the injectivity of the hash function
+or that any reachable state is collision-free, there is a predicate assuming
+that there are no hash collisions during the execution of the protocol.
+
 ```agda
     data CollisionFree (N : Stateᵍ) : Set where
 
@@ -647,13 +652,10 @@ When the current state is collision free, previous states were so too
 
 # Forging free predicate
 
+Signatures are not modelled explicitly. Instead we assume that the adversary cannot send any
+block with the `creatorId` of an honest party that is not already in the block history.
+
 ```agda
-    open Block
-
-    -- TODO: fix `Honesty` predicate
-    postulate
-      HonestBlock : Block → Set
-
     data ForgingFree (N : Stateᵍ) : Set where
 
       forging-free : ∀ {M : Stateᵍ} {b} {p}

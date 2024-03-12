@@ -74,6 +74,7 @@ TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (a
 ```agda
       open import Data.Sum using (_⊎_; inj₁; inj₂)
       open import Peras.Chain
+      open Honesty
 ```
 ## Chain growth
 
@@ -88,12 +89,15 @@ that period.
       postulate
         chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
+          → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
           → {c₁ c₂ : Chain}
           → {d₁ d₂ : List Vote}
           → {pr₁ : DanglingVotes c₁ d₁}
           → {pr₂ : DanglingVotes c₂ d₂}
           → {t₁ t₂ : A}
           → {w : ℕ}
+          → h₁ ≡ Honest {p₁}
+          → h₂ ≡ Honest {p₂}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
           → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
@@ -126,12 +130,12 @@ chains of honest parties will always be a common prefix of each other.
 
       postulate
         common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
-          → {p : PartyId} {c : Chain} {k : Slot} {bh : List Block} {t : A} {d : List Vote}
+          → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A} {d : List Vote}
           → lookup (stateMap N) p ≡ just ⟪ t , d ⟫
           → N₀ ↝ N
           → ForgingFree N
           → CollisionFree N
-          -- → IsHonest p N
+          → h ≡ Honest {p}
           → let sl = clock N
             in (prune k ((bestChain blockTree) (sl ∸ 1) d t)) ⪯ c
              ⊎ (Σ[ sl′ ∈ Slot ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl)))
