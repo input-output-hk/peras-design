@@ -67,6 +67,10 @@ cabalProject:
     export PATH="''${CARGO_HOME:-~/.cargo}/bin:$PATH"
     export PATH="''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION/bin/:$PATH"
     export LD_LIBRARY_PATH="$PWD/peras-rust/target/debug:$LD_LIBRARY_PATH"
+    if [ ! -f rust-toolchain ]
+    then
+      echo "$RUSTC_VERSION" > rust-toolchain
+    fi
   '';
 
   tools = {
