@@ -60,7 +60,7 @@ pub struct ProtocolParameters {
 impl Default for ProtocolParameters {
     fn default() -> Self {
         ProtocolParameters {
-            active_coefficient: 0.5,
+            active_coefficient: 0.1,
         }
     }
 }
@@ -394,7 +394,10 @@ mod tests {
     fn node_is_slot_leader_every_3_slots_given_coefficient_is_0_5_and_node_has_half_the_stake() {
         let params = NodeParameters {
             node_stake: 50,
-            protocol_parameters: ProtocolParameters::default(),
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 0.5,
+                ..Default::default()
+            },
         };
         let mut node = Node::new("N1".into(), params);
 
