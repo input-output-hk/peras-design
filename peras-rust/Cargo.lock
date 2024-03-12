@@ -417,7 +417,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 [[package]]
 name = "netsim"
 version = "0.1.0"
-source = "git+https://github.com/input-output-hk/ce-netsim?branch=main#564d7cf8fa7ce0098e2b3fc1ccff465b9c2ad44e"
+source = "git+https://github.com/bwbush/ce-netsim?branch=main#97a063637df54586086d4ad08233d7c42408d6c2"
 dependencies = [
  "anyhow",
  "netsim-core",
@@ -426,7 +426,7 @@ dependencies = [
 [[package]]
 name = "netsim-core"
 version = "0.1.0"
-source = "git+https://github.com/input-output-hk/ce-netsim?branch=main#564d7cf8fa7ce0098e2b3fc1ccff465b9c2ad44e"
+source = "git+https://github.com/bwbush/ce-netsim?branch=main#97a063637df54586086d4ad08233d7c42408d6c2"
 dependencies = [
  "anyhow",
 ]

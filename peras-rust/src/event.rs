@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 /// Unique identifier for various entities in the network.
 /// Currently used for identifying messages from their content.
