@@ -11,12 +11,23 @@ let
       description = "A topology library for Peras";
     };
   };
+  peras_topology_src = ../peras_topology;
   peras_rust = inputs.nixos-unstable.legacyPackages.rustPlatform.buildRustPackage rec {
     pname = "peras_rust";
     version = "0.1.0";
     src = ../peras-rust;
-    cargoSha256 = "14w94a5jysbns9g07rdndrlvha5ywjk1dsnfxwxbkqyx2dck1nya";
+    cargoSha256 = "";
+    cargoLock = {
+      lockFile = ../peras-rust/Cargo.lock;
+      outputHashes = {
+        "netsim-0.1.0" = "sha256-KjS9pwXCEqU2x0W8OAD53Pc/YirXS5+Upq0nvDgZ2rA=";
+      };
+    };
+    buildInputs = [ peras_topology ];
     doCheck = false; # FIXME: Turn on the unit tests as soon as they start passing.
+    preConfigure = ''
+      sed -i "s@../peras_topology@${peras_topology_src}@" Cargo.toml
+    '';
     preInstall = ''
       mkdir -p "$out/include"
       cp "$src/peras.h" "$out/include/"
