@@ -82,9 +82,7 @@ module _ {block₀ : Block}
         chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {c₁ c₂ : Chain}
-          → {d₁ d₂ : List Vote}
-          → {pr₁ : DanglingVotes c₁ d₁}
-          → {pr₂ : DanglingVotes c₂ d₂}
+          → {d₁ d₂ : List Vote} -- d₁ ⊆ d₂ ?
           → {t₁ t₂ : A}
           → {w : ℕ}
           → N₀ ↝ N₁
@@ -92,9 +90,9 @@ module _ {block₀ : Block}
           → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
           → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
           → luckySlots ≥ w
-          → c₁ ≡ (bestChain blockTree) ((clock N₁) ∸ 1) d₁ t₁
-          → c₂ ≡ (bestChain blockTree) ((clock N₂) ∸ 1) d₂ t₂
-          → (∥ ⟨ c₁ , d₁ , pr₁ ⟩ ∥ + w) ≤ ∥ ⟨ c₂ , d₂ , pr₂ ⟩ ∥
+          → c₁ ≡ ((bestChain blockTree) ((clock N₁) ∸ 1) d₁ t₁)
+          → c₂ ≡ ((bestChain blockTree) ((clock N₂) ∸ 1) d₂ t₂)
+          → ∣ c₁ ∣ + w ≤ ∣ c₂ ∣
 ```
 
 ## Chain quality

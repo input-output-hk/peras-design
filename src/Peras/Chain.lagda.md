@@ -177,6 +177,13 @@ prune : Slot → Chain → Chain
 prune sl c = c -- TODO: {b ← c | slot b ≤ sl}.
 ```
 
+### Chain length
+
+```agda
+∣_∣ : Chain → ℕ
+∣ MkChain bs _ _ ∣ = length bs
+```
+
 ### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
