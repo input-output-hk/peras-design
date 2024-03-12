@@ -32,17 +32,18 @@ runPropInNetSim = monadic (ioProperty . runner)
 withNewNode :: (Node IO -> IO Property) -> IO Property
 withNewNode k = do
   node <- startNode (MkNodeId "N1") 100 1000
-  runTest node
+  runTest k node
     `finally` stopNode node
- where
-  runTest node =
-    try (k node)
-      >>= \case
-        Right v -> pure v
-        Left (e :: IOException) ->
-          pure $
-            property False
-              & counterexample ("Execution failed with error: " <> show e)
+
+runTest :: (env -> IO Property) -> env -> IO Property
+runTest k node =
+  try (k node)
+    >>= \case
+      Right v -> pure v
+      Left (e :: IOException) ->
+        pure $
+          property False
+            & counterexample ("Execution failed with error: " <> show e)
 
 startNode :: NodeId -> Integer -> Integer -> IO (Node IO)
 startNode nodeId nodeStake totalStake = do
@@ -63,6 +64,9 @@ startNode nodeId nodeStake totalStake = do
       , nodeStake = nodeStake % totalStake
       }
 
-  unmarshall :: ByteString -> OutEnvelope
-  unmarshall bs =
-    either (error . (("Failed to deserialise received message (" <> show bs <> "): ") <>)) id . A.eitherDecode . LBS.fromStrict $ bs
+marshall :: A.ToJSON a => a -> ByteString
+marshall = LBS.toStrict . A.encode
+
+unmarshall :: A.FromJSON a => ByteString -> a
+unmarshall bs =
+  either (error . (("Failed to deserialise received message (" <> show bs <> "): ") <>)) id . A.eitherDecode . LBS.fromStrict $ bs

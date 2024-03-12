@@ -8,7 +8,7 @@ use std::hash::Hash;
 #[derive(Debug, Eq, Clone, Hash, PartialEq)]
 #[allow(non_snake_case)]
 pub struct NodeId {
-    nodeId: String,
+    pub nodeId: String,
 }
 
 impl std::fmt::Display for NodeId {
@@ -51,9 +51,9 @@ pub struct NodeLink {
     reliability: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Topology {
-    connections: HashMap<NodeId, HashMap<NodeId, NodeLink>>,
+    pub connections: HashMap<NodeId, HashMap<NodeId, NodeLink>>,
 }
 
 impl Topology {

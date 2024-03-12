@@ -49,24 +49,38 @@ pub enum OutEnvelope {
         out_message: Message,
         bytes: u32,
     },
+    Stopped(String),
 }
 
+#[derive(Debug, Clone)]
+pub struct ProtocolParameters {
+    pub active_coefficient: f64,
+}
+
+impl Default for ProtocolParameters {
+    fn default() -> Self {
+        ProtocolParameters {
+            active_coefficient: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct NodeParameters {
     pub node_stake: u64,
-    pub total_stake: u64,
-    pub active_coefficient: f64,
+    pub protocol_parameters: ProtocolParameters,
 }
 
 impl Default for NodeParameters {
     fn default() -> Self {
         NodeParameters {
             node_stake: 10,
-            total_stake: 100,
-            active_coefficient: 0.1,
+            protocol_parameters: ProtocolParameters::default(),
         }
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Node {
     node_id: NodeId,
     parameters: NodeParameters,
@@ -75,9 +89,11 @@ pub struct Node {
 }
 
 pub struct NodeHandle {
+    node_id: NodeId,
     sender: Sender<InEnvelope>,
     receiver: Receiver<OutEnvelope>,
     thread: Option<JoinHandle<()>>,
+    pub current_best_chain: Chain,
 }
 
 impl Node {
@@ -90,87 +106,130 @@ impl Node {
         }
     }
 
-    pub fn start(self) -> NodeHandle {
+    pub fn start(&self, total_stake: u64) -> NodeHandle {
         let (tx_in, rx_in) = mpsc::channel::<InEnvelope>();
         let (tx_out, rx_out) = mpsc::channel::<OutEnvelope>();
 
-        let thread = thread::spawn(move || work(self, rx_in, tx_out));
+        let mut node1 = self.clone();
+
+        let thread = thread::spawn(move || node1.work(total_stake, rx_in, tx_out));
 
         NodeHandle {
+            node_id: self.node_id.clone(),
             sender: tx_in,
             receiver: rx_out,
             thread: Some(thread),
+            current_best_chain: empty_chain(),
         }
     }
 
-    // FIXME: why is the slot number not involved in the leadership selection?
-    fn is_slot_leader(&mut self, _slot: u64) -> bool {
-        let stake_ratio =
-            (self.parameters.node_stake as f64) / (self.parameters.total_stake as f64);
-        let prob = 1.0 - (1.0 - self.parameters.active_coefficient).powf(stake_ratio);
+    fn is_slot_leader(&mut self, total_stake: u64) -> bool {
+        let stake_ratio = (self.parameters.node_stake as f64) / (total_stake as f64);
+        let prob =
+            1.0 - (1.0 - self.parameters.protocol_parameters.active_coefficient).powf(stake_ratio);
         self.seed.gen_bool(prob)
     }
-}
 
-fn work(mut node: Node, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
-    loop {
-        let recv = rx_in.recv();
-        match recv {
-            Ok(InEnvelope::Stop) => return,
-            Ok(InEnvelope::SendMessage {
-                origin: _,
-                in_id: _,
-                in_message: Message::NextSlot(slot),
-            }) => match handle_slot(slot, &mut node) {
-                Some(out) => tx_out.send(out).expect("Failed to send message"),
-                None => (),
-            },
-            Ok(_) => (),
-            Err(err) => panic!("Error while receiving message {err}"),
+    fn work(&mut self, total_stake: u64, rx_in: Receiver<InEnvelope>, tx_out: Sender<OutEnvelope>) {
+        loop {
+            let recv = rx_in.recv();
+            match recv {
+                Ok(InEnvelope::Stop) => {
+                    tx_out
+                        .send(OutEnvelope::Stopped(self.node_id.clone()))
+                        .expect("Failed to send message");
+                    return;
+                }
+                Ok(InEnvelope::SendMessage {
+                    origin: _,
+                    in_id: _,
+                    in_message: Message::NextSlot(slot),
+                }) => match self.handle_slot(slot, total_stake) {
+                    Some(out) => tx_out.send(out).expect("Failed to send message"),
+                    None => (),
+                },
+                Ok(InEnvelope::SendMessage {
+                    origin: _,
+                    in_id: _,
+                    in_message: Message::NewChain(chain),
+                }) => match self.handle_new_chain(chain) {
+                    Some(out) => tx_out.send(out).expect("Failed to send message"),
+                    None => (),
+                },
+                Ok(_) => (),
+                Err(err) => panic!("Error while receiving message {err}"),
+            }
+
+            tx_out
+                .send(OutEnvelope::Idle {
+                    timestamp: Utc::now(),
+                    source: self.node_id.clone(),
+                    best_chain: self.best_chain(),
+                })
+                .expect("Failed to send Idle message")
         }
-
-        tx_out
-            .send(OutEnvelope::Idle {
-                timestamp: Utc::now(),
-                source: node.node_id.clone(),
-                best_chain: node.best_chain.clone(),
-            })
-            .expect("Failed to send Idle message")
     }
-}
 
-fn handle_slot(slot: u64, node: &mut Node) -> Option<OutEnvelope> {
-    if node.is_slot_leader(slot) {
-        let mut signature = [0u8; 8];
-        node.seed.fill_bytes(&mut signature);
-        let mut leadership_proof = [0u8; 8];
-        node.seed.fill_bytes(&mut leadership_proof);
-        let new_block = Block {
-            slot_number: slot,
-            creator_id: 1,
-            parent_block: crypto::Hash {
-                hash: [0, 0, 0, 0, 0, 0, 0, 0],
-            },
-            included_votes: vec![],
-            leadership_proof: crypto::LeadershipProof {
-                proof: leadership_proof,
-            },
-            signature: crypto::Signature { signature },
-            body_hash: crypto::Hash {
-                hash: [0, 0, 0, 0, 0, 0, 0, 0],
-            },
-        };
-        node.best_chain.blocks.insert(0, new_block);
-        Some(OutEnvelope::SendMessage {
-            timestamp: Utc::now(),
-            source: node.node_id.clone(),
-            destination: node.node_id.clone(), // FIXME this does not make sense
-            out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
-            out_message: Message::NewChain(node.best_chain.clone()),
-            bytes: 0,
-        })
-    } else {
-        None
+    fn handle_slot(&mut self, slot: u64, total_stake: u64) -> Option<OutEnvelope> {
+        if self.is_slot_leader(total_stake) {
+            let mut signature = [0u8; 8];
+            self.seed.fill_bytes(&mut signature);
+            let mut leadership_proof = [0u8; 8];
+            self.seed.fill_bytes(&mut leadership_proof);
+            let mut body_hash = [0u8; 8];
+            self.seed.fill_bytes(&mut body_hash);
+            let parent_hash = match self.best_chain.blocks.first() {
+                Some(b) => b.body_hash.clone(),
+                None => Block::genesis_hash(),
+            };
+            let new_block = Block {
+                slot_number: slot,
+                creator_id: 1,
+                parent_block: parent_hash,
+                included_votes: vec![],
+                leadership_proof: crypto::LeadershipProof {
+                    proof: leadership_proof,
+                },
+                signature: crypto::Signature { signature },
+                body_hash: crypto::Hash { hash: body_hash },
+            };
+            self.best_chain.blocks.insert(0, new_block);
+            let msg = Message::NewChain(self.best_chain.clone());
+            Some(OutEnvelope::SendMessage {
+                timestamp: Utc::now(),
+                source: self.node_id.clone(),
+                destination: self.node_id.clone(), // FIXME this does not make sense
+                out_id: UniqueId::new(&msg),
+                out_message: msg,
+                bytes: 0,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn handle_new_chain(&mut self, chain: Chain) -> Option<OutEnvelope> {
+        let new_length = chain.blocks.len();
+        let cur_length = self.best_chain.blocks.len();
+
+        if new_length > cur_length {
+            self.best_chain = chain;
+            let msg = Message::NewChain(self.best_chain.clone());
+            Some(OutEnvelope::SendMessage {
+                timestamp: Utc::now(),
+                source: self.node_id.clone(),
+                destination: self.node_id.clone(), // FIXME this does not make sense
+                out_id: UniqueId::new(&msg),
+                out_message: msg,
+                bytes: 0,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn best_chain(&self) -> Chain {
+        self.best_chain.clone()
     }
 }
 
@@ -186,7 +245,10 @@ impl NodeHandle {
     }
 
     pub fn send(&mut self, msg: InEnvelope) {
-        self.sender.send(msg).expect("sending failed");
+        match self.sender.send(msg) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
     }
 
     /// Non blocking receiving of a message from the node
@@ -253,11 +315,13 @@ mod tests {
     #[test]
     fn returns_idle_after_processing_tick() {
         let node = Node::new("N1".into(), Default::default());
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         handle.send(InEnvelope::SendMessage {
             origin: None,
-            in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+            in_id: UniqueId {
+                unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+            },
             in_message: Message::NextSlot(1),
         });
 
@@ -281,8 +345,9 @@ mod tests {
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_all_stake(slot: u64) {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let mut node = Node::new("N1".into(), params);
 
@@ -293,12 +358,13 @@ mod tests {
     fn node_is_slot_leader_every_other_slot_given_coefficient_is_0_5_and_node_has_all_stake() {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 0.5,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 0.5,
+            },
         };
         let mut node = Node::new("N1".into(), params);
         let schedule = (0..10000)
-            .map(|n| node.is_slot_leader(n))
+            .map(|n| node.is_slot_leader(100))
             .filter(|b| *b)
             .count();
 
@@ -309,8 +375,9 @@ mod tests {
     fn node_is_slot_leader_every_slot_given_coefficient_is_1_and_node_has_half_the_stake() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let mut node = Node::new("N1".into(), params);
 
@@ -327,13 +394,12 @@ mod tests {
     fn node_is_slot_leader_every_3_slots_given_coefficient_is_0_5_and_node_has_half_the_stake() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 0.5,
+            protocol_parameters: ProtocolParameters::default(),
         };
         let mut node = Node::new("N1".into(), params);
 
         let schedule = (0..10000)
-            .map(|n| node.is_slot_leader(n))
+            .map(|_| node.is_slot_leader(100))
             .filter(|b| *b)
             .count();
 
@@ -344,16 +410,19 @@ mod tests {
     fn produce_a_block_when_node_is_leader() {
         let params = NodeParameters {
             node_stake: 50,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let node = Node::new("N1".into(), params);
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
-                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                in_id: UniqueId {
+                    unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
                 in_message: Message::NextSlot(i),
             })
         }
@@ -367,7 +436,7 @@ mod tests {
                 timestamp: _,
                 source: _,
                 destination: _,
-                out_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                out_id: _,
                 out_message: Message::NewChain(chain),
                 bytes: _,
             } => {
@@ -382,16 +451,19 @@ mod tests {
     fn grow_best_chain_from_the_head() {
         let params = NodeParameters {
             node_stake: 100,
-            total_stake: 100,
-            active_coefficient: 1.0,
+            protocol_parameters: ProtocolParameters {
+                active_coefficient: 1.0,
+            },
         };
         let node = Node::new("N1".into(), params);
-        let mut handle = node.start();
+        let mut handle = node.start(100);
 
         for i in 1..5 {
             handle.send(InEnvelope::SendMessage {
                 origin: None,
-                in_id: UniqueId{unique_id: [0, 0, 0, 0, 0, 0, 0, 0],},
+                in_id: UniqueId {
+                    unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
+                },
                 in_message: Message::NextSlot(i),
             })
         }

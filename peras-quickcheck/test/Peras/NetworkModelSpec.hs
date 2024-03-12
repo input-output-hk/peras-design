@@ -23,27 +23,33 @@ import Peras.Chain (Chain (..))
 import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
 import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
-import Peras.IOSim.Protocol.Types (Protocol (activeSlotCoefficient))
-import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (NodeId)
-import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), runMonad)
-import Test.Hspec (Spec)
+import Peras.Network.Netsim (runPropInNetSim)
+import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), parameters, protocol, runMonad)
+import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
-import Test.QuickCheck (Gen, Property, Testable, counterexample, property, within)
+import Test.QuickCheck (Gen, Property, Testable, counterexample, noShrinking, once, property, withMaxSuccess, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
 import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
-spec =
+spec = do
   -- those tests are a bit slow...
-  modifyMaxSuccess (const 50) $ prop "Chain progress" prop_chain_progress
+  modifyMaxSuccess (const 50) $
+    describe "IOSim Network" $
+      prop "Chain progress" (prop_chain_progress propIOSimNetwork)
 
-prop_chain_progress :: Property
-prop_chain_progress =
+  describe "Netsim Network" $
+    prop "Chain progress" $
+      withMaxSuccess 20 $
+        prop_chain_progress propNetsimNetwork
+
+prop_chain_progress :: (Actions Network -> Property) -> Property
+prop_chain_progress runProp =
   within 50000000 $ -- FIXME: Is `within` working in the multi-threaded environment?
-    forAllDL chainProgress propNetworkModel
+    forAllDL chainProgress runProp
 
 chainProgress :: DL Network ()
 chainProgress = do
@@ -54,12 +60,17 @@ chainProgress = do
     chains <- forM nodeIds (action . ObserveBestChain)
     void $ action $ ChainsHaveCommonPrefix chains
 
-propNetworkModel :: Actions Network -> Property
-propNetworkModel actions =
-  property $
-    runPropInIOSim $ do
-      _ <- runActions actions
-      assert True
+propIOSimNetwork :: Actions Network -> Property
+propIOSimNetwork actions =
+  property $ runPropInIOSim $ do
+    _ <- runActions actions
+    assert True
+
+propNetsimNetwork :: Actions Network -> Property
+propNetsimNetwork actions =
+  property $ runPropInNetSim $ do
+    _ <- runActions actions
+    assert True
 
 runPropInIOSim :: Testable a => (forall s. PropertyM (RunMonad (IOSim s)) a) -> Gen Property
 runPropInIOSim p = do
@@ -102,22 +113,3 @@ runWithState stateVar act = do
   (res, st') <- runStateT act st
   atomically $ writeTVar stateVar st'
   pure res
-
-protocol :: Protocol
-protocol = def{activeSlotCoefficient = defaultActiveSlotCoefficient}
-
-defaultActiveSlotCoefficient :: Double
-defaultActiveSlotCoefficient = 0.05
-
-parameters :: Parameters
-parameters =
-  Parameters
-    { randomSeed = 12345
-    , peerCount = 10
-    , downstreamCount = 3
-    , totalStake = Nothing
-    , maximumStake = 1000
-    , endSlot = 1000
-    , messageDelay = 350_000
-    , experiment = Nothing
-    }
