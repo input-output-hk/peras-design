@@ -75,6 +75,11 @@ TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (a
       open import Data.Sum using (_⊎_; inj₁; inj₂)
       open import Peras.Chain
       open Honesty
+
+      postulate
+        luckySlots : Slot × Slot → ℕ
+        superSlots : Slot × Slot → ℕ
+        adversarialSlots : Slot × Slot → ℕ
 ```
 ## Chain growth
 
@@ -83,9 +88,6 @@ party will increase at least by a number that is proportional to the number of l
 that period.
 
 ```agda
-      postulate
-        luckySlots : Slot × Slot → ℕ
-
       postulate
         chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
@@ -124,10 +126,6 @@ The common prefix property informally says that during the execution of the prot
 chains of honest parties will always be a common prefix of each other.
 
 ```agda
-      postulate
-        superSlots : Slot × Slot → ℕ
-        adversarialSlots : Slot × Slot → ℕ
-
       postulate
         common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
           → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A} {d : List Vote}
