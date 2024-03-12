@@ -8,7 +8,6 @@ module Peras.IOSim.Node.Types (
   clock,
   committeeMember,
   downstreams,
-  initialSeed,
   nodeId,
   owner,
   rollbacks,
@@ -39,7 +38,6 @@ import Test.QuickCheck.Instances.Time ()
 data NodeState = NodeState
   { _nodeId :: NodeId
   , _owner :: PartyId
-  , _initialSeed :: Int
   , _clock :: UTCTime
   , _slot :: Slot
   , _stake :: Coin
