@@ -300,11 +300,17 @@ Ticking the global clock
 Delaying messages
 ```agda
     data Delay : Envelope → Envelope → Set where
+
       Id : ∀ {e : Envelope} →
         Delay e e
 
+      Delayed : ∀ {d m p} →
+        Delay ⦅ d , m , p ⦆ ⦅ suc d , m , p ⦆
+
     data δ : List Envelope → List Envelope → Set where
+
       Empty : δ [] []
+
       Cons : ∀ {e e′} {es es′}
         → Delay e e′
         → δ es es′
