@@ -9,8 +9,6 @@ open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; 
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
-open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
-open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; ℕ; _+_; _*_; _∸_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -299,6 +297,20 @@ Ticking the global clock
       }
       where open Stateᵍ
 ```
+Delaying messages
+```agda
+    data Delay : Envelope → Envelope → Set where
+      Id : ∀ {e : Envelope} →
+        Delay e e
+
+    data δ : List Envelope → List Envelope → Set where
+      Empty : δ [] []
+      Cons : ∀ {e e′} {es es′}
+        → Delay e e′
+        → δ es es′
+        → δ (e ∷ es) (e′ ∷ es′)
+```
+
 ## Receive
 
 A party receives messages from the global state by fetching messages assigned to the party,
@@ -326,7 +338,7 @@ updating the local block tree and putting the local state back into the global s
           ⟧
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ} {m}
-        → ms ↭ ms′
+        → δ ms ms′
           ------------------------------------
         → ⟦ c
           , s
@@ -375,7 +387,7 @@ A party can cast a vote for a block, if
         → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) 0 p ⟪ t , v ∷ d ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
-        → ms ↭ ms′
+        → δ ms ms′
           --------------------------------
         → ⟦ c
           , s
@@ -429,7 +441,7 @@ state.
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
-        → ms ↭ ms′
+        → δ ms ms′
           --------------------------------
         → ⟦ c
           , s
