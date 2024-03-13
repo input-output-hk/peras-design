@@ -1,3 +1,20 @@
+## 2024-03-13
+
+### Formal specification in Agda
+
+* The formal specification in Agda is inspired by the work of Søren Eller Thomsen and Bas Spitters summarized in the
+  research paper "Formalizing Nakamoto-Style Proof of Stake". In this paper a formalization for a PoS protocol like
+  Ouroboros Praos is presented together with the proofs for safety and liveness. For the proofs they assume 2/3 of
+  the parties to be honest, whereas using the *characteristic string* technique 1/2 is sufficient. This raises the
+  following questions:
+
+  * Can the technique described in the paper be extended easily and used for Peras as well with the 2/3 honest bound
+  * Do we need a formalization of the *characteristic string* technique anyway, in order to express 1/2 honest bound
+
+* The dangling votes are now kept explicitly in the local state. An other approach would be to add the dangling votes
+  as well to the block tree and therefore hide them in the abstraction. Formalizing both approaches and showing that
+  they are equivalent might be used as an argument that the dangling votes are not needed.
+
 ## 2024-03-11
 
 ### Designs for sync protocol
