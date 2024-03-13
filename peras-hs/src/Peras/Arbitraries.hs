@@ -17,7 +17,7 @@ import Peras.Crypto (
   Signature (..),
   VerificationKey (..),
  )
-import Peras.Event (Event, UniqueId (..))
+import Peras.Event (Event, Rollback, UniqueId (..))
 import Peras.Message (Message, NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
@@ -79,4 +79,7 @@ instance Arbitrary UniqueId where
   arbitrary = UniqueId <$> genByteString 8
 
 instance Arbitrary Event where
+  arbitrary = genericArbitrary uniform
+
+instance Arbitrary Rollback where
   arbitrary = genericArbitrary uniform

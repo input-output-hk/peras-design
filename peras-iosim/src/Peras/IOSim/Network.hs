@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,64 +9,45 @@ module Peras.IOSim.Network (
   emptyTopology,
   randomTopology,
   connectNode,
-  createNetwork,
   runNetwork,
-  stepToIdle,
-  startNodes,
 ) where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, STM, TQueue, atomically)
-import Control.Concurrent.Class.MonadSTM.TQueue (flushTQueue, newTQueueIO, tryReadTQueue, writeTQueue)
-import Control.Lens (
-  use,
-  uses,
-  (%=),
-  (&),
-  (.=),
-  (.~),
-  (^.),
- )
-import Control.Monad (unless, void)
-import Control.Monad.Class.MonadFork (MonadFork (forkIO))
-import Control.Monad.Class.MonadSay (MonadSay)
-import Control.Monad.Class.MonadTime (MonadTime)
+import Control.Lens ((&), (.~), (^.))
+import Control.Monad.Class.MonadTime
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
-import Control.Monad.State (StateT, execStateT, lift)
-import Control.Tracer (Tracer)
+import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Chain (Chain (blocks))
-import Peras.Event (Event, UniqueId (..))
-import Peras.IOSim.Experiment
-import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
+import Data.Ratio ((%))
+import Peras.Event (Event (Drop))
+import Peras.IOSim.Experiment (
+  experimentFactory,
+  noVeto,
+ )
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
 import Peras.IOSim.Network.Types (
   Delay,
-  Network (..),
   NetworkState,
+  NodeLink (messageDelay),
   Topology (..),
-  activeNodes,
-  blocksSeen,
-  chainsSeen,
   currentStates,
   lastSlot,
   lastTime,
-  networkRandom,
   pending,
   reliableLink,
-  votesSeen,
  )
-import Peras.IOSim.Node (NodeProcess (NodeProcess), runNode)
-import Peras.IOSim.Node.Types (NodeState, stake)
+import Peras.IOSim.Node (makeContext, observeNode)
+import Peras.IOSim.Node.Types (NodeContext (NodeContext, clock, slot), NodeResult (outputs), PerasNode (..))
+import Peras.IOSim.Nodes (SomeNode)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
+import Peras.IOSim.Types (simulationStart)
 import Peras.Message (Message (..), NodeId (..))
-import System.Random (uniformR)
 
 import qualified Data.Map.Strict as M
-import qualified Data.Set as S
+import qualified Data.PQueue.Min as PQ
 
 emptyTopology ::
   [NodeId] ->
@@ -100,182 +79,78 @@ connectNode ::
 connectNode messageDelay upstream downstream =
   Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageDelay)) . connections
 
-createNetwork ::
-  MonadSTM m =>
-  Maybe Experiment ->
-  Topology ->
-  m (Network m)
-createNetwork experiment Topology{connections} =
-  do
-    nodesIn <- mapM (const newTQueueIO) connections
-    nodesOut <- newTQueueIO
-    let veto = maybe noVeto experimentFactory experiment
-    pure Network{..}
-
--- TODO: Replace this centralized router with a performant decentralized
---       one like a tree barrier.
--- TODO: Rewrite as a state machine.
 runNetwork ::
   forall m.
   MonadDelay m =>
-  MonadFork m =>
-  MonadSay m =>
-  MonadSTM m =>
   MonadTime m =>
   Tracer m Event ->
   Parameters ->
   Protocol ->
-  M.Map NodeId NodeState ->
-  Network m ->
+  Topology ->
+  M.Map NodeId SomeNode ->
   NetworkState ->
   m NetworkState
-runNetwork tracer parameters protocol states network@Network{..} initialState =
-  flip execStateT (initialState & currentStates .~ states) $
-    do
-      let
-        -- Notify a node to stop.
-        notifyStop destination nodeIn = output destination nodeIn Stop
-        -- Receive and send messages.
-        loop :: StateT NetworkState m ()
-        loop =
-          do
-            stepToIdle parameters network
-            -- Check on whether the simulation is ending.
-            doExit <- lastSlot `uses` (>= endSlot parameters)
-            if doExit
-              then do
-                uncurry notifyStop `mapM_` M.toList nodesIn
-                waitForExits parameters network
-              else loop
-      -- Start the node processes.
-      startNodes tracer parameters protocol states network
-      -- Run the network.
-      loop
-
-startNodes ::
-  (MonadSTM m, MonadSay m, MonadDelay m, MonadFork m, MonadTime m) =>
-  Tracer m Event ->
-  Parameters ->
-  Protocol ->
-  M.Map NodeId NodeState ->
-  Network m ->
-  StateT NetworkState m ()
-startNodes tracer parameters protocol states network =
-  mapM_ forkNode $ M.toList nodesIn
- where
-  Network{nodesIn, nodesOut} = network
-  -- Find the total stake.
-  total = fromMaybe (sum $ (^. stake) <$> states) $ totalStake parameters
-  -- Start a node process.
-  forkNode (nodeId, nodeIn) =
-    void
-      . lift
-      . forkIO
-      . runNode tracer protocol total (states M.! nodeId)
-      $ NodeProcess nodeIn nodesOut
-
--- | Wait for all nodes to exit.
-waitForExits ::
-  (MonadSTM m, MonadSay m, MonadDelay m) =>
-  Parameters ->
-  Network m ->
-  StateT NetworkState m ()
-waitForExits parameters network =
+runNetwork tracer parameters@Parameters{endSlot, experiment} protocol topology initialStates initialNetwork =
   do
-    allIdle <- activeNodes `uses` null
-    received <- lift $ atomically (flush nodesOut)
-    mapM_ route received
-    unless allIdle $ waitForExits parameters network
- where
-  Network{nodesOut} = network
-  route = routeEnvelope parameters network
-
--- | Read all of the pending messages.
-flush :: MonadSTM m => TQueue m a -> STM m [a]
-flush q =
-  if False -- FIXME: Is it safe to use `flushTQueue`?
-    then flushTQueue q -- As of `io-classes-1.3.1.0`, the queue isn't empty after this call!
-    else tryReadTQueue q >>= maybe (pure mempty) ((<$> flush q) . (:))
-
--- | Advance the network up to one single slot.
--- This function loops until all nodes are idle
-stepToIdle ::
-  (MonadSTM m, MonadSay m, MonadDelay m) =>
-  Parameters ->
-  Network m ->
-  StateT NetworkState m ()
-stepToIdle parameters network = do
-  -- Advance the slot counter and notify the nodes, if all nodes are idle.
-  allIdle <- activeNodes `uses` null
-  -- FIXME: This is unsafe because a node crashing or becoming unresponsive will block the slot advancement.
-  if allIdle
-    then do
-      -- FIXME: This is unsafe because a node might take more than one slot to do its computations.
-      lastSlot %= (+ 1)
-      stop <- lastSlot `uses` (>= endSlot parameters)
-      unless stop $
-        uncurry notifySlot `mapM_` M.toList nodesIn
-      lift $ threadDelay 1_000_000
-      -- FIXME: Assume that pending messages are received in the next slot.
-      mapM_ route =<< use pending
-      pending .= mempty
-    else do
-      -- Receive and route messages.
-      received <- lift $ atomically $ flush nodesOut
-      mapM_ route received
-      stepToIdle parameters network
- where
-  nextSlotId = UniqueId "000000"
-  Network{nodesIn, nodesOut} = network
-  route = routeEnvelope parameters network
-  -- Notify a node of the next slot.
-  notifySlot destination nodeIn =
-    output destination nodeIn . InEnvelope Nothing nextSlotId . NextSlot
-      =<< use lastSlot
-
--- | Dispatch a single message through the network.
-routeEnvelope ::
-  MonadSTM m =>
-  Parameters ->
-  Network m ->
-  OutEnvelope ->
-  StateT NetworkState m ()
-routeEnvelope parameters Network{nodesIn, veto} = \case
-  out@OutEnvelope{..} ->
-    do
-      now <- use lastSlot
-      lastTime %= max timestamp
-      (r, gen) <- networkRandom `uses` uniformR (0, 1_000_000)
-      networkRandom .= gen
-      unless (veto out now) $
-        -- FIXME: This is an approximation, and it results of occasional reordering of messages.
-        if r > messageDelay parameters
-          then do
-            -- FIXME: Awkwardly peek at the chain.
-            case outMessage of
-              NewChain chain -> do
-                chainsSeen %= M.insert source chain
-                case blocks chain of
-                  tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
-                  [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
-                  _ -> pure ()
-              SomeVote vote -> votesSeen %= M.insert (hashVote vote) vote
-              _ -> pure ()
-            -- Forward the message.
-            output destination (nodesIn M.! destination) $ InEnvelope (pure source) outId outMessage
-          else pending %= (out :)
-  Idle{..} -> do
-    lastTime %= max timestamp
-    activeNodes %= S.delete source
-    chainsSeen %= M.insert source bestChain
-  Exit{..} -> do
-    lastTime %= max timestamp
-    activeNodes %= S.delete source
-    currentStates %= M.insert source nodeState
-
--- | Send a message and mark the destination as active.
-output :: MonadSTM m => NodeId -> TQueue m p -> p -> StateT NetworkState m ()
-output destination inChannel inEnvelope =
-  do
-    lift . atomically . writeTQueue inChannel $ inEnvelope
-    activeNodes %= S.insert destination
+    let controller = MkNodeId "controller"
+        total = fromMaybe (sum $ getStake <$> initialStates) $ totalStake parameters
+        veto = maybe noVeto experimentFactory experiment
+        makeNextSlot destination slot =
+          OutEnvelope
+            { source = controller
+            , destination = destination
+            , outId = mkUniqueId (controller, destination, slot)
+            , outMessage = NextSlot slot
+            , outTime = fromIntegral slot `addUTCTime` simulationStart
+            , outBytes = 0
+            }
+        initialMessages = PQ.fromList [makeNextSlot destination slot | destination <- M.keys initialStates, slot <- [0 .. endSlot]]
+        go network =
+          case PQ.minView (network ^. pending) of
+            Nothing ->
+              do
+                let stop' state = stop state =<< makeContext tracer protocol total (getNodeId state)
+                states' <- mapM stop' $ network ^. currentStates
+                pure $ network & currentStates .~ states'
+            Just (outEnvelope@OutEnvelope{..}, pending') ->
+              do
+                now <- getCurrentTime
+                threadDelay . floor . (* 1000000) . toRational $ outTime `diffUTCTime` now
+                context@NodeContext{slot, clock} <- makeContext tracer protocol total destination
+                if veto outEnvelope slot
+                  then do
+                    traceWith tracer $ Drop outId clock source destination outMessage outBytes
+                    go $
+                      network
+                        & pending .~ pending'
+                        -- FIXME: Remove the following because they are redundant with the new observability.
+                        & lastSlot .~ slot
+                        & lastTime .~ clock
+                  else do
+                    let states = network ^. currentStates
+                        node = states M.! destination
+                        delay =
+                          if source == controller
+                            then 0
+                            else Peras.IOSim.Network.Types.messageDelay $ (connections topology M.! source) M.! destination
+                        inEnvelope =
+                          InEnvelope
+                            { origin = source
+                            , inId = outId
+                            , inMessage = outMessage
+                            , inTime = fromRational (fromIntegral delay % 1000000) `addUTCTime` outTime
+                            , inBytes = outBytes
+                            }
+                    (result, node') <- handleMessage node context inEnvelope
+                    observeNode (traceWith tracer) destination slot clock inEnvelope result
+                    go $
+                      network
+                        & currentStates .~ M.insert destination node' states
+                        & pending .~ foldr PQ.insert pending' (outputs result)
+                        -- FIXME: Remove the following because they are redundant with the new observability.
+                        & lastSlot .~ slot
+                        & lastTime .~ clock
+    go $
+      initialNetwork
+        & currentStates .~ initialStates
+        & pending .~ initialMessages

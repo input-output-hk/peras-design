@@ -47,5 +47,3 @@ splitBrain start finish OutEnvelope{..} now =
     start <= now
       && now <= finish
       && on (/=) parity source destination
-splitBrain _ _ Idle{} _ = True
-splitBrain _ _ Exit{} _ = True

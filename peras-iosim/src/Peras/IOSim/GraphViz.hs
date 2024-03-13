@@ -14,7 +14,7 @@ import Peras.Block (Block (..))
 import Peras.Chain (RoundNumber (roundNumber), Vote (..))
 import Peras.IOSim.Hash (genesisHash)
 import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
-import Peras.IOSim.Node.Types (committeeMember, downstreams, rxBytes, slotLeader, stake, txBytes, vrfOutput)
+import Peras.IOSim.Node.Types (PerasNode (..))
 import Peras.Message (NodeId (..))
 
 import qualified Data.Map.Strict as M
@@ -45,21 +45,13 @@ peersGraph networkState =
               "<b>"
                 <> nodeId name
                 <> "</b>"
+                <> "|Owner "
+                <> show (getOwner nodeState)
                 <> "|Stake "
-                <> show (nodeState ^. stake)
-                <> "|VrfOutput "
-                <> take 6 (show $ nodeState ^. vrfOutput)
-                <> "|SlotLeader "
-                <> show (nodeState ^. slotLeader)
-                <> "|CommitteeMember "
-                <> show (nodeState ^. committeeMember)
-                <> "|Rx/Tx (kB)"
-                <> show (nodeState ^. rxBytes `div` 1024)
-                <> "/"
-                <> show (nodeState ^. txBytes `div` 1024)
+                <> show (getStake nodeState)
           ]
       mkEdge name name' = G.EdgeStatement [G.ENodeId G.NoEdge $ nodeIds M.! name, G.ENodeId G.DirectedEdge $ nodeIds M.! name'] mempty
-      mkEdges name nodeState = mkEdge name <$> S.toList (nodeState ^. downstreams)
+      mkEdges name nodeState = mkEdge name <$> S.toList (getDownstreams nodeState)
       nodes = uncurry mkNode <$> M.toList nodeStates
       edges = concatMap (uncurry mkEdges) $ M.toList nodeStates
    in G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Peers") $
@@ -69,8 +61,8 @@ chainGraph ::
   NetworkState ->
   G.Graph
 chainGraph networkState =
-  let tree = networkState ^. Peras.IOSim.Network.Types.blocksSeen
-      allVotes = networkState ^. votesSeen
+  let tree = blocksSeen networkState
+      allVotes = votesSeen networkState
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement

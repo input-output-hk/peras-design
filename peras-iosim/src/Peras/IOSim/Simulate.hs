@@ -12,13 +12,12 @@ module Peras.IOSim.Simulate (
 ) where
 
 import Control.Lens ((&), (.~))
-import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
 import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, selectTraceEventsDynamic, selectTraceEventsSay, traceM, traceResult)
 import Control.Monad.Random (evalRandT)
 import Control.Tracer (Tracer (Tracer), emit)
 import Data.Default (def)
 import Peras.Event (Event)
-import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
+import Peras.IOSim.Network (randomTopology, runNetwork)
 import Peras.IOSim.Network.Types (NetworkState, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol)
@@ -38,16 +37,14 @@ simulation parameters@Parameters{..} protocol =
     let (gen, gen') = split $ mkStdGen randomSeed
         tracer :: Tracer (IOSim s) Event
         tracer = Tracer $ emit traceM
-    now <- getCurrentTime
     -- FIXME: Read the topology and node states from files.
     (topology, states) <-
       flip evalRandT gen $
         do
           topology' <- randomTopology parameters
-          states' <- initializeNodes parameters now topology'
+          states' <- initializeNodes parameters topology'
           pure (topology', states')
-    network <- createNetwork experiment topology
-    runNetwork tracer parameters protocol states network $
+    runNetwork tracer parameters protocol topology states $
       def & networkRandom .~ gen'
 
 simulate ::

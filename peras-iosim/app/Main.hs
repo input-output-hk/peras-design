@@ -10,7 +10,7 @@ import Data.Maybe (fromJust, isJust)
 import Data.Version (showVersion)
 import Paths_peras_iosim (version)
 import Peras.IOSim.GraphViz (chainGraph, peersGraph, writeGraph)
-import Peras.IOSim.Simulate (simulate, writeEvents, writeReport, writeSays, writeTrace)
+import Peras.IOSim.Simulate (simulate, writeEvents, writeReport, writeTrace)
 import System.Directory (removeFile)
 import System.Exit (die)
 import System.IO.Temp (emptySystemTempFile)
@@ -25,12 +25,9 @@ main =
     Command{..} <- O.execParser commandParser
     parameters <- either (error . show) id <$> Y.decodeFileEither parameterFile
     protocol <- either (error . show) id <$> Y.decodeFileEither protocolFile
-    let (result, trace) = simulate parameters protocol $ isJust traceFile || isJust sayFile || isJust eventFile
+    let (result, trace) = simulate parameters protocol $ isJust traceFile || isJust eventFile
     whenJust traceFile $
       flip writeTrace $
-        fromJust trace
-    whenJust sayFile $
-      flip writeSays $
         fromJust trace
     whenJust eventFile $
       flip writeEvents $
@@ -87,7 +84,6 @@ data Command = Command
   { parameterFile :: FilePath
   , protocolFile :: FilePath
   , traceFile :: Maybe FilePath
-  , sayFile :: Maybe FilePath
   , eventFile :: Maybe FilePath
   , resultFile :: Maybe FilePath
   , networkDotFile :: Maybe FilePath
@@ -107,8 +103,6 @@ commandParser =
           <*> O.strOption (O.long "protocol-file" <> O.metavar "FILE" <> O.help "Path to YAML file with protocol parameters.")
           <*> (O.optional . O.strOption)
             (O.long "trace-file" <> O.metavar "FILE" <> O.help "Path to output text file for simulation trace.")
-          <*> (O.optional . O.strOption)
-            (O.long "say-file" <> O.metavar "FILE" <> O.help "Path to output text file for `Say` messages.")
           <*> (O.optional . O.strOption)
             (O.long "event-file" <> O.metavar "FILE" <> O.help "Path to output JSON array file for simulation events.")
           <*> (O.optional . O.strOption)
