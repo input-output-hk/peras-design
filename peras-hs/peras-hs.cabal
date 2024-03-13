@@ -33,6 +33,8 @@ library
                 , bytestring
                 , data-default
                 , generic-random
+                , hashable
+                , io-classes
                 , quickcheck-instances
                 , text
                 , time

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -20,12 +21,13 @@ import Data.Aeson (
 import Data.Aeson.Types (parseFail, toJSONKeyText)
 import Data.Bifunctor (bimap)
 import Data.Default (Default (..))
+import Data.Hashable (Hashable)
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..), BlockBody (..), Certificate (..), Party (..))
 import Peras.Chain (Chain, RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
-import Peras.Event (Event (..), UniqueId (..))
+import Peras.Event (Event (..), Rollback (..), UniqueId (..))
 import Peras.Message (Message (..), NodeId (..))
 import Text.Read (Read (readPrec))
 
@@ -37,6 +39,7 @@ import qualified Data.Text as T
 -- Only used for deriving instances of similar types.
 
 newtype Bytes = Bytes {getBytes :: BS.ByteString}
+  deriving (Eq, Generic, Ord)
 
 instance Read Bytes where
   readPrec = do
@@ -48,6 +51,8 @@ instance Show Bytes where
 
 instance IsString Bytes where
   fromString = either error Bytes . B16.decode . BS8.pack
+
+deriving anyclass instance Hashable Bytes
 
 instance FromJSON Bytes where
   parseJSON = withText "Base 16 Bytes" $ either parseFail (pure . Bytes) . B16.decode . BS8.pack . T.unpack
@@ -73,6 +78,7 @@ deriving stock instance Generic Party
 deriving stock instance Ord Party
 deriving stock instance Read Party
 deriving stock instance Show Party
+deriving anyclass instance Hashable Party
 instance FromJSON Party
 instance ToJSON Party
 instance FromJSONKey Party
@@ -89,6 +95,7 @@ deriving stock instance Generic Block
 deriving stock instance Ord Block
 deriving stock instance Read Block
 deriving stock instance Show Block
+deriving anyclass instance Hashable Block
 instance FromJSON Block
 instance ToJSON Block
 
@@ -96,6 +103,7 @@ deriving stock instance Generic BlockBody
 deriving stock instance Ord BlockBody
 deriving stock instance Read BlockBody
 deriving stock instance Show BlockBody
+deriving anyclass instance Hashable BlockBody
 instance FromJSON BlockBody
 instance ToJSON BlockBody
 
@@ -105,6 +113,7 @@ deriving stock instance Generic RoundNumber
 deriving stock instance Ord RoundNumber
 deriving stock instance Read RoundNumber
 deriving stock instance Show RoundNumber
+deriving anyclass instance Hashable RoundNumber
 deriving newtype instance FromJSON RoundNumber
 deriving newtype instance ToJSON RoundNumber
 deriving newtype instance FromJSONKey RoundNumber
@@ -130,11 +139,9 @@ deriving stock instance Generic Vote
 deriving stock instance Ord Vote
 deriving stock instance Read Vote
 deriving stock instance Show Vote
+deriving anyclass instance Hashable Vote
 instance FromJSON Vote
 instance ToJSON Vote
-
-instance Default Chain where
-  def = []
 
 -- Orphans for `Peras.Crypto`.
 
@@ -145,11 +152,19 @@ deriving via Bytes instance Show a => Show (Hash a)
 deriving via Bytes instance IsString a => IsString (Hash a)
 deriving via Bytes instance FromJSON a => FromJSON (Hash a)
 deriving via Bytes instance ToJSON a => ToJSON (Hash a)
-deriving via Bytes instance FromJSONKey a => FromJSONKey (Hash a)
-deriving via Bytes instance ToJSONKey a => ToJSONKey (Hash a)
+
+instance FromJSON a => FromJSONKey (Hash a) where
+  fromJSONKey = FromJSONKeyTextParser $ \t ->
+    case B16.decode . BS8.pack . T.unpack $ t of
+      Left err -> fail err
+      Right k -> pure $ Hash k
+
+instance ToJSON a => ToJSONKey (Hash a) where
+  toJSONKey = toJSONKeyText $ T.pack . init . tail . show . hashBytes
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof
+deriving anyclass instance Hashable MembershipProof
 deriving via Bytes instance Read MembershipProof
 deriving via Bytes instance Show MembershipProof
 deriving via Bytes instance IsString MembershipProof
@@ -158,6 +173,7 @@ deriving via Bytes instance ToJSON MembershipProof
 
 deriving stock instance Generic LeadershipProof
 deriving stock instance Ord LeadershipProof
+deriving anyclass instance Hashable LeadershipProof
 deriving via Bytes instance Read LeadershipProof
 deriving via Bytes instance Show LeadershipProof
 deriving via Bytes instance IsString LeadershipProof
@@ -166,6 +182,7 @@ deriving via Bytes instance ToJSON LeadershipProof
 
 deriving stock instance Generic Signature
 deriving stock instance Ord Signature
+deriving anyclass instance Hashable Signature
 deriving via Bytes instance Read Signature
 deriving via Bytes instance Show Signature
 deriving via Bytes instance IsString Signature
@@ -174,6 +191,7 @@ deriving via Bytes instance ToJSON Signature
 
 deriving stock instance Generic VerificationKey
 deriving stock instance Ord VerificationKey
+deriving anyclass instance Hashable VerificationKey
 deriving via Bytes instance Read VerificationKey
 deriving via Bytes instance Show VerificationKey
 deriving via Bytes instance IsString VerificationKey
@@ -190,12 +208,14 @@ deriving newtype instance FromJSON NodeId
 deriving newtype instance ToJSON NodeId
 deriving newtype instance FromJSONKey NodeId
 deriving newtype instance ToJSONKey NodeId
+deriving newtype instance Hashable NodeId
 
 deriving stock instance Eq Message
 deriving stock instance Ord Message
 deriving stock instance Generic Message
 deriving instance Read Message
 deriving instance Show Message
+deriving anyclass instance Hashable Message
 instance FromJSON Message
 instance ToJSON Message
 
@@ -203,16 +223,29 @@ deriving stock instance Eq UniqueId
 deriving stock instance Ord UniqueId
 deriving via Bytes instance Read UniqueId
 deriving via Bytes instance Show UniqueId
+deriving via Bytes instance Hashable UniqueId
 deriving via Bytes instance IsString UniqueId
 deriving via Bytes instance FromJSON UniqueId
 deriving via Bytes instance ToJSON UniqueId
 deriving via Bytes instance FromJSONKey UniqueId
 deriving via Bytes instance ToJSONKey UniqueId
 
+-- Orphans for `Peras.Event`.
+
 deriving stock instance Eq Event
 deriving stock instance Generic Event
 deriving stock instance Ord Event
 deriving stock instance Read Event
 deriving stock instance Show Event
+deriving anyclass instance Hashable Event
 instance FromJSON Event
 instance ToJSON Event
+
+deriving stock instance Eq Rollback
+deriving stock instance Generic Rollback
+deriving stock instance Ord Rollback
+deriving stock instance Read Rollback
+deriving stock instance Show Rollback
+deriving anyclass instance Hashable Rollback
+instance FromJSON Rollback
+instance ToJSON Rollback
