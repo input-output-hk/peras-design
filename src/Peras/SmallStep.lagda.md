@@ -9,8 +9,6 @@ open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; 
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
-open import Data.List.Relation.Binary.Permutation.Propositional using (_↭_; ↭-sym)
-open import Data.List.Relation.Binary.Permutation.Propositional.Properties
 open import Data.Maybe using (just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; ℕ; _+_; _*_; _∸_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -59,10 +57,11 @@ data Message : Set where
 Messages are put into an envelope
 ```agda
 record Envelope : Set where
-  constructor ⦅_,_⦆
+  constructor ⦅_,_,_⦆
   field
-    message : Message
     partyId : PartyId
+    message : Message
+    delay : ℕ
 ```
 <!--
 ```agda
@@ -169,10 +168,14 @@ The block tree type
   * voting committee membership predicate
   * tx selection
   * The list of parties
+  * AdversarialState₀ is the initial adversarial state
+
 
 ```agda
   module _ {A : Set}
            {blockTree : TreeType A}
+           {AdversarialState : Set}
+           {adversarialsState₀ : AdversarialState}
            {isSlotLeader : PartyId → Slot → Bool}
            {isCommitteeMember : PartyId → RoundNumber → Bool}
            {txSelection : Slot → PartyId → List Tx}
@@ -249,7 +252,7 @@ votes.
 
 ```agda
     record Stateᵍ : Set where
-      constructor ⟦_,_,_,_⟧
+      constructor ⟦_,_,_,_,_⟧
       field
 ```
 The global state consists of the following fields:
@@ -270,14 +273,19 @@ The global state consists of the following fields:
 ```agda
         history : List Message
 ```
+* Adversarial state
+```agda
+        adversarialState : AdversarialState
+```
 Updating global state
 ```agda
-    updateᵍ : Message → PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateᵍ m p l ⟦ c , s , ms , hs ⟧ =
+    updateᵍ : Message → ℕ → PartyId → Stateˡ → Stateᵍ → Stateᵍ
+    updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
           ⟦ c
           , insert p l s
-          , map ⦅ m ,_⦆ parties ++ ms
+          , map ⦅_, m , d ⦆ parties ++ ms
           , m ∷ hs
+          , as
           ⟧
 ```
 Ticking the global clock
@@ -289,6 +297,26 @@ Ticking the global clock
       }
       where open Stateᵍ
 ```
+Delaying messages
+```agda
+    data Delay : Envelope → Envelope → Set where
+
+      Id : ∀ {e : Envelope} →
+        Delay e e
+
+      Delayed : ∀ {d m p} →
+        Delay ⦅ d , m , p ⦆ ⦅ suc d , m , p ⦆
+
+    data δ : List Envelope → List Envelope → Set where
+
+      Empty : δ [] []
+
+      Cons : ∀ {e e′} {es es′}
+        → Delay e e′
+        → δ es es′
+        → δ (e ∷ es) (e′ ∷ es′)
+```
+
 ## Receive
 
 A party receives messages from the global state by fetching messages assigned to the party,
@@ -297,25 +325,39 @@ updating the local block tree and putting the local state back into the global s
 ```agda
     data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
 
-      honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs}
+      honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
-        → (m∈ms : ⦅ m , p ⦆ ∈ ms)
+        → (m∈ms : ⦅ 0 , m , p ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
           ------------------------
         → ⟦ c
           , s
           , ms
           , hs
+          , as
           ⟧ [ Honest {p} , m ]⇀
           ⟦ c
           , insert p lₚ′ s
           , ms ─ m∈ms
           , hs
+          , as
           ⟧
 
-      corrupt : ∀ {p N} {m}
-          -------------------------
-        → N [ Corrupt {p} , m ]⇀ N
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ} {m}
+        → δ ms ms′
+          ------------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} , m ]⇀
+          ⟦ c
+          , insert p lₚ s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 ## Vote
 
@@ -348,11 +390,23 @@ A party can cast a vote for a block, if
         → isCommitteeMember p r ≡ true
         → VoteInRound ⟨ c , d , pr ⟩ r
           ---------------------------------------------------------
-        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) p ⟪ t , v ∷ d ⟫ M
+        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) 0 p ⟪ t , v ∷ d ⟫ M
 
-      corrupt : ∀ {p N}
-          ---------------------
-        → N [ Corrupt {p} ]⇉ N
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
+        → δ ms ms′
+          --------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} ]⇉
+          ⟦ c
+          , insert p lₚ s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 ## Create
 
@@ -389,12 +443,24 @@ state.
           lookup stateMap p ≡ just ⟪ t , d ⟫
         → isSlotLeader p clock ≡ true
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
              ⟪ (extendTree blockTree) t b vs , d ⟫ M
 
-      corrupt : ∀ {p N}
-          ---------------------
-        → N [ Corrupt {p} ]↷ N
+      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
+        → δ ms ms′
+          --------------------------------
+        → ⟦ c
+          , s
+          , ms
+          , hs
+          , as
+          ⟧ [ Corrupt {p} ]↷
+          ⟦ c
+          , insert p lₚ s
+          , ms′
+          , hs
+          , as′
+          ⟧
 ```
 
 # Small-step semantics
@@ -453,6 +519,11 @@ In the paper mentioned above this is big-step semantics.
     open Stateᵍ
 ```
 -->
+
+Rather than assuming a global axiom on the injectivity of the hash function
+or that any reachable state is collision-free, there is a predicate assuming
+that there are no hash collisions during the execution of the protocol.
+
 ```agda
     data CollisionFree (N : Stateᵍ) : Set where
 
@@ -490,22 +561,61 @@ In the paper mentioned above this is big-step semantics.
       → M [ h , m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
-    []-hist-common-prefix corrupt x = x
+    []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
       → M [ h , m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    []⇀-collision-free cf-N corrupt = cf-N
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
 
     -- Create
 
-    -- TODO: implement Gossip data type
-    postulate
-      []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-        → M [ h ]↷ N
-        → history M ⊆ₘ history N
+    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → M [ h ]↷ N
+      → history M ⊆ₘ history N
+    []↷-hist-common-prefix (honest {p} {t} {d} {M} _ _) =
+      let r = roundNumber (v-round (clock M))
+          txs = txSelection (clock M) p
+          c = (bestChain blockTree) (pred (clock M)) d t
+          vs = filterᵇ (λ {
+                   v → r ≤ᵇ (roundNumber (votingRound v) + L)
+                 } )
+                 (votes c)
+          body = record {
+              blockHash = hash txs ;
+              payload = txs
+              }
+          b = record {
+                slotNumber = clock M ;
+                creatorId = p ;
+                parentBlock = hash (tip c) ;
+                includedVotes = map hash vs ;
+                leadershipProof = record { proof = emptyBS } ;
+                bodyHash = blockHash body ;
+                signature = record { bytes = emptyBS }
+              }
+       in xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix (corrupt _) x₁ = x₁
+
+    []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → M [ h ]⇉ N
+      → history M ⊆ₘ history N
+    []⇉-hist-common-prefix {M} (honest {p} {t} {d} {M} _ _ _ _ _) =
+      let r = v-round (clock M)
+          b = (bestChain blockTree) ((clock M) ∸ L) d t
+          v = record {
+                votingRound = r ;
+                creatorId = p ;
+                committeeMembershipProof =
+                  record { proofM = emptyBS } ;
+                blockHash = hash (tip b) ;
+                signature =
+                  record { bytes = emptyBS }
+              }
+      in xs⊆x∷xs (history M) (VoteMsg v)
+    []⇉-hist-common-prefix (corrupt _) x₁ = x₁
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
@@ -513,11 +623,11 @@ In the paper mentioned above this is big-step semantics.
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
-    postulate
-      []⇉-collision-free : ∀ {M N p} {h : Honesty p}
-        → CollisionFree N
-        → M [ h ]⇉ N
-        → CollisionFree M
+    []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → M [ h ]⇉ N
+      → CollisionFree M
+    []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
 ```
 -->
 
@@ -557,3 +667,18 @@ When the current state is collision free, previous states were so too
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
 ```
 -->
+
+# Forging free predicate
+
+Signatures are not modelled explicitly. Instead we assume that the adversary cannot send any
+block with the `creatorId` of an honest party that is not already in the block history.
+
+```agda
+    data ForgingFree (N : Stateᵍ) : Set where
+
+      forging-free : ∀ {M : Stateᵍ} {b} {p}
+        → M [ Corrupt {p} ]↷ N
+        → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
+            → m ∈ history M }) (history N)
+        → ForgingFree N
+```

@@ -12,6 +12,9 @@ open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder)
 
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≡_)
+
 open import Peras.Crypto
 
 open import Haskell.Prelude using (Eq)
@@ -116,7 +119,14 @@ record BlockBody : Set where
 open BlockBody public
 
 ```
+```agda
+data HonestBlock : Block → Set where
 
+  HonestParty : ∀ {p : PartyId} {h : Honesty p} {b : Block}
+    → creatorId b ≡ p
+    → h ≡ Honest {p}
+    → HonestBlock b
+```
 <!--
 ```agda
 {-# COMPILE AGDA2HS Block deriving Eq #-}
