@@ -224,10 +224,11 @@ A new vote is added as dangling vote to the local state, when
           in
           v ∉ vs
         → getCert r cs ≡ nothing
---        → ¬ (Any (v ∻_) vs)
+        → ¬ (Any (v ∻_) vs)
         → length vs′ < τ
         → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ t′ ⟫
-
+```
+```agda
       VoteReceivedNewCert : ∀ {v t}
         → let r = votingRound v
               s = T * (roundNumber r)
@@ -240,7 +241,7 @@ A new vote is added as dangling vote to the local state, when
           in
           v ∉ vs
         → getCert r cs ≡ nothing
---        → ¬ (Any (v ∻_) vs)
+        → ¬ (Any (v ∻_) vs)
         → length vs′ ≥ τ
         → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ (addCert blockTree) t′ (createCertificate v) ⟫
 ```

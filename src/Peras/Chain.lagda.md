@@ -108,22 +108,37 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 ```
 -->
 
+### Equivocation relation
+
+Equivocal votes are multiple votes by the same party for the same round.
+
+```agda
+data _∻_ : Vote → Vote → Set where
+
+  Equivocation : ∀ {v₁ v₂}
+    → creatorId v₁ ≡ creatorId v₂
+    → votingRound v₁ ≡ votingRound v₂
+    → v₁ ≢ v₂
+    → v₁ ∻ v₂
+```
+
+```agda
+-- NonEquivocation : Vote → Vote → Set
+-- NonEquivocation v₁ v₂ = ¬ (v₁ ∻ v₂)
+
+-- open import Data.List.Relation.Unary.AllPairs.Core NonEquivocation renaming (AllPairs to NoEquivocations) public
+```
+
 ## Chain
 
- * The tip of this chain is the head of `blocks`
- * The set of "pending" votes, eg. which have not been included in a `Block`.
-
-TODO: consider an association list for the votes
 ```agda
 record Chain : Set where
   constructor MkChain
   field blocks : List Block
---        votes : List Vote
         @0 non-empty : NonEmpty blocks
 
 open Chain public
 ```
-
 <!--
 ```agda
 {-# COMPILE AGDA2HS Chain deriving Eq #-}
@@ -135,12 +150,6 @@ tip : Chain → Block
 tip (MkChain blks non-empty) = head blks ⦃ non-empty ⦄
 ```
 
-<!--
-```agda
-{-# COMPILE AGDA2HS tip #-}
-```
--->
-
 ### Chain prefix
 
 ```agda
@@ -148,7 +157,6 @@ data _⪯_ : Chain → Chain → Set where
 
   Prefix : ∀ {c₁ c₂ c₃ : Chain}
     → blocks c₁ ++ blocks c₃ ≡ blocks c₂
---    → votes c₁ ++ votes c₃ ≡ votes c₂
     → c₁ ⪯ c₂
 ```
 
@@ -163,7 +171,7 @@ prune sl c = c -- TODO: {b ← c | slot b ≤ sl}.
 
 ```agda
 ∣_∣ : Chain → ℕ
-∣ MkChain bs _ ∣ = length bs
+∣ c ∣ = length (blocks c)
 ```
 
 ### Chain weight
@@ -175,7 +183,6 @@ open Params ⦃...⦄
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
---         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Params ⦄
          where
 
@@ -185,109 +192,13 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Hashable ⦃...⦄
 ```
-```agda
-{-
-  import Prelude.AssocList as A
-  open A.Decidable _≟-Hash_
-
-  referencedVote : Chain → Hash → M.Maybe Vote
-  referencedVote c h =
-    let vs = votes c
-    in h ‼ zip (map hash vs) vs
--}
-```
-### Dangling vote
-
-A C-dangling vote
-  * votes for a block in C
-  * is not already referenced by blocks in C
-  * is not an equivocation of a vote referenced by blocks in C
-
-```agda
-{-
-  data Dangling : Chain → Vote → Set where
-
-    C-Dangling : ∀ {v} {b} {c} -- {r}
-      → -- let s = r * T in
-        b ∈ blocks c
-      → blockHash v ≡ hash b
---      → slotNumber b ≥ (s ∸ Lₗ)
---      → slotNumber b ≤ (s ∸ Lₕ)
-      → ¬ (Any (λ { x → (hash v) ∈ (includedVotes x) }) (blocks c))
-      → All (λ { x → NoEquivocations
-                          (catMaybes $ map (referencedVote c) (includedVotes x))
-                  }) (blocks c)
-      → Dangling c v
--}
-```
-
-```agda
---  DanglingVotes : Chain → List Vote → Set
---  DanglingVotes = All ∘ Dangling
-```
 
 ### Chain state
 
 ```agda
-  {-
-  record ChainState : Set where
-    constructor ⟨_,_⟩
-    field chain : Chain
-          certs : List Certificate
-
-  open ChainState public
-  -}
-  
   postulate
     latestCertSeen : Chain → List Certificate → Certificate
     latestCertOnChain : Chain → List Certificate → Certificate
-```
-
-Counting votes for a block from votes
-```agda
-{-
-  countVotes : List Vote → RoundNumber → Block → ℕ
-  countVotes vs r b = length $
-    filter (λ { v →
-      (blockHash v ≟-Hash (hash b)) ×-dec
-      (votingRound v ≟-RoundNumber r)
-      })
-    vs
--}
-```
-Counting votes for a block
-```agda
---  weightOfBlock : ChainState → RoundNumber → Block → ℕ
---  weightOfBlock ⟨ MkChain bs vs _ , d , _ ⟩ r b = countVotes vs r b + countVotes d r b
-```
-
-### Quorum
-
-The relation `QuorumOnChain` checks whether there is a round-r quorum with respect to
-the votes on chain c and dangling votes for a block on chain c.
-
-```agda
-{-
-  data QuorumOnChain : ChainState → RoundNumber → Set where
-
-    Initial : ∀ {c} {r}
-      → roundNumber r ≡ 0
-      → QuorumOnChain c r
-
-    LaterRound : ∀ {c} {d} {r} {b}
-      → roundNumber r > 0
-      → b ∈ blocks c
-      → (p : DanglingVotes c d)
-      → weightOfBlock ⟨ c , d , p ⟩ r b ≥ τ
-      → QuorumOnChain ⟨ c , d , p ⟩ r
--}
-```
-
-```agda
-{-
-  postulate
-    QuorumOnChain? : ∀ (c : ChainState) → (r : RoundNumber) → Dec (QuorumOnChain c r)
--}
 ```
 
 In a cooldown period there is no voting.
@@ -306,7 +217,7 @@ In a cooldown period there is no voting.
       in
         rₛ + 1 ≥ r
       → Reference certₛ c
-      → VoteInRound c cs (MkRoundNumber r) 
+      → VoteInRound c cs (MkRoundNumber r)
 
     AfterCooldown : ∀ {chain cs r c} →
       let certₛ = latestCertSeen chain cs
@@ -405,7 +316,7 @@ module _ {block₀ : Block}
           non-empty = NonEmpty.itsNonEmpty
         }
 
-    Cons : ∀ {vs : List Vote} {c : Chain} {b : Block}
+    Cons : ∀ {c : Chain} {b : Block}
       → parentBlock b ≡ hash (tip c)
       → ValidChain c
       → ValidChain
@@ -413,7 +324,14 @@ module _ {block₀ : Block}
             blocks = b ∷ blocks c ;
             non-empty = NonEmpty.itsNonEmpty
           }
+```
 
+```agda
+{-
+  tip : ∀ {c : Chain} → ValidChain c → Block
+  tip Genesis = block₀
+  tip (Cons {c} {b₁} refl _) = b₁
+-}
 ```
 
 #### Properties
@@ -422,9 +340,9 @@ For a valid chain we can show, that the blocks are non-empty without relying on 
 property in `non-empty` of the `Chain`.
 
 ```agda
-  instance
-    itsNonEmptyChain : ∀ {c : Chain} → {ValidChain c} → NonEmpty (blocks c)
-    itsNonEmptyChain {MkChain (x ∷ _) _ } = NonEmpty.itsNonEmpty
+--  instance
+--    itsNonEmptyChain : ∀ {c : Chain} → {ValidChain c} → NonEmpty (blocks c)
+--    itsNonEmptyChain {MkChain (x ∷ _) _ } = NonEmpty.itsNonEmpty
 ```
 
 The last block in a valid chain is always the genesis block.
