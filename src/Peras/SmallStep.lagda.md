@@ -5,12 +5,12 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
 open import Data.Maybe using (Maybe; just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id; _$_)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -106,7 +106,6 @@ module _ {block₀ : Block}
                     (addCert : T → Certificate → T)
                     (votes : T → Chain → List Vote)
                     (certs : T → Chain → List Certificate)
-                    (getCert : T → RoundNumber → Maybe Certificate)
          : Set₁ where
 
     allBlocksUpTo : Slot → T → List Block
@@ -154,12 +153,9 @@ The block tree type
       votes : T → Chain → List Vote
       certs : T → Chain → List Certificate
 
-      getCert : T → RoundNumber → Maybe Certificate
-
-
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
-                      addVote addCert votes certs getCert
+                      addVote addCert votes certs
 
   open TreeType
 ```
@@ -200,6 +196,10 @@ The local state initialized with the block tree
 ```agda
     Stateˡ = LocalState blockTree
 ```
+```agda
+    getCert : RoundNumber → List Certificate → Maybe Certificate
+    getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ Certificate.roundNumber)
+```
 ### State update
 
 Updating the local state upon receiving a message
@@ -217,12 +217,13 @@ A new vote is added as dangling vote to the local state, when
               s = T * (roundNumber r)
               b = (bestChain blockTree) s t
               vs = (votes blockTree) t b
+              cs = (certs blockTree) t b
               t′ = (addVote blockTree) t v
               b′ = (bestChain blockTree) s t′
               vs′ = (votes blockTree) t′ b′
           in
           v ∉ vs
-        → (getCert blockTree) t r ≡ nothing
+        → getCert r cs ≡ nothing
 --        → ¬ (Any (v ∻_) vs)
         → length vs′ < τ
         → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ t′ ⟫
@@ -232,19 +233,25 @@ A new vote is added as dangling vote to the local state, when
               s = T * (roundNumber r)
               b = (bestChain blockTree) s t
               vs = (votes blockTree) t b
+              cs = (certs blockTree) t b
               t′ = (addVote blockTree) t v
               b′ = (bestChain blockTree) s t′
               vs′ = (votes blockTree) t′ b′
           in
           v ∉ vs
-        → (getCert blockTree) t r ≡ nothing
+        → getCert r cs ≡ nothing
 --        → ¬ (Any (v ∻_) vs)
         → length vs′ ≥ τ
         → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ (addCert blockTree) t′ (createCertificate v) ⟫
 ```
 ```agda
       CertReceived : ∀ {c t}
-        → (getCert blockTree) t (MkRoundNumber (Certificate.roundNumber c)) ≡ nothing
+        → let r = Certificate.roundNumber c
+              s = T * r
+              b = (bestChain blockTree) s t
+              cs = (certs blockTree) t b
+          in
+          getCert (MkRoundNumber (Certificate.roundNumber c)) cs ≡ nothing
         → ⟪ t ⟫ [ CertMsg c ]→ ⟪ (addCert blockTree) t c ⟫
 ```
 
@@ -435,6 +442,7 @@ state.
               r = roundNumber (v-round clock)
               txs = txSelection clock p
               c = (bestChain blockTree) (pred clock) t
+              cs = (certs blockTree) t c
               body = record {
                   blockHash = hash txs ;
                   payload = txs
@@ -450,7 +458,7 @@ state.
                   }
           in
           lookup stateMap p ≡ just ⟪ t ⟫
-        → (getCert blockTree) t (MkRoundNumber (r ∸ 2)) ≡ nothing
+        → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
 
         → IsSlotLeader p clock
           -------------------------------------------
