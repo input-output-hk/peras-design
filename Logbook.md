@@ -15,6 +15,95 @@
   as well to the block tree and therefore hide them in the abstraction. Formalizing both approaches and showing that
   they are equivalent might be used as an argument that the dangling votes are not needed.
 
+### Meeting w/ Quviq
+
+We go through a tour of the codebase with Quviq.
+
+**Next steps**: Design a simple example how a state machine in Agda could be reused in q-d to model an actual system's behaviour
+
+### Meeting w/ PNSol
+
+While discussing the details of Peras, we realise we need to make the protocol clearer, visualising how it unfolds over time in a more precise way than how it's currently done.
+
+*Note*: Maximum header size of 1400 bytes is baked in the consitution of Cardano => need a constitutional change to increase it!
+
+If the header increases beyond a MUT, we'll be unable to meet the 5s threshold (need to make that more precise through ΔQ modeling)
+
+In practice:
+* diffusion is 400-600ms for small blocks
+* no forks longer than 3 blocks since shelley
+* code is optimised for the worst case => adversary cannot do much, system needs to do less work than the adversary
+* Grinding attacks => large number of k
+
+Tuning the ΔQ analysis depending on the header size => increase it and shows => quantify opportunity
+
+* Having a predictable window for vote casting might be an attack vector
+* We should avoid averaging over a round and stick to worst case analysis
+* Even a single larger header every minute => increase faults
+
+* Karl has a Dapp provider providing "canary" for settlement time
+* https://pooltool.io => provides observation of forks (survivor bias?)
+* We could do an offline analysis from mainchain to use as a baseline for current work
+
+* Isn't a case to be made that Praos "dominates" Peras from a game theory perspective on the worst case behaviour?
+* If the voting window is too big in the past => Praos will already have settled it
+
+* current valency ~ 20 => probability of split brain is negligible
+* if a whole continent's internet fails we have other problems to cater for than Cardano's settlement time
+
+**Next steps**:
+* Provide details of the timeline of messages flowing between nodes to PNSol
+* Draft a ΔQ analysis
+
+Plan for Code:
+* How to present tool to potential users -> Jupyter notebook
+* Backend -> piecewise polynomial -> lack thorough testing
+* Provide a consistent API?
+* link language for modelling and simulating => Artjoms' code
+
+### PeerSim meeting
+
+* PeerSim is the ancestor of PeerNet and was exclusively cycle-driven
+* Peernet: https://github.com/PeerNet/PeerNet
+  * provide pluggable protocol/node
+  * event driven only
+  * deterministic and reproducible simulations
+  * interaction is only through message passing (use real world/synthetic latency)
+  * defines "adversaries" [Control class](https://github.com/PeerNet/PeerNet/blob/master/src/peernet/core/Control.java)
+  * can simulate several protocols at the same time
+
+* Simulation mode = simulated time
+* Emulation mode = 1 thread/node -> scale down experiment, actual time, can identify actual race conditions, non-deterministic
+* Net mode = real-world execution and actual network connection
+  * uses UDP message transport
+  * can scale to 100s of 1000s of nodes
+
+* lots of simulation on block dissemination in Cardano
+  * take into account the validation time
+  * used ΔQ model -> break a block into packets and use RT time to distritbute the blocks at that time
+
+Discussing how we could collaborate?
+* Share a common simulation description language?
+* Generate JS code from Agda code to interpret it in the JVM (!)
+
+**Next steps**: Share code about block diffusion simulations
+
+### Weekly meeting
+
+We discuss the expected property of Peras and how to formulate it:
+Under good circumstances, a tx will be adopted much faster, eg. Txs
+are buried under enough weight that even a large adversarial party
+won't overthrow the chain.  It could be the case that "the adversary"
+is dormant, eg. it behaves as honest node(s) until there's an
+opportunity that arises.
+
+We need to write scenarios under different _regimes_ and emphasize the
+behaviour of the system while transitioning as the _core difference_
+is when _going from good to bad_: Peras won't rollback/fork as deep as
+Praos.
+
+Practical engineering question is: How much? And what's the _value_ of this property?
+
 ## 2024-03-11
 
 ### Designs for sync protocol
