@@ -5,6 +5,7 @@ module Peras.Block where
 <!--
 ```agda
 open import Data.Bool using (Bool)
+open import Data.Maybe using (Maybe)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.List using (List)
@@ -101,11 +102,14 @@ hashes of included votes.
 **Note**: What we name `Block` is actually a block _Header_, we use `BlockBody` to contain the payload.
 
 ```agda
+record Certificate : Set where
+  field roundNumber : ℕ
+
 record Block : Set where
   field slotNumber : Slot
         creatorId : PartyId
         parentBlock : Hash
-        includedVotes : List Hash
+        certificate : Maybe Certificate
         leadershipProof : LeadershipProof
         signature : Signature
         bodyHash : Hash
