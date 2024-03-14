@@ -19,7 +19,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain -- using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ⟨_,_,_⟩; Dangling; v-round; DanglingVotes; _∻_)
+open import Peras.Chain
 open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
 
 open import Peras.Block
@@ -28,7 +28,6 @@ open import Peras.Params
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
-open Chain public
 open Honesty public
 open MembershipProof public
 open Signature public
@@ -129,11 +128,11 @@ Properties that must hold with respect to blocks and votes
         → let b = bestChain sl t
           in
           ValidChain {block₀} c
-        → blocks c ⊆ allBlocksUpTo sl t
+        → c ⊆ allBlocksUpTo sl t
         → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
 
       self-contained : ∀ (t : T) (sl : Slot)
-        → blocks (bestChain sl t) ⊆ allBlocksUpTo sl t
+        → bestChain sl t ⊆ allBlocksUpTo sl t
 ```
 The block tree type
 
@@ -156,6 +155,9 @@ The block tree type
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
                       addVote addCert votes certs
+
+    tipBest : Slot → T → Block
+    tipBest sl t = tip ((IsTreeType.valid is-TreeType) t sl)
 
   open TreeType
 ```
@@ -262,7 +264,8 @@ votes.
 
 ```agda
       ChainReceived : ∀ {c t}
-        → let b = (bestChain blockTree) (slotNumber (tip c)) t
+        → (v : ValidChain {block₀} c)
+        → let b = (bestChain blockTree) (slotNumber (tip v)) t
           in
             ∥ b , (certs blockTree) t b ∥ < ∥ c , (certs blockTree) t c ∥
           → ⟪ t ⟫ [ ChainMsg c ]→ ⟪ (newChain blockTree) t c ⟫
@@ -393,13 +396,12 @@ A party can cast a vote for a block, if
               r = v-round clock
               c = (bestChain blockTree) clock t
               cs = (certs blockTree) t c
-              b = (bestChain blockTree) (clock ∸ L) t
               v = record {
                     votingRound = r ;
                     creatorId = p ;
                     committeeMembershipProof =
                       record { proofM = emptyBS } ; -- FIXME
-                    blockHash = hash (tip b) ;
+                    blockHash = hash ((tipBest blockTree) (clock ∸ L) t) ;
                     signature =
                       record { bytes = emptyBS }  -- FIXME
                   }
@@ -451,7 +453,7 @@ state.
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
-                    parentBlock = hash (tip c) ;
+                    parentBlock = hash ((tipBest blockTree) (pred clock) t) ;
                     certificate = nothing ;
                     leadershipProof = record { proof = emptyBS } ; -- FIXME
                     bodyHash = blockHash body ;
@@ -598,7 +600,6 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix (honest {p} {t} {M} _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
-          c = (bestChain blockTree) (pred (clock M)) t
           body = record {
               blockHash = hash txs ;
               payload = txs
@@ -606,7 +607,7 @@ that there are no hash collisions during the execution of the protocol.
           b = record {
                 slotNumber = clock M ;
                 creatorId = p ;
-                parentBlock = hash (tip c) ;
+                parentBlock = hash ((tipBest blockTree) (pred (clock M)) t) ;
                 certificate = nothing ;
                 leadershipProof = record { proof = emptyBS } ;
                 bodyHash = blockHash body ;
@@ -620,13 +621,12 @@ that there are no hash collisions during the execution of the protocol.
       → history M ⊆ₘ history N
     []⇉-hist-common-prefix {M} (honest {p} {t} {M} _ _ _ _) =
       let r = v-round (clock M)
-          b = (bestChain blockTree) ((clock M) ∸ L) t
           v = record {
                 votingRound = r ;
                 creatorId = p ;
                 committeeMembershipProof =
                   record { proofM = emptyBS } ;
-                blockHash = hash (tip b) ;
+                blockHash = hash ((tipBest blockTree) ((clock M) ∸ L) t) ;
                 signature =
                   record { bytes = emptyBS }
               }

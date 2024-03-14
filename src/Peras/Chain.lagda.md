@@ -132,12 +132,7 @@ data _∻_ : Vote → Vote → Set where
 ## Chain
 
 ```agda
-record Chain : Set where
-  constructor MkChain
-  field blocks : List Block
-        @0 non-empty : NonEmpty blocks
-
-open Chain public
+Chain = List Block
 ```
 <!--
 ```agda
@@ -145,18 +140,13 @@ open Chain public
 ```
 -->
 
-```agda
-tip : Chain → Block
-tip (MkChain blks non-empty) = head blks ⦃ non-empty ⦄
-```
-
 ### Chain prefix
 
 ```agda
 data _⪯_ : Chain → Chain → Set where
 
   Prefix : ∀ {c₁ c₂ c₃ : Chain}
-    → blocks c₁ ++ blocks c₃ ≡ blocks c₂
+    → c₁ ++ c₃ ≡ c₂
     → c₁ ⪯ c₂
 ```
 
@@ -171,7 +161,7 @@ prune sl c = c -- TODO: {b ← c | slot b ≤ sl}.
 
 ```agda
 ∣_∣ : Chain → ℕ
-∣ c ∣ = length (blocks c)
+∣_∣ = length
 ```
 
 ### Chain weight
@@ -310,28 +300,18 @@ module _ {block₀ : Block}
   data ValidChain : Chain → Set where
 
     Genesis :
-      ValidChain
-        record {
-          blocks = block₀ ∷ [] ;
-          non-empty = NonEmpty.itsNonEmpty
-        }
+      ValidChain (block₀ ∷ [])
 
-    Cons : ∀ {c : Chain} {b : Block}
-      → parentBlock b ≡ hash (tip c)
-      → ValidChain c
-      → ValidChain
-          record {
-            blocks = b ∷ blocks c ;
-            non-empty = NonEmpty.itsNonEmpty
-          }
+    Cons : ∀ {c : Chain} {b₁ b₂ : Block}
+      → parentBlock b₂ ≡ hash b₁
+      → ValidChain (b₂ ∷ c)
+      → ValidChain (b₁ ∷ (b₂ ∷ c))
 ```
 
 ```agda
-{-
   tip : ∀ {c : Chain} → ValidChain c → Block
   tip Genesis = block₀
   tip (Cons {c} {b₁} refl _) = b₁
--}
 ```
 
 #### Properties
@@ -406,7 +386,7 @@ commonPrefix chains =
      (Just bs) -> reverse bs
    where
      listPrefix : Maybe (List Block)
-     listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse (blocks l)) chains)
+     listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse l) chains)
 
 {-# COMPILE AGDA2HS commonPrefix #-}
 
