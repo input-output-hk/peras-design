@@ -10,7 +10,7 @@ open import Data.Maybe using (just)
 open import Data.Nat using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 
-open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO)
+open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate)
 open import Peras.Chain using (RoundNumber; Vote)
 open import Peras.Crypto using (Hashable)
 open import Peras.Params using (Params)
@@ -37,14 +37,15 @@ module _ {block₀ : Block}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (isSlotLeader : PartyId → Slot → Bool)
-           (isCommitteeMember : PartyId → RoundNumber → Bool)
+           (IsSlotLeader : PartyId → Slot → Set)
+           (IsCommitteeMember : PartyId → RoundNumber → Set)
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
+           (createCertificate : Vote → Certificate)
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟪_,_⟫; CollisionFree; ForgingFree)
+    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟪_⟫; CollisionFree; ForgingFree)
 ```
 ```agda
     module _ ⦃ N₀ : Stateᵍ ⦄ where
@@ -59,14 +60,13 @@ TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (a
 
 ```agda
       postulate
-        kownledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+        kownledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties} {createCertificate}}
           → {p₁ p₂ : PartyId}
-          → {d₁ d₂ : List Vote}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
-          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
-          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ ⟫
           → clock N₁ ≡ clock N₂
           → (allBlocks blockTree) t₁ ⊆ (allBlocks blockTree) t₂
 ```
@@ -89,25 +89,25 @@ that period.
 
 ```agda
       postulate
-        chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
+        chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties} {createCertificate}}
           → {p₁ p₂ : PartyId}
           → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-          → {c₁ c₂ : Chain}
           → {d₁ d₂ : List Vote}
-          → {pr₁ : DanglingVotes c₁ d₁}
-          → {pr₂ : DanglingVotes c₂ d₂}
           → {t₁ t₂ : A}
           → {w : ℕ}
-          → h₁ ≡ Honest {p₁}
+          → let c₁ = (bestChain blockTree) ((clock N₁) ∸ 1) t₁
+                c₂ = (bestChain blockTree) ((clock N₂) ∸ 1) t₂
+                cs₁ = (certs blockTree) t₁ c₁
+                cs₂ = (certs blockTree) t₂ c₂
+            in
+            h₁ ≡ Honest {p₁}
           → h₂ ≡ Honest {p₂}
           → N₀ ↝ N₁
           → N₁ ↝ N₂
-          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ , d₁ ⟫
-          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ , d₂ ⟫
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ ⟫
           → luckySlots (clock N₁ , clock N₂) ≥ w
-          → c₁ ≡ ((bestChain blockTree) ((clock N₁) ∸ 1) d₁ t₁)
-          → c₂ ≡ ((bestChain blockTree) ((clock N₂) ∸ 1) d₂ t₂)
-          → ∥ ⟨ c₁ , d₁ , pr₁ ⟩ ∥ + w ≤ ∥ ⟨ c₂ , d₂ , pr₂ ⟩ ∥
+          → ∥ c₁ , cs₁ ∥ + w ≤ ∥ c₂ , cs₂ ∥
 ```
 
 ## Chain quality
@@ -127,15 +127,15 @@ chains of honest parties will always be a common prefix of each other.
 
 ```agda
       postulate
-        common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {isSlotLeader} {isCommitteeMember} {txSelection} {parties}}
-          → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A} {d : List Vote}
-          → lookup (stateMap N) p ≡ just ⟪ t , d ⟫
+        common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties}}
+          → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
+          → lookup (stateMap N) p ≡ just ⟪ t ⟫
           → N₀ ↝ N
           → ForgingFree N
           → CollisionFree N
           → h ≡ Honest {p}
           → let sl = clock N
-            in (prune k ((bestChain blockTree) (sl ∸ 1) d t)) ⪯ c
+            in (prune k ((bestChain blockTree) (sl ∸ 1) t)) ⪯ c
              ⊎ (Σ[ sl′ ∈ Slot ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix
