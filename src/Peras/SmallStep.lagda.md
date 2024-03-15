@@ -265,7 +265,9 @@ In a cooldown period there is no voting.
 
       Regular : ∀ {c cs r t certₛ}
         → just certₛ ≡ latestCertSeen blockTree t
-        → (Certificate.roundNumber certₛ) + 1 ≥ r
+        → let rₛ = Certificate.roundNumber certₛ
+        in
+          rₛ + 1 ≥ r
         → Reference certₛ c
         → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
 
