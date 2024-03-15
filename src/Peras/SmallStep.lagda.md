@@ -157,7 +157,7 @@ The block tree type
                       addVote addCert votes certs
 
     tipBest : Slot → T → Block
-    tipBest sl t = tip ((IsTreeType.valid is-TreeType) t sl)
+    tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
   open TreeType
 ```
@@ -174,7 +174,7 @@ The block tree type
 # Parameterized module
 
   * blockTree
-  * slot leader computable predicate
+  * slot leader predicate
   * voting committee membership predicate
   * tx selection
   * The list of parties
