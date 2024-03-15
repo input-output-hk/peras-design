@@ -225,11 +225,12 @@ The block tree type
            {blockTree : TreeType tT}
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
-           {IsSlotLeader : PartyId → Slot → Set}
-           {IsCommitteeMember : PartyId → RoundNumber → Set}
+           {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
+           {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
-           {createCertificate : Vote → Certificate}
+           {IsBlockSignature : Block → Signature → Set}
+           {IsVoteSignature : Vote → Signature → Set}
            where
 ```
 The local state initialized with the block tree
@@ -399,9 +400,7 @@ A party can cast a vote for a block, if
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M}
-        → (prf : MembershipProof)
-        → (sig : Signature)
+      honest : ∀ {p} {t} {M} {prf} {sig}
         → let open Stateᵍ M
               r = v-round clock
               c = bestChain blockTree clock t
@@ -414,9 +413,9 @@ A party can cast a vote for a block, if
                     signature = sig                  }
           in
           lookup stateMap p ≡ just ⟪ t ⟫
-
+        → IsVoteSignature v sig
         → StartOfRound clock r
-        → IsCommitteeMember p r
+        → IsCommitteeMember p r prf
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
@@ -447,7 +446,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M} {c₁} {c₂}
+      honest : ∀ {p} {t} {M} {c₁} {c₂} {prf} {sig}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -460,8 +459,6 @@ state.
            in
               c₁ ≡ latestCertSeen blockTree t
            →  c₂ ≡ latestCertOnChain blockTree c t
-           → (prf : LeadershipProof)
-           → (sig : Signature)
            → let
               b = record {
                     slotNumber = clock ;
@@ -474,9 +471,10 @@ state.
                   }
           in
           lookup stateMap p ≡ just ⟪ t ⟫
+        → IsBlockSignature b sig
         → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
 
-        → IsSlotLeader p clock
+        → IsSlotLeader p clock prf
           -------------------------------------------
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
              ⟪ extendTree blockTree t b ⟫ M
@@ -610,7 +608,7 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {M} {c₁} _ _ prf sig _ _ _) =
+    []↷-hist-common-prefix (honest {p} {t} {M} {c₁} {c₂} {prf} {sig} _ _ _ _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
           body = record {
@@ -632,7 +630,7 @@ that there are no hash collisions during the execution of the protocol.
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
       → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {p} {t} {M} prf sig _ _ _ _) =
+    []⇉-hist-common-prefix {M} (honest {p} {t} {M} {prf} {sig} _ _ _ _ _) =
       let r = v-round (clock M)
           v = record {
                 votingRound = r ;

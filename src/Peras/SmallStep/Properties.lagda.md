@@ -12,7 +12,7 @@ open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj�
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate)
 open import Peras.Chain using (RoundNumber; Vote)
-open import Peras.Crypto using (Hashable)
+open import Peras.Crypto
 open import Peras.Params using (Params)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
@@ -37,11 +37,12 @@ module _ {block₀ : Block}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (IsSlotLeader : PartyId → Slot → Set)
-           (IsCommitteeMember : PartyId → RoundNumber → Set)
+           (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
+           (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
-           (createCertificate : Vote → Certificate)
+           (IsBlockSignature : Block → Signature → Set)
+           (IsVoteSignature : Vote → Signature → Set)
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
@@ -59,7 +60,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 ```agda
       postulate
-        kownledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties} {createCertificate}}
+        kownledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties} {IsBlockSignature} {IsVoteSignature}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁
@@ -88,7 +89,7 @@ that period.
 
 ```agda
       postulate
-        chain-growth : ∀ {N₁ N₂ : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties} {createCertificate}}
+        chain-growth : ∀ {N₁ N₂ : Stateᵍ}
           → {p₁ p₂ : PartyId}
           → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
           → {d₁ d₂ : List Vote}
@@ -126,7 +127,7 @@ chains of honest parties will always be a common prefix of each other.
 
 ```agda
       postulate
-        common-prefix : ∀ {N : Stateᵍ {block₀} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {IsCommitteeMember} {txSelection} {parties}}
+        common-prefix : ∀ {N : Stateᵍ}
           → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
           → lookup (stateMap N) p ≡ just ⟪ t ⟫
           → N₀ ↝ N
