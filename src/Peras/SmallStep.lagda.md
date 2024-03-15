@@ -20,8 +20,7 @@ open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
 open import Peras.Chain
-open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
-
+open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
@@ -32,7 +31,6 @@ open Honesty public
 open MembershipProof public
 open Signature public
 open RoundNumber public
--- open Vote
 open Party
 ```
 -->
@@ -75,7 +73,7 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 block₀ denotes the genesis block that is passed in as a module parameter
 
 ```agda
-module _ {block₀ : Block} {cert₀ : Certificate}
+module _ {block₀ : Block}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -402,6 +400,8 @@ A party can cast a vote for a block, if
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
       honest : ∀ {p} {t} {M}
+        → (prf : MembershipProof)
+        → (sig : Signature)
         → let open Stateᵍ M
               r = v-round clock
               c = bestChain blockTree clock t
@@ -409,12 +409,9 @@ A party can cast a vote for a block, if
               v = record {
                     votingRound = r ;
                     creatorId = p ;
-                    committeeMembershipProof =
-                      record { proofM = emptyBS } ; -- FIXME
+                    committeeMembershipProof = prf ;
                     blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
-                    signature =
-                      record { bytes = emptyBS }  -- FIXME
-                  }
+                    signature = sig                  }
           in
           lookup stateMap p ≡ just ⟪ t ⟫
 
@@ -450,7 +447,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M}
+      honest : ∀ {p} {t} {M} {c₁} {c₂}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -460,14 +457,20 @@ state.
                   blockHash = hash txs ;
                   payload = txs
                   }
+           in
+              c₁ ≡ latestCertSeen blockTree t
+           →  c₂ ≡ latestCertOnChain blockTree c t
+           → (prf : LeadershipProof)
+           → (sig : Signature)
+           → let
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
                     parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = nothing ;
-                    leadershipProof = record { proof = emptyBS } ; -- FIXME
+                    certificate = c₁ ;
+                    leadershipProof = prf ;
                     bodyHash = blockHash body ;
-                    signature = record { bytes = emptyBS } -- FIXME
+                    signature = sig
                   }
           in
           lookup stateMap p ≡ just ⟪ t ⟫
@@ -607,7 +610,7 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {M} _ _ _) =
+    []↷-hist-common-prefix (honest {p} {t} {M} {c₁} _ _ prf sig _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
           body = record {
@@ -618,10 +621,10 @@ that there are no hash collisions during the execution of the protocol.
                 slotNumber = clock M ;
                 creatorId = p ;
                 parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
-                certificate = nothing ;
-                leadershipProof = record { proof = emptyBS } ;
+                certificate = c₁ ;
+                leadershipProof = prf ;
                 bodyHash = blockHash body ;
-                signature = record { bytes = emptyBS }
+                signature = sig
               }
        in xs⊆x∷xs (history M) (BlockMsg b)
     []↷-hist-common-prefix (corrupt _) x₁ = x₁
@@ -629,16 +632,14 @@ that there are no hash collisions during the execution of the protocol.
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
       → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {p} {t} {M} _ _ _ _) =
+    []⇉-hist-common-prefix {M} (honest {p} {t} {M} prf sig _ _ _ _) =
       let r = v-round (clock M)
           v = record {
                 votingRound = r ;
                 creatorId = p ;
-                committeeMembershipProof =
-                  record { proofM = emptyBS } ;
+                committeeMembershipProof = prf ;
                 blockHash = hash (tipBest blockTree ((clock M) ∸ L) t) ;
-                signature =
-                  record { bytes = emptyBS }
+                signature = sig
               }
       in xs⊆x∷xs (history M) (VoteMsg v)
     []⇉-hist-common-prefix (corrupt _) x₁ = x₁

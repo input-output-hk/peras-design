@@ -121,14 +121,14 @@ data _∻_ : Vote → Vote → Set where
     → v₁ ≢ v₂
     → v₁ ∻ v₂
 ```
-
+<!--
 ```agda
 -- NonEquivocation : Vote → Vote → Set
 -- NonEquivocation v₁ v₂ = ¬ (v₁ ∻ v₂)
 
 -- open import Data.List.Relation.Unary.AllPairs.Core NonEquivocation renaming (AllPairs to NoEquivocations) public
 ```
-
+-->
 ## Chain
 
 ```agda
