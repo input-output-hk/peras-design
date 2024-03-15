@@ -56,7 +56,6 @@ module _ {block₀ : Block}
 ### Knowledge propagation
 
 The lemma describes how knowledge is propagated between honest parties in the system.
-TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (allVotes blockTree) t₂`
 
 ```agda
       postulate
@@ -68,7 +67,7 @@ TODO: Do we the result as well for votes? I.e. `(allVotes blockTree) t₁ ⊆ (a
           → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
           → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ ⟫
           → clock N₁ ≡ clock N₂
-          → (allBlocks blockTree) t₁ ⊆ (allBlocks blockTree) t₂
+          → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
 ```
 
 ```agda
@@ -95,10 +94,10 @@ that period.
           → {d₁ d₂ : List Vote}
           → {t₁ t₂ : A}
           → {w : ℕ}
-          → let c₁ = (bestChain blockTree) ((clock N₁) ∸ 1) t₁
-                c₂ = (bestChain blockTree) ((clock N₂) ∸ 1) t₂
-                cs₁ = (certs blockTree) t₁ c₁
-                cs₂ = (certs blockTree) t₂ c₂
+          → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
+                c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
+                cs₁ = certs blockTree t₁ c₁
+                cs₂ = certs blockTree t₂ c₂
             in
             h₁ ≡ Honest {p₁}
           → h₂ ≡ Honest {p₂}
@@ -135,7 +134,7 @@ chains of honest parties will always be a common prefix of each other.
           → CollisionFree N
           → h ≡ Honest {p}
           → let sl = clock N
-            in (prune k ((bestChain blockTree) (sl ∸ 1) t)) ⪯ c
+            in (prune k (bestChain blockTree (sl ∸ 1) t)) ⪯ c
              ⊎ (Σ[ sl′ ∈ Slot ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix

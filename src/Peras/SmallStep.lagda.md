@@ -217,12 +217,12 @@ A new vote is added as dangling vote to the local state, when
       VoteReceived : ∀ {v t}
         → let r = votingRound v
               s = T * (roundNumber r)
-              b = (bestChain blockTree) s t
-              vs = (votes blockTree) t b
-              cs = (certs blockTree) t b
-              t′ = (addVote blockTree) t v
-              b′ = (bestChain blockTree) s t′
-              vs′ = (votes blockTree) t′ b′
+              b = bestChain blockTree s t
+              vs = votes blockTree t b
+              cs = certs blockTree t b
+              t′ = addVote blockTree t v
+              b′ = bestChain blockTree s t′
+              vs′ = votes blockTree t′ b′
           in
           v ∉ vs
         → getCert r cs ≡ nothing
@@ -234,28 +234,28 @@ A new vote is added as dangling vote to the local state, when
       VoteReceivedNewCert : ∀ {v t}
         → let r = votingRound v
               s = T * (roundNumber r)
-              b = (bestChain blockTree) s t
-              vs = (votes blockTree) t b
-              cs = (certs blockTree) t b
-              t′ = (addVote blockTree) t v
-              b′ = (bestChain blockTree) s t′
-              vs′ = (votes blockTree) t′ b′
+              b = bestChain blockTree s t
+              vs = votes blockTree t b
+              cs = certs blockTree t b
+              t′ = addVote blockTree t v
+              b′ = bestChain blockTree s t′
+              vs′ = votes blockTree t′ b′
           in
           v ∉ vs
         → getCert r cs ≡ nothing
         → ¬ (Any (v ∻_) vs)
         → length vs′ ≥ τ
-        → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ (addCert blockTree) t′ (createCertificate v) ⟫
+        → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ addCert blockTree t′ (createCertificate v) ⟫
 ```
 ```agda
       CertReceived : ∀ {c t}
         → let r = Certificate.roundNumber c
               s = T * r
-              b = (bestChain blockTree) s t
-              cs = (certs blockTree) t b
+              b = bestChain blockTree s t
+              cs = certs blockTree t b
           in
           getCert (MkRoundNumber (Certificate.roundNumber c)) cs ≡ nothing
-        → ⟪ t ⟫ [ CertMsg c ]→ ⟪ (addCert blockTree) t c ⟫
+        → ⟪ t ⟫ [ CertMsg c ]→ ⟪ addCert blockTree t c ⟫
 ```
 
 When a chain is received it is added the the blockTree only if it
@@ -265,10 +265,10 @@ votes.
 ```agda
       ChainReceived : ∀ {c t}
         → (v : ValidChain {block₀} c)
-        → let b = (bestChain blockTree) (slotNumber (tip v)) t
+        → let b = bestChain blockTree (slotNumber (tip v)) t
           in
-            ∥ b , (certs blockTree) t b ∥ < ∥ c , (certs blockTree) t c ∥
-          → ⟪ t ⟫ [ ChainMsg c ]→ ⟪ (newChain blockTree) t c ⟫
+            ∥ b , certs blockTree t b ∥ < ∥ c , certs blockTree t c ∥
+          → ⟪ t ⟫ [ ChainMsg c ]→ ⟪ newChain blockTree t c ⟫
 ```
 ## Global state
 
@@ -394,14 +394,14 @@ A party can cast a vote for a block, if
       honest : ∀ {p} {t} {M}
         → let open Stateᵍ M
               r = v-round clock
-              c = (bestChain blockTree) clock t
-              cs = (certs blockTree) t c
+              c = bestChain blockTree clock t
+              cs = certs blockTree t c
               v = record {
                     votingRound = r ;
                     creatorId = p ;
                     committeeMembershipProof =
                       record { proofM = emptyBS } ; -- FIXME
-                    blockHash = hash ((tipBest blockTree) (clock ∸ L) t) ;
+                    blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
                     signature =
                       record { bytes = emptyBS }  -- FIXME
                   }
@@ -411,9 +411,9 @@ A party can cast a vote for a block, if
         → StartOfRound clock r
         → IsCommitteeMember p r
         → VoteInRound c cs r
-          -----------------------------------------------------
+          ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) 0 p ⟪ (addVote blockTree) t v ⟫ M
+          updateᵍ (VoteMsg v) 0 p ⟪ addVote blockTree t v ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
         → δ ms ms′
@@ -444,8 +444,8 @@ state.
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
-              c = (bestChain blockTree) (pred clock) t
-              cs = (certs blockTree) t c
+              c = bestChain blockTree (pred clock) t
+              cs = certs blockTree t c
               body = record {
                   blockHash = hash txs ;
                   payload = txs
@@ -453,7 +453,7 @@ state.
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
-                    parentBlock = hash ((tipBest blockTree) (pred clock) t) ;
+                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
                     certificate = nothing ;
                     leadershipProof = record { proof = emptyBS } ; -- FIXME
                     bodyHash = blockHash body ;
@@ -466,7 +466,7 @@ state.
         → IsSlotLeader p clock
           -------------------------------------------
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
-             ⟪ (extendTree blockTree) t b ⟫ M
+             ⟪ extendTree blockTree t b ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
         → δ ms ms′
@@ -607,7 +607,7 @@ that there are no hash collisions during the execution of the protocol.
           b = record {
                 slotNumber = clock M ;
                 creatorId = p ;
-                parentBlock = hash ((tipBest blockTree) (pred (clock M)) t) ;
+                parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
                 certificate = nothing ;
                 leadershipProof = record { proof = emptyBS } ;
                 bodyHash = blockHash body ;
@@ -626,7 +626,7 @@ that there are no hash collisions during the execution of the protocol.
                 creatorId = p ;
                 committeeMembershipProof =
                   record { proofM = emptyBS } ;
-                blockHash = hash ((tipBest blockTree) ((clock M) ∸ L) t) ;
+                blockHash = hash (tipBest blockTree ((clock M) ∸ L) t) ;
                 signature =
                   record { bytes = emptyBS }
               }
