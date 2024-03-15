@@ -92,22 +92,27 @@ module _ {block₀ : Block}
 ```agda
   open Params ⦃...⦄
 ```
+```agda
+  getCert : RoundNumber → List Certificate → Maybe Certificate
+  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ Certificate.roundNumber)
+```
+
 ## BlockTree
 
 ```agda
-  record IsTreeType {T : Set}
-                    (tree₀ : T)
-                    (extendTree : T → Block → T)
-                    (newChain : T → Chain → T)
-                    (allBlocks : T → List Block)
-                    (bestChain : Slot → T → Chain)
-                    (addVote : T → Vote → T)
-                    (addCert : T → Certificate → T)
-                    (votes : T → Chain → List Vote)
-                    (certs : T → Chain → List Certificate)
+  record IsTreeType {tT : Set}
+                    (tree₀ : tT)
+                    (extendTree : tT → Block → tT)
+                    (newChain : tT → Chain → tT)
+                    (allBlocks : tT → List Block)
+                    (bestChain : Slot → tT → Chain)
+                    (addVote : tT → Vote → tT)
+                    (addCert : tT → Certificate → tT)
+                    (votes : tT → Chain → List Vote)
+                    (certs : tT → Chain → List Certificate)
          : Set₁ where
 
-    allBlocksUpTo : Slot → T → List Block
+    allBlocksUpTo : Slot → tT → List Block
     allBlocksUpTo sl t = filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
 
     field
@@ -118,21 +123,48 @@ Properties that must hold with respect to blocks and votes
       instantiated :
         allBlocks tree₀ ≡ block₀ ∷ []
 
-      extendable : ∀ (t : T) (b : Block)
+      extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      valid : ∀ (t : T) (sl : Slot)
+      valid : ∀ (t : tT) (sl : Slot)
         → ValidChain {block₀} (bestChain sl t)
 
-      optimal : ∀ (c : Chain) (t : T) (sl : Slot)
+      optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
         → let b = bestChain sl t
           in
           ValidChain {block₀} c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
 
-      self-contained : ∀ (t : T) (sl : Slot)
+      self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
+
+      unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
+        → let vs = votes t c
+          in
+          v ∈ vs
+        → vs ≡ votes (addVote t v) c
+
+      no-equivocations : ∀ (t : tT) (v : Vote) (c : Chain)
+        → let vs = votes t c
+          in
+          Any (v ∻_) vs
+        → vs ≡ votes (addVote t v) c
+
+      non-quorum : ∀ (t : tT) (r : RoundNumber)
+        → let sl = T * (roundNumber r)
+              b = bestChain sl t
+          in
+          length (votes t b) < τ
+        → getCert r (certs t b) ≡ nothing
+
+      quorum : ∀ (t : tT) (r : RoundNumber) (c : Certificate)
+        → let sl = T * (roundNumber r)
+              b = bestChain sl t
+          in
+          length (votes t b) ≥ τ
+        → getCert r (certs t b) ≡ just c
+
 ```
 The block tree type
 
@@ -198,10 +230,6 @@ The local state initialized with the block tree
 ```agda
     Stateˡ = LocalState blockTree
 ```
-```agda
-    getCert : RoundNumber → List Certificate → Maybe Certificate
-    getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ Certificate.roundNumber)
-```
 ### State update
 
 Updating the local state upon receiving a message
@@ -209,66 +237,20 @@ Updating the local state upon receiving a message
 ```agda
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
 ```
-A new vote is added as dangling vote to the local state, when
-  * the vote has not already been seen (on-chain or dangling)
-  * the vote is not an equivocation (on-chain or dangling)
-
 ```agda
       VoteReceived : ∀ {v t}
-        → let r = votingRound v
-              s = T * (roundNumber r)
-              b = bestChain blockTree s t
-              vs = votes blockTree t b
-              cs = certs blockTree t b
-              t′ = addVote blockTree t v
-              b′ = bestChain blockTree s t′
-              vs′ = votes blockTree t′ b′
-          in
-          v ∉ vs
-        → getCert r cs ≡ nothing
-        → ¬ (Any (v ∻_) vs)
-        → length vs′ < τ
-        → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ t′ ⟫
-```
-```agda
-      VoteReceivedNewCert : ∀ {v t}
-        → let r = votingRound v
-              s = T * (roundNumber r)
-              b = bestChain blockTree s t
-              vs = votes blockTree t b
-              cs = certs blockTree t b
-              t′ = addVote blockTree t v
-              b′ = bestChain blockTree s t′
-              vs′ = votes blockTree t′ b′
-          in
-          v ∉ vs
-        → getCert r cs ≡ nothing
-        → ¬ (Any (v ∻_) vs)
-        → length vs′ ≥ τ
-        → ⟪ t ⟫ [ VoteMsg v ]→ ⟪ addCert blockTree t′ (createCertificate v) ⟫
+        → ⟪ t ⟫ [ VoteMsg v ]→
+          ⟪ addVote blockTree t v ⟫
 ```
 ```agda
       CertReceived : ∀ {c t}
-        → let r = Certificate.roundNumber c
-              s = T * r
-              b = bestChain blockTree s t
-              cs = certs blockTree t b
-          in
-          getCert (MkRoundNumber (Certificate.roundNumber c)) cs ≡ nothing
-        → ⟪ t ⟫ [ CertMsg c ]→ ⟪ addCert blockTree t c ⟫
+        → ⟪ t ⟫ [ CertMsg c ]→
+          ⟪ addCert blockTree t c ⟫
 ```
-
-When a chain is received it is added the the blockTree only if it
-is heavier than the current best chain with respect of the dangling
-votes.
-
 ```agda
       ChainReceived : ∀ {c t}
-        → (v : ValidChain {block₀} c)
-        → let b = bestChain blockTree (slotNumber (tip v)) t
-          in
-            ∥ b , certs blockTree t b ∥ < ∥ c , certs blockTree t c ∥
-          → ⟪ t ⟫ [ ChainMsg c ]→ ⟪ newChain blockTree t c ⟫
+        → ⟪ t ⟫ [ ChainMsg c ]→
+          ⟪ newChain blockTree t c ⟫
 ```
 ## Global state
 
