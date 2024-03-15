@@ -185,12 +185,6 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ### Chain state
 
-```agda
-  postulate
-    latestCertSeen : Chain → List Certificate → Certificate
-    latestCertOnChain : Chain → List Certificate → Certificate
-```
-
 In a cooldown period there is no voting.
 
 ```agda
@@ -198,25 +192,6 @@ In a cooldown period there is no voting.
 
   postulate
     Reference? : ∀ (c : Chain) → (cert : Certificate) → Dec (Reference cert c)
-
-  data VoteInRound : Chain → List Certificate → RoundNumber → Set where
-
-    Regular : ∀ {c cs r} →
-      let certₛ = latestCertSeen c cs
-          rₛ = Certificate.roundNumber certₛ
-      in
-        rₛ + 1 ≥ r
-      → Reference certₛ c
-      → VoteInRound c cs (MkRoundNumber r)
-
-    AfterCooldown : ∀ {chain cs r c} →
-      let certₛ = latestCertSeen chain cs
-          rₛ = Certificate.roundNumber certₛ
-      in
-        c > 0
-      → r ≥ R + rₛ
-      → r ≡ (c * K) + rₛ
-      → VoteInRound chain cs (MkRoundNumber r)
 ```
 
 There is not voting in round 0

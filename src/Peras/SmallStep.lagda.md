@@ -10,9 +10,9 @@ open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
 open import Data.Maybe using (Maybe; just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Function.Base using (_∘_; id; _$_)
+open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
@@ -75,7 +75,7 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 block₀ denotes the genesis block that is passed in as a module parameter
 
 ```agda
-module _ {block₀ : Block}
+module _ {block₀ : Block} {cert₀ : Certificate}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -108,6 +108,7 @@ module _ {block₀ : Block}
                     (bestChain : Slot → tT → Chain)
                     (addVote : tT → Vote → tT)
                     (addCert : tT → Certificate → tT)
+                    (allCerts : tT → List Certificate)
                     (votes : tT → Chain → List Vote)
                     (certs : tT → Chain → List Certificate)
          : Set₁ where
@@ -181,15 +182,23 @@ The block tree type
       addVote : T → Vote → T
       addCert : T → Certificate → T
 
+      allCerts : T → List Certificate
+
       votes : T → Chain → List Vote
       certs : T → Chain → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
-                      addVote addCert votes certs
+                      addVote addCert allCerts votes certs
 
     tipBest : Slot → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
+
+    latestCertSeen : T → Maybe Certificate
+    latestCertSeen = head ∘ allCerts
+
+    latestCertOnChain : Chain → T → Maybe Certificate
+    latestCertOnChain c = head ∘ flip certs c
 
   open TreeType
 ```
@@ -236,21 +245,38 @@ Updating the local state upon receiving a message
 
 ```agda
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
-```
-```agda
+
       VoteReceived : ∀ {v t}
         → ⟪ t ⟫ [ VoteMsg v ]→
           ⟪ addVote blockTree t v ⟫
-```
-```agda
+
       CertReceived : ∀ {c t}
         → ⟪ t ⟫ [ CertMsg c ]→
           ⟪ addCert blockTree t c ⟫
-```
-```agda
+
       ChainReceived : ∀ {c t}
         → ⟪ t ⟫ [ ChainMsg c ]→
           ⟪ newChain blockTree t c ⟫
+```
+In a cooldown period there is no voting.
+
+```agda
+    data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
+
+      Regular : ∀ {c cs r t certₛ}
+        → just certₛ ≡ latestCertSeen blockTree t
+        → (Certificate.roundNumber certₛ) + 1 ≥ r
+        → Reference certₛ c
+        → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
+
+      AfterCooldown : ∀ {chain cs r c t certₛ}
+        → just certₛ ≡ latestCertSeen blockTree t
+        → let rₛ = Certificate.roundNumber certₛ
+        in
+          c > 0
+        → r ≥ R + rₛ
+        → r ≡ (c * K) + rₛ
+        → VoteInRound ⟪ t ⟫ chain cs (MkRoundNumber r)
 ```
 ## Global state
 
@@ -392,7 +418,7 @@ A party can cast a vote for a block, if
 
         → StartOfRound clock r
         → IsCommitteeMember p r
-        → VoteInRound c cs r
+        → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
           updateᵍ (VoteMsg v) 0 p ⟪ addVote blockTree t v ⟫ M
