@@ -1,3 +1,25 @@
+## 2024-03-17
+
+## Redesign of Peras IOSim
+
+The [bwbush/diffusion](https://github.com/input-output-hk/peras-design/tree/bwbush/diffusion) branch contains a major upgrade of `peras-iosim`:
+
+1. The `PerasNode` typeclass and the `SomeNode` type separates interface from interface.
+2. `Peras.IOSim.Nodes.Honest` implements the honest node.
+3. `NodeState` has been split into `Node`, `NodeContext`, `NodeResult`, and `PerasNode`, so that static, dynamic, and result fields are separated.
+4. Detailed event logging is provided by `Event` and `NodeStats`.
+    - CPU resource consumption is now computed and log.
+    - Bytes transmitted and received are tracked.
+    - Slot leadership and committee membership are logged.
+    - Rollbacks are recorded.
+    - The sending, receiving, and dropping of messages are stored.
+5. Since `IOSim` is single-threaded anyway, the use of `STM` has been eliminated, through it can be cleanly reintroduced if needed.
+6. Time progresses in sub-increments of a slot.
+
+Next steps:
+- Rework `peras-quickcheck` and `peras-rust` so they are compatible.
+- Finish implementing proper diffusion of blocks.
+
 ## 2024-03-13
 
 ### Formal specification in Agda
