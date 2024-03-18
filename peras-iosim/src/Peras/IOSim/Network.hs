@@ -9,9 +9,11 @@ module Peras.IOSim.Network (
   emptyTopology,
   randomTopology,
   connectNode,
+  getDelay,
   runNetwork,
 ) where
 
+import Control.Applicative ((<|>))
 import Control.Lens ((&), (.~), (^.))
 import Control.Monad.Class.MonadTime
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
@@ -19,7 +21,7 @@ import Control.Monad.Random (MonadRandom, getRandomR)
 import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (foldrM)
 import Data.List (delete)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Ratio ((%))
 import Peras.Event (Event (Drop))
 import Peras.IOSim.Experiment (
@@ -79,6 +81,17 @@ connectNode ::
 connectNode messageDelay upstream downstream =
   Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageDelay)) . connections
 
+getDelay ::
+  Topology ->
+  NodeId ->
+  NodeId ->
+  Maybe Delay
+getDelay Topology{connections} from to =
+  fmap Peras.IOSim.Network.Types.messageDelay $ forward <|> backward
+ where
+  forward = M.lookup from connections >>= M.lookup to
+  backward = M.lookup to connections >>= M.lookup from
+
 runNetwork ::
   forall m.
   MonadDelay m =>
@@ -117,7 +130,12 @@ runNetwork tracer parameters@Parameters{endSlot, experiment} protocol topology i
                 now <- getCurrentTime
                 threadDelay . floor . (* 1000000) . toRational $ outTime `diffUTCTime` now
                 context@NodeContext{slot, clock} <- makeContext tracer protocol total destination
-                if veto outEnvelope slot
+                let
+                  delay =
+                    if source == controller
+                      then Just 0
+                      else getDelay topology source destination
+                if veto outEnvelope slot || isNothing delay
                   then do
                     traceWith tracer $ Drop outId clock source destination outMessage outBytes
                     go $
@@ -129,16 +147,12 @@ runNetwork tracer parameters@Parameters{endSlot, experiment} protocol topology i
                   else do
                     let states = network ^. currentStates
                         node = states M.! destination
-                        delay =
-                          if source == controller
-                            then 0
-                            else Peras.IOSim.Network.Types.messageDelay $ (connections topology M.! source) M.! destination
                         inEnvelope =
                           InEnvelope
                             { origin = source
                             , inId = outId
                             , inMessage = outMessage
-                            , inTime = fromRational (fromIntegral delay % 1000000) `addUTCTime` outTime
+                            , inTime = fromRational (fromIntegral (fromJust delay) % 1000000) `addUTCTime` outTime
                             , inBytes = outBytes
                             }
                     (result, node') <- handleMessage node context inEnvelope
