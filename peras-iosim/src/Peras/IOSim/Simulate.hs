@@ -29,10 +29,11 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 
 simulation ::
   forall s.
+  Bool ->
   Parameters ->
   Protocol ->
   IOSim s NetworkState
-simulation parameters@Parameters{..} protocol =
+simulation verbose parameters@Parameters{..} protocol =
   do
     let (gen, gen') = split $ mkStdGen randomSeed
         tracer :: Tracer (IOSim s) Event
@@ -44,17 +45,18 @@ simulation parameters@Parameters{..} protocol =
           topology' <- randomTopology parameters
           states' <- initializeNodes parameters topology'
           pure (topology', states')
-    runNetwork tracer parameters protocol topology states $
+    runNetwork verbose tracer parameters protocol topology states $
       def & networkRandom .~ gen'
 
 simulate ::
+  Bool ->
   Parameters ->
   Protocol ->
   Bool ->
   (Either Failure NetworkState, Maybe (SimTrace NetworkState))
-simulate parameters protocol False = (runSim $ simulation parameters protocol, Nothing)
-simulate parameters protocol True =
-  let trace = runSimTrace $ simulation parameters protocol
+simulate verbose parameters protocol False = (runSim $ simulation verbose parameters protocol, Nothing)
+simulate verbose parameters protocol True =
+  let trace = runSimTrace $ simulation verbose parameters protocol
    in (traceResult False trace, Just trace)
 
 writeTrace ::
