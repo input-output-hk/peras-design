@@ -22,8 +22,8 @@ import Data.Bifunctor (bimap)
 import Data.Default (Default (..))
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
-import Peras.Block (Block (..), BlockBody (..), Party (..))
-import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
+import Peras.Block (Block (..), BlockBody (..), Certificate (..), Party (..))
+import Peras.Chain (Chain, RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
 import Peras.Event (Event (..), UniqueId (..))
 import Peras.Message (Message (..), NodeId (..))
@@ -78,6 +78,13 @@ instance ToJSON Party
 instance FromJSONKey Party
 instance ToJSONKey Party
 
+deriving stock instance Generic Certificate
+deriving stock instance Ord Certificate
+deriving stock instance Read Certificate
+deriving stock instance Show Certificate
+instance FromJSON Certificate
+instance ToJSON Certificate
+
 deriving stock instance Generic Block
 deriving stock instance Ord Block
 deriving stock instance Read Block
@@ -126,15 +133,8 @@ deriving stock instance Show Vote
 instance FromJSON Vote
 instance ToJSON Vote
 
-deriving stock instance Generic Chain
-deriving stock instance Ord Chain
-deriving stock instance Read Chain
-deriving stock instance Show Chain
-instance FromJSON Chain
-instance ToJSON Chain
-
 instance Default Chain where
-  def = MkChain mempty mempty
+  def = []
 
 -- Orphans for `Peras.Crypto`.
 

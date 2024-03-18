@@ -5,12 +5,10 @@
             "payload": {
                 "contents": {
                     "bodyHash": "cfff9ad5502ee5f1",
+                    "certificate": {
+                        "votingRoundNumber": 8
+                    },
                     "creatorId": 26,
-                    "includedVotes": [
-                        "883a24c844d41f5f",
-                        "c1cecac99081f513",
-                        "1674c4ad2488658d"
-                    ],
                     "leadershipProof": "0119e4187c01c9ae",
                     "parentBlock": "2fb56a55e2df44df",
                     "signature": "a417d265d2190b29",

@@ -1,0 +1,687 @@
+{
+    "samples": [
+        [
+            {
+                "bodyHash": "d17be7f1a6c9b717",
+                "certificate": {
+                    "votingRoundNumber": 1
+                },
+                "creatorId": 22,
+                "leadershipProof": "a588582241bc6961",
+                "parentBlock": "c7c51627bf0bd132",
+                "signature": "a557ba8366862a11",
+                "slotNumber": 15
+            },
+            {
+                "bodyHash": "bd95d0515034e548",
+                "certificate": {
+                    "votingRoundNumber": 16
+                },
+                "creatorId": 29,
+                "leadershipProof": "3d1f2e24860104d2",
+                "parentBlock": "d9d71e8bef9575c6",
+                "signature": "a1a8fc70266548d2",
+                "slotNumber": 21
+            },
+            {
+                "bodyHash": "132c4020cfc32156",
+                "certificate": {
+                    "votingRoundNumber": 21
+                },
+                "creatorId": 4,
+                "leadershipProof": "837914c3e85d8878",
+                "parentBlock": "badec5225a688d4d",
+                "signature": "4617d94cc3c71c70",
+                "slotNumber": 4
+            },
+            {
+                "bodyHash": "d15159feafd484b0",
+                "certificate": {
+                    "votingRoundNumber": 19
+                },
+                "creatorId": 21,
+                "leadershipProof": "777bf8679fa0d9c4",
+                "parentBlock": "7053e739b6f3d373",
+                "signature": "813437975119deb4",
+                "slotNumber": 26
+            },
+            {
+                "bodyHash": "61646cd78218f0d0",
+                "certificate": {
+                    "votingRoundNumber": 6
+                },
+                "creatorId": 26,
+                "leadershipProof": "fd4becdfff9b7a67",
+                "parentBlock": "9087a136c7173d6e",
+                "signature": "2eb4104c5c24e71b",
+                "slotNumber": 14
+            },
+            {
+                "bodyHash": "ab39886a6555a4b7",
+                "certificate": null,
+                "creatorId": 16,
+                "leadershipProof": "61cb1ffc38d73d6f",
+                "parentBlock": "3fdd87b13e89302d",
+                "signature": "974374c3d8367b63",
+                "slotNumber": 25
+            },
+            {
+                "bodyHash": "d85ea34e318e5121",
+                "certificate": null,
+                "creatorId": 16,
+                "leadershipProof": "5ab7a2a1a6622c1d",
+                "parentBlock": "6a1e25b6fdad4396",
+                "signature": "39d70adf6c693d58",
+                "slotNumber": 24
+            },
+            {
+                "bodyHash": "7fd70f21fb58f74a",
+                "certificate": {
+                    "votingRoundNumber": 26
+                },
+                "creatorId": 19,
+                "leadershipProof": "84881ee57edac453",
+                "parentBlock": "819ca674ecb823b3",
+                "signature": "4f7caf806d2b6f77",
+                "slotNumber": 13
+            }
+        ],
+        [
+            {
+                "bodyHash": "b711bd87496cc13d",
+                "certificate": {
+                    "votingRoundNumber": 29
+                },
+                "creatorId": 23,
+                "leadershipProof": "afbb40ae7637c103",
+                "parentBlock": "725aacba859b5703",
+                "signature": "837488f3d6bb126f",
+                "slotNumber": 29
+            },
+            {
+                "bodyHash": "72b5fc0bd7374123",
+                "certificate": {
+                    "votingRoundNumber": 17
+                },
+                "creatorId": 23,
+                "leadershipProof": "e8d164c2990057d5",
+                "parentBlock": "ac3de2ad1224ba30",
+                "signature": "d65b1a84f4d4e656",
+                "slotNumber": 6
+            },
+            {
+                "bodyHash": "ef052d16b6b938a5",
+                "certificate": {
+                    "votingRoundNumber": 2
+                },
+                "creatorId": 18,
+                "leadershipProof": "36966c8cd625c5aa",
+                "parentBlock": "fd095c32c2a662a8",
+                "signature": "6a838ec4a8d2c3da",
+                "slotNumber": 1
+            },
+            {
+                "bodyHash": "8e6acb7cb7cc0490",
+                "certificate": {
+                    "votingRoundNumber": 20
+                },
+                "creatorId": 0,
+                "leadershipProof": "f5de305eae820c01",
+                "parentBlock": "c0a135c1b45e27e9",
+                "signature": "68b5545e324cb802",
+                "slotNumber": 27
+            },
+            {
+                "bodyHash": "8d9d4a5d56fc83f9",
+                "certificate": {
+                    "votingRoundNumber": 17
+                },
+                "creatorId": 24,
+                "leadershipProof": "6f5043f15e3adf18",
+                "parentBlock": "eb2c056795c442b0",
+                "signature": "0669b149f1b4dffc",
+                "slotNumber": 25
+            },
+            {
+                "bodyHash": "21bfdef4a0e17c5a",
+                "certificate": {
+                    "votingRoundNumber": 12
+                },
+                "creatorId": 30,
+                "leadershipProof": "7a74d225ff586329",
+                "parentBlock": "8b65ca6bf8373087",
+                "signature": "2268115eee7827f6",
+                "slotNumber": 29
+            },
+            {
+                "bodyHash": "6eba4dbf37583c69",
+                "certificate": {
+                    "votingRoundNumber": 24
+                },
+                "creatorId": 5,
+                "leadershipProof": "257e2ff9706d41ba",
+                "parentBlock": "cb0a17e9170f439f",
+                "signature": "450ef7b703f78ea9",
+                "slotNumber": 13
+            },
+            {
+                "bodyHash": "3623633421b03d99",
+                "certificate": {
+                    "votingRoundNumber": 3
+                },
+                "creatorId": 11,
+                "leadershipProof": "423ce10f4c688b92",
+                "parentBlock": "1d9ab256a9f1d810",
+                "signature": "6b71c92c661bde58",
+                "slotNumber": 9
+            },
+            {
+                "bodyHash": "b409c6d426c11662",
+                "certificate": {
+                    "votingRoundNumber": 23
+                },
+                "creatorId": 11,
+                "leadershipProof": "d4f7cfe13361f8a3",
+                "parentBlock": "7ebc75c228bb5d23",
+                "signature": "16547b627598b6cf",
+                "slotNumber": 22
+            },
+            {
+                "bodyHash": "05e7a29c1c8cd029",
+                "certificate": {
+                    "votingRoundNumber": 2
+                },
+                "creatorId": 17,
+                "leadershipProof": "389927ec5ff864bb",
+                "parentBlock": "2a431b72298df48e",
+                "signature": "34e437cc6491ae16",
+                "slotNumber": 4
+            },
+            {
+                "bodyHash": "0dc90155bdcc56aa",
+                "certificate": {
+                    "votingRoundNumber": 3
+                },
+                "creatorId": 14,
+                "leadershipProof": "c57c3f0987ae0e83",
+                "parentBlock": "49180e5c7d3d9ea6",
+                "signature": "368d65dd773d7e59",
+                "slotNumber": 19
+            },
+            {
+                "bodyHash": "283d4af0a784616c",
+                "certificate": null,
+                "creatorId": 2,
+                "leadershipProof": "bc23c2c4e79347da",
+                "parentBlock": "1285983da1738f88",
+                "signature": "123a9c649f409a42",
+                "slotNumber": 15
+            },
+            {
+                "bodyHash": "a5606aefc16b1975",
+                "certificate": null,
+                "creatorId": 7,
+                "leadershipProof": "1e57858e631e7bee",
+                "parentBlock": "bc46b732e311f916",
+                "signature": "3bd2edadf27a7ede",
+                "slotNumber": 29
+            },
+            {
+                "bodyHash": "0a16949d275f5619",
+                "certificate": null,
+                "creatorId": 23,
+                "leadershipProof": "7356ed93a3b7d496",
+                "parentBlock": "c872b8372245d235",
+                "signature": "b19fdfa246eb2346",
+                "slotNumber": 14
+            },
+            {
+                "bodyHash": "4c40e205e8044b6a",
+                "certificate": {
+                    "votingRoundNumber": 27
+                },
+                "creatorId": 17,
+                "leadershipProof": "9dcd1d69428e825b",
+                "parentBlock": "c98f2c08230b0fb9",
+                "signature": "eaba14bdf8e4d7e9",
+                "slotNumber": 1
+            },
+            {
+                "bodyHash": "d9dfb29a14f2fc6b",
+                "certificate": null,
+                "creatorId": 11,
+                "leadershipProof": "fc88040bb8d464b6",
+                "parentBlock": "41f4734760f4236e",
+                "signature": "6aa9675274fae33c",
+                "slotNumber": 17
+            },
+            {
+                "bodyHash": "e7f63f090d1c264e",
+                "certificate": null,
+                "creatorId": 2,
+                "leadershipProof": "2602bdf6ae5753e3",
+                "parentBlock": "4ca2aeae4833c5dc",
+                "signature": "2ef8c7897fc888a2",
+                "slotNumber": 8
+            },
+            {
+                "bodyHash": "75d33a5b1f55b54a",
+                "certificate": {
+                    "votingRoundNumber": 2
+                },
+                "creatorId": 21,
+                "leadershipProof": "f04f17c66da106db",
+                "parentBlock": "1a37a38913a70381",
+                "signature": "54acc98f8973f3e3",
+                "slotNumber": 21
+            },
+            {
+                "bodyHash": "dab6f88759eb21a4",
+                "certificate": null,
+                "creatorId": 29,
+                "leadershipProof": "925cdb2edc328bbc",
+                "parentBlock": "403ca53cb87aab3e",
+                "signature": "598411e5b9d5d60a",
+                "slotNumber": 27
+            },
+            {
+                "bodyHash": "3cbd173bb4656169",
+                "certificate": {
+                    "votingRoundNumber": 23
+                },
+                "creatorId": 14,
+                "leadershipProof": "51ebda42e6d46c30",
+                "parentBlock": "f713a0f9e023a53e",
+                "signature": "eaa5c810574f003a",
+                "slotNumber": 7
+            }
+        ],
+        [
+            {
+                "bodyHash": "6cd3f8dbc419caf1",
+                "certificate": null,
+                "creatorId": 5,
+                "leadershipProof": "25337754aba3a288",
+                "parentBlock": "4a111c6a825d7926",
+                "signature": "c01b12b2a05c990c",
+                "slotNumber": 2
+            },
+            {
+                "bodyHash": "e6f664b8c7026ca0",
+                "certificate": {
+                    "votingRoundNumber": 22
+                },
+                "creatorId": 6,
+                "leadershipProof": "60cac8f6ada99e77",
+                "parentBlock": "86f6caa7d3d2cb32",
+                "signature": "597daad4079b4e98",
+                "slotNumber": 12
+            },
+            {
+                "bodyHash": "daef37aeed0feaca",
+                "certificate": null,
+                "creatorId": 5,
+                "leadershipProof": "4da17da418e34211",
+                "parentBlock": "648ce1202bb15d2d",
+                "signature": "70b2036c63506788",
+                "slotNumber": 19
+            },
+            {
+                "bodyHash": "c2bf7e7f5a7b4ccb",
+                "certificate": {
+                    "votingRoundNumber": 11
+                },
+                "creatorId": 29,
+                "leadershipProof": "0bfec50dfa81e0ee",
+                "parentBlock": "1d75ef6d8129739b",
+                "signature": "ab3271a16d7cfd07",
+                "slotNumber": 8
+            },
+            {
+                "bodyHash": "54cf270f224884f9",
+                "certificate": {
+                    "votingRoundNumber": 29
+                },
+                "creatorId": 19,
+                "leadershipProof": "ccea5169fc8032c7",
+                "parentBlock": "841485c800066d31",
+                "signature": "01d774ccc1f0dfac",
+                "slotNumber": 28
+            },
+            {
+                "bodyHash": "84c60f66309e6241",
+                "certificate": {
+                    "votingRoundNumber": 6
+                },
+                "creatorId": 6,
+                "leadershipProof": "d846190023738137",
+                "parentBlock": "0c6614d10f91fc56",
+                "signature": "24f2938bd83ce428",
+                "slotNumber": 10
+            },
+            {
+                "bodyHash": "cdbae59753e19448",
+                "certificate": null,
+                "creatorId": 26,
+                "leadershipProof": "3fd64df83e5b6c67",
+                "parentBlock": "4f7be6d66ab6a361",
+                "signature": "72bde85668ccb8ed",
+                "slotNumber": 19
+            },
+            {
+                "bodyHash": "7f87136907865383",
+                "certificate": {
+                    "votingRoundNumber": 17
+                },
+                "creatorId": 19,
+                "leadershipProof": "4bbfb5d59d656ed9",
+                "parentBlock": "d36be6b42d219287",
+                "signature": "71dac5ac36312694",
+                "slotNumber": 30
+            },
+            {
+                "bodyHash": "941a99afeac8dcbd",
+                "certificate": {
+                    "votingRoundNumber": 19
+                },
+                "creatorId": 21,
+                "leadershipProof": "749929fa37a5fcf7",
+                "parentBlock": "58b657d1ecf47dbc",
+                "signature": "b112ae4ab8673b9d",
+                "slotNumber": 14
+            },
+            {
+                "bodyHash": "12d265af71ea2cd8",
+                "certificate": {
+                    "votingRoundNumber": 18
+                },
+                "creatorId": 28,
+                "leadershipProof": "b95fd4b3512f0532",
+                "parentBlock": "752662e3f844f0fd",
+                "signature": "103f76ad67690edf",
+                "slotNumber": 9
+            },
+            {
+                "bodyHash": "84abe4ec7dfd2160",
+                "certificate": {
+                    "votingRoundNumber": 19
+                },
+                "creatorId": 0,
+                "leadershipProof": "17d27e3b83630945",
+                "parentBlock": "57989cf11e75a007",
+                "signature": "60b520ca5fbfd09f",
+                "slotNumber": 4
+            },
+            {
+                "bodyHash": "4e708578ae669c23",
+                "certificate": {
+                    "votingRoundNumber": 26
+                },
+                "creatorId": 10,
+                "leadershipProof": "4df63e3da1dbecdc",
+                "parentBlock": "ef9afc104dac7473",
+                "signature": "82188f702b7f89ee",
+                "slotNumber": 18
+            },
+            {
+                "bodyHash": "f8300a35ef3d6b7f",
+                "certificate": {
+                    "votingRoundNumber": 13
+                },
+                "creatorId": 10,
+                "leadershipProof": "efc72ddca0a5eab0",
+                "parentBlock": "84e0b6e661dfc92d",
+                "signature": "56de42ab8e9c3e6a",
+                "slotNumber": 19
+            }
+        ],
+        [
+            {
+                "bodyHash": "030919f7e29e94dd",
+                "certificate": null,
+                "creatorId": 30,
+                "leadershipProof": "910f15622b59a728",
+                "parentBlock": "6b04936a30058e14",
+                "signature": "a5f7e6a77a96d75b",
+                "slotNumber": 12
+            },
+            {
+                "bodyHash": "d661f710441289c5",
+                "certificate": {
+                    "votingRoundNumber": 18
+                },
+                "creatorId": 29,
+                "leadershipProof": "559ba58e79cccc00",
+                "parentBlock": "e63c26a201ead7d0",
+                "signature": "49e52745ffbe9428",
+                "slotNumber": 3
+            },
+            {
+                "bodyHash": "1faa0a49b2e82e5b",
+                "certificate": {
+                    "votingRoundNumber": 10
+                },
+                "creatorId": 11,
+                "leadershipProof": "f2fa0920067519b7",
+                "parentBlock": "2d6d91e382de2089",
+                "signature": "c16525a3b6c764a3",
+                "slotNumber": 14
+            },
+            {
+                "bodyHash": "d0dce483c3f4fdd8",
+                "certificate": {
+                    "votingRoundNumber": 4
+                },
+                "creatorId": 20,
+                "leadershipProof": "99a6e245903cdb74",
+                "parentBlock": "2945fabaebcd53ac",
+                "signature": "8b658315e4ac8c5d",
+                "slotNumber": 8
+            },
+            {
+                "bodyHash": "f10934e4c5a098a4",
+                "certificate": null,
+                "creatorId": 10,
+                "leadershipProof": "5e949efd71206e27",
+                "parentBlock": "91119547dc0b9c47",
+                "signature": "d26a29112db730bf",
+                "slotNumber": 13
+            },
+            {
+                "bodyHash": "62e7504593d21f65",
+                "certificate": {
+                    "votingRoundNumber": 0
+                },
+                "creatorId": 1,
+                "leadershipProof": "cc662581c58cc345",
+                "parentBlock": "e3b405a9ed5f137e",
+                "signature": "f4a6857f5f4d3f73",
+                "slotNumber": 5
+            },
+            {
+                "bodyHash": "a43ceeab7eb22517",
+                "certificate": {
+                    "votingRoundNumber": 30
+                },
+                "creatorId": 7,
+                "leadershipProof": "a6c898873f411a76",
+                "parentBlock": "45bd88b0879ccc20",
+                "signature": "7eb4244e3239761d",
+                "slotNumber": 25
+            },
+            {
+                "bodyHash": "78d96e0d765e29d9",
+                "certificate": {
+                    "votingRoundNumber": 8
+                },
+                "creatorId": 7,
+                "leadershipProof": "18f6b4caf1f49aab",
+                "parentBlock": "08eee58bf95146fe",
+                "signature": "d66c21d1e8189812",
+                "slotNumber": 1
+            },
+            {
+                "bodyHash": "f4a124d25c36a1b2",
+                "certificate": {
+                    "votingRoundNumber": 18
+                },
+                "creatorId": 17,
+                "leadershipProof": "a5dc146c08298713",
+                "parentBlock": "a3828564bb26a493",
+                "signature": "3f7b09ad8a2d8e29",
+                "slotNumber": 11
+            },
+            {
+                "bodyHash": "f38863fe6d69ddb1",
+                "certificate": {
+                    "votingRoundNumber": 22
+                },
+                "creatorId": 7,
+                "leadershipProof": "1341e9e41b20a170",
+                "parentBlock": "34b7a7bd987c4cca",
+                "signature": "dc6be0743f04d165",
+                "slotNumber": 21
+            },
+            {
+                "bodyHash": "75f9c69f43276427",
+                "certificate": {
+                    "votingRoundNumber": 20
+                },
+                "creatorId": 24,
+                "leadershipProof": "d36923d603466573",
+                "parentBlock": "3bcb92a2b8f806fd",
+                "signature": "918a4acfb5502535",
+                "slotNumber": 28
+            },
+            {
+                "bodyHash": "a1fb2bb6e3f40945",
+                "certificate": null,
+                "creatorId": 18,
+                "leadershipProof": "beedbf05029dc0c0",
+                "parentBlock": "b333c7aacf1065c0",
+                "signature": "c054b6f0fbd16b11",
+                "slotNumber": 16
+            },
+            {
+                "bodyHash": "fcb8b3e1e0eba0e0",
+                "certificate": {
+                    "votingRoundNumber": 3
+                },
+                "creatorId": 28,
+                "leadershipProof": "02646647ef402a51",
+                "parentBlock": "e8f19354254c0ee7",
+                "signature": "ff90c79036f07fe5",
+                "slotNumber": 17
+            },
+            {
+                "bodyHash": "03e2cc197c793db6",
+                "certificate": {
+                    "votingRoundNumber": 9
+                },
+                "creatorId": 0,
+                "leadershipProof": "e96d41fec2dfeb3e",
+                "parentBlock": "914da30a4f08ea33",
+                "signature": "6841ac3271a2054a",
+                "slotNumber": 4
+            },
+            {
+                "bodyHash": "266575bb7446c871",
+                "certificate": null,
+                "creatorId": 6,
+                "leadershipProof": "3256a705f21f38c7",
+                "parentBlock": "2deb4a15fb2ccb0b",
+                "signature": "8f8d7fcdab78d2f8",
+                "slotNumber": 29
+            },
+            {
+                "bodyHash": "6c8f97514bed21b1",
+                "certificate": {
+                    "votingRoundNumber": 17
+                },
+                "creatorId": 18,
+                "leadershipProof": "3888651f767780e7",
+                "parentBlock": "d71c4766946b84bb",
+                "signature": "ef745d6c39c9b3d5",
+                "slotNumber": 17
+            },
+            {
+                "bodyHash": "a89f6ca41630aebd",
+                "certificate": {
+                    "votingRoundNumber": 9
+                },
+                "creatorId": 14,
+                "leadershipProof": "6c61367e02dda51a",
+                "parentBlock": "f6217c20f442ecf0",
+                "signature": "1b6bbd917e1acdfd",
+                "slotNumber": 28
+            },
+            {
+                "bodyHash": "95dd4e76beb3b1ad",
+                "certificate": {
+                    "votingRoundNumber": 1
+                },
+                "creatorId": 0,
+                "leadershipProof": "923a5a4bc232d584",
+                "parentBlock": "ec3be2342110554e",
+                "signature": "897f01657a20453c",
+                "slotNumber": 2
+            },
+            {
+                "bodyHash": "45a96dafa3aaf040",
+                "certificate": {
+                    "votingRoundNumber": 0
+                },
+                "creatorId": 0,
+                "leadershipProof": "6720cfce8d60abce",
+                "parentBlock": "2ece3640e73572e8",
+                "signature": "6920f94cea6b9261",
+                "slotNumber": 24
+            },
+            {
+                "bodyHash": "1c6a4053a0298be3",
+                "certificate": null,
+                "creatorId": 7,
+                "leadershipProof": "9cf24aa540694353",
+                "parentBlock": "01c3c077796ca825",
+                "signature": "f9972c3cedf8cbe7",
+                "slotNumber": 1
+            }
+        ],
+        [
+            {
+                "bodyHash": "32f81e34e8734b92",
+                "certificate": {
+                    "votingRoundNumber": 28
+                },
+                "creatorId": 6,
+                "leadershipProof": "e29e60430c2c210b",
+                "parentBlock": "2dd51f95d7391978",
+                "signature": "bf5483f5dba5e599",
+                "slotNumber": 16
+            },
+            {
+                "bodyHash": "e5aacc8c95fb00ef",
+                "certificate": {
+                    "votingRoundNumber": 12
+                },
+                "creatorId": 7,
+                "leadershipProof": "b1986aa10d584430",
+                "parentBlock": "1d9703d5ea84ffd3",
+                "signature": "1ac01241f6448edd",
+                "slotNumber": 2
+            },
+            {
+                "bodyHash": "4351c8e4168ec15b",
+                "certificate": {
+                    "votingRoundNumber": 15
+                },
+                "creatorId": 13,
+                "leadershipProof": "e002a7eacf41b844",
+                "parentBlock": "234418f37324fa15",
+                "signature": "703ad3f2de9b833e",
+                "slotNumber": 3
+            }
+        ]
+    ],
+    "seed": 1577654517
+}

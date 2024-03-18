@@ -92,7 +92,7 @@ module _ {block₀ : Block}
 ```
 ```agda
   getCert : RoundNumber → List Certificate → Maybe Certificate
-  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ Certificate.roundNumber)
+  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ votingRoundNumber)
 ```
 
 ## BlockTree
@@ -264,7 +264,7 @@ In a cooldown period there is no voting.
 
       Regular : ∀ {c cs r t certₛ}
         → just certₛ ≡ latestCertSeen blockTree t
-        → let rₛ = Certificate.roundNumber certₛ
+        → let rₛ = votingRoundNumber certₛ
         in
           rₛ + 1 ≥ r
         → Reference certₛ c
@@ -272,7 +272,7 @@ In a cooldown period there is no voting.
 
       AfterCooldown : ∀ {chain cs r c t certₛ}
         → just certₛ ≡ latestCertSeen blockTree t
-        → let rₛ = Certificate.roundNumber certₛ
+        → let rₛ = votingRoundNumber certₛ
         in
           c > 0
         → r ≥ R + rₛ

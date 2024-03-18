@@ -8,8 +8,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (..), BlockBody (..))
-import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
+import Peras.Block (Block (..), BlockBody (..), Certificate (..))
+import Peras.Chain (RoundNumber (..), Vote (..))
 import Peras.Crypto (
   Hash (..),
   LeadershipProof (..),
@@ -47,10 +47,11 @@ instance Arbitrary VerificationKey where
 genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
 
+instance Arbitrary Certificate where
+  arbitrary = genericArbitrary uniform
+
 instance Arbitrary Block where
   arbitrary = genericArbitrary uniform
-  shrink block@Block{includedVotes} =
-    [block{includedVotes = includedVotes'} | includedVotes' <- shrink includedVotes]
 
 instance Arbitrary BlockBody where
   arbitrary = genericArbitrary uniform
@@ -68,9 +69,6 @@ instance Arbitrary Vote where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
-instance Arbitrary Chain where
-  arbitrary = MkChain <$> arbitrary <*> arbitrary
 
 instance Arbitrary Message where
   arbitrary = genericArbitrary uniform

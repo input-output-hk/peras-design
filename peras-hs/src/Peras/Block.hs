@@ -14,11 +14,14 @@ type Tx = ()
 
 type Slot = Natural
 
+data Certificate = Certificate {votingRoundNumber :: Natural}
+  deriving (Eq)
+
 data Block = Block
   { slotNumber :: Slot
   , creatorId :: PartyId
   , parentBlock :: Hash
-  , includedVotes :: [Hash]
+  , certificate :: Maybe Certificate
   , leadershipProof :: LeadershipProof
   , signature :: Signature
   , bodyHash :: Hash

@@ -103,8 +103,16 @@ hashes of included votes.
 
 ```agda
 record Certificate : Set where
-  field roundNumber : ℕ
+  field votingRoundNumber : ℕ
 
+open Certificate public
+```
+<!--
+```agda
+{-# COMPILE AGDA2HS Certificate deriving Eq #-}
+```
+-->
+```agda
 record Block : Set where
   field slotNumber : Slot
         creatorId : PartyId
