@@ -1,3 +1,85 @@
+## 2024-03-18
+
+### Innovation stream steering committee
+
+Shared a few issues with the steering committee regarding relationship
+between Engineering and Research in the context of innovation
+projects.
+
+1. How to improve communication between the 2 departments in order to
+   shorten feedback loop and ensure we both keep up with each other's
+   work?
+2. How to make the formal modelling effort useful both for engineering
+   and for research?
+3. How to maximize reuse of tools across teams and departments
+   (eg. not duplicate effort in implementing network simulation)?
+
+### AB - Understanding newer version of Peras
+
+Trying to understand better the newest version of the protocol, I drew some diagram:
+
+![Peras with Certificates](docs/diagrams/peras-with-certs.jpg)
+
+Also shared my understanding of the potential benefits of ΔQ analysis:
+
+* My understanding is that the Delta-Q methodology was applied for the
+  development of Shelley and lead the engineering team behind this
+  development to fix the critical parameter Δ to 5s. This parameter is
+  very important because the security argument of Ourobouros Praos, as
+  far as I understand it, rests on partial synchrony assumption about
+  network diffusion, and the actual value of `k` is derived from this
+  bound
+* The aforementioned paper section 4 describes what I think is the
+  process that lead to this definition, namely the modeling of various
+  characteristics of the network at a high-level:
+    * Average time of TCP transmission for various block sizes gives a
+      baseline for a single hop diffusion assuming uniform
+      distribution of various classes of distances (small, medium,
+      long), yielding a CDF for one block on one hop
+    * The characteristics of the network (number of nodes,
+      connectivity of each node) yields a probability distribution for
+      the number of hops a single block needs to go through to travel
+      between any 2 arbitrary pair of nodes
+    * The Delta-Q language provides combinators and their semantics to
+      build a global cumulative distribution function from those
+      building blocks that tells us what to expect depending on
+      various packets size, using some numerical operations on the
+      individual CDFs
+    * This modeling also takes into account the probability of failure
+      yielding so-called _Improper Random Variables_ and a global
+      distribution of the probability of failure
+* In the case of Shelley, I think this modeling was done somewhat
+  informally and one of the thing I have asked @neil and @Peter
+  (PNSol) is to dig or rebuild a Delta-Q model for Praos as we'll need
+  it to contrast it with and without Peras
+* While I must confess I was initially quite puzzled by Delta-Q and it
+  did not "click", reading the paper and poking around on
+  https://pnsol.com website for other articles lead to some kind of
+  "illumination", and ultimately helped me appreciate the potential
+  benefits of this approach. Having the ability to quickly model the
+  expected performance profile a complex networked system is, IMHO,
+  invaluable to quickly weed out infeasible solutions.
+* This does not preclude other approaches, and in particular I think
+  Delta-Q modeling complements more "traditional" network simulation
+  approaches, and one reinforces the others: If the simulation results
+  are widely off w.r.t Delta-Q, that's strong evidence something might
+  be off in our reasoning, in either or both models.
+    * In Peras, we are _also_ building simulations as they help us
+      refine our understanding of the system we plan to build, and
+      they are amenable to finer grained analysis and experiments. For
+      example, simulations would allow us to test the system under
+      various adversarial behaviours in a more precise way than the
+      Delta-Q model would allow
+    * Moreover, it could be the case that we can merge both approaches
+      in order to simplify and scale up the simulation's handling of
+      messages: If we have a Delta-Q model as an IRV, we can use that
+      model as a function to compute the delay (and possible loss) for
+      all messages emitted by nodes in the simulation without having
+      to explicitly simulate individual links.
+* It might be the case Delta-Q is not suitable for modelling FastBFT,
+  that's a call I am unable to make of course. And that's perfectly
+  fine.
+
 ## 2024-03-17
 
 ## Redesign of Peras IOSim
