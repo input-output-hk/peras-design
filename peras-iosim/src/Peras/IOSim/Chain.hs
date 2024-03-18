@@ -8,35 +8,22 @@ module Peras.IOSim.Chain (
   addChain,
   addVote,
   appendBlock,
-  blockInWindow,
-  blockOnChain,
   blockTree,
   blockTrees,
   blocksInWindow,
   eligibleDanglingVotes,
   filterDanglingVotes,
-  filterVotesByRound,
-  indexChain,
   isBlockOnChain,
-  isVoteRecordedOnChain,
   lookupBlock,
-  lookupRound,
   lookupRoundForChain,
-  lookupVote',
   lookupVote,
   preferChain,
   resolveBlock,
   resolveBlocksOnChain,
-  voteOnChain',
-  voteOnChain,
   voteRecorded,
-  votesForBlocksOnChain',
-  votesForBlocksOnChain,
-  votesRecordedOnChain',
-  votesRecordedOnChain,
 ) where
 
-import Control.Monad (filterM, unless, (<=<))
+import Control.Monad (filterM, unless)
 import Control.Monad.Except (throwError)
 import Data.Default (Default (def))
 import Data.Foldable (foldr')
@@ -68,9 +55,6 @@ blockTrees states =
 
 blockTree :: ChainState -> BlockTree
 blockTree = blockTrees . pure
-
-indexChain :: Chain -> Either Invalid ChainState
-indexChain = flip preferChain def
 
 preferChain :: Chain -> ChainState -> Either Invalid ChainState
 preferChain chain state =
@@ -186,9 +170,6 @@ lookupRoundForChain r state chain =
 isBlockOnChain :: ChainState -> BlockHash -> Bool
 isBlockOnChain = flip S.notMember . danglingBlocks
 
-isVoteRecordedOnChain :: ChainState -> VoteHash -> Bool
-isVoteRecordedOnChain = flip S.notMember . danglingVotes
-
 resolveBlock :: ChainState -> Vote -> Either Invalid VoteWithBlock
 resolveBlock state vote =
   do
@@ -199,32 +180,6 @@ resolveBlocksOnChain :: ChainState -> Either Invalid [VoteWithBlock]
 resolveBlocksOnChain state =
   mapM (resolveBlock state) . M.elems $
     M.withoutKeys (voteIndex state) (danglingVotes state)
-
-votesRecordedOnChain :: Chain -> Either Invalid [VoteWithBlock]
-votesRecordedOnChain = resolveBlocksOnChain <=< indexChain
-
-votesRecordedOnChain' :: Chain -> Either Invalid [Vote]
-votesRecordedOnChain' chain =
-  do
-    state <- indexChain chain
-    pure . M.elems $
-      M.withoutKeys (voteIndex state) (danglingVotes state)
-
-votesForBlocksOnChain :: Chain -> Either Invalid [VoteWithBlock]
-votesForBlocksOnChain chain =
-  do
-    state <- indexChain chain
-    let hashes = M.keysSet (blockIndex state) `S.difference` danglingBlocks state
-    mapM (resolveBlock state) . M.elems $
-      M.filter ((`S.member` hashes) . blockHash) (voteIndex state)
-
-votesForBlocksOnChain' :: Chain -> Either Invalid [Vote]
-votesForBlocksOnChain' chain =
-  do
-    state <- indexChain chain
-    let hashes = M.keysSet (blockIndex state) `S.difference` danglingBlocks state
-    pure . M.elems $
-      M.filter ((`S.member` hashes) . blockHash) (voteIndex state)
 
 eligibleDanglingVotes :: ChainState -> Either Invalid [VoteHash]
 eligibleDanglingVotes state =
@@ -240,26 +195,11 @@ filterDanglingVotes f state =
     { danglingVotes = S.filter (either (const False) f . flip lookupVote state) $ danglingVotes state
     }
 
-filterVotesByRound :: (VoteWithBlock -> Bool) -> ChainState -> ChainState
-filterVotesByRound f state =
-  state
-    { votesByRound = M.map (M.map $ S.filter (either (const False) f . flip lookupVote state)) $ votesByRound state
-    }
-
 blockInWindow :: (Slot, Slot) -> Block -> Bool
 blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotNumber <= newest
 
 blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
 blocksInWindow window = filter (blockInWindow window) . blocks
-
-voteOnChain :: Chain -> Vote -> Bool
-voteOnChain MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
-
-voteOnChain' :: Chain -> Vote -> Bool
-voteOnChain' MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
-
-blockOnChain :: Chain -> Block -> Bool
-blockOnChain MkChain{blocks} block = any ((== hashBlock block) . hashBlock) blocks
 
 voteRecorded :: Chain -> Vote -> [Block]
 voteRecorded MkChain{blocks} vote = filter ((hashVote vote `elem`) . includedVotes) blocks
