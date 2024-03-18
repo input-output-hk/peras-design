@@ -5,6 +5,7 @@
 module Peras.IOSim.Chain (
   Invalid (..),
   addBlock,
+  addBody,
   addChain,
   addVote,
   appendBlock,
@@ -28,10 +29,10 @@ import Control.Monad.Except (throwError)
 import Data.Default (Default (def))
 import Data.Foldable (foldr')
 import Data.Maybe (fromMaybe)
-import Peras.Block (Block (..), Slot)
+import Peras.Block (Block (..), BlockBody, Slot)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
-import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashVote)
+import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashBody, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
 import Peras.IOSim.Types (VoteWithBlock)
 import Peras.Orphans ()
@@ -144,6 +145,15 @@ addVote (vote, block) state =
             , danglingVotes = S.insert vhash $ danglingVotes state
             , votesByRound = M.insertWith M.union r (M.singleton bhash $ S.singleton vhash) $ votesByRound state
             }
+
+addBody :: BlockBody -> ChainState -> Either Invalid ChainState
+addBody body state =
+  let
+    bhash = hashBody body
+   in
+    if bhash `M.member` blockIndex state
+      then pure state{bodyIndex = M.insert bhash body $ bodyIndex state}
+      else throwError HashOfUnknownBlock
 
 lookupBlock :: BlockHash -> ChainState -> Either Invalid Block
 lookupBlock hash ChainState{blockIndex} =

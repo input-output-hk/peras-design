@@ -9,9 +9,9 @@ module Peras.IOSim.Chain.Types (
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
-import Peras.Block (Block (..))
-import Peras.Chain (Chain (..), RoundNumber, Vote)
-import Peras.IOSim.Hash (BlockHash, VoteHash)
+import Peras.Block (Block, BlockBody)
+import Peras.Chain (Chain, RoundNumber, Vote)
+import Peras.IOSim.Hash (BlockHash, BodyHash, VoteHash)
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
 
@@ -24,6 +24,7 @@ type BlockTree = T.Forest Block
 data ChainState = ChainState
   { preferredChain :: Chain
   , blockIndex :: M.Map BlockHash Block
+  , bodyIndex :: M.Map BodyHash BlockBody
   , voteIndex :: M.Map VoteHash Vote
   , danglingBlocks :: S.Set BlockHash
   , danglingVotes :: S.Set VoteHash
@@ -35,7 +36,7 @@ instance FromJSON ChainState
 instance ToJSON ChainState
 
 instance Default ChainState where
-  def = ChainState def def def def def def
+  def = ChainState def def def def def def def
 
 instance Arbitrary ChainState where
   arbitrary = pure def
