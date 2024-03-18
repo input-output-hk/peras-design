@@ -33,8 +33,6 @@ library
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
-  other-modules:
-    Control.Monad.IOSim.Orphans
   hs-source-dirs:   src
   build-depends:
     , aeson

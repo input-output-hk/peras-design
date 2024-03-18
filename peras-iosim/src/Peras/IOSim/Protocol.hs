@@ -26,7 +26,6 @@ module Peras.IOSim.Protocol (
 
 import Control.Monad (forM_, unless)
 import Control.Monad.Except (MonadError (throwError))
-import Control.Monad.IOSim.Orphans ()
 import Data.Function (on)
 import Peras.Block (Block (Block, slotNumber), Slot)
 import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
