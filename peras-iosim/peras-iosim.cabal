@@ -60,7 +60,7 @@ library
   ghc-options: 
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints -Widentities
-    -Wunused-packages -Werror
+    -Wunused-packages -Wno-deprecations -Werror
 
 executable peras-iosim
   hs-source-dirs:   app

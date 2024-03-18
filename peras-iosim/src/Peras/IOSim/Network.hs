@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -23,6 +24,7 @@ import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Ratio ((%))
+import Peras.Block (Slot)
 import Peras.Event (Event (Drop))
 import Peras.IOSim.Experiment (
   experimentFactory,
@@ -47,9 +49,30 @@ import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (simulationStart)
 import Peras.Message (Message (..), NodeId (..))
+import System.IO (hPutStr, stderr)
+import System.IO.Unsafe (unsafePerformIO)
+import System.Random (randomRIO)
 
 import qualified Data.Map.Strict as M
 import qualified Data.PQueue.Min as PQ
+
+{-# NOINLINE showProgress #-}
+showProgress :: Bool -> Slot -> UTCTime -> Int -> a -> a
+showProgress True _slot time size x =
+  unsafePerformIO $
+    randomRIO (0 :: Int, 99)
+      >>= \case
+        0 -> do
+          hPutStr stderr $
+            "\r"
+              <> take 15 (show (time `diffUTCTime` simulationStart) <> replicate 15 ' ')
+              <> "\t"
+              <> show size
+              <> " pending"
+              <> replicate 5 ' '
+          pure x
+        _ -> pure x
+showProgress False _ _ _ x = x
 
 emptyTopology ::
   [NodeId] ->
@@ -96,6 +119,7 @@ runNetwork ::
   forall m.
   MonadDelay m =>
   MonadTime m =>
+  Bool ->
   Tracer m Event ->
   Parameters ->
   Protocol ->
@@ -103,7 +127,7 @@ runNetwork ::
   M.Map NodeId SomeNode ->
   NetworkState ->
   m NetworkState
-runNetwork tracer parameters@Parameters{endSlot, experiment} protocol topology initialStates initialNetwork =
+runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol topology initialStates initialNetwork =
   do
     let controller = MkNodeId "controller"
         total = fromMaybe (sum $ getStake <$> initialStates) $ totalStake parameters
@@ -135,35 +159,36 @@ runNetwork tracer parameters@Parameters{endSlot, experiment} protocol topology i
                     if source == controller
                       then Just 0
                       else getDelay topology source destination
-                if veto outEnvelope slot || isNothing delay
-                  then do
-                    traceWith tracer $ Drop outId clock source destination outMessage outBytes
-                    go $
-                      network
-                        & pending .~ pending'
-                        -- FIXME: Remove the following because they are redundant with the new observability.
-                        & lastSlot .~ slot
-                        & lastTime .~ clock
-                  else do
-                    let states = network ^. currentStates
-                        node = states M.! destination
-                        inEnvelope =
-                          InEnvelope
-                            { origin = source
-                            , inId = outId
-                            , inMessage = outMessage
-                            , inTime = fromRational (fromIntegral (fromJust delay) % 1000000) `addUTCTime` outTime
-                            , inBytes = outBytes
-                            }
-                    (result, node') <- handleMessage node context inEnvelope
-                    observeNode (traceWith tracer) destination slot clock inEnvelope result
-                    go $
-                      network
-                        & currentStates .~ M.insert destination node' states
-                        & pending .~ foldr PQ.insert pending' (outputs result)
-                        -- FIXME: Remove the following because they are redundant with the new observability.
-                        & lastSlot .~ slot
-                        & lastTime .~ clock
+                showProgress verbose slot clock (PQ.size pending') $
+                  if veto outEnvelope slot || isNothing delay
+                    then do
+                      traceWith tracer $ Drop outId clock source destination outMessage outBytes
+                      go $
+                        network
+                          & pending .~ pending'
+                          -- FIXME: Remove the following because they are redundant with the new observability.
+                          & lastSlot .~ slot
+                          & lastTime .~ clock
+                    else do
+                      let states = network ^. currentStates
+                          node = states M.! destination
+                          inEnvelope =
+                            InEnvelope
+                              { origin = source
+                              , inId = outId
+                              , inMessage = outMessage
+                              , inTime = fromRational (fromIntegral (fromJust delay) % 1000000) `addUTCTime` outTime
+                              , inBytes = outBytes
+                              }
+                      (result, node') <- handleMessage node context inEnvelope
+                      observeNode (traceWith tracer) destination slot clock inEnvelope result
+                      go $
+                        network
+                          & currentStates .~ M.insert destination node' states
+                          & pending .~ foldr PQ.insert pending' (outputs result)
+                          -- FIXME: Remove the following because they are redundant with the new observability.
+                          & lastSlot .~ slot
+                          & lastTime .~ clock
     go $
       initialNetwork
         & currentStates .~ initialStates

@@ -25,7 +25,7 @@ main =
     Command{..} <- O.execParser commandParser
     parameters <- either (error . show) id <$> Y.decodeFileEither parameterFile
     protocol <- either (error . show) id <$> Y.decodeFileEither protocolFile
-    let (result, trace) = simulate parameters protocol $ isJust traceFile || isJust eventFile
+    let (result, trace) = simulate verbose parameters protocol $ isJust traceFile || isJust eventFile
     whenJust traceFile $
       flip writeTrace $
         fromJust trace
@@ -92,6 +92,7 @@ data Command = Command
   , chainDotFile :: Maybe FilePath
   , chainPngFile :: Maybe FilePath
   , chainSvgFile :: Maybe FilePath
+  , verbose :: Bool
   }
   deriving stock (Eq, Ord, Read, Show)
 
@@ -130,6 +131,10 @@ commandParser =
             ( O.long "chain-svg-file"
                 <> O.metavar "FILE"
                 <> O.help "Path to output SVG file of chain visualizaton. Requires `GraphViz` executable."
+            )
+          <*> O.switch
+            ( O.long "verbose"
+                <> O.help "Whether to print progress during simulation."
             )
    in O.info
         ( O.helper
