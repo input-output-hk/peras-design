@@ -13,7 +13,6 @@ module Peras.IOSim.Node (
 
 import Control.Monad (forM_)
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime, diffUTCTime)
-import Control.Monad.IOSim.Orphans ()
 import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
 import Control.Tracer (Tracer, traceWith)
 import Data.Default (def)
