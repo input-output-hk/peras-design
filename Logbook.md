@@ -1604,8 +1604,10 @@ HLS/LSP: Code action for filling missing variables did not work, so I
 upgraded to latest available `lsp-haskell` but now I get another
 error:
 
-``` Symbol’s value as variable is void:
-lsp-haskell-plugin-cabal-code-actions-on ```
+```
+Symbol’s value as variable is void:
+lsp-haskell-plugin-cabal-code-actions-on
+```
 
 Managed to propertly configure auto formatting for Haskell on local
 environment for Peras, such that it picks up the right configuration
@@ -1625,9 +1627,11 @@ with some delays or loss...
 A basic property that could be interesting to state as our first test
 would be the _Common Prefix_ property:
 
-``` do anyActions_ getState >>= \ nodes -> do chains <- mapM (action
-. ObserveBestChain) nodes assert $ all ((< k) . lengthDivergingSuffix)
-chains ```
+```
+do anyActions_ getState >>= \ nodes -> do
+   chains <- mapM (action. ObserveBestChain) nodes
+   assert $ all ((< k) . lengthDivergingSuffix) chains
+```
 
 eg. all nodes' potential forks are not deeper than the security parameter `k` or equivalently all nodes have a common prefixs.
 
