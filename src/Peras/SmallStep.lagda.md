@@ -44,7 +44,7 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-Messages for sending and receiving blocks, votes and chains
+Messages for sending and receiving blocks, certificates, votes and chains
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
@@ -52,7 +52,8 @@ data Message : Set where
   CertMsg : Certificate → Message
   ChainMsg : Chain → Message
 ```
-Messages are put into an envelope
+Messages are put into an envelope which is assigned to a given party and is defined with
+a delay.
 ```agda
 record Envelope : Set where
   constructor ⦅_,_,_⦆
@@ -70,10 +71,11 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 -->
 
-block₀ denotes the genesis block that is passed in as a module parameter
+block₀ denotes the genesis block that is passed in as a module parameter.
 
 ```agda
 module _ {block₀ : Block}
+         {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -137,6 +139,14 @@ Properties that must hold with respect to blocks and votes
 
       self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
+
+      valid-votes : ∀ (t : tT) (v : Vote) (c : Chain)
+        → All (λ { v →
+              IsCommitteeMember
+                (creatorId v)
+                (votingRound v)
+                (committeeMembershipProof v) })
+              (votes t c)
 
       unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
         → let vs = votes t c
@@ -226,7 +236,6 @@ The block tree type
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
            {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
-           {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
            {IsBlockSignature : Block → Signature → Set}
