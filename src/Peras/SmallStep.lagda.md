@@ -80,6 +80,7 @@ block₀ denotes the genesis block that is passed in as a module parameter.
 module _ {block₀ : Block} {cert₀ : Certificate}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
          {IsVoteSignature : Vote → Signature → Set}
+         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -135,12 +136,12 @@ Properties that must hold with respect to blocks and votes
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : tT) (sl : Slot)
-        → ValidChain {block₀} (bestChain sl t)
+        → ValidChain {block₀} {IsBlockSignature} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
         → let b = bestChain sl t
           in
-          ValidChain {block₀} c
+          ValidChain {block₀} {IsBlockSignature} c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
 
@@ -252,7 +253,6 @@ The block tree type
            {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
-           {IsBlockSignature : Block → Signature → Set}
            where
 ```
 The local state initialized with the block tree

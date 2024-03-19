@@ -210,6 +210,7 @@ open import Data.List.Membership.Propositional using (_∈_)
 -->
 ```agda
 module _ {block₀ : Block}
+         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Params ⦄
          where
@@ -223,14 +224,15 @@ module _ {block₀ : Block}
       ValidChain (block₀ ∷ [])
 
     Cons : ∀ {c : Chain} {b₁ b₂ : Block}
-      → parentBlock b₂ ≡ hash b₁
+      → IsBlockSignature b₁ (signature b₁)
+      → parentBlock b₁ ≡ hash b₂
       → ValidChain (b₂ ∷ c)
       → ValidChain (b₁ ∷ (b₂ ∷ c))
 ```
 ```agda
   tip : ∀ {c : Chain} → ValidChain c → Block
   tip Genesis = block₀
-  tip (Cons {c} {b₁} refl _) = b₁
+  tip (Cons {c} {b₁} _ refl _) = b₁
 ```
 <!--
 ```agda

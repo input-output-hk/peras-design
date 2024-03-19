@@ -26,6 +26,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
+         (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -42,7 +43,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
-           (IsBlockSignature : Block → Signature → Set)
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
@@ -60,7 +60,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 ```agda
       postulate
-        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {txSelection} {parties} {IsBlockSignature}}
+        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁
