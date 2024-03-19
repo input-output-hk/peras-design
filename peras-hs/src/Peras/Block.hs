@@ -14,7 +14,10 @@ type Tx = ()
 
 type Slot = Natural
 
-data Certificate = Certificate {votingRoundNumber :: Natural}
+data Certificate = Certificate
+  { votingRoundNumber :: Natural
+  , blockRef :: Hash
+  }
   deriving (Eq)
 
 data Block = Block

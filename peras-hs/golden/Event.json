@@ -6,7 +6,8 @@
                 "contents": {
                     "bodyHash": "cfff9ad5502ee5f1",
                     "certificate": {
-                        "votingRoundNumber": 8
+                        "blockRef": "3a24c844d41f5f70",
+                        "votingRoundNumber": 15
                     },
                     "creatorId": 26,
                     "leadershipProof": "0119e4187c01c9ae",

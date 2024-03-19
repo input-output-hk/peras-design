@@ -192,7 +192,7 @@ module _ ⦃ _ : Hashable Block ⦄
   data Reference : Certificate → Chain → Set where
 
     PointToPrefix : ∀ {c} {bs}
-      → Any (λ { b → blockHash c ≡ hash b }) bs
+      → Any (λ { b → blockRef c ≡ hash b }) bs
       → Reference c bs
 
   postulate
