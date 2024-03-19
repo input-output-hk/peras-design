@@ -107,6 +107,20 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 ```
 -->
 
+```agda
+module _ {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
+         {IsVoteSignature : Vote → Signature → Set}
+         where
+
+  ValidVote : Vote → Set
+  ValidVote v =
+    IsCommitteeMember
+        (creatorId v)
+        (votingRound v)
+        (committeeMembershipProof v)
+    × IsVoteSignature v (signature v)
+```
+
 ### Equivocation relation
 
 Equivocal votes are multiple votes by the same party for the same round.
@@ -128,6 +142,7 @@ data _∻_ : Vote → Vote → Set where
 -- open import Data.List.Relation.Unary.AllPairs.Core NonEquivocation renaming (AllPairs to NoEquivocations) public
 ```
 -->
+
 ## Chain
 
 ```agda
@@ -210,9 +225,9 @@ open import Data.List.Membership.Propositional using (_∈_)
 -->
 ```agda
 module _ {block₀ : Block}
+         {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
          {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄
@@ -225,6 +240,7 @@ module _ {block₀ : Block}
 
     Cons : ∀ {c : Chain} {b₁ b₂ : Block}
       → IsBlockSignature b₁ (signature b₁)
+      → IsSlotLeader (creatorId b₁) (slotNumber b₁) (leadershipProof b₁)
       → parentBlock b₁ ≡ hash b₂
       → ValidChain (b₂ ∷ c)
       → ValidChain (b₁ ∷ (b₂ ∷ c))
@@ -232,8 +248,9 @@ module _ {block₀ : Block}
 ```agda
   tip : ∀ {c : Chain} → ValidChain c → Block
   tip Genesis = block₀
-  tip (Cons {c} {b₁} _ refl _) = b₁
+  tip (Cons {c} {b₁} _ _ refl _) = b₁
 ```
+
 <!--
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own

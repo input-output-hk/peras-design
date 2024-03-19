@@ -26,6 +26,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
+         (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable Vote ⦄
@@ -40,7 +41,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
            where
@@ -60,7 +60,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 ```agda
       postulate
-        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {txSelection} {parties}}
+        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁

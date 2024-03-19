@@ -80,6 +80,7 @@ block₀ denotes the genesis block that is passed in as a module parameter.
 module _ {block₀ : Block} {cert₀ : Certificate}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
          {IsVoteSignature : Vote → Signature → Set}
+         {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
          {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -103,7 +104,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ```agda
   latestCert : List Certificate → Certificate
-  latestCert = argmax votingRoundNumber cert₀ 
+  latestCert = argmax votingRoundNumber cert₀
 ```
 
 ## BlockTree
@@ -136,30 +137,20 @@ Properties that must hold with respect to blocks and votes
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
       valid : ∀ (t : tT) (sl : Slot)
-        → ValidChain {block₀} {IsBlockSignature} (bestChain sl t)
+        → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
         → let b = bestChain sl t
           in
-          ValidChain {block₀} {IsBlockSignature} c
+          ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
 
       self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
-      valid-votes : ∀ (t : tT) (v : Vote) (c : Chain)
-        → All
-            (λ { v →
-              IsCommitteeMember
-                (creatorId v)
-                (votingRound v)
-                (committeeMembershipProof v)
-            × IsVoteSignature
-                v
-                (signature v)
-            })
-            (votes t c)
+      valid-votes : ∀ (t : tT) (c : Chain)
+        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t c)
 
       unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
         → let vs = votes t c
@@ -250,7 +241,6 @@ The block tree type
            {blockTree : TreeType tT}
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
-           {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
            where
@@ -285,7 +275,7 @@ In a cooldown period there is no voting.
     data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
 
       Regular : ∀ {c cs r t}
-        → let certₛ = latestCertSeen blockTree (r * T) t 
+        → let certₛ = latestCertSeen blockTree (r * T) t
               rₛ = votingRoundNumber certₛ
         in
           rₛ + 1 ≥ r
