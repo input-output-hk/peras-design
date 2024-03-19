@@ -23,7 +23,7 @@ open Eq using (_≡_; refl; cong; sym; subst; trans)
 -->
 
 ```agda
-module _ {block₀ : Block}
+module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
          ⦃ _ : Hashable Block ⦄
@@ -60,7 +60,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 ```agda
       postulate
-        kownledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {IsCommitteeMember} {IsVoteSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {txSelection} {parties} {IsBlockSignature}}
+        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {IsSlotLeader} {txSelection} {parties} {IsBlockSignature}}
           → {p₁ p₂ : PartyId}
           → {t₁ t₂ : A}
           → N₀ ↝ N₁

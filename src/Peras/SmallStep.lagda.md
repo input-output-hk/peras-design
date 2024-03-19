@@ -5,12 +5,13 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
+open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -18,6 +19,8 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
+
+open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
 open import Peras.Chain
 open import Peras.Crypto
@@ -74,7 +77,7 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 block₀ denotes the genesis block that is passed in as a module parameter.
 
 ```agda
-module _ {block₀ : Block}
+module _ {block₀ : Block} {cert₀ : Certificate}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
          {IsVoteSignature : Vote → Signature → Set}
          ⦃ _ : Hashable Block ⦄
@@ -97,6 +100,10 @@ module _ {block₀ : Block}
   getCert : RoundNumber → List Certificate → Maybe Certificate
   getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ votingRoundNumber)
 ```
+```agda
+  latestCert : List Certificate → Certificate
+  latestCert = argmax votingRoundNumber cert₀ 
+```
 
 ## BlockTree
 
@@ -109,7 +116,6 @@ module _ {block₀ : Block}
                     (bestChain : Slot → tT → Chain)
                     (addVote : tT → Vote → tT)
                     (addCert : tT → Certificate → tT)
-                    (allCerts : tT → List Certificate)
                     (votes : tT → Chain → List Vote)
                     (certs : tT → Chain → List Certificate)
          : Set₁ where
@@ -196,23 +202,25 @@ The block tree type
       addVote : T → Vote → T
       addCert : T → Certificate → T
 
-      allCerts : T → List Certificate
-
       votes : T → Chain → List Vote
       certs : T → Chain → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
-                      addVote addCert allCerts votes certs
+                      addVote addCert votes certs
 
     tipBest : Slot → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
-    latestCertSeen : T → Maybe Certificate
-    latestCertSeen = head ∘ allCerts
+    latestCertOnChain : Slot → T → Certificate
+    latestCertOnChain sl t =
+      let b = bestChain sl t
+      in latestCert (catMaybes $ map certificate b)
 
-    latestCertOnChain : Chain → T → Maybe Certificate
-    latestCertOnChain c = head ∘ flip certs c
+    latestCertSeen : Slot → T → Certificate
+    latestCertSeen sl t =
+      let b = bestChain sl t
+      in latestCert (certs t b)
 
   open TreeType
 ```
@@ -276,17 +284,17 @@ In a cooldown period there is no voting.
 ```agda
     data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
 
-      Regular : ∀ {c cs r t certₛ}
-        → just certₛ ≡ latestCertSeen blockTree t
-        → let rₛ = votingRoundNumber certₛ
+      Regular : ∀ {c cs r t}
+        → let certₛ = latestCertSeen blockTree (r * T) t 
+              rₛ = votingRoundNumber certₛ
         in
           rₛ + 1 ≥ r
         → Reference certₛ c
         → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
 
-      AfterCooldown : ∀ {chain cs r c t certₛ}
-        → just certₛ ≡ latestCertSeen blockTree t
-        → let rₛ = votingRoundNumber certₛ
+      AfterCooldown : ∀ {chain cs r c t}
+        → let certₛ = latestCertSeen blockTree (r * T) t
+              rₛ = votingRoundNumber certₛ
         in
           c > 0
         → r ≥ R + rₛ
@@ -460,7 +468,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M} {c₁} {c₂} {prf} {sig}
+      honest : ∀ {p} {t} {M}{prf} {sig}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -470,15 +478,13 @@ state.
                   blockHash = hash txs ;
                   payload = txs
                   }
-           in
-              c₁ ≡ latestCertSeen blockTree t
-           →  c₂ ≡ latestCertOnChain blockTree c t
-           → let
+              c₁ = latestCertSeen blockTree (r * T) t
+              c₂ = latestCertOnChain blockTree (pred clock) t
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
                     parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = c₁ ;
+                    certificate = just c₁ ;
                     leadershipProof = prf ;
                     bodyHash = blockHash body ;
                     signature = sig
@@ -622,9 +628,11 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {M} {c₁} {c₂} {prf} {sig} _ _ _ _ _ _) =
+    []↷-hist-common-prefix (honest {p} {t} {M} {prf} {sig} _ _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
+          c₁ = latestCertSeen blockTree (r * T) t
+          c₂ = latestCertOnChain blockTree (pred $ clock M) t
           body = record {
               blockHash = hash txs ;
               payload = txs
@@ -633,7 +641,7 @@ that there are no hash collisions during the execution of the protocol.
                 slotNumber = clock M ;
                 creatorId = p ;
                 parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
-                certificate = c₁ ;
+                certificate = just c₁ ;
                 leadershipProof = prf ;
                 bodyHash = blockHash body ;
                 signature = sig
