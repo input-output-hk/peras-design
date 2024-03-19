@@ -102,6 +102,7 @@ Such a certificate is supposed to be self-contained and verifiable by any node.
 ```agda
 record Certificate : Set where
   field votingRoundNumber : ℕ
+        blockHash : Hash
 
 open Certificate public
 ```
