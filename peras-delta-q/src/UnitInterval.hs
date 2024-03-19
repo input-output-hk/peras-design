@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module UnitInterval where
 
@@ -42,12 +44,30 @@ class Iops i where
   (\/) :: i -> i -> i
   x \/ y = inv (inv x UnitInterval.* inv y)
 
+  -- | Upper bound of the unit interval
+  one :: i
+
+  -- | Lower bound of the unit interval
+  zero :: i
+
 instance Iops Double where
-  a <  b = a Prelude.<  b
+  a < b = a Prelude.< b
   a <= b = a Prelude.<= b
   fromDouble a = a
   toDouble a = a
   inv x = 1 Prelude.- x
   a * b = a Prelude.* b
   a + b = a Prelude.+ b
+  one = 1.0
+  zero = 0.0
 
+instance Iops Rational where
+  a < b = a Prelude.< b
+  a <= b = a Prelude.<= b
+  inv x = 1 Prelude.- x
+  a * b = a Prelude.* b
+  a + b = a Prelude.+ b
+  fromDouble = toRational
+  toDouble = fromRational
+  one = 1
+  zero = 0
