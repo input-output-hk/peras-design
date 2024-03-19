@@ -3,7 +3,7 @@ module Peras.Message where
 open import Data.String using (String)
 
 open import Data.List using (List)
-open import Peras.Block using (Block; BlockBody; Slot)
+open import Peras.Block using (Block; BlockBody; Slot; Certificate)
 open import Peras.Chain using (Chain; RoundNumber; Vote)
 open import Peras.Crypto using (Hash)
 
@@ -35,11 +35,14 @@ data Message : Set where
   -- | Some `Vote` is received from upstream or broadcast
   SomeVote : Vote → Message
 
+  -- | Some `Certificate` is received from upstream or broadcast
+  SomeCertificate : Certificate → Message
+
   -- | Request to fetch some votes
-  FetchVotes : List Hash → Message
+  FetchVotes : List (Hash Vote) → Message
 
   -- | Follow upstream chain from some point (could be genesis).
-  FollowChain : Hash → Message
+  FollowChain : Hash Chain → Message
 
   -- | Some new block is added on top of the best chain.
   RollForward : Block → Message
@@ -48,7 +51,7 @@ data Message : Set where
   RollBack : Block → Message
 
   -- | Request to fetch some blocks
-  FetchBlocks : List Hash → Message
+  FetchBlocks : List (Hash Block) → Message
 
   -- | Some Block body as response to `FetchBlocks`
   SomeBlock : BlockBody → Message

@@ -5,35 +5,35 @@ module Peras.SmallStep where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false; _∧_; not)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_)
-open import Data.Maybe using (just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; ℕ; _+_; _*_; _∸_)
+open import Data.Maybe using (Maybe; just; nothing)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
+open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Function.Base using (_∘_; id; _$_)
+open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
-open import Peras.Chain using (Chain; tip; Vote; RoundNumber; ValidChain; VoteInRound; ∥_∥; ⟨_,_,_⟩; Dangling; v-round; DanglingVotes; _∻_)
-open import Peras.Crypto using (Hashable; emptyBS; MembershipProof; Signature; Hash)
+open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
+open import Peras.Chain
+open import Peras.Crypto
 open import Peras.Block
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
-open Chain public
 open Honesty public
 open MembershipProof public
 open Signature public
 open RoundNumber public
-open Vote
 open Party
 ```
 -->
@@ -47,14 +47,16 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-Messages for sending and receiving blocks, votes and chains
+Messages for sending and receiving blocks, certificates, votes and chains
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
   VoteMsg : Vote → Message
+  CertMsg : Certificate → Message
   ChainMsg : Chain → Message
 ```
-Messages are put into an envelope
+Messages are put into an envelope which is assigned to a given party and is defined with
+a delay.
 ```agda
 record Envelope : Set where
   constructor ⦅_,_,_⦆
@@ -72,12 +74,15 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 -->
 
-block₀ denotes the genesis block that is passed in as a module parameter
+block₀ denotes the genesis block that is passed in as a module parameter.
 
 ```agda
-module _ {block₀ : Block}
+module _ {block₀ : Block} {cert₀ : Certificate}
+         {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
+         {IsVoteSignature : Vote → Signature → Set}
+         {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
+         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          where
@@ -93,18 +98,31 @@ module _ {block₀ : Block}
 ```agda
   open Params ⦃...⦄
 ```
+```agda
+  getCert : RoundNumber → List Certificate → Maybe Certificate
+  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ votingRoundNumber)
+```
+```agda
+  latestCert : List Certificate → Certificate
+  latestCert = argmax votingRoundNumber cert₀
+```
+
 ## BlockTree
 
 ```agda
-  record IsTreeType {T : Set}
-                    (tree₀ : T)
-                    (extendTree : T → Block → List Vote → T)
-                    (newChain : T → Chain → T)
-                    (allBlocks : T → List Block)
-                    (bestChain : Slot → List Vote → T → Chain)
+  record IsTreeType {tT : Set}
+                    (tree₀ : tT)
+                    (extendTree : tT → Block → tT)
+                    (newChain : tT → Chain → tT)
+                    (allBlocks : tT → List Block)
+                    (bestChain : Slot → tT → Chain)
+                    (addVote : tT → Vote → tT)
+                    (addCert : tT → Certificate → tT)
+                    (votes : tT → Chain → List Vote)
+                    (certs : tT → Chain → List Certificate)
          : Set₁ where
 
-    allBlocksUpTo : Slot → T → List Block
+    allBlocksUpTo : Slot → tT → List Block
     allBlocksUpTo sl t = filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
 
     field
@@ -115,23 +133,51 @@ Properties that must hold with respect to blocks and votes
       instantiated :
         allBlocks tree₀ ≡ block₀ ∷ []
 
-      extendable : ∀ (t : T) (b : Block) (vs : List Vote)
-        → allBlocks (extendTree t b vs) ≐ (b ∷ allBlocks t)
+      extendable : ∀ (t : tT) (b : Block)
+        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      valid : ∀ (t : T) (sl : Slot) (d : List Vote)
-        → ValidChain {block₀} (bestChain sl d t)
+      valid : ∀ (t : tT) (sl : Slot)
+        → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
-      optimal : ∀ (c : Chain) (t : T) (sl : Slot) (d : List Vote)
-        → let b = bestChain sl d t
+      optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
+        → let b = bestChain sl t
           in
-          ValidChain {block₀} c
-        → (pc : DanglingVotes c d)
-        → (pb : DanglingVotes b d)
-        → blocks c ⊆ allBlocksUpTo sl t
-        → ∥ ⟨ c , d , pc ⟩ ∥ ≤ ∥ ⟨ b , d , pb ⟩ ∥
+          ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
+        → c ⊆ allBlocksUpTo sl t
+        → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
 
-      self-contained : ∀ (t : T) (sl : Slot) (d : List Vote)
-        → blocks (bestChain sl d t) ⊆ allBlocksUpTo sl t
+      self-contained : ∀ (t : tT) (sl : Slot)
+        → bestChain sl t ⊆ allBlocksUpTo sl t
+
+      valid-votes : ∀ (t : tT) (c : Chain)
+        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t c)
+
+      unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
+        → let vs = votes t c
+          in
+          v ∈ vs
+        → vs ≡ votes (addVote t v) c
+
+      no-equivocations : ∀ (t : tT) (v : Vote) (c : Chain)
+        → let vs = votes t c
+          in
+          Any (v ∻_) vs
+        → vs ≡ votes (addVote t v) c
+
+      non-quorum : ∀ (t : tT) (r : RoundNumber)
+        → let sl = T * (roundNumber r)
+              b = bestChain sl t
+          in
+          length (votes t b) < τ
+        → getCert r (certs t b) ≡ nothing
+
+      quorum : ∀ (t : tT) (r : RoundNumber) (c : Certificate)
+        → let sl = T * (roundNumber r)
+              b = bestChain sl t
+          in
+          length (votes t b) ≥ τ
+        → getCert r (certs t b) ≡ just c
+
 ```
 The block tree type
 
@@ -140,13 +186,33 @@ The block tree type
 
     field
       tree₀ : T
-      extendTree : T → Block → List Vote → T
+      extendTree : T → Block → T
       newChain : T → Chain → T
       allBlocks : T → List Block
-      bestChain : Slot → List Vote → T → Chain
+      bestChain : Slot → T → Chain
+
+      addVote : T → Vote → T
+      addCert : T → Certificate → T
+
+      votes : T → Chain → List Vote
+      certs : T → Chain → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ extendTree newChain allBlocks bestChain
+                      addVote addCert votes certs
+
+    tipBest : Slot → T → Block
+    tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
+
+    latestCertOnChain : Slot → T → Certificate
+    latestCertOnChain sl t =
+      let b = bestChain sl t
+      in latestCert (catMaybes $ map certificate b)
+
+    latestCertSeen : Slot → T → Certificate
+    latestCertSeen sl t =
+      let b = bestChain sl t
+      in latestCert (certs t b)
 
   open TreeType
 ```
@@ -154,17 +220,16 @@ The block tree type
 
 ```agda
   record LocalState {A : Set} (blockTree : TreeType A) : Set where
-    constructor ⟪_,_⟫
+    constructor ⟪_⟫
     field
       tree : A
-      danglingVotes : List Vote
 
   open LocalState
 ```
 # Parameterized module
 
   * blockTree
-  * slot leader computable predicate
+  * slot leader predicate
   * voting committee membership predicate
   * tx selection
   * The list of parties
@@ -172,12 +237,10 @@ The block tree type
 
 
 ```agda
-  module _ {A : Set}
-           {blockTree : TreeType A}
+  module _ {tT : Set}
+           {blockTree : TreeType tT}
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
-           {isSlotLeader : PartyId → Slot → Bool}
-           {isCommitteeMember : PartyId → RoundNumber → Bool}
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
            where
@@ -193,60 +256,40 @@ Updating the local state upon receiving a message
 
 ```agda
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
+
+      VoteReceived : ∀ {v t}
+        → ⟪ t ⟫ [ VoteMsg v ]→
+          ⟪ addVote blockTree t v ⟫
+
+      CertReceived : ∀ {c t}
+        → ⟪ t ⟫ [ CertMsg c ]→
+          ⟪ addCert blockTree t c ⟫
+
+      ChainReceived : ∀ {c t}
+        → ⟪ t ⟫ [ ChainMsg c ]→
+          ⟪ newChain blockTree t c ⟫
 ```
-A new vote is added as dangling vote to the local state, when
-  * the vote has not already been seen (on-chain or dangling)
-  * the vote is not an equivocation (on-chain or dangling)
+In a cooldown period there is no voting.
 
 ```agda
-      VoteReceived : ∀ {v t d}
-        → let s = T * roundNumber (votingRound v)
-              b = (bestChain blockTree) s d t
-          in
-          v ∉ votes b
-        → v ∉ d
-        → ¬ (Any (v ∻_) (votes b))
-        → ¬ (Any (v ∻_) d)
-        → ⟪ t
-          , d
-          ⟫ [ VoteMsg v ]→
-          ⟪ t
-          , v ∷ d
-          ⟫
-```
-<!--
-A block received is added to the blocktree
-TODO: Is this part of the protocol?
+    data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
 
-```agda
-{-
-      BlockReceived : ∀ {b t d}
-        → ⟪ t
-          , d
-          ⟫ [ SomeBlock b ]→
-          ⟪ (extendTree blockTree) t b [] -- No votes, if a block is received
-          , d
-          ⟫
--}
-```
--->
-When a chain is received it is added the the blockTree only if it
-is heavier than the current best chain with respect of the dangling
-votes.
+      Regular : ∀ {c cs r t}
+        → let certₛ = latestCertSeen blockTree (r * T) t
+              rₛ = votingRoundNumber certₛ
+        in
+          rₛ + 1 ≥ r
+        → Reference certₛ c
+        → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
 
-```agda
-      ChainReceived : ∀ {c t d}
-        → let b = (bestChain blockTree) (slotNumber (tip c)) d t
-          in
-          (pb : DanglingVotes b d)
-        → (pc : DanglingVotes c d)
-        → ∥ ⟨ b , d , pb ⟩ ∥ < ∥ ⟨ c , d , pc ⟩ ∥
-        → ⟪ t
-          , d
-          ⟫ [ ChainMsg c ]→
-          ⟪ (newChain blockTree) t c
-          , d
-          ⟫
+      AfterCooldown : ∀ {chain cs r c t}
+        → let certₛ = latestCertSeen blockTree (r * T) t
+              rₛ = votingRoundNumber certₛ
+        in
+          c > 0
+        → r ≥ R + rₛ
+        → r ≡ (c * K) + rₛ
+        → VoteInRound ⟪ t ⟫ chain cs (MkRoundNumber r)
 ```
 ## Global state
 
@@ -369,28 +412,26 @@ A party can cast a vote for a block, if
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {d} {M}
+      honest : ∀ {p} {t} {M} {prf} {sig}
         → let open Stateᵍ M
               r = v-round clock
-              c = (bestChain blockTree) clock d t
-              b = (bestChain blockTree) (clock ∸ L) d t
+              c = bestChain blockTree clock t
+              cs = certs blockTree t c
               v = record {
                     votingRound = r ;
                     creatorId = p ;
-                    committeeMembershipProof =
-                      record { proofM = emptyBS } ; -- FIXME
-                    blockHash = hash (tip b) ;
-                    signature =
-                      record { bytes = emptyBS }  -- FIXME
-                  }
+                    committeeMembershipProof = prf ;
+                    blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
+                    signature = sig                  }
           in
-          (pr : DanglingVotes c d)
-        → lookup stateMap p ≡ just ⟪ t , d ⟫
-        → clock ≡ roundNumber r * T
-        → isCommitteeMember p r ≡ true
-        → VoteInRound ⟨ c , d , pr ⟩ r
-          ---------------------------------------------------------
-        → M [ Honest {p} ]⇉ updateᵍ (VoteMsg v) 0 p ⟪ t , v ∷ d ⟫ M
+          lookup stateMap p ≡ just ⟪ t ⟫
+        → IsVoteSignature v sig
+        → StartOfRound clock r
+        → IsCommitteeMember p r prf
+        → VoteInRound ⟪ t ⟫ c cs r
+          ---------------------------------------------------
+        → M [ Honest {p} ]⇉
+          updateᵍ (VoteMsg v) 0 p ⟪ addVote blockTree t v ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
         → δ ms ms′
@@ -417,15 +458,12 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {d} {M}
+      honest : ∀ {p} {t} {M}{prf} {sig}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
-              c = (bestChain blockTree) (pred clock) d t
-              vs = filterᵇ (λ {
-                       v → r ≤ᵇ (roundNumber (votingRound v) + L)
-                     } )
-                     (votes c) -- TODO: more conditions
+              c = bestChain blockTree (pred clock) t
+              cs = certs blockTree t c
               body = record {
                   blockHash = hash txs ;
                   payload = txs
@@ -433,18 +471,21 @@ state.
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
-                    parentBlock = hash (tip c) ;
-                    includedVotes = map hash vs ;
-                    leadershipProof = record { proof = emptyBS } ; -- FIXME
+                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
+                    certificate = just (latestCertSeen blockTree (pred clock) t) ;
+                    leadershipProof = prf ;
                     bodyHash = blockHash body ;
-                    signature = record { bytes = emptyBS } -- FIXME
+                    signature = sig
                   }
           in
-          lookup stateMap p ≡ just ⟪ t , d ⟫
-        → isSlotLeader p clock ≡ true
+          lookup stateMap p ≡ just ⟪ t ⟫
+        → IsBlockSignature b sig
+        → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
+
+        → IsSlotLeader p clock prf
           -------------------------------------------
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
-             ⟪ (extendTree blockTree) t b vs , d ⟫ M
+             ⟪ extendTree blockTree t b ⟫ M
 
       corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
         → δ ms ms′
@@ -575,14 +616,9 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {d} {M} _ _) =
+    []↷-hist-common-prefix (honest {p} {t} {M} {prf} {sig} _ _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
-          c = (bestChain blockTree) (pred (clock M)) d t
-          vs = filterᵇ (λ {
-                   v → r ≤ᵇ (roundNumber (votingRound v) + L)
-                 } )
-                 (votes c)
           body = record {
               blockHash = hash txs ;
               payload = txs
@@ -590,11 +626,11 @@ that there are no hash collisions during the execution of the protocol.
           b = record {
                 slotNumber = clock M ;
                 creatorId = p ;
-                parentBlock = hash (tip c) ;
-                includedVotes = map hash vs ;
-                leadershipProof = record { proof = emptyBS } ;
+                parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
+                certificate = just (latestCertSeen blockTree (pred (clock M)) t) ;
+                leadershipProof = prf ;
                 bodyHash = blockHash body ;
-                signature = record { bytes = emptyBS }
+                signature = sig
               }
        in xs⊆x∷xs (history M) (BlockMsg b)
     []↷-hist-common-prefix (corrupt _) x₁ = x₁
@@ -602,17 +638,14 @@ that there are no hash collisions during the execution of the protocol.
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
       → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {p} {t} {d} {M} _ _ _ _ _) =
+    []⇉-hist-common-prefix {M} (honest {p} {t} {M} {prf} {sig} _ _ _ _ _) =
       let r = v-round (clock M)
-          b = (bestChain blockTree) ((clock M) ∸ L) d t
           v = record {
                 votingRound = r ;
                 creatorId = p ;
-                committeeMembershipProof =
-                  record { proofM = emptyBS } ;
-                blockHash = hash (tip b) ;
-                signature =
-                  record { bytes = emptyBS }
+                committeeMembershipProof = prf ;
+                blockHash = hash (tipBest blockTree ((clock M) ∸ L) t) ;
+                signature = sig
               }
       in xs⊆x∷xs (history M) (VoteMsg v)
     []⇉-hist-common-prefix (corrupt _) x₁ = x₁

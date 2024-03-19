@@ -2,9 +2,7 @@ module Peras.Chain where
 
 import Numeric.Natural (Natural)
 import Peras.Block (Block, PartyId)
-import Peras.Crypto (Hash, Hashable, MembershipProof, Signature (bytes))
-
-import Peras.Crypto (Hash (..), Hashable (..))
+import Peras.Crypto (Hash, MembershipProof, Signature)
 
 newtype RoundNumber = MkRoundNumber {roundNumber :: Natural}
   deriving (Eq)
@@ -13,16 +11,12 @@ data Vote = MkVote
   { votingRound :: RoundNumber
   , creatorId :: PartyId
   , committeeMembershipProof :: MembershipProof
-  , blockHash :: Hash
+  , blockHash :: Hash Block
   , signature :: Signature
   }
   deriving (Eq)
 
-data Chain = MkChain {blocks :: [Block], votes :: [Vote]}
-  deriving (Eq)
-
-tip :: Chain -> Block
-tip (MkChain blks _) = head blks
+type Chain = [Block]
 
 foldl1Maybe :: (a -> a -> a) -> [a] -> Maybe a
 foldl1Maybe f xs =
@@ -49,8 +43,4 @@ commonPrefix chains =
     Just bs -> reverse bs
  where
   listPrefix :: Maybe [Block]
-  listPrefix =
-    foldl1Maybe (prefix []) (map (\l -> reverse (blocks l)) chains)
-
-instance Hashable Vote where
-  hash = \v -> Hash (bytes (signature v))
+  listPrefix = foldl1Maybe (prefix []) (map reverse chains)
