@@ -19,6 +19,7 @@ packages:
   peras-iosim
   peras-quickcheck
   peras-delta-q
+  test-demo
 
 tests: True
 test-show-details: direct
