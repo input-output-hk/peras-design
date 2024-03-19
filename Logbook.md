@@ -1,3 +1,11 @@
+## 2024-03-19
+
+### Formal specification in Agda
+
+* March version of Peras specification in Agda
+* The blocktree is the only local state. It is an abstract data type
+  specified by properties
+
 ## 2024-03-18
 
 ### Innovation stream steering committee
