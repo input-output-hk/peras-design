@@ -94,48 +94,41 @@ Slot = ℕ
 ```
 -->
 
-## Certificate
+## Block and Certificate
+
+In addition to a Praos block, there is an optional field for the included certificate.
+**Note**: What we name `Block` is actually a block _Header_, we use `BlockBody` to contain the payload.
 
 A Peras Certificate represents an aggregated quorum of votes for a specific block at a specific round.
 Such a certificate is supposed to be self-contained and verifiable by any node.
 
 ```agda
-record Certificate : Set where
+record Block : Set
+record BlockBody : Set
+record Certificate : Set
+
+record Certificate where
   field votingRoundNumber : ℕ
-        blockRef : Hash
+        blockRef : Hash Block
 
 open Certificate public
-```
-<!--
-```agda
-{-# COMPILE AGDA2HS Certificate deriving Eq #-}
-```
--->
 
-## Block
-
-In addition to a Praos block, there is an optional field for the included certificate.
-
-**Note**: What we name `Block` is actually a block _Header_, we use `BlockBody` to contain the payload.
-
-```agda
-record Block : Set where
+record Block where
   field slotNumber : Slot
         creatorId : PartyId
-        parentBlock : Hash
+        parentBlock : Hash Block
         certificate : Maybe Certificate
         leadershipProof : LeadershipProof
         signature : Signature
-        bodyHash : Hash
+        bodyHash : Hash (List Tx)
 
 open Block public
 
-record BlockBody : Set where
-  field blockHash : Hash
+record BlockBody where
+  field blockHash : Hash (List Tx)
         payload : List Tx
 
 open BlockBody public
-
 ```
 ```agda
 data HonestBlock : Block → Set where
@@ -149,6 +142,7 @@ data HonestBlock : Block → Set where
 ```agda
 {-# COMPILE AGDA2HS Block deriving Eq #-}
 {-# COMPILE AGDA2HS BlockBody deriving Eq #-}
+{-# COMPILE AGDA2HS Certificate deriving Eq #-}
 ```
 -->
 

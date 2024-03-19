@@ -22,18 +22,20 @@ postulate
 {-# COMPILE GHC emptyBS = BS.empty #-}
 {-# COMPILE GHC _isInfixOf_ = BS.isInfixOf #-}
 
-record Hash : Set where
+record Hash (a : Set) : Set where
   field hashBytes : ByteString
 
 open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
 
+{-
 postulate
   _≟-Hash_ : DecidableEquality Hash
+-}
 
 record Hashable (a : Set) : Set where
-  field hash : a → Hash
+  field hash : a → Hash a
 
 {-# COMPILE AGDA2HS Hashable class #-}
 

@@ -68,7 +68,7 @@ record Vote : Set where
   field votingRound              : RoundNumber
         creatorId                : PartyId
         committeeMembershipProof : MembershipProof
-        blockHash                : Hash
+        blockHash                : Hash Block
         signature                : Signature
 
 open Vote public
