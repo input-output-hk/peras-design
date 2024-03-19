@@ -1,6 +1,6 @@
 module Peras.Message where
 
-import Peras.Block (Block, BlockBody, Slot)
+import Peras.Block (Block, BlockBody, Certificate, Slot)
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash)
 
@@ -11,9 +11,10 @@ data Message
   = NextSlot Slot
   | NewChain Chain
   | SomeVote Vote
-  | FetchVotes [Hash]
-  | FollowChain Hash
+  | SomeCertificate Certificate
+  | FetchVotes [Hash Vote]
+  | FollowChain (Hash Chain)
   | RollForward Block
   | RollBack Block
-  | FetchBlocks [Hash]
+  | FetchBlocks [Hash Block]
   | SomeBlock BlockBody

@@ -29,7 +29,7 @@ instance Arbitrary NodeId where
     MkNodeId
       <$> (("Node-" <>) . show <$> (arbitrary @Natural))
 
-instance Arbitrary Hash where
+instance Arbitrary a => Arbitrary (Hash a) where
   arbitrary = Hash <$> genByteString 8
 
 instance Arbitrary Signature where

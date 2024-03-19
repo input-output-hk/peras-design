@@ -14,24 +14,24 @@ type Tx = ()
 
 type Slot = Natural
 
-data Certificate = Certificate
-  { votingRoundNumber :: Natural
-  , blockRef :: Hash
-  }
-  deriving (Eq)
-
 data Block = Block
   { slotNumber :: Slot
   , creatorId :: PartyId
-  , parentBlock :: Hash
+  , parentBlock :: Hash Block
   , certificate :: Maybe Certificate
   , leadershipProof :: LeadershipProof
   , signature :: Signature
-  , bodyHash :: Hash
+  , bodyHash :: Hash [Tx]
   }
   deriving (Eq)
 
-data BlockBody = BlockBody {blockHash :: Hash, payload :: [Tx]}
+data BlockBody = BlockBody {blockHash :: Hash [Tx], payload :: [Tx]}
+  deriving (Eq)
+
+data Certificate = Certificate
+  { votingRoundNumber :: Natural
+  , blockRef :: Hash Block
+  }
   deriving (Eq)
 
 instance Hashable Block where

@@ -11,7 +11,7 @@ data Vote = MkVote
   { votingRound :: RoundNumber
   , creatorId :: PartyId
   , committeeMembershipProof :: MembershipProof
-  , blockHash :: Hash
+  , blockHash :: Hash Block
   , signature :: Signature
   }
   deriving (Eq)

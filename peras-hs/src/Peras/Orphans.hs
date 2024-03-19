@@ -138,15 +138,15 @@ instance Default Chain where
 
 -- Orphans for `Peras.Crypto`.
 
-deriving stock instance Generic Hash
-deriving stock instance Ord Hash
-deriving via Bytes instance Read Hash
-deriving via Bytes instance Show Hash
-deriving via Bytes instance IsString Hash
-deriving via Bytes instance FromJSON Hash
-deriving via Bytes instance ToJSON Hash
-deriving via Bytes instance FromJSONKey Hash
-deriving via Bytes instance ToJSONKey Hash
+deriving stock instance Generic a => Generic (Hash a)
+deriving stock instance Ord a => Ord (Hash a)
+deriving via Bytes instance Read a => Read (Hash a)
+deriving via Bytes instance Show a => Show (Hash a)
+deriving via Bytes instance IsString a => IsString (Hash a)
+deriving via Bytes instance FromJSON a => FromJSON (Hash a)
+deriving via Bytes instance ToJSON a => ToJSON (Hash a)
+deriving via Bytes instance FromJSONKey a => FromJSONKey (Hash a)
+deriving via Bytes instance ToJSONKey a => ToJSONKey (Hash a)
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof
