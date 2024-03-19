@@ -478,13 +478,11 @@ state.
                   blockHash = hash txs ;
                   payload = txs
                   }
-              c₁ = latestCertSeen blockTree (r * T) t
-              c₂ = latestCertOnChain blockTree (pred clock) t
               b = record {
                     slotNumber = clock ;
                     creatorId = p ;
                     parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = just c₁ ;
+                    certificate = just (latestCertSeen blockTree (pred clock) t) ;
                     leadershipProof = prf ;
                     bodyHash = blockHash body ;
                     signature = sig
@@ -631,8 +629,6 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix (honest {p} {t} {M} {prf} {sig} _ _ _ _) =
       let r = roundNumber (v-round (clock M))
           txs = txSelection (clock M) p
-          c₁ = latestCertSeen blockTree (r * T) t
-          c₂ = latestCertOnChain blockTree (pred $ clock M) t
           body = record {
               blockHash = hash txs ;
               payload = txs
@@ -641,7 +637,7 @@ that there are no hash collisions during the execution of the protocol.
                 slotNumber = clock M ;
                 creatorId = p ;
                 parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
-                certificate = just c₁ ;
+                certificate = just (latestCertSeen blockTree (pred (clock M)) t) ;
                 leadershipProof = prf ;
                 bodyHash = blockHash body ;
                 signature = sig
