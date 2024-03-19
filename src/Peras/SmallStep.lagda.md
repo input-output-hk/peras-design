@@ -76,6 +76,7 @@ block₀ denotes the genesis block that is passed in as a module parameter.
 ```agda
 module _ {block₀ : Block}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
+         {IsVoteSignature : Vote → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -141,12 +142,17 @@ Properties that must hold with respect to blocks and votes
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
       valid-votes : ∀ (t : tT) (v : Vote) (c : Chain)
-        → All (λ { v →
+        → All
+            (λ { v →
               IsCommitteeMember
                 (creatorId v)
                 (votingRound v)
-                (committeeMembershipProof v) })
-              (votes t c)
+                (committeeMembershipProof v)
+            × IsVoteSignature
+                v
+                (signature v)
+            })
+            (votes t c)
 
       unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
         → let vs = votes t c
@@ -239,7 +245,6 @@ The block tree type
            {txSelection : Slot → PartyId → List Tx}
            {parties : List PartyId}
            {IsBlockSignature : Block → Signature → Set}
-           {IsVoteSignature : Vote → Signature → Set}
            where
 ```
 The local state initialized with the block tree
