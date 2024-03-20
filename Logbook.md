@@ -1,4 +1,94 @@
+## 2024-03-20
+
+### AB - Work on ΔQ
+
+Trying to make the test comparing the tabulation from a `dx` on a CDF and the raw QTA is poised to fail on values that lie at the boundary of the resolution of `dx`! Experimented with increasing the resolution and it's always the case the test fails at low resolutions, but it passes when the resolution is set to 0.001
+
+Now trying to replicate graphs representing header + body diffusion which implies convolution of 2 CDF but it seems it does not work
+* The convolution is the operation needed to compute the PDF of 2 independent random variables. Given 2 CDF, the resulting CDF can be computed by first computing the PDF from the CDF through derivation, then doing the convolution, then computing integrating the resulting PDF to get a CDF.
+* Some link showing computation of a general convolution in Haskell: https://jip.dev/posts/naive-convolution-in-haskell/
+* As it's possible to compute a convolution faster using FFT, seems like this page could be useful: https://www.skybluetrades.net/blog/2013/11/2013-11-13-dat
+
+Going to design models using original code from Neil as it seems the numerical computations in Artem's code are not working.
+Got stuck trying to model probabilistic choice among the avarious path lengths possible, as it seems the expression I am constructing naively does not make sense.
+
 ## 2024-03-19
+
+### AB - Work on ΔQ
+
+Copied Artjom's code into peras repo to start working on a ΔQ model for Peras.  the idea is to gradually refactor the existing code into something that can be more widely shared and published as an open-source repository, adding tests, utilities, and integrating Peter's Piecewise polynomial model. As this code provides a way to generate both CDF diagrams and outcome graphs (albeit through slightly different languages that should be unified), this will be a good basis to share results and simulations.
+
+Implementing a function for transforming a list of `Quantitative Time assessment` values, eg. a monotonically increasing list of pairs of probability/value, into an `A` expression, and struggling to define a proper test for that.
+My current idea is to generate arbitrary QTAs and, given an arbitrary value, check the CDF computed from the expression gives a probability that's consistent with the value and the original list of QTA
+
+There's something wrong with the way `tabulate` is computed for `NCDF`. It says:
+```
+  tabulate :: t -> R t -> [(I t, R t)]
+```
+where the first element should be in the unit interval and the second span the possible values for which we are defining probabilities.
+But it seems that what's computed is the opposite!
+
+Looks like `tabulate` should indeed be defined as :
+
+```
+tabulate :: t -> R t -> [(R t, I t)]
+```
+
+This raises an interesting "design" issue: Even though we have strong types in the definition of the interfaces, we are practically using `Double` in both places which makes it irrelevant! We are using directly `tabulate` to draw diagrams though, so it should have raised a flag that the `x` and `y` values are not in the right position...
+
+Still struggling to get my tests right though, to define a good property test for the `fromQTA` function. I need to work with intervals and sum values which is more or less what the code already does, and it's a bit annoying. I think I need to construct intervals from the simple `(Prob, Value)` list I have so that I can know where a random value falls in.
+
+### Team meeting
+
+* Discussing ΔQ modelling, network data
+  > Arguments sound like navigating in the XVth century -> you're gonna fall off a cliff
+
+* Observability layer for the node -> logs all the state transitions
+* Agenda:
+  1. March protocol update
+  2. Node/QC interface
+  3. Agenda for next week's demo
+
+Agda model:
+* Andre is working on a UC framework in Agda -> used by Genesis
+* 2 different approaches, crypto research approach + CT expression
+* Weekly FM consensus meeting
+
+* Keeping dangling votes around in local state was a mistake, local state = BlockTree
+* Messages : receive vote, cert, chain
+  * validity of messages is a property of the block tree -> discarded if invalid, eg. no state change
+* Chain weight function is simpler
+
+* Switch to not using google doc pseudo-code anymore and use only Agda
+
+* Some issues w/ cryptographic primitives we need to highlight in the tech report:
+  * comittee selection -> how should it be done in practice?
+  * certificate generation and verification -> need new keys? interactive?
+
+* Refactoring on simulation code
+  * `PerasNode` is a typeclass/interface
+  * `NodeContext` -> provide various static utilities (including tracer)
+  * Abstract the details of the protocol state machine
+  * Wiring / node wrapper
+  * `NodeStats`  -> computed, monoidal
+  * `NodeResult` -> `wakeup` time => represent the node's business , node is abstracted away from STM stuff, it's a pure state machine
+  * plugged into any environment -> network layer would deal with all this
+  * `Protocol` -> contains the pure function primitives of the protocol
+* Network:
+  * contains a single queue of all messages for all nodes, single threaded loop pulling one message, letting the node react and updating its state
+  * `Event`s -> `Compute` event, interesting to have some timeline of the node's actions
+
+* March Monthly demo agenda:
+  * Updated protocol (with certs) -> show diagram
+    * highlight some "new" properties of the protocol, eg. smaller headers + certs verif/generation
+    * simpler chain weight and chain decision -> only change on new chain/certs (eg. no need to decide on every new vote)
+  * Update Agda model -> BlockTree + focus on properties
+  * Block congestion experiment? => still on Feb protocol version
+  * Quviq's early work -> a short presentation (ask Max/Ulf)
+  * DeltaQ -> early model for Praos (+ Peras)
+    * real world data from Markus/pooltool?
+  * Draft Technical report
+
 
 ### Formal specification in Agda
 
