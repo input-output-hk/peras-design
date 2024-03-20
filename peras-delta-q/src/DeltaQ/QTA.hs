@@ -13,13 +13,15 @@ import Prelude hiding ((+), (-))
 -- given uniform probability.  The values must be monotonically
 -- increasing and the sum of probabilities be lower than 1.
 fromQTA :: (Rops r, Iops i) => NonEmpty (i, r) -> A r i
-fromQTA steps = go steps (fromDouble 0.0)
+fromQTA steps = go (fromDouble 0.0) steps
  where
-  go ((p, v) :| (x : rest)) acc =
-    let step = K p delta
-        delta = (v - acc)
-     in step `Plus` ShiftRight delta (go (x :| rest) (acc + delta))
-  go ((p, v) :| []) acc =
-    let step = K p delta
-        delta = (v - acc)
-     in step
+  stepf (p, v) acc =
+    let delta = (v - acc)
+     in (K p delta, delta)
+
+  go acc = \case
+    (q :| (x : rest)) ->
+      let (step, delta) = stepf q acc
+       in step `Plus` ShiftRight delta (go (acc + delta) (x :| rest))
+    (q :| []) ->
+      fst $ stepf q acc
