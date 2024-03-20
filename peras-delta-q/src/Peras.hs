@@ -5,6 +5,7 @@ import A (A (..))
 import Data.List.NonEmpty (fromList)
 import Data.Ratio ((%))
 import DeltaQ.QTA (fromQTA)
+import OBox (O (..), Tag (..), alt, box, (=>=))
 import Reals (Rops)
 import qualified Reals
 import UnitInterval (Iops)
@@ -36,3 +37,35 @@ toR = Reals.fromDouble
 
 oneThird :: Iops i => i
 oneThird = toI $ fromRational $ 1 % 3
+
+fullPraos :: O
+fullPraos =
+  let
+    oneHop =
+      Annotated
+        (Tag "1 hop" "1 hop")
+        ( box
+            "req hdr"
+            =>= box "rep hdr"
+            =>= box "req body"
+            =>= box "rep body"
+        )
+    twoHops =
+      alt
+        1
+        oneHop
+        ( alt
+            5
+            (Annotated (Tag "2 hops" "2 hops") $ oneHop =>= oneHop)
+            ( alt
+                36
+                (Annotated (Tag "3 hops" "3 hops") $ oneHop =>= oneHop =>= oneHop)
+                ( alt
+                    98
+                    (Annotated (Tag "4 hops" "4 hops") $ oneHop =>= oneHop =>= oneHop =>= oneHop)
+                    (Annotated (Tag "5 hops" "5 hops") $ oneHop =>= oneHop =>= oneHop =>= oneHop =>= oneHop)
+                )
+            )
+        )
+   in
+    twoHops
