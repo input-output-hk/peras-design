@@ -82,7 +82,7 @@ gradTest :: [Double]
 gradTest = grad [1, 4, 9, 16, 25] 1
 
 convTest :: [Double]
-convTest = NumericalCDF.conv [1, 2, 3] [4, 5, 6] 1
+convTest = NumericalCDF.conv [1, 2, 3, 4, 5, 6] [1, 2, 3, 4, 5, 6] 1
 
 integrateTest :: [Double]
 integrateTest = integrate [1, 2, 3] 1

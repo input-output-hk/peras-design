@@ -1,8 +1,12 @@
+{-# LANGUAGE TupleSections #-}
+
 module DrawExamples where
 
 import A
 import NumericalCDF as N
 
+import Data.List.NonEmpty (fromList)
+import DeltaQ.QTA (fromQTA)
 import Graphics.Rendering.Chart.Backend.Cairo (toFile)
 import Graphics.Rendering.Chart.Easy (def, layout_title, line, plot, (.=))
 import qualified Peras
@@ -10,11 +14,13 @@ import qualified Peras
 introGraph :: IO ()
 introGraph = do
   let parts = (2000 :: Int)
-  let dx = (2.0 / fromIntegral parts :: Double)
+  let dx = 1.0
 
   -- NOTE we can put any of our examples here, given that
   --      the parts (and dx) are acceptable.
-  let ex = (toCDF Peras.praosHeader :: Double -> NCDF) dx
+  let q = fromQTA $ fromList $ (1 / 6,) <$> [1 .. 6]
+      r = q `Conv` q
+      ex = (toCDF r :: Double -> NCDF) dx
   let fg = A.tabulate ex dx
 
   toFile def "do-intro.png" $ do
@@ -28,15 +34,19 @@ perasGraph = do
 
   -- NOTE we can put any of our examples here, given that
   --      the parts (and dx) are acceptable.
-  let hdr = (toCDF Peras.praosHeader :: Double -> NCDF) dx
-      body = (toCDF Peras.praosBody :: Double -> NCDF) dx
+  let hdr = (toCDF Peras.singleMTURoundtrip :: Double -> NCDF) dx
+      full = (toCDF Peras.headerBodyDiffusion :: Double -> NCDF) dx
+      full5Hops = (toCDF (Peras.multihopsDiffusion 5 Peras.headerBodyDiffusion) :: Double -> NCDF) dx
       hdrTab = A.tabulate hdr dx
-      bodyTab = A.tabulate body dx
+      fullTab = A.tabulate full dx
+      full5HopsTab = A.tabulate full5Hops dx
 
-  toFile def "do-intro.png" $ do
-    layout_title .= "Intro Example"
+  toFile def "peras.png" $ do
+    layout_title .= "Praos Diffusion"
     plot (line "header" [hdrTab])
-    plot (line "body" [bodyTab])
+    plot (line "header + body" [fullTab])
+
+-- plot (line "full5Hops" [full5HopsTab])
 
 -- TODO this is deprecated code that uses NumericalCDF directly.
 --      It should produce exactly the same result as toCDF Examples.doIntro.

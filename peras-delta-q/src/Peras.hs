@@ -10,16 +10,23 @@ import qualified Reals
 import UnitInterval (Iops)
 import qualified UnitInterval
 
-praosHeader :: (Rops r, Iops i) => A r i
-praosHeader =
+singleMTURoundtrip :: (Rops r, Iops i) => A r i
+singleMTURoundtrip =
   fromQTA $
-    fromList
-      [(oneThird, toR 0.012), (oneThird, toR 0.069), (oneThird, toR 0.268)]
+    fromList [(oneThird, toR 0.012), (oneThird, toR 0.069), (oneThird, toR 0.268)]
 
-praosBody :: (Rops r, Iops i) => A r i
-praosBody =
+payload64KRoundtrip :: (Rops r, Iops i) => A r i
+payload64KRoundtrip =
   fromQTA $
     fromList [(oneThird, toR 0.024), (oneThird, toR 0.143), (oneThird, toR 0.531)]
+
+headerBodyDiffusion :: (Rops r, Iops i) => A r i
+headerBodyDiffusion =
+  singleMTURoundtrip `Conv` singleMTURoundtrip -- `Conv` singleMTURoundtrip `Conv` payload64KRoundtrip
+
+multihopsDiffusion :: (Rops r, Iops i) => Int -> A r i -> A r i
+multihopsDiffusion n base =
+  foldl Conv base $ replicate (n - 1) base
 
 toI :: Iops i => Double -> i
 toI = UnitInterval.fromDouble
