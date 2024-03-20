@@ -1,6 +1,7 @@
 module TargetModel where
 
 import Data.IORef
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
 import Test.QuickCheck
@@ -15,6 +16,13 @@ import Test.QuickCheck.Extras
 -- Network model:
 --  - messages diffuse over the network instantly to all other
 --    hosts.
+
+-- TODO: the current model doesn't increment the blocks because negative actions
+-- (specifically negative `Tick`s!) mean that sometimes the environment (dishonestly)
+-- fails to trasmit a message! That means the chain isn't unbroken. However, we don't
+-- detect that safety property here because we aren't observing the fact that when the
+-- sut sends a message it always sends the message that contains the slot number, not the
+-- increment of the last message we received. Something to think about here.
 
 newtype Block = Block { blockIndex :: Integer }
   deriving (Ord, Eq, Show, Generic)
@@ -86,6 +94,9 @@ instance StateModel EnvState where
   nextState s (ProduceBlock b) _ = s { lastEnvBlock = b }
   nextState s Tick             _ = s { time = time s + 1 }
 
+  failureNextState s Tick = s { time = time s + 1 }
+  failureNextState s _ = s
+
   precondition s@EnvState{..} = \case
     -- An honest environment can only tick when it has fulfilled
     -- its obligation to produce a block
@@ -98,13 +109,16 @@ instance StateModel EnvState where
     -- We can only produce a block if its the environments turn and
     -- the block it is producing is the next block.
     ProduceBlock b
-      | environmentsTurn s
-      , isNextEnvBlock s b -> True
+      | expectedMessage time == Message b (envHost s)
+      , b /= lastEnvBlock -> True
     _ -> False
+
+  validFailingAction _ _ = True
 
   arbitraryAction ctx s =
     oneof [ pure $ Some Tick
           , Some . ProduceBlock <$> nextEnvBlock s
+          , Some . ProduceBlock . Block <$> arbitrary
           ]
 
 -- Run Model --------------------------------------------------------------
@@ -125,16 +139,17 @@ instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunM
       onNode nodeProgressTime
       onNode nodeReceiveFrom
     ProduceBlock b -> do
-      put b
+      when (expectedMessage time == Message b (envHost s)) $ do
+        put b
       onNode $ flip nodeSendTo $ Message b (envHost s)
 
   postcondition (_, EnvState{..}) Tick _ msgs = do
-    lastBlock <- lift get
+    lastHonestBlock <- lift get
     case msgs of
       []
         | time `mod` 3 == 2
         , messageOriginator (expectedMessage time) == sutHost
-        , messageBlock (expectedMessage time) /= lastBlock -> do
+        , messageBlock (expectedMessage time) /= lastHonestBlock -> do
             counterexamplePost $ "Node failed to produce a block in time"
             pure False
         | otherwise -> pure True
@@ -145,7 +160,7 @@ instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunM
         | m /= expectedMessage time -> do
             counterexamplePost $ "Node produced an unexpected message " ++ show m
             pure False
-        | messageBlock m == lastBlock -> do
+        | messageBlock m == lastHonestBlock -> do
             counterexamplePost $ "Node produced the same block twice " ++ show m
             pure False
         | otherwise -> do
@@ -156,15 +171,18 @@ instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunM
         pure False
   postcondition _ _ _ _ = pure True
 
-prop_node_correct :: (Monad m, RunModel EnvState (ModelMonad m))
+prop_nodeCorrect :: (Monad m, RunModel EnvState (ModelMonad m))
                   => Node m
                   -> (PropertyM m () -> Property)
                   -> Actions EnvState
                   -> Property
-prop_node_correct node runProp as = runProp $ do
+prop_nodeCorrect node runProp as = runProp $ do
   () <$ runPropertyStateT (runPropertyReaderT (runActions as) node) (Block 0)
 
 -- Honest implementation --------------------------------------------------
+
+prop_honest :: Actions EnvState -> Property
+prop_honest = prop_nodeCorrect (honestNode Alice) runHonestMonad
 
 type HonestNodeMonad = ReaderT (IORef Integer) IO
 
