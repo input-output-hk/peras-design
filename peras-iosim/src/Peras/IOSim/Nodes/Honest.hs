@@ -10,24 +10,25 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Nodes.Honest (
-  CostModel (..),
+  NodeCosts (..),
   Node (Node),
 ) where
 
 import Control.Lens (Lens', lens, use, uses, (%=), (&), (.=), (.~), (^.))
-import Control.Monad ((<=<))
+import Control.Monad (when, (<=<))
 import Control.Monad.Class.MonadTime (addUTCTime)
-import Control.Monad.Except (ExceptT (ExceptT), MonadError (throwError), liftEither, runExceptT)
-import Control.Monad.State (MonadState, lift, runStateT)
+import Control.Monad.Except (ExceptT (..), liftEither, runExceptT)
+import Control.Monad.State (MonadState, StateT (runStateT), lift)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (..))
+import Data.Either (isRight)
 import Data.List (partition)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
-import Peras.Block (Block (..), BlockBody, PartyId, Slot)
+import Peras.Block (Block (..), BlockBody, PartyId)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.Crypto (Hash (Hash))
 import Peras.Event (CpuTime, Rollback (..))
@@ -41,13 +42,14 @@ import Peras.IOSim.Chain (
   blocksInWindow,
   eligibleDanglingVotes,
   lookupBlock,
+  lookupBody,
   lookupVote,
+  missingIncludedVotes,
   preferChain,
   resolveBlock,
  )
 import Peras.IOSim.Chain.Types (ChainState (blockIndex, bodyIndex, preferredChain, voteIndex))
 import Peras.IOSim.Crypto (
-  VrfOutput,
   VrfUsage (VrfBodyHash),
   nextVrf,
   proveLeadership,
@@ -81,7 +83,7 @@ import qualified Data.Aeson as A
 import qualified Data.Map as M
 import qualified Data.Set as S
 
-data CostModel = CostModel
+data NodeCosts = NodeCosts
   { costForgeBlock :: CpuTime
   -- ^ Slot leader forges a new block.
   , costCastVote :: CpuTime
@@ -92,6 +94,8 @@ data CostModel = CostModel
   -- ^ Process
   , costRollBack :: CpuTime
   -- ^ Process a rollback message.
+  , costFollowChain :: CpuTime
+  -- ^ Process a chain-following message.
   , costVerifyVote :: CpuTime
   -- ^ Verify the validity of a vote.
   , costVerifyBlock :: CpuTime
@@ -121,38 +125,33 @@ data CostModel = CostModel
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
-instance FromJSON CostModel
-instance ToJSON CostModel
+instance FromJSON NodeCosts
+instance ToJSON NodeCosts
 
-instance Default CostModel where
+instance Default NodeCosts where
   -- FIXME: Replace with realistic values.
   def =
-    CostModel
+    NodeCosts
       { costForgeBlock = fromRational $ 100_000 % 1_000_000
       , costCastVote = fromRational $ 100_001 % 1_000_000
       , costEvaluateChain = fromRational $ 100_002 % 1_000_000
       , costRollForward = fromRational $ 100_003 % 1_000_000
       , costRollBack = fromRational $ 100_004 % 1_000_000
-      , costVerifyVote = fromRational $ 100_005 % 1_000_000
-      , costVerifyBlock = fromRational $ 100_006 % 1_000_000
-      , costVerifyBody = fromRational $ 100_007 % 1_000_000
-      , costReportVote = fromRational $ 100_008 % 1_000_000
-      , costReportBlock = fromRational $ 100_009 % 1_000_000
-      , costReportBody = fromRational $ 100_010 % 1_000_000
-      , costRecordVote = fromRational $ 100_011 % 1_000_000
-      , costRecordBlock = fromRational $ 100_012 % 1_000_000
-      , costRecordBody = fromRational $ 100_013 % 1_000_000
-      , costRequestVote = fromRational $ 100_014 % 1_000_000
-      , costRequestBlock = fromRational $ 100_015 % 1_000_000
-      , costRequestBody = fromRational $ 100_016 % 1_000_000
-      , costSendMessage = fromRational $ 100_017 % 1_000_000
+      , costFollowChain = fromRational $ 100_005 % 1_000_000
+      , costVerifyVote = fromRational $ 100_006 % 1_000_000
+      , costVerifyBlock = fromRational $ 100_007 % 1_000_000
+      , costVerifyBody = fromRational $ 100_008 % 1_000_000
+      , costReportVote = fromRational $ 100_009 % 1_000_000
+      , costReportBlock = fromRational $ 100_010 % 1_000_000
+      , costReportBody = fromRational $ 100_011 % 1_000_000
+      , costRecordVote = fromRational $ 100_012 % 1_000_000
+      , costRecordBlock = fromRational $ 100_013 % 1_000_000
+      , costRecordBody = fromRational $ 100_014 % 1_000_000
+      , costRequestVote = fromRational $ 100_015 % 1_000_000
+      , costRequestBlock = fromRational $ 100_016 % 1_000_000
+      , costRequestBody = fromRational $ 100_017 % 1_000_000
+      , costSendMessage = fromRational $ 100_018 % 1_000_000
       }
-
-uses' :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e b) -> m b
-uses' l f = uses l f >>= liftEither
-
-(%#=) :: MonadError e m => MonadState s m => Lens' s a -> (a -> Either e a) -> m ()
-l %#= f = uses l f >>= either throwError (l .=)
 
 traceInvalid ::
   Monad m =>
@@ -173,13 +172,21 @@ traceInvalid location def' x trace =
             ]
         pure def'
 
+traceInvalid' ::
+  NodeContext m ->
+  String ->
+  Invalid ->
+  m ()
+traceInvalid' NodeContext{traceSelf} location invalid =
+  traceSelf $ A.object ["invalid" A..= invalid, "location" A..= location]
+
 data Node = Node
   { nodeId :: NodeId
   , owner :: PartyId
   , stake :: Coin
   , vrfOutput :: Double
-  , chainState :: ChainState
   , downstreams :: Set NodeId
+  , chainState :: ChainState
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -221,11 +228,11 @@ instance PerasNode Node where
       case inMessage of
         NextSlot _ -> nextSlot context'
         NewChain chain -> newChain context' chain
-        SomeVote vote -> newVote context' vote
-        FetchVotes hashes -> fetchVotes context' origin hashes
         FollowChain hash -> followChain context' origin hash
-        RollForward block -> newBlock context' block
-        RollBack block -> rollBackward context' origin block
+        RollForward block -> roll context' (costRollForward def) origin block
+        RollBack block -> roll context' (costRollBack def) origin block
+        FetchVotes hashes -> fetchVotes context' origin hashes
+        SomeVote vote -> newVote context' origin vote
         FetchBlocks hashes -> fetchBodies context' origin hashes
         SomeBlock body -> recordBody context' body
    where
@@ -235,35 +242,28 @@ instance PerasNode Node where
       traceSelf $ A.object ["finalState" A..= (node ^. chainStateLens)]
       pure node
 
--- FIXME / TODO:
--- 1. Consider using `These` instead of `Either` for graceful reporting of incomplete indices.
--- 2. Review each function in this file:
---    - Add cpu resource consumption.
---    - Request missing blocks, bodies, and votes.
---    - Cache messages that cannot be processed until blocks, votes, or bodies are received.
---    - `FollowChain` should trigger a stream of `RollForward`s.
---    - `RollForward` should act as an incremental version of `NewChain`.
---    - A rollback should trigger a `Rollback` message.
--- 3. Add toggle for `NewChain` mode vs `RollForward`/`Rollback`/`FollowChain` mode.
---
-makeResult ::
+-- | Whether to use `NewChain` messages for notifying downstream peers when a new chain is adopted: otherwise, `RollForward` and `RollBack` messages are sent.
+legacyMode :: Bool
+legacyMode = True
+
+makeResultDownstreams ::
   MonadState Node m =>
   NodeContext m ->
   NodeStats ->
   [Message] ->
   m NodeResult
-makeResult context stats' messages =
+makeResultDownstreams context stats' messages =
   do
     peers <- uses downstreamsLens S.toList
-    makeResult' context stats' $ (,) <$> peers <*> messages
+    makeResult context stats' $ (,) <$> peers <*> messages
 
-makeResult' ::
+makeResult ::
   MonadState Node m =>
   NodeContext m ->
   NodeStats ->
   [(NodeId, Message)] ->
   m NodeResult
-makeResult' NodeContext{..} stats' messages =
+makeResult NodeContext{..} stats' messages =
   do
     source <- use nodeIdLens
     tip <- uses chainStateLens $ hashTip . blocks . preferredChain
@@ -284,85 +284,89 @@ makeResult' NodeContext{..} stats' messages =
         stats'
           <> mempty
             { preferredTip = pure (slot, tip)
-            , --          , txBytes = sum $ outBytes <$> outputs  -- FIXME: Why does this fail with `<<loop>>`?
-              txBytes = sum $ messageSize . snd <$> messages
+            , txBytes = sum $ messageSize . snd <$> messages
             }
     pure NodeResult{..}
 
-nextSlot :: MonadState Node m => NodeContext m -> m NodeResult
+nextSlot ::
+  MonadState Node m =>
+  NodeContext m ->
+  m NodeResult
 nextSlot context@NodeContext{..} =
   do
     let
       Peras{..} = protocol
       r = currentRound protocol slot
       votingRound = isFirstSlotInRound protocol slot
+    -- Discard expired votes.
     chainStateLens %= discardExpiredVotes protocol slot
+    -- Update the VRF output.
     vrfOutputLens %= nextVrf
     vrf <- use vrfOutputLens
+    -- Handle block production.
     leader <- isSlotLeader activeSlotCoefficient totalStake vrf <$> use stakeLens
-    leaderMessages <-
+    leaderResult <-
       if leader
-        then doLeading slot vrf traceSelf
+        then doLeading context
         else pure mempty
+    -- Handle voting.
     voter <- isCommitteeMember pCommitteeLottery totalStake vrf <$> use stakeLens
     votes <- uses chainStateLens $ voteInRound protocol r
-    voterMessages <-
+    voterResult <-
       if votingRound && voter && votes
-        then doVoting protocol slot r vrf traceSelf
+        then doVoting context r
         else pure mempty
     tip <- uses chainStateLens $ hashTip . blocks . preferredChain
-    makeResult
-      context
-      mempty
-        { slotLeader = if leader then pure slot else mempty
-        , committeeMember = if votingRound && voter then pure slot else mempty
-        , votingAllowed = if votingRound && votes then pure (r, tip) else mempty
-        , cpuTime = fromRational $ 201_000 % 1_000_000 -- FIXME: Use realistic CPU times.
-        }
-      $ leaderMessages <> voterMessages
+    roundResult <- makeResultDownstreams context mempty{votingAllowed = if votingRound && votes then pure (r, tip) else mempty} mempty
+    -- Report the results.
+    pure $ leaderResult <> voterResult <> roundResult
 
 doLeading ::
   MonadState Node m =>
-  Slot ->
-  VrfOutput ->
-  TraceSelf m ->
-  m [Message]
-doLeading slotNumber vrf =
-  traceInvalid "Peras.IOSim.Nodes.Honest.doLeading" mempty $ do
-    -- FIXME: Move toe `Peras.IOSim.Protocol`.
+  NodeContext m ->
+  m NodeResult
+doLeading context@NodeContext{slot} =
+  do
+    vrf <- use vrfOutputLens
+    -- Forge the new block.
     block <-
-      Block slotNumber
+      Block slot
         <$> use ownerLens
         <*> uses chainStateLens (hashTip . Peras.Chain.blocks . preferredChain)
-        <*> uses' chainStateLens eligibleDanglingVotes
+        <*> uses chainStateLens eligibleDanglingVotes
         <*> pure (proveLeadership vrf ())
         <*> pure (signBlock vrf ())
         <*> pure (Hash $ randomBytes VrfBodyHash vrf)
-    chainStateLens %#= appendBlock block
+    chainStateLens %= appendBlock block
     -- FIXME: Implement `prefixCutoffWeight` logic.
-    uses chainStateLens $ pure . NewChain . preferredChain
+    preferred <- chainStateLens `uses` preferredChain
+    makeResultDownstreams
+      context
+      mempty{slotLeader = pure slot, cpuTime = costForgeBlock def + costRecordBlock def}
+      $ if legacyMode
+        then [NewChain preferred] -- Send the whole chain downstream.
+        else [RollForward block] -- Send only the new block header downstream.
 
 doVoting ::
   MonadState Node m =>
-  Protocol ->
-  Slot ->
+  NodeContext m ->
   RoundNumber ->
-  VrfOutput ->
-  TraceSelf m ->
-  m [Message]
-doVoting protocol slotNumber r vrf =
-  traceInvalid "Peras.IOSim.Nodes.Honest.doVoting" mempty $ do
-    chainStateLens `uses` (blocksInWindow (candidateWindow protocol slotNumber) . preferredChain)
+  m NodeResult
+doVoting context@NodeContext{protocol, slot} r =
+  makeResultDownstreams context mempty{committeeMember = pure slot, cpuTime = costCastVote def + costRecordVote def} =<< do
+    vrf <- use vrfOutputLens
+    chainStateLens `uses` (blocksInWindow (candidateWindow protocol slot) . preferredChain)
       >>= \case
         block : _ -> do
+          -- Cast the vote.
           vote <-
-            -- FIXME: Move to `Peras.IOSim.Protocol`.
             MkVote r
               <$> use ownerLens
               <*> pure (proveMembership vrf ())
               <*> pure (hashBlock block)
               <*> pure (signVote vrf ())
-          addValidVote protocol vote
+          chainStateLens %= addVote vote
+          -- Send the vote downstream.
           pure [SomeVote vote]
         [] -> pure mempty
 
@@ -378,7 +382,7 @@ newChain context@NodeContext{..} proposed =
     fromWeight <- chainStateLens `uses` chainWeight protocol
     notEquivocated <- uses chainStateLens $ ((/= Left EquivocatedVote) .) . checkEquivocation
     let proposed' = proposed{votes = filter notEquivocated $ votes proposed}
-    state' <- chainStateLens `uses'` preferChain proposed'
+    state' <- chainStateLens `uses` preferChain proposed'
     liftEither $ do
       validChain protocol state'
       mapM_ (validCandidateWindow protocol <=< resolveBlock state') $ votes proposed'
@@ -398,7 +402,7 @@ newChain context@NodeContext{..} proposed =
       then do
         chainStateLens .= state'
         preferred <- chainStateLens `uses` preferredChain
-        makeResult
+        makeResultDownstreams
           context'
           mempty
             { cpuTime = fromRational $ 202_000 % 1_000_000 -- FIXME: Use realistic CPU times.
@@ -407,73 +411,13 @@ newChain context@NodeContext{..} proposed =
           [NewChain preferred]
       else do
         messages <- newBlocksVotes proposed'
-        chainStateLens %#= addChain proposed'
-        makeResult
+        chainStateLens %= addChain proposed'
+        makeResultDownstreams
           context'
           mempty
             { cpuTime = fromRational $ 203_000 % 1_000_000 -- FIXME: Use realistic CPU times.
             }
           messages
-
-newBlock ::
-  MonadState Node m =>
-  NodeContext m ->
-  Block ->
-  m NodeResult
-newBlock context@NodeContext{..} block =
-  traceInvalid "Peras.IOSim.Nodes.Honest.newBlock" mempty (newBlock' protocol block) traceSelf
-    >>= makeResult
-      context
-      mempty
-        { cpuTime = fromRational $ 204_000 % 1_000_000 -- FIXME: Use realistic CPU times.
-        }
-
-newBlock' ::
-  MonadError Invalid m =>
-  MonadState Node m =>
-  Protocol ->
-  Block ->
-  m [Message]
-newBlock' _ block =
-  do
-    chainStateLens `uses` lookupBlock (hashBlock block)
-      >>= \case
-        Right _ -> pure mempty
-        Left _ -> do
-          chainStateLens %#= addBlock block
-          pure [RollForward block]
-
-newVote ::
-  MonadState Node m =>
-  NodeContext m ->
-  Vote ->
-  m NodeResult
-newVote context@NodeContext{..} vote =
-  traceInvalid "Peras.IOSim.Nodes.Honest.newVote" mempty (newVote' protocol vote) traceSelf
-    >>= makeResult
-      context
-      mempty
-        { cpuTime = fromRational $ 205_000 % 1_000_000 -- FIXME: Use realistic CPU times.
-        }
-
-newVote' ::
-  MonadError Invalid m =>
-  MonadState Node m =>
-  Protocol ->
-  Vote ->
-  m [Message]
-newVote' protocol vote =
-  do
-    chainStateLens `uses` lookupVote (hashVote vote)
-      >>= \case
-        Right _ -> pure mempty
-        Left _ -> do
-          addValidVote protocol vote
-          chainStateLens `uses` lookupBlock (blockHash vote)
-            >>= \case
-              Right block -> pure [SomeVote vote, RollForward block, SomeVote vote]
-              Left HashOfUnknownBlock -> pure [SomeVote vote] -- FIXME: Ideally, we should request the block from the peers.
-              Left e -> throwError e
 
 newBlocksVotes ::
   MonadState Node m =>
@@ -486,21 +430,15 @@ newBlocksVotes (MkChain blocks votes) =
         newVotes = SomeVote <$> filter (flip M.notMember (voteIndex chain) . hashVote) votes
     pure $ newBlocks <> newVotes
 
-addValidVote ::
-  MonadError Invalid m =>
-  MonadState Node m =>
-  Protocol ->
-  Vote ->
-  m ()
-addValidVote protocol vote =
-  do
-    state <- use chainStateLens
-    block <- liftEither $ snd <$> resolveBlock state vote
-    liftEither $ do
-      checkEquivocation state vote
-      validCandidateWindow protocol (vote, block)
-    state' <- liftEither $ addVote (vote, block) state
-    chainStateLens .= state'
+evaluateChain ::
+  Monad m =>
+  NodeContext m ->
+  Block ->
+  m NodeResult
+evaluateChain _ _ =
+  if legacyMode
+    then pure mempty
+    else undefined -- FIXME
 
 followChain ::
   MonadState Node m =>
@@ -508,33 +446,111 @@ followChain ::
   NodeId ->
   BlockHash ->
   m NodeResult
-followChain context _sender _hash =
+followChain context sender hash =
   do
-    -- FIXME: Implement.
-    makeResult context mempty mempty
+    -- Finds the block subsequent to the intersection point.
+    blocks <- uses chainStateLens $ reverse . takeWhile ((/= hash) . hashBlock) . blocks . preferredChain
+    -- Send the blocks.
+    makeResult context mempty{cpuTime = costFollowChain def} $
+      (sender,) . RollForward <$> blocks
 
-rollBackward ::
+roll ::
   MonadState Node m =>
   NodeContext m ->
+  CpuTime ->
   NodeId ->
   Block ->
   m NodeResult
-rollBackward context@NodeContext{traceSelf} _sender block =
+roll context cpu sender block =
   do
-    flip (traceInvalid "Peras.IOSim.Nodes.Honest.rollBackward" mempty) traceSelf $
-      chainStateLens %#= addBlock block
-    makeResult context mempty mempty
+    -- Process the block.
+    blockResult <- newBlock context cpu sender block
+    -- Determine whether to adopt a new chain.
+    evaluateResult <- evaluateChain context block
+    -- Report the result.
+    pure $ blockResult <> evaluateResult
+
+newBlock ::
+  MonadState Node m =>
+  NodeContext m ->
+  CpuTime ->
+  NodeId ->
+  Block ->
+  m NodeResult
+newBlock context cpu sender block =
+  chainStateLens `uses` lookupBlock (hashBlock block) >>= \case
+    -- No action is required because this block has already been processed.
+    Right _ -> pure mempty
+    Left _ ->
+      makeResult context mempty{cpuTime = cpu + costVerifyBlock def + costRecordBlock def} . fmap (sender,) =<< do
+        -- Record the block.
+        chainStateLens %= addBlock block
+        -- Fetch any votes included in the block.
+        message <- uses chainStateLens $ FetchVotes . missingIncludedVotes [block]
+        either
+          -- Fetch the block body if it hasn't already been fetched.
+          (const [message, FetchBlocks [bodyHash block]])
+          (const [message])
+          <$> chainStateLens `uses` lookupBody (bodyHash block)
+
+newVote ::
+  MonadState Node m =>
+  NodeContext m ->
+  NodeId ->
+  Vote ->
+  m NodeResult
+newVote context@NodeContext{protocol} sender vote =
+  chainStateLens `uses` lookupVote (hashVote vote) >>= \case
+    -- No action is required because this vote has already been processed.
+    Right _ -> pure mempty
+    Left _ -> do
+      addValidVote protocol vote >>= \case
+        -- Forward the vote downstream if the node is in legacy mode.
+        Right _ ->
+          if legacyMode
+            then makeResultDownstreams context mempty{cpuTime = costVerifyVote def + costRecordVote def} [SomeVote vote]
+            else makeResult context mempty{cpuTime = costVerifyVote def + costRecordVote def} mempty
+        -- Fetch the block so that the vote can later be evaluated.
+        Left e@HashOfUnknownBlock -> do
+          traceInvalid' context "Peras.IOSim.Nodes.Honest.newVote" e
+          makeResult context mempty{cpuTime = costVerifyVote def + costRecordVote def} [(sender, FetchBlocks [blockHash vote])]
+        -- Report the receipt of an invalid vote.
+        Left e -> do
+          traceInvalid' context "Peras.IOSim.Nodes.Honest.newVote" e
+          makeResult context mempty{cpuTime = costVerifyVote def + costRecordVote def} mempty
+
+addValidVote ::
+  MonadState Node m =>
+  Protocol ->
+  Vote ->
+  m (Either Invalid ())
+addValidVote protocol vote =
+  do
+    state <- use chainStateLens
+    let result =
+          do
+            -- A vote can only be validated if it votes for a known block.
+            block <- snd <$> resolveBlock state vote
+            -- Ensure that the vote is not an equivocation.
+            checkEquivocation state vote
+            -- Validate the vote.
+            validCandidateWindow protocol (vote, block)
+    -- Record the vote.
+    when (isRight result) $
+      chainStateLens .= addVote vote state
+    pure result
 
 recordBody ::
   MonadState Node m =>
   NodeContext m ->
   BlockBody ->
   m NodeResult
-recordBody context@NodeContext{traceSelf} body =
+recordBody context body =
   do
-    flip (traceInvalid "Peras.IOSim.Nodes.Honest.recordBody" mempty) traceSelf $
-      chainStateLens %#= addBody body
-    makeResult context mempty mempty
+    -- Record the block body.
+    chainStateLens %= addBody body
+    -- Report the result.
+    makeResultDownstreams context mempty{cpuTime = costRecordBody def} mempty
 
 fetchBodies ::
   MonadState Node m =>
@@ -544,8 +560,10 @@ fetchBodies ::
   m NodeResult
 fetchBodies context requester hashes =
   do
+    -- Find which block bodies are known.
     found <- uses chainStateLens $ flip M.restrictKeys (S.fromList hashes) . bodyIndex
-    makeResult' context mempty $
+    -- Send the block bodies.
+    makeResult context mempty{cpuTime = fromIntegral (length hashes) * costReportBody def} $
       (requester,) . SomeBlock
         <$> M.elems found
 
@@ -557,7 +575,9 @@ fetchVotes ::
   m NodeResult
 fetchVotes context requester hashes =
   do
+    -- Find the votes which are known.
     found <- uses chainStateLens $ flip M.restrictKeys (S.fromList hashes) . voteIndex
-    makeResult' context mempty $
+    -- Send the votes.
+    makeResult context mempty{cpuTime = fromIntegral (length hashes) * costReportVote def} $
       (requester,) . SomeVote
         <$> M.elems found

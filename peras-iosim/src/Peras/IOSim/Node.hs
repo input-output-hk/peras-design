@@ -55,8 +55,8 @@ initializeNode Parameters{maximumStake} nodeId downstreams =
       <$> ((fromIntegral . abs :: Int -> Natural) <$> getRandom)
       <*> getRandomR (1, maximumStake)
       <*> getRandomR (0, 1)
-      <*> pure def
       <*> pure downstreams
+      <*> pure def
 
 makeContext ::
   MonadTime m =>
