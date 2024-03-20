@@ -17,6 +17,7 @@ module Peras.IOSim.Node.Types (
 import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Aeson (FromJSON, ToJSON, Value)
 import Data.Function (on)
+import Data.List (nub)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
@@ -66,11 +67,11 @@ instance ToJSON NodeStats
 instance Semigroup NodeStats where
   x <> y =
     NodeStats
-      { preferredTip = on (<>) preferredTip x y
-      , rollbacks = on (<>) rollbacks x y
-      , slotLeader = on (<>) slotLeader x y
-      , committeeMember = on (<>) committeeMember x y
-      , votingAllowed = on (<>) votingAllowed x y
+      { preferredTip = nub $ on (<>) preferredTip x y
+      , rollbacks = nub $ on (<>) rollbacks x y
+      , slotLeader = nub $ on (<>) slotLeader x y
+      , committeeMember = nub $ on (<>) committeeMember x y
+      , votingAllowed = nub $ on (<>) votingAllowed x y
       , cpuTime = on (+) cpuTime x y
       , rxBytes = on (+) rxBytes x y
       , txBytes = on (+) txBytes x y
