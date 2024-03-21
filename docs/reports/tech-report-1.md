@@ -57,7 +57,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Overview
 
-![Peras Protocol Overview](/docs/diagrams/peras-with-certs.pdf)
+![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
 
 ## Pseudo-code
 
