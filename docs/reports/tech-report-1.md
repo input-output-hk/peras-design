@@ -155,7 +155,7 @@ deltaq15 = combine hopsProba15
 
 Then using `empiricalCDF` computation with 5000 different samples yield the following graph:
 
-![Praos ΔQ Model CDF](/docs/diagrams/deltaq-basic.png)
+![Praos ΔQ Model CDF](/docs/diagrams/plot-hops-distribution.svg)
 
 ## Peras ΔQ Model
 
