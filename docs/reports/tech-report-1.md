@@ -168,9 +168,45 @@ Then using `empiricalCDF` computation with 5000 different samples yield the foll
 
 ![Praos ΔQ Model CDF](/docs/diagrams/plot-hops-distribution.svg)
 
-For comparison purpose, we also plot on this graph the empirical distribution of block adoption time observed on the mainnet over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/.[^2]
+To calibrate our model, we have computed an empirical distribution of block adoption time[^2] observed on the mainnet over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/. The raw data is provided as a file with 12 millions entries similar to:
+
+```
+9963861,117000029,57.128.141.149,192.168.1.1,570,0,60,30
+9963861,117000029,57.128.141.149,192.168.1.1,540,0,60,40
+9963861,117000029,158.101.97.195,150.136.84.82,320,0,10,50
+9963861,117000029,185.185.82.168,158.220.80.17,610,0,50,50
+9963861,117000029,74.122.122.114,10.10.100.12,450,0,10,50
+9963861,117000029,69.156.16.141,69.156.16.141,420,0,10,50
+9963861,117000029,165.227.139.87,10.114.0.2,620,10,0,70
+9963861,117000029,192.99.4.52,144.217.78.44,460,0,10,100
+9963861,117000029,49.12.89.235,135.125.188.228,550,0,20,50
+9963861,117000029,168.119.9.11,3.217.90.52,450,150,10,50
+...
+```
+
+Each entry provides:
+
+* Block height,
+* Slot number,
+* Emitter and receiver's IP addresses,
+* Time (in ms) to header announcement,
+* then additional time to fetch header,
+* time to download block,
+* and finally time to adopt block on the receiver.
+
+Therefore the total time for block diffusion is the sum of the last 4 columns.
+
+This data is gathered through a network of over 100 collaborating nodes that agreed to report various statistics to a central aggregator, so it's not exhausitve and could be biased.
+The following graph compares this observed CDF to various CDFs for different distances (in the graph sense, eg. number of hops one need to go through from an emitting node to a recipient node) between nodes.
+
+![Multiple hops & empirical CDF](/docs/diagrams/plot-praos-multi-hops.svg)
+
+While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
 ## Peras ΔQ Model
+
+Things to take into account for modelling peras:
+* Impact of the size of the certificate: If it increases the size of the header too much,
 
 * ΔQ model of Peras
   * model the impact of larger headers
