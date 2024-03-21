@@ -40,6 +40,7 @@ import Peras.IOSim.Chain (
   addVote,
   appendBlock,
   blocksInWindow,
+  buildChain,
   eligibleDanglingVotes,
   lookupBlock,
   lookupBody,
@@ -244,7 +245,7 @@ instance PerasNode Node where
 
 -- | Whether to use `NewChain` messages for notifying downstream peers when a new chain is adopted: otherwise, `RollForward` and `RollBack` messages are sent.
 legacyMode :: Bool
-legacyMode = True
+legacyMode = False
 
 makeResultDownstreams ::
   MonadState Node m =>
@@ -268,6 +269,12 @@ makeResult NodeContext{..} stats' messages =
     source <- use nodeIdLens
     tip <- uses chainStateLens $ hashTip . blocks . preferredChain
     let
+      messages' =
+        flip filter messages $
+          \case
+            (_, FetchVotes []) -> False
+            (_, FetchBlocks []) -> False
+            _ -> True
       wakeup = cpuTime stats `addUTCTime` clock
       outTime = wakeup
       outEnvelope destination outMessage =
@@ -279,12 +286,12 @@ makeResult NodeContext{..} stats' messages =
       outputs =
         -- FIXME: Add realistic delays.
         zipWith (\i out -> out{outTime = fromRational (10 * i % 1_000_000) `addUTCTime` outTime}) [1 ..] $
-          uncurry outEnvelope <$> messages
+          uncurry outEnvelope <$> messages'
       stats =
         stats'
           <> mempty
             { preferredTip = pure (slot, tip)
-            , txBytes = sum $ messageSize . snd <$> messages
+            , txBytes = sum $ messageSize . snd <$> messages'
             }
     pure NodeResult{..}
 
@@ -404,20 +411,12 @@ newChain context@NodeContext{..} proposed =
         preferred <- chainStateLens `uses` preferredChain
         makeResultDownstreams
           context'
-          mempty
-            { cpuTime = fromRational $ 202_000 % 1_000_000 -- FIXME: Use realistic CPU times.
-            , rollbacks = checkRollback preferred proposed'
-            }
+          mempty{cpuTime = costEvaluateChain def, rollbacks = checkRollback preferred proposed'}
           [NewChain preferred]
       else do
         messages <- newBlocksVotes proposed'
         chainStateLens %= addChain proposed'
-        makeResultDownstreams
-          context'
-          mempty
-            { cpuTime = fromRational $ 203_000 % 1_000_000 -- FIXME: Use realistic CPU times.
-            }
-          messages
+        makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def} messages
 
 newBlocksVotes ::
   MonadState Node m =>
@@ -431,14 +430,27 @@ newBlocksVotes (MkChain blocks votes) =
     pure $ newBlocks <> newVotes
 
 evaluateChain ::
-  Monad m =>
+  MonadState Node m =>
   NodeContext m ->
+  NodeId ->
   Block ->
   m NodeResult
-evaluateChain _ _ =
+evaluateChain context@NodeContext{traceSelf} sender block =
   if legacyMode
     then pure mempty
-    else undefined -- FIXME
+    else
+      chainStateLens `uses` buildChain block >>= \case
+        -- Evaluate the chain if it could be constructed.
+        Right chain -> do
+          traceSelf $ A.object ["tag" A..= ("CHAIN FOUND" :: String), "block" A..= block, "chain" A..= chain]
+          newChain context chain
+        -- Request the missing blocks and votes if the chain could not be constructed.
+        Left (blocksMissing, votesMissing) ->
+          do
+            traceSelf $ A.object ["tag" A..= ("CHAIN NOT FOUND" :: String), "block" A..= block, "blocksMissing" A..= blocksMissing, "votesMissing" A..= votesMissing]
+            makeResult context mempty{cpuTime = costEvaluateChain def} $
+              (sender,)
+                <$> [FetchVotes votesMissing, FetchBlocks blocksMissing]
 
 followChain ::
   MonadState Node m =>
@@ -466,7 +478,7 @@ roll context cpu sender block =
     -- Process the block.
     blockResult <- newBlock context cpu sender block
     -- Determine whether to adopt a new chain.
-    evaluateResult <- evaluateChain context block
+    evaluateResult <- evaluateChain context sender block
     -- Report the result.
     pure $ blockResult <> evaluateResult
 
@@ -507,7 +519,7 @@ newVote context@NodeContext{protocol} sender vote =
       addValidVote protocol vote >>= \case
         -- Forward the vote downstream if the node is in legacy mode.
         Right _ ->
-          if legacyMode
+          if legacyMode || True
             then makeResultDownstreams context mempty{cpuTime = costVerifyVote def + costRecordVote def} [SomeVote vote]
             else makeResult context mempty{cpuTime = costVerifyVote def + costRecordVote def} mempty
         -- Fetch the block so that the vote can later be evaluated.
@@ -550,7 +562,7 @@ recordBody context body =
     -- Record the block body.
     chainStateLens %= addBody body
     -- Report the result.
-    makeResultDownstreams context mempty{cpuTime = costRecordBody def} mempty
+    makeResultDownstreams context mempty{cpuTime = costVerifyBody def + costRecordBody def} mempty
 
 fetchBodies ::
   MonadState Node m =>

@@ -10,15 +10,10 @@ module Peras.IOSim.Chain (
   addVote,
   appendBlock,
   blockTree,
-  missingParents,
-  missingVotedBlocks,
-  missingIncludedVotes,
-  blocksMissingFromChain,
-  votesMissingFromChain,
-  missingBlocks,
-  missingVotes,
   blockTrees,
   blocksInWindow,
+  blocksMissingFromChain,
+  buildChain,
   eligibleDanglingVotes,
   filterDanglingVotes,
   isBlockOnChain,
@@ -26,10 +21,16 @@ module Peras.IOSim.Chain (
   lookupBody,
   lookupRoundForChain,
   lookupVote,
+  missingBlocks,
+  missingIncludedVotes,
+  missingParents,
+  missingVotedBlocks,
+  missingVotes,
   preferChain,
   resolveBlock,
   resolveBlocksOnChain,
   voteRecorded,
+  votesMissingFromChain,
 ) where
 
 import Control.Monad.Except (throwError)
@@ -37,7 +38,7 @@ import Data.Default (Default (def))
 import Data.Either (rights)
 import Data.Foldable (foldr')
 import Data.List (nub)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Peras.Block (Block (..), BlockBody, Slot)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
@@ -244,3 +245,20 @@ blocksInWindow window = filter (blockInWindow window) . blocks
 
 voteRecorded :: Chain -> Vote -> [Block]
 voteRecorded MkChain{blocks} vote = filter ((hashVote vote `elem`) . includedVotes) blocks
+
+buildChain :: Block -> ChainState -> Either ([BlockHash], [VoteHash]) Chain
+buildChain block ChainState{blockIndex, voteIndex} =
+  let
+    buildChain' block'@Block{parentBlock, includedVotes} (blocksFound, votesFound, blocksMissing, votesMissing)
+      | parentBlock == genesisHash = (blocksFound', votesFound', blocksMissing, votesMissing')
+      | otherwise = case parentBlock `M.lookup` blockIndex of
+          Just block'' -> buildChain' block'' (blocksFound', votesFound', blocksMissing, votesMissing')
+          Nothing -> (blocksFound', votesFound', pure parentBlock, votesMissing')
+     where
+      blocksFound' = block' : blocksFound
+      votesFound' = mapMaybe (`M.lookup` voteIndex) includedVotes <> votesFound
+      votesMissing' = filter (`M.notMember` voteIndex) includedVotes <> votesMissing
+   in
+    case buildChain' block mempty of
+      (blocksFound, votesFound, [], []) -> Right $ MkChain (reverse blocksFound) (nub votesFound)
+      (_, _, blocksMissing, votesMissing) -> Left (blocksMissing, nub votesMissing)
