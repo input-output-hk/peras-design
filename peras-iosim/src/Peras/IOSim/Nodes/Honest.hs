@@ -407,12 +407,18 @@ newChain context@NodeContext{..} proposed =
                   pure Rollback{..}
     if toWeight > fromWeight
       then do
+        oldBlocks <- uses chainStateLens $ blocks . preferredChain
+        oldVotes <- uses chainStateLens $ votes . preferredChain
+        let forwardBlocks = filter (`notElem` oldBlocks) $ blocks proposed
+            newVotes = filter (`notElem` oldVotes) $ votes proposed
         chainStateLens .= state'
         preferred <- chainStateLens `uses` preferredChain
         makeResultDownstreams
           context'
           mempty{cpuTime = costEvaluateChain def, rollbacks = checkRollback preferred proposed'}
-          [NewChain preferred]
+          $ if legacyMode
+            then [NewChain preferred]
+            else (SomeVote <$> newVotes) <> reverse (RollForward <$> forwardBlocks)
       else do
         messages <- newBlocksVotes proposed'
         chainStateLens %= addChain proposed'
