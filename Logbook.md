@@ -1,5 +1,9 @@
 ## 2024-03-20
 
+### Block diffusion and resource tracking in `peras-iosim`
+
+The [diffusion](https://github.com/input-output-hk/peras-design/tree/bwbush/diffusion) branch now contains a generally faithful representation of pull-oriented block diffusion that mimic real-life block diffusion. Additionally, it now handles the latency and bandwidth of links along with the compute time at nodes. A provisional set of network, message, and CPU parameters provides coarsely representative modeling of delays in processing and tranmission.
+
 ### AB - Work on ΔQ
 
 Trying to make the test comparing the tabulation from a `dx` on a CDF and the raw QTA is poised to fail on values that lie at the boundary of the resolution of `dx`! Experimented with increasing the resolution and it's always the case the test fails at low resolutions, but it passes when the resolution is set to 0.001
