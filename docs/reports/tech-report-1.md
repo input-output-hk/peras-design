@@ -57,7 +57,10 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Overview
 
+This diagram attempts at depicting graphically how the Peras protocol works over a period of time. A high-fidelity version is [available](/docs/diagrams/peras-with-certs.pdf).
+
 ![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
+
 
 ## Pseudo-code
 
@@ -98,15 +101,23 @@ The block and body sizes are assumed to be:
 * Block header size is smaller than typical MTU of IP network (eg. 1500 bytes) and therefore requires a single roundtrip of TCP messages for propagation,
 * Block body size is about 64kB which implies propagation requires several TCP packets sending and therefore takes more time.
 
+> [NOTE!]
+> As the Cardano network uses TCP/IP for its transport, we should base the header size on the [Maximum Segment Size](https://en.wikipedia.org/wiki/Maximum_segment_size), not the MTU.
+> This size is 536 for IPv4 and 1220 for IPv6.
+
 Average latency numbers are drawn from table 1 in the paper and depend on the (physical) distance between 2 connected nodes:
 
-| Distance | 1 packet RTT (ms) | 64 kB RTT (ms) |
+| Distance | 1 segment RTT (ms) | 64 kB RTT (ms) |
 |----------|-------------------|----------------|
 | Short    | 12                | 24             |
 | Medium   | 69                | 143            |
 | Long     | 268               | 531            |
 
 For each step in the diffusion of block, we assume an equal ($frac{1}{3}$) chance for each class of distance.
+
+> [NOTE!]
+> The actual block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available.
+> We should actually measure the real value for this block size.
 
 We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Note the current target valency for cardano-node's connection is 20 but the actual value might be lower in practice (?). Table 2 gives us the following distribution of paths length:
 
@@ -157,6 +168,8 @@ Then using `empiricalCDF` computation with 5000 different samples yield the foll
 
 ![Praos ΔQ Model CDF](/docs/diagrams/plot-hops-distribution.svg)
 
+For comparison purpose, we also plot on this graph the empirical distribution of block adoption time observed on the mainnet over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/.[^2]
+
 ## Peras ΔQ Model
 
 * ΔQ model of Peras
@@ -192,3 +205,5 @@ Then using `empiricalCDF` computation with 5000 different samples yield the foll
 # Conclusion
 
 ## Future work
+
+[^2]:  This data was kindly provided by [Markus Gufler](https://www.linkedin.com/in/markus-gufler)
