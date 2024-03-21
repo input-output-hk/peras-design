@@ -408,32 +408,29 @@ newChain context@NodeContext{..} proposed =
     if toWeight > fromWeight
       then do
         oldBlocks <- uses chainStateLens $ blocks . preferredChain
-        oldVotes <- uses chainStateLens $ votes . preferredChain
         let forwardBlocks = filter (`notElem` oldBlocks) $ blocks proposed
-            newVotes = filter (`notElem` oldVotes) $ votes proposed
         chainStateLens .= state'
         preferred <- chainStateLens `uses` preferredChain
-        makeResultDownstreams
-          context'
-          mempty{cpuTime = costEvaluateChain def, rollbacks = checkRollback preferred proposed'}
-          $ if legacyMode
+        let rollbacks' = checkRollback preferred proposed'
+        makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def, rollbacks = rollbacks'} $
+          if legacyMode
             then [NewChain preferred]
-            else (SomeVote <$> newVotes) <> reverse (RollForward <$> forwardBlocks)
-      else do
-        messages <- newBlocksVotes proposed'
-        chainStateLens %= addChain proposed'
-        makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def} messages
-
-newBlocksVotes ::
-  MonadState Node m =>
-  Chain ->
-  m [Message]
-newBlocksVotes (MkChain blocks votes) =
-  do
-    chain <- use chainStateLens
-    let newBlocks = RollForward <$> filter (flip M.notMember (blockIndex chain) . hashBlock) blocks
-        newVotes = SomeVote <$> filter (flip M.notMember (voteIndex chain) . hashVote) votes
-    pure $ newBlocks <> newVotes
+            else
+              if null rollbacks'
+                then reverse $ RollForward <$> forwardBlocks
+                else [RollBack . head $ blocks proposed]
+      else
+        makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def}
+          =<< if legacyMode
+            then do
+              chain <- use chainStateLens
+              let newBlocks = RollForward <$> filter (flip M.notMember (blockIndex chain) . hashBlock) (blocks proposed)
+                  newVotes = SomeVote <$> filter (flip M.notMember (voteIndex chain) . hashVote) (votes proposed)
+              chainStateLens %= addChain proposed'
+              pure $ newBlocks <> newVotes
+            else do
+              chainStateLens %= addChain proposed'
+              pure mempty
 
 evaluateChain ::
   MonadState Node m =>
@@ -441,22 +438,18 @@ evaluateChain ::
   NodeId ->
   Block ->
   m NodeResult
-evaluateChain context@NodeContext{traceSelf} sender block =
+evaluateChain context sender block =
   if legacyMode
     then pure mempty
     else
       chainStateLens `uses` buildChain block >>= \case
         -- Evaluate the chain if it could be constructed.
-        Right chain -> do
-          traceSelf $ A.object ["tag" A..= ("CHAIN FOUND" :: String), "block" A..= block, "chain" A..= chain]
-          newChain context chain
+        Right chain -> newChain context chain
         -- Request the missing blocks and votes if the chain could not be constructed.
         Left (blocksMissing, votesMissing) ->
-          do
-            traceSelf $ A.object ["tag" A..= ("CHAIN NOT FOUND" :: String), "block" A..= block, "blocksMissing" A..= blocksMissing, "votesMissing" A..= votesMissing]
-            makeResult context mempty{cpuTime = costEvaluateChain def} $
-              (sender,)
-                <$> [FetchVotes votesMissing, FetchBlocks blocksMissing]
+          makeResult context mempty{cpuTime = costEvaluateChain def} $
+            (sender,)
+              <$> [FetchVotes votesMissing, FetchBlocks blocksMissing]
 
 followChain ::
   MonadState Node m =>
