@@ -8,7 +8,7 @@ open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (Any; _─_)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Nat.Properties using (≤-totalOrder)
@@ -345,26 +345,6 @@ Ticking the global clock
       }
       where open Stateᵍ
 ```
-Delaying messages
-```agda
-    data _←_ : Envelope → Envelope → Set where
-
-      Id : ∀ {e : Envelope} →
-        e ← e
-
-      Delayed : ∀ {d m p} →
-        ⦅ d , m , p ⦆ ← ⦅ suc d , m , p ⦆
-
-    data δ : List Envelope → List Envelope → Set where
-
-      Empty : δ [] []
-
-      Cons : ∀ {e e′} {es es′}
-        → e ← e′
-        → δ es es′
-        → δ (e ∷ es) (e′ ∷ es′)
-```
-
 ## Receive
 
 A party receives messages from the global state by fetching messages assigned to the party,
@@ -396,8 +376,8 @@ the local state
 ```
 An adversarial party might delay a message
 ```agda
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ} {m}
-        → δ ms ms′ 
+      corrupt : ∀ {p c s ms hs as as′} {lₚ} {m}
+        → (m∈ms : ⦅ p , m , zero ⦆ ∈ ms)
           ------------------------------------
         → ⟦ c
           , s
@@ -407,7 +387,7 @@ An adversarial party might delay a message
           ⟧ [ Corrupt {p} , m ]⇀
           ⟦ c
           , insert p lₚ s
-          , ms′
+          , m∈ms ∷= ⦅ p , m , suc zero ⦆
           , hs
           , as′
           ⟧
