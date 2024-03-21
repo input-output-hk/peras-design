@@ -376,9 +376,9 @@ the local state
 ```
 An adversarial party might delay a message
 ```agda
-      corrupt : ∀ {p c s ms hs as as′} {lₚ} {m}
+      corrupt : ∀ {p c s ms hs as as′} {m}
         → (m∈ms : ⦅ p , m , zero ⦆ ∈ ms)
-          ------------------------------------
+          --------------------------------
         → ⟦ c
           , s
           , ms
@@ -386,7 +386,7 @@ An adversarial party might delay a message
           , as
           ⟧ [ Corrupt {p} , m ]⇀
           ⟦ c
-          , insert p lₚ s
+          , s -- TODO: insert p lₚ s
           , m∈ms ∷= ⦅ p , m , suc zero ⦆
           , hs
           , as′
@@ -422,24 +422,9 @@ A party can cast a vote for a block, if
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
           updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
-
-      -- TODO: create delayed vote
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
---        → δ ms ms′
-          --------------------------------
-        → ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ Corrupt {p} ]⇉
-          ⟦ c
-          , insert p lₚ s
-          , ms′
-          , hs
-          , as′
-          ⟧
 ```
+Rather than creating a delayed vote, an adversary can honestly create it and delay the message
+
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
@@ -477,24 +462,8 @@ state.
           -------------------------------------------
         → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
              ⟪ extendTree blockTree t b ⟫ M
-
-      -- TODO: create delayed block
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
---        → δ ms ms′
-          --------------------------------
-        → ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ Corrupt {p} ]↷
-          ⟦ c
-          , insert p lₚ s
-          , ms′
-          , hs
-          , as′
-          ⟧
 ```
+Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
 # Small-step semantics
 
@@ -625,7 +594,6 @@ that there are no hash collisions during the execution of the protocol.
                 signature = sig
               }
        in xs⊆x∷xs (history M) (BlockMsg b)
-    []↷-hist-common-prefix corrupt x₁ = x₁
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
@@ -640,7 +608,6 @@ that there are no hash collisions during the execution of the protocol.
                 signature = sig
               }
       in xs⊆x∷xs (history M) (VoteMsg v)
-    []⇉-hist-common-prefix corrupt x₁ = x₁
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
