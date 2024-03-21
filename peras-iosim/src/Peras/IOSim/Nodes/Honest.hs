@@ -28,7 +28,7 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
-import Peras.Block (Block (..), BlockBody, PartyId)
+import Peras.Block (Block (..), BlockBody (BlockBody), PartyId)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.Crypto (Hash (Hash))
 import Peras.Event (CpuTime, Rollback (..))
@@ -130,28 +130,27 @@ instance FromJSON NodeCosts
 instance ToJSON NodeCosts
 
 instance Default NodeCosts where
-  -- FIXME: Replace with realistic values.
   def =
     NodeCosts
-      { costForgeBlock = fromRational $ 100_000 % 1_000_000
-      , costCastVote = fromRational $ 100_001 % 1_000_000
-      , costEvaluateChain = fromRational $ 100_002 % 1_000_000
-      , costRollForward = fromRational $ 100_003 % 1_000_000
-      , costRollBack = fromRational $ 100_004 % 1_000_000
-      , costFollowChain = fromRational $ 100_005 % 1_000_000
-      , costVerifyVote = fromRational $ 100_006 % 1_000_000
-      , costVerifyBlock = fromRational $ 100_007 % 1_000_000
-      , costVerifyBody = fromRational $ 100_008 % 1_000_000
-      , costReportVote = fromRational $ 100_009 % 1_000_000
-      , costReportBlock = fromRational $ 100_010 % 1_000_000
-      , costReportBody = fromRational $ 100_011 % 1_000_000
-      , costRecordVote = fromRational $ 100_012 % 1_000_000
-      , costRecordBlock = fromRational $ 100_013 % 1_000_000
-      , costRecordBody = fromRational $ 100_014 % 1_000_000
-      , costRequestVote = fromRational $ 100_015 % 1_000_000
-      , costRequestBlock = fromRational $ 100_016 % 1_000_000
-      , costRequestBody = fromRational $ 100_017 % 1_000_000
-      , costSendMessage = fromRational $ 100_018 % 1_000_000
+      { costForgeBlock = fromRational $ 90 % 1_000_000
+      , costCastVote = fromRational $ 75 % 1_000_000
+      , costEvaluateChain = fromRational $ 40_000 % 1_000_000
+      , costRollForward = fromRational $ 750 % 1_000_000
+      , costRollBack = fromRational $ 700 % 1_000_000
+      , costFollowChain = fromRational $ 50 % 1_000_000
+      , costVerifyVote = fromRational $ 150 % 1_000_000
+      , costVerifyBlock = fromRational $ 150 % 1_000_000
+      , costVerifyBody = fromRational $ 150 % 1_000_000
+      , costReportVote = fromRational $ 1_000 % 1_000_000
+      , costReportBlock = fromRational $ 1_000 % 1_000_000
+      , costReportBody = fromRational $ 2_000 % 1_000_000
+      , costRecordVote = fromRational $ 3_000 % 1_000_000
+      , costRecordBlock = fromRational $ 3_000 % 1_000_000
+      , costRecordBody = fromRational $ 3_000 % 1_000_000
+      , costRequestVote = fromRational $ 50 % 1_000_000
+      , costRequestBlock = fromRational $ 50 % 1_000_000
+      , costRequestBody = fromRational $ 50 % 1_000_000
+      , costSendMessage = fromRational $ 100 % 1_000_000
       }
 
 traceInvalid ::
@@ -226,16 +225,17 @@ instance PerasNode Node where
   getVotes = voteIndex . chainState
   handleMessage node context InEnvelope{..} =
     flip runStateT node $
-      case inMessage of
-        NextSlot _ -> nextSlot context'
-        NewChain chain -> newChain context' chain
-        FollowChain hash -> followChain context' origin hash
-        RollForward block -> roll context' (costRollForward def) origin block
-        RollBack block -> roll context' (costRollBack def) origin block
-        FetchVotes hashes -> fetchVotes context' origin hashes
-        SomeVote vote -> newVote context' origin vote
-        FetchBlocks hashes -> fetchBodies context' origin hashes
-        SomeBlock body -> recordBody context' body
+      (mempty{stats = mempty{rxBytes = messageSize inMessage}} <>)
+        <$> case inMessage of
+          NextSlot _ -> nextSlot context'
+          NewChain chain -> newChain context' chain
+          FollowChain hash -> followChain context' origin hash
+          RollForward block -> roll context' (costRollForward def) origin block
+          RollBack block -> roll context' (costRollBack def) origin block
+          FetchVotes hashes -> fetchVotes context' origin hashes
+          SomeVote vote -> newVote context' origin vote
+          FetchBlocks hashes -> fetchBodies context' origin hashes
+          SomeBlock body -> recordBody context' body
    where
     context' = hoistNodeContext lift context
   stop node NodeContext{traceSelf} =
@@ -269,12 +269,6 @@ makeResult NodeContext{..} stats' messages =
     source <- use nodeIdLens
     tip <- uses chainStateLens $ hashTip . blocks . preferredChain
     let
-      messages' =
-        flip filter messages $
-          \case
-            (_, FetchVotes []) -> False
-            (_, FetchBlocks []) -> False
-            _ -> True
       wakeup = cpuTime stats `addUTCTime` clock
       outTime = wakeup
       outEnvelope destination outMessage =
@@ -284,14 +278,13 @@ makeResult NodeContext{..} stats' messages =
         outBytes = messageSize outMessage
       -- Send the messages in order, and not simultaneously.
       outputs =
-        -- FIXME: Add realistic delays.
-        zipWith (\i out -> out{outTime = fromRational (10 * i % 1_000_000) `addUTCTime` outTime}) [1 ..] $
-          uncurry outEnvelope <$> messages'
+        zipWith (\i out -> out{outTime = fromRational (i % 1_000_000) `addUTCTime` outTime}) [1 ..] $
+          uncurry outEnvelope <$> messages
       stats =
         stats'
           <> mempty
             { preferredTip = pure (slot, tip)
-            , txBytes = sum $ messageSize . snd <$> messages'
+            , txBytes = sum $ messageSize . snd <$> messages
             }
     pure NodeResult{..}
 
@@ -345,6 +338,7 @@ doLeading context@NodeContext{slot} =
         <*> pure (signBlock vrf ())
         <*> pure (Hash $ randomBytes VrfBodyHash vrf)
     chainStateLens %= appendBlock block
+    chainStateLens %= addBody (BlockBody (bodyHash block) mempty)
     -- FIXME: Implement `prefixCutoffWeight` logic.
     preferred <- chainStateLens `uses` preferredChain
     makeResultDownstreams

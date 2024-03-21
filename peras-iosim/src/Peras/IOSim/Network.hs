@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,7 +17,7 @@ module Peras.IOSim.Network (
 
 import Control.Applicative ((<|>))
 import Control.Lens ((&), (.~), (^.))
-import Control.Monad.Class.MonadTime
+import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime, addUTCTime, diffUTCTime)
 import Control.Monad.Class.MonadTimer (MonadDelay (..))
 import Control.Monad.Random (MonadRandom, getRandomR)
 import Control.Tracer (Tracer, traceWith)
@@ -25,16 +26,13 @@ import Data.List (delete)
 import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Ratio ((%))
 import Peras.Block (Slot)
-import Peras.Event (Event (Drop))
-import Peras.IOSim.Experiment (
-  experimentFactory,
-  noVeto,
- )
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
+import Peras.Event (ByteSize, CpuTime, Event (Drop))
+import Peras.IOSim.Experiment (experimentFactory, noVeto)
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), messageSize, mkUniqueId)
 import Peras.IOSim.Network.Types (
   Delay,
   NetworkState,
-  NodeLink (messageDelay),
+  NodeLink (NodeLink, bandwidth, latency),
   Topology (..),
   currentStates,
   lastSlot,
@@ -91,27 +89,33 @@ randomTopology Parameters{..} =
           j <- (js !!) <$> getRandomR (0, length js - 1)
           (j :) <$> choose (n - 1) (j `delete` js)
       randomConnects i topology =
-        foldr (connectNode messageDelay (nodeIds !! i) . (nodeIds !!)) topology
+        foldr (connectNode messageLatency messageBandwidth (nodeIds !! i) . (nodeIds !!)) topology
           <$> choose downstreamCount (i `delete` [0 .. peerCount - 1])
    in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
   Delay ->
+  ByteSize ->
   NodeId ->
   NodeId ->
   Topology ->
   Topology
-connectNode messageDelay upstream downstream =
-  Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageDelay)) . connections
+connectNode messageLatency messageBandwidth upstream downstream =
+  Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageLatency messageBandwidth)) . connections
 
 getDelay ::
   Topology ->
   NodeId ->
   NodeId ->
-  Maybe Delay
-getDelay Topology{connections} from to =
-  fmap Peras.IOSim.Network.Types.messageDelay $ forward <|> backward
+  Message ->
+  Maybe CpuTime
+getDelay Topology{connections} from to message =
+  (messageDelay <$> forward) <|> (messageDelay <$> backward)
  where
+  messageDelay NodeLink{latency, bandwidth} =
+    fromRational $
+      (fromIntegral latency + fromIntegral (messageSize message * bandwidth))
+        % 1_000_000
   forward = M.lookup from connections >>= M.lookup to
   backward = M.lookup to connections >>= M.lookup from
 
@@ -152,15 +156,15 @@ runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol to
             Just (outEnvelope@OutEnvelope{..}, pending') ->
               do
                 now <- getCurrentTime
-                threadDelay . floor . (* 1000000) . toRational $ outTime `diffUTCTime` now
+                threadDelay . floor . (* 1_000_000) . toRational $ outTime `diffUTCTime` now
                 context@NodeContext{slot, clock} <- makeContext tracer protocol total destination
                 let
                   delay =
                     if source == controller
                       then Just 0
-                      else getDelay topology source destination
+                      else getDelay topology source destination outMessage
                 showProgress verbose slot clock (PQ.size pending') $
-                  if veto outEnvelope slot || isNothing delay
+                  if veto outEnvelope slot || isNothing delay -- FIXME: Handle link reliability here.
                     then do
                       traceWith tracer $ Drop outId clock source destination outMessage outBytes
                       go $
@@ -177,7 +181,7 @@ runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol to
                               { origin = source
                               , inId = outId
                               , inMessage = outMessage
-                              , inTime = fromRational (fromIntegral (fromJust delay) % 1000000) `addUTCTime` outTime
+                              , inTime = fromJust delay `addUTCTime` outTime
                               , inBytes = outBytes
                               }
                       (result, node') <- handleMessage node context inEnvelope

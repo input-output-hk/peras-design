@@ -8,6 +8,7 @@ module Peras.IOSim.Simulate.Types (
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Peras.Block (Slot)
+import Peras.Event (ByteSize)
 import Peras.IOSim.Experiment (Experiment)
 import Peras.IOSim.Network.Types (Delay)
 import Peras.IOSim.Types (Coin)
@@ -19,7 +20,8 @@ data Parameters = Parameters
   , downstreamCount :: Int
   , totalStake :: Maybe Coin
   , maximumStake :: Coin
-  , messageDelay :: Delay
+  , messageLatency :: Delay
+  , messageBandwidth :: ByteSize
   , experiment :: Maybe Experiment
   }
   deriving stock (Eq, Generic, Ord, Read, Show)

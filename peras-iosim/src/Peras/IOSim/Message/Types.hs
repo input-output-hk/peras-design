@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Peras.IOSim.Message.Types (
   InEnvelope (..),
@@ -11,6 +12,7 @@ module Peras.IOSim.Message.Types (
 
 import Control.Monad.Class.MonadTime (UTCTime)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (..))
 import Data.Hashable (Hashable, hash)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
@@ -69,11 +71,47 @@ instance Arbitrary OutEnvelope where
 mkUniqueId :: Hashable a => a -> UniqueId
 mkUniqueId = UniqueId . Serialize.encode . hash
 
+data MessageSizes = MessageSizes
+  { sizeNextSlot :: ByteSize
+  , sizeNewChain :: ByteSize
+  , sizeSomeVote :: ByteSize
+  , sizeFetchVotes :: ByteSize
+  , sizeFollowChain :: ByteSize
+  , sizeRollForward :: ByteSize
+  , sizeRollBack :: ByteSize
+  , sizeFetchBlocks :: ByteSize
+  , sizeSomeBlock :: ByteSize
+  }
+  deriving stock (Eq, Generic, Read, Show)
+
+instance FromJSON MessageSizes
+instance ToJSON MessageSizes
+
+instance Default MessageSizes where
+  def =
+    MessageSizes
+      { sizeNextSlot = 0 -- Not a real message.
+      , sizeNewChain = 1_100 -- Not a real message, but size it as the block header.
+      , sizeSomeVote = 300 -- Just a guess.
+      , sizeFetchVotes = 75 -- Size per vote hash.
+      , sizeFollowChain = 75 -- Just a hash.
+      , sizeRollForward = 1_100 -- Size of block header.
+      , sizeRollBack = 1_100 -- Size of block header.
+      , sizeFetchBlocks = 75 -- Size per vote hash.
+      , sizeSomeBlock = 90_112 -- Worst case scenario.
+      }
+
 -- | The estimated serialized size of the message, in bytes
 messageSize :: Message -> ByteSize
 messageSize = \case
-  NextSlot{} -> 0
-  SomeBlock{} -> 72000 -- full body size at 80% load
-  NewChain{} -> 1000 -- just the size of a header, checkout https://github.com/IntersectMBO/cardano-ledger/blob/master/eras/conway/impl/cddl-files/conway.cddl#L22
-  SomeVote{} -> 300 -- FIXME
-  _ -> 999 -- FIXME
+  NextSlot{} -> sizeNextSlot def
+  NewChain{} -> sizeNewChain def
+  SomeVote{} -> sizeSomeVote def
+  FetchVotes vs -> sizeFetchVotes def * fromIntegral (length vs)
+  FollowChain{} -> sizeFollowChain def
+  RollForward{} -> sizeRollForward def
+  RollBack{} -> sizeRollBack def
+  FetchBlocks bs -> sizeFetchBlocks def * fromIntegral (length bs)
+  SomeBlock{} -> sizeSomeBlock def
+
+-- FIXME: Add TCP overhead.
