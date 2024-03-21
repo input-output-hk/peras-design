@@ -101,7 +101,7 @@ The block and body sizes are assumed to be:
 * Block header size is smaller than typical MTU of IP network (eg. 1500 bytes) and therefore requires a single roundtrip of TCP messages for propagation,
 * Block body size is about 64kB which implies propagation requires several TCP packets sending and therefore takes more time.
 
-> [NOTE!]
+> [!NOTE]
 > As the Cardano network uses TCP/IP for its transport, we should base the header size on the [Maximum Segment Size](https://en.wikipedia.org/wiki/Maximum_segment_size), not the MTU.
 > This size is 536 for IPv4 and 1220 for IPv6.
 
@@ -115,7 +115,7 @@ Average latency numbers are drawn from table 1 in the paper and depend on the (p
 
 For each step in the diffusion of block, we assume an equal ($frac{1}{3}$) chance for each class of distance.
 
-> [NOTE!]
+> [!NOTE]
 > The actual block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available.
 > We should actually measure the real value for this block size.
 
@@ -206,7 +206,9 @@ While this would require some more rigorous analysis to be asserted in a sound w
 ## Peras ΔQ Model
 
 Things to take into account for modelling peras:
-* Impact of the size of the certificate: If it increases the size of the header too much,
+* Impact of the size of the certificate: If adding the certificate increases the size of the header beyond the MSS (or MTU?), this will impact header diffusion
+  * We might need to just add a hash to the header (32 bytes) and then have the node request the certificate, which also increases (full) header diffusion time
+* Impact of validating the certificate: If it's not cheap (eg. a few ms like a signature verification), this could also lead to an increase in block adoption time as a node receiving a header will have to add more time to validate it before sharing it with its peers
 
 * ΔQ model of Peras
   * model the impact of larger headers
