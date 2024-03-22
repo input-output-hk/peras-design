@@ -16,15 +16,8 @@ pub struct Vote {
     pub signature: Signature,
 }
 
-#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize, Hash)]
-pub struct Chain {
-    pub blocks: Vec<Block>,
-    pub votes: Vec<Vote>,
-}
+pub type Chain = Vec<Block>;
 
-pub fn empty_chain() -> Chain {
-    Chain {
-        blocks: vec![],
-        votes: vec![],
-    }
+pub fn empty_chain() -> Vec<Block> {
+    return vec![];
 }

@@ -23,7 +23,7 @@ pub struct Block {
     pub slot_number: Slot,
     pub creator_id: PartyId,
     pub parent_block: Hash,
-    pub included_votes: Vec<Hash>,
+    pub certificate: Option<Certificate>,
     pub leadership_proof: LeadershipProof,
     pub signature: Signature,
     pub body_hash: Hash,
@@ -42,4 +42,11 @@ impl Block {
 pub struct BlockBody {
     pub block_hash: Hash,
     pub payload: Vec<Tx>,
+}
+
+#[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize, Hash)]
+#[serde(tag = "tag", rename_all = "camelCase")]
+pub struct Certificate {
+    pub voting_round_number: u64,
+    pub blockRef: Hash,
 }
