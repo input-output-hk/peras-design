@@ -79,11 +79,11 @@ chainGraph networkState =
         "Round " <> show (roundNumber votingRound) <> ": " <> show creatorId <> " voted for " <> show' blockHash
       mkNode block@Block{..} =
         G.NodeStatement
-          (nodeId signature)
+          (nodeId bodyHash)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show' signature
+                <> show' bodyHash
                 <> "</b>"
                 <> "|Slot "
                 <> show slotNumber
@@ -95,8 +95,8 @@ chainGraph networkState =
       nodes = mkNode <$> blocks
       mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge bid', G.ENodeId G.DirectedEdge bid] mempty
       mkEdges bid bs
-        | bid == genesisHash = mkEdge genesisId . nodeId . Peras.Block.signature <$> S.toList bs
-        | otherwise = mkEdge (nodeId bid) . nodeId . Peras.Block.signature <$> S.toList bs
+        | bid == genesisHash = mkEdge genesisId . nodeId . Peras.Block.bodyHash <$> S.toList bs
+        | otherwise = mkEdge (nodeId bid) . nodeId . Peras.Block.bodyHash <$> S.toList bs
       edges = M.foldMapWithKey mkEdges tree
    in G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains") $
         [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges

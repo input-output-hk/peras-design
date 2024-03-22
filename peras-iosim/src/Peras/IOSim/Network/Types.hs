@@ -56,8 +56,8 @@ newtype Reliability = Reliability Double
   deriving newtype (Num, Arbitrary, ToJSON, FromJSON)
 
 data NodeLink = NodeLink
-  { reliability :: Reliability
-  , latency :: Delay
+  { latency :: Delay
+  , reliability :: Reliability
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
@@ -65,7 +65,7 @@ instance ToJSON NodeLink
 instance FromJSON NodeLink
 
 reliableLink :: Delay -> NodeLink
-reliableLink = NodeLink 1
+reliableLink = flip NodeLink 1
 
 instance Arbitrary NodeLink where
   arbitrary = genericArbitrary uniform
