@@ -1,0 +1,340 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{a4wide}
+\usepackage{parskip}
+\usepackage{draftwatermark}
+\SetWatermarkText{\textsf{Confidential}}
+\SetWatermarkScale{5}
+\SetWatermarkLightness{0.75}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.13}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\rfoot{\small\copyright\ Predictable Network Solutions Ltd 2016--2017}
+\title{Capturing and Reasoning with Quality Attenuation \\ the $\Delta$Q Ecosystem}
+\author{Neil Davies}
+\begin{document}
+\maketitle
+\tableofcontents
+\section{Quality Attenuation and outcome}
+\begin{itemize}
+\item Outcome: something that is a day-to-day / commercial interest in
+  what occurs in a system, at most once, over a particular interval of time.
+  An outcome being in progress is knowable.
+\item The interest (after some notion of correctness) in the \emph{outcome}
+  is in its timeliness - how long it is in progress, or how quickly it finishes
+  given it has started. It is not property of outcomes that they must 
+  eventually complete. 
+\item There may be a population of outcomes of the same sort. It is not 
+  unreasonable to discuss the distribution of the timeliness of such a population, 
+  or its frequency.
+\item Delivering an outcome incurs costs (even if it doesn't complete), 
+  cost is not necessarily a simple scalar. 
+\end{itemize}
+
+A `perfect' outcome is defined to be an outcome that occurs with zero duration. 
+
+\subsection{Outcomes in the context of translocation}
+Any outcome that is extended in space is, necessarily, extended in time and
+thus is less than perfect, we can say that its quality is attenuated. 
+Only outcomes that occur at a single point in space can be `perfect'. 
+Any information translocation is therefore, necessarily, attenuated.
+
+\subsection{Outcomes in the context of computation}
+... similar words to above but about computation ...
+
+
+\section{Observables}
+Only certain aspects of the system under consideration are observable. In particular the
+beginnings and ends of outcomes are observable.
+
+Perfect knowledge of past light cone of an outcome\footnote{Noting that the past light cone 
+of an outcome relates to the trailing edge of that outcome.}, yields certainty of 
+quality attenuation. Imperfection in this knowledge yields uncertainty.
+
+This is not the only type of uncertainty that can exist, even in the 
+presence of perfect contemporaneous knowledge (i.e.\ complete knowledge
+of the light cone associated with the leading edge of the outcome), there
+will be future events (which sit in the difference between the light
+cones of the trailing edge and the leading edge of the outcome). 
+
+
+There is a familily of morphisms between notion of quality attenuation, 
+observables, population of observables,  and $\Delta{Q}$.
+
+\section{Relationship between concepts}
+\begin{description}
+ \item[$\Delta$Q] $\Delta$Q has its foundations in the notion of an
+   improper random variable --- something that captures a continuous
+   quantity (such as delay or some other scalar) combined with the
+   discrete concept of non-occurrence (such as loss, discard, failure
+   or divergence).  A typical way of thinking about a $\Delta$Q value
+   is: \textit{Given event $A$ occurred what is the probability of
+     event $B$ ever occurring and what is the distribution of delay
+     between those two events?}.
+ \item[$\Delta$Q Algebra] The collection of distinguished values and
+   operators that form an algebra that permits the construction and
+   manipulation of $\Delta$Q values.  Namely:
+    \begin{description}
+    \item[$\varnothing$] perfection -- no delay / unconditional
+      success -- the \emph{unit} for this algebra.
+    \item[$\bot$] bottom -- unbounded delay / unconditional failure --
+      the \emph{absorbing element} for this algebra.
+    \item[$\leftrightharpoons$] probabilistic choice.
+      $(\textit{left}\,\underset{q}{\overset{p}{{\leftrightharpoons}}}\,\textit{right})$
+      represents a Bernoulli Choice which chooses between
+      \textit{left} and \textit{right} in the ratio of $p:q$, that is
+      the \textit{left} choice with probability $p/(p+q)$.
+    \item[$\oplus$] convolution. Convolution captures the notion of
+      sequential composition.
+    \item[$\mathbb{D}$] The model for the underlying continuous
+      quantity (a proper random variable). The delay model.
+    \end{description}
+ \item[$\Delta$Q Calculus] $\Delta$Q Algebra $+$ behaviour. This
+   combines the $\Delta$Q Algebra with a suitable representation of
+   the notion of behaviour, e.g Process Algebra or Labelled Transition
+   System.  This calculus underpins refinement as it supports both
+   abstraction (considering some emergent outcome from a component's
+   implementation) and reification (decomposing the delivery of an
+   outcome into one or more collaborative components).
+      
+   The delivery of an outcome is (see above) is, in itself, a
+   $\Delta$Q. This gives a relationship between behaviour, where the
+   behavioural steps have associated $\Delta$Q, and the $\Delta$Q of
+   the outcome(s) of that behaviour.
+      
+   Thus the $\Delta$Q calculus can be used to form statements which
+   can capture concepts relating to feasibility \& risk:
+   \begin{itemize}
+     \item What is the probability that an outcome, $\mathbb{O}$, will
+       occur within a time, $t$?
+     \item What is the probability distribution of the time to
+       complete an outcome, $\mathbb{O}$? What is the likelihood that
+       $\mathbb{O}$ will complete within $t_0, t_1, t_2, ...$. What is
+       the likelihood that it will ever complete (i.e as
+       $t\to\infty$)?
+     \item For given outcome,$\mathbb{O}$, that has a $\Delta$Q,
+       what is its average time to complete?, its median? the variance
+       in completion time? it probability of `failure' (not
+       completing)? its 95-centile of completion (if it exists)?
+   \end{itemize}
+	  
+  Such concepts can be flowed through abstraction and reification
+  steps, and can be applied at multiple stages of a system's
+  life-cycle, e.g.\ it can be used to capture design choice
+  interactions with performance risks, analyse implemented components
+  (to inform integration risks and/or in-life optimisation decisions)
+  as well as providing a quantitative framework for monitoring overall
+  system performance during its deployment (supporting proactive
+  management and capacity planning).
+     
+\item[QTA] Quantitative Timeliness Agreement. The operation of any
+  system requires some infrastructure, the \textit{supply}. As a
+  process executes to deliver an outcome, $\mathbb{O}$, it will place
+  a \textit{demand} on that infrastructure. A QTA captures the demand
+  and supply aspects that underpins $\mathbb{O}$ occurring with a
+  given $\Delta$Q.
+  
+  From the supply perspective, the QTA can be seen as making a
+  refinement of of the notion of $\Delta$Q in the algebra and calculus.
+  In a QTA context, the $\Delta$Q is referring to a delivered (or
+  deliverable) performance outcome from some implementation of
+  \textit{supply}.  This refinement from the abstract notion of
+  outcome, in turn, has implications on how any given supply is
+  designed, constructed and operated.
+  
+  From the demand perspective, the QTA is capturing a measure (again
+  stochastic in nature) of how much load is being based on
+  infrastructure.  The load could be on one (or more) resources that
+  are contained with the infrastructure. For example in distributed
+  computing that may contain the load placed on the communications
+  network as well as the computational load on the processing elements
+  within that network.
+     
+  Thus a QTA is capturing the relationship between \textit{supply},
+  \textit{demand} and $\Delta$Q.  For example, consider the time to
+  download a web page of a given size, the quicker that outcome is
+  completed the more intense the demand. If a a given supply (the data
+  transport path between the source and destination) has a increased
+  delay then time taken to complete the outcome will be increased
+  which, in turn, reduces the intensity of the demand. If a particular
+  supply has an increased loss rate that will both increase the time
+  to complete the outcome (which will decrease the intensity of
+  demand) but also create more demand (as information will need to be
+  retransmitted to mitigate the loss).  Although this is a qualitative
+  description, the QTA captures the relationships quantitatively, thus
+  allowing for formulation of questions such as:
+  \begin{itemize}
+    \item Given a $\Delta$Q measure of the outcome, if the delivered
+      $\Delta$Q of the supply changes by $x$ how much does the
+      $\Delta$Q of the outcome change?
+      
+      This is technical aspect of the issue of how supply side changes
+      influence the delivered UX/QoE (User Experience/Quality of
+      Experience).
+    \item Given the desire to deliver a particular outcome (either to
+      improve its delivered performance, or before entering into some
+      new commercial arrangement) with a specific $\Delta$Q, what is
+      the $\Delta$Q required from the supply and how much demand will
+      it place on that supply?
+      
+      This is the technical aspect of how to create agreements between
+      parties in digital supply chains. The supply-side $\Delta$Q
+      capturing the delivery requirement from the infrastructure,
+      where as the demand-side measure captures the offered-load on
+      that infrastructure.
+  \end{itemize}
+    
+  In capturing this relationship the QTA is also creating specific
+  points of measurement, their range of likely values and how that
+  relates to a measurable outcome.
+\item[QTA and resources]
+  The notion of a resource in a QTA is very general and the particular
+  resources of interest will vary according to the particular domain being
+  modelled.
+   
+ In the general distributed computing case there are several resource
+ types that come to mind: CPU cycles, network data transport, memory
+ footprint and disk capacity as exemplars. In considering how QTAs
+ aggregate one distinguishing aspect is what is the response of the
+ infrastructure when a QTA makes demand for that resource and that
+ resource is not idle. This is best illustrated with some examples:
+ \begin{itemize}
+   \item A demand for memory capacity. If there is no allocatable
+     memory then the infrastructure will respond with $\bot$. Memory
+     is a \textit{threshold} constrained resource.  While below the
+     threshold the supply's $\Delta$Q is $\varnothing$, once above the
+     threshold the $\Delta$Q is $\bot$.
+   \item A demand for certain quantity of CPU time. This is a demand
+     for a share of an (ephemeral) resource. Whether the
+     infrastructure can deliver the supply with the desired $\Delta$Q
+     is a question of if the demand can be satisfied within the
+     appropriate time-scale. CPU time is a \textit{schedulability}
+     constrained resource.  If the demand can not be met within the
+     time-scale, the infrastructures (typical) response would be to
+     deliver the supply with a increased $\Delta$Q.
+ \end{itemize}
+ 
+ It is reasonably clear that disk capacity is threshold
+ resource. However which category network data transport falls into
+ depends on how that resource has been constructed.  Where that data
+ transport is being discretely allocated, as in the case of
+ light-paths or TDM capacity, then the transport resource falls into
+ the threshold resource category.  Where the data transport is
+ statistically multiplexed resource (such as broadband) it typically
+ falls into the schedulability category.
+ 
+ It is uncommon for a system to explicitly engage with the notion that
+ infrastructure resources have different styles of demand
+ response. Often such responses only manifest themselves late in the
+ project development or post deployment. Consequentially, the system's
+ reaction to such responses can lead to severe project or service
+ execution issues.
+ 
+ Although infrastructure's capacity can be increased, there is a limit
+ to how dynamic that can be. This has consequences for short term
+ handling (i.e.\ how does the system gracefully degrade) and capacity
+ planning (i.e.\ how and when to provision increased infrastructure).
+ 
+ Although these seem a very diverse set of issues, because they all
+ manifest themselves as change in delivered $\Delta$Q and that, in
+ turn, can be translated to (increasing higher level) $\Delta$Q
+ effects on outcomes, the concept of opportunity-cost can be used to
+ unify them for presentation to stakeholders.
+ 
+\end{description}
+\section{Quality Attenuation - $\Delta$Q}
+Quality attenuation / impairment as a privation, like silence and darkness.
+\begin{itemize}
+  \item Relationship with passage times in process algebras, primacy
+    \textit{observation} in the ontology, notion of
+    \textit{bisimulation}.
+  \item Notion of `improperness' - probability mass and (in this case)
+    its non-conservation
+  \item $\Delta$Q as a `conserved' quantity - how this concept
+    captures the quality attenuation / impairment.
+  \item How $\Delta$Q is the consequence of resource sharing - how it
+    captures the effects of queueing systems
+  \item How $\Delta$Q `accrues' and how that accrual captures the
+    notion of both `journey' and `evolution'.
+  \item Use of CDF as measure of \textit{better}, notions of
+    \textit{slack} and \textit{hazard}.
+  \item Models of the delay/impairment component - use of Uniform
+    Distribution (comparison with neg-exponential phase space)
+\end{itemize}
+%\begin{tikzpicture}
+%\begin{axis}[
+%    title={ILLUSTATIVE PURPOSES ONLY :)},
+%    xlabel={Temperature},
+%    ylabel={Solubility [g per 100 g water]},
+%    xmin=0, xmax=100,
+%    ymin=0, ymax=120,
+%    xtick={0,20,40,60,80,100},
+%    ytick={0,20,40,60,80,100,120},
+%    legend pos=north west,
+%    ymajorgrids=true,
+%    grid style=dashed,
+%]
+% 
+%\addplot[
+%    color=blue,
+%    mark=square,
+%    ]
+%    coordinates {
+%    (0,23.1)(10,27.5)(20,32)(30,37.8)(40,44.6)(60,61.8)(80,83.8)(100,114)
+%    };
+%    \legend{CuSO$_4\cdot$5H$_2$O}
+% 
+%\end{axis}
+%\end{tikzpicture}
+\section{$\Delta$Q Algebra properties}
+\subsection{Probability Mass}
+\subsubsection{Intangible Probability Mass}
+\subsubsection{Tangible Randomness}
+\subsection{Properties of $\varnothing$ and $\bot$}
+\subsection{Properties of $\leftrightharpoons$}
+\subsection{Properties of $\oplus$}
+\subsection{Delay Model}
+\begin{itemize}
+\item Uniform Delay as basis function for finite times
+\item Representation of uniform delay as Dirac delta ($\delta$) and Uniform from zero ($\sqcap$)
+\item Delay model properties under $\leftrightharpoons$ and $\oplus$ 
+\end{itemize}
+\subsection{$\Delta$Q basis set} 
+The role of $\Delta Q_{|G}$, $\Delta Q_{|S}$ and $\Delta Q_{|V}$ for
+capturing different contributors of quality attenuation in real world
+scenarios (e.g.\ data networking, vector processing or any service
+facility that has a set up time and a rate of service once set up).
+\section{$\Delta$Q Calculus}
+\section{QTA}
+\begin{itemize}
+  \item QTA as a performance design/analysis building block
+  \item QTA aggregation and disaggregation - the application Erlang. 
+    \begin{itemize}
+      \item Time scale effects - the curse of `bandwidth`
+      \item heterogeneous and homogeneous aggregation/disaggregation; 
+            positive/negative and random correlation.
+      \item Mapping of aggregated QTA requirements into treatment
+        classes --- robust simplification of heterogeneous demands
+        into low-complexity homogeneous delivery.
+    \end{itemize}
+  \item QTA and the digital supply chain.
+  \item QTA and overbooking hazards.
+  \item QTA and graceful degradation.
+\end{itemize}
+\section{QTA and resources}
+\begin{itemize}
+  \item Graceful degradation
+  \item Capacity planning as probability of failing to meet a QTA
+  \item Scheduling mechanisms for ephemeral resources --- how that
+    interacts with the resource's threshold/schedulability allocation
+    constraints.
+  \item Other resources and their allocation
+  \item Capturing the opportunity cost of supporting a QTA on a
+    particular resource.
+\end{itemize}
+
+\end{document}
