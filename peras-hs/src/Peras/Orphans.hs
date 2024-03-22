@@ -20,12 +20,11 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (parseFail, toJSONKeyText)
 import Data.Bifunctor (bimap)
-import Data.Default (Default (..))
-import Data.Hashable (Hashable)
+import Data.Hashable (Hashable (..))
 import Data.String (IsString (..))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..), BlockBody (..), Certificate (..), Party (..))
-import Peras.Chain (Chain, RoundNumber (..), Vote (..))
+import Peras.Chain (RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (..), LeadershipProof (..), MembershipProof (..), Signature (..), VerificationKey (..))
 import Peras.Event (Event (..), Rollback (..), UniqueId (..))
 import Peras.Message (Message (..), NodeId (..))
@@ -88,6 +87,7 @@ deriving stock instance Generic Certificate
 deriving stock instance Ord Certificate
 deriving stock instance Read Certificate
 deriving stock instance Show Certificate
+instance Hashable Certificate
 instance FromJSON Certificate
 instance ToJSON Certificate
 
@@ -161,6 +161,10 @@ instance FromJSON a => FromJSONKey (Hash a) where
 
 instance ToJSON a => ToJSONKey (Hash a) where
   toJSONKey = toJSONKeyText $ T.pack . init . tail . show . hashBytes
+
+instance Hashable (Hash a) where
+  hash = hash . hashBytes
+  hashWithSalt = (. hashBytes) . hashWithSalt
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof

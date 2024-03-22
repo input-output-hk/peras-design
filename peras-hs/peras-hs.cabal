@@ -31,7 +31,6 @@ library
                 , base >=4.9 && <5
                 , base16-bytestring
                 , bytestring
-                , data-default
                 , generic-random
                 , hashable
                 , io-classes
