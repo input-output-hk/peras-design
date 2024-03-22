@@ -434,7 +434,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M}{prf} {sig}
+      honest : ∀ {p} {t} {M} {prf} {sig}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -512,6 +512,13 @@ In the paper mentioned above this is big-step semantics.
         → M ↝⋆ N
           ------
         → L ↝⋆ N
+
+    ↝∘↝⋆ : ∀ {M N O}
+      → M ↝⋆ N
+      → N ↝ O
+      → M ↝⋆ O
+    ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
+    ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
 ```
 
 # Collision free predicate
