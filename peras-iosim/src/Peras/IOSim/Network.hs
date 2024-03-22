@@ -26,13 +26,13 @@ import Data.List (delete)
 import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Ratio ((%))
 import Peras.Block (Slot)
-import Peras.Event (ByteSize, CpuTime, Event (Drop))
+import Peras.Event (CpuTime, Event (Drop))
 import Peras.IOSim.Experiment (experimentFactory, noVeto)
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), messageSize, mkUniqueId)
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
 import Peras.IOSim.Network.Types (
   Delay,
   NetworkState,
-  NodeLink (NodeLink, bandwidth, latency),
+  NodeLink (NodeLink, latency),
   Topology (..),
   currentStates,
   lastSlot,
@@ -89,33 +89,28 @@ randomTopology Parameters{..} =
           j <- (js !!) <$> getRandomR (0, length js - 1)
           (j :) <$> choose (n - 1) (j `delete` js)
       randomConnects i topology =
-        foldr (connectNode messageLatency messageBandwidth (nodeIds !! i) . (nodeIds !!)) topology
+        foldr (connectNode messageLatency (nodeIds !! i) . (nodeIds !!)) topology
           <$> choose downstreamCount (i `delete` [0 .. peerCount - 1])
    in foldrM randomConnects (emptyTopology nodeIds) [0 .. peerCount - 1]
 
 connectNode ::
   Delay ->
-  ByteSize ->
   NodeId ->
   NodeId ->
   Topology ->
   Topology
-connectNode messageLatency messageBandwidth upstream downstream =
-  Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageLatency messageBandwidth)) . connections
+connectNode messageLatency upstream downstream =
+  Topology . M.insertWith (<>) upstream (M.singleton downstream (reliableLink messageLatency)) . connections
 
 getDelay ::
   Topology ->
   NodeId ->
   NodeId ->
-  Message ->
   Maybe CpuTime
-getDelay Topology{connections} from to message =
+getDelay Topology{connections} from to =
   (messageDelay <$> forward) <|> (messageDelay <$> backward)
  where
-  messageDelay NodeLink{latency, bandwidth} =
-    fromRational $
-      (fromIntegral latency + fromIntegral (messageSize message * bandwidth))
-        % 1_000_000
+  messageDelay NodeLink{latency} = fromRational $ fromIntegral latency % 1_000_000
   forward = M.lookup from connections >>= M.lookup to
   backward = M.lookup to connections >>= M.lookup from
 
@@ -162,7 +157,7 @@ runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol to
                   delay =
                     if source == controller
                       then Just 0
-                      else getDelay topology source destination outMessage
+                      else getDelay topology source destination
                 showProgress verbose slot clock (PQ.size pending') $
                   if veto outEnvelope slot || isNothing delay -- FIXME: Handle link reliability here.
                     then do

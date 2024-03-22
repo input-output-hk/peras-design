@@ -114,7 +114,7 @@ instance ToJSON NodeResult
 instance Semigroup NodeResult where
   x <> y =
     NodeResult
-      { wakeup = on min wakeup x y
+      { wakeup = on min wakeup x y -- FIXME: This isn't precisely correct.
       , outputs = on (<>) outputs x y
       , stats = on (<>) stats x y
       }

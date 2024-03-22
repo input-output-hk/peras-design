@@ -31,7 +31,7 @@ import Peras.Arbitraries ()
 import Peras.Block (Block (..), BlockBody (BlockBody), PartyId)
 import Peras.Chain (Chain (..), RoundNumber, Vote (..))
 import Peras.Crypto (Hash (Hash))
-import Peras.Event (CpuTime, Rollback (..))
+import Peras.Event (ByteSize, CpuTime, Rollback (..))
 import Peras.IOSim.Chain (
   Invalid (EquivocatedVote, HashOfUnknownBlock),
   addBlock,
@@ -184,6 +184,7 @@ data Node = Node
   { nodeId :: NodeId
   , owner :: PartyId
   , stake :: Coin
+  , nicBandwidth :: ByteSize
   , vrfOutput :: Double
   , downstreams :: Set NodeId
   , chainState :: ChainState
@@ -205,6 +206,9 @@ ownerLens = lens owner $ \s x -> s{owner = x}
 stakeLens :: Lens' Node Coin
 stakeLens = lens stake $ \s x -> s{stake = x}
 
+nicBandwidthLens :: Lens' Node ByteSize
+nicBandwidthLens = lens nicBandwidth $ \s x -> s{nicBandwidth = x}
+
 vrfOutputLens :: Lens' Node Double
 vrfOutputLens = lens vrfOutput $ \s x -> s{vrfOutput = x}
 
@@ -225,8 +229,8 @@ instance PerasNode Node where
   getVotes = voteIndex . chainState
   handleMessage node context InEnvelope{..} =
     flip runStateT node $
-      (mempty{stats = mempty{rxBytes = messageSize inMessage}} <>)
-        <$> case inMessage of
+      adjustMessageDelays context' inMessage
+        =<< case inMessage of
           NextSlot _ -> nextSlot context'
           NewChain chain -> newChain context' chain
           FollowChain hash -> followChain context' origin hash
@@ -246,6 +250,27 @@ instance PerasNode Node where
 -- | Whether to use `NewChain` messages for notifying downstream peers when a new chain is adopted: otherwise, `RollForward` and `RollBack` messages are sent.
 legacyMode :: Bool
 legacyMode = False
+
+adjustMessageDelays ::
+  MonadState Node m =>
+  NodeContext m ->
+  Message ->
+  NodeResult ->
+  m NodeResult
+adjustMessageDelays NodeContext{slot} message result@NodeResult{..} =
+  do
+    tip <- uses chainStateLens $ hashTip . blocks . preferredChain
+    bandwidth <- use nicBandwidthLens
+    let individualDelays = fromRational . (/ fromIntegral bandwidth) . (% 1_000_000) . fromIntegral . messageSize . outMessage <$> outputs
+        cumulativeDelays = scanl1 (+) individualDelays
+        delayMessage output delay = output{outTime = delay `addUTCTime` outTime output}
+        outputs' = zipWith delayMessage outputs cumulativeDelays
+    pure
+      result
+        { wakeup -- FIXME: Whether to adjust `wakeup` depends upon threading assumptions.
+        , outputs = outputs'
+        , stats = stats{preferredTip = pure (slot, tip), rxBytes = messageSize message}
+        }
 
 makeResultDownstreams ::
   MonadState Node m =>
@@ -267,7 +292,6 @@ makeResult ::
 makeResult NodeContext{..} stats' messages =
   do
     source <- use nodeIdLens
-    tip <- uses chainStateLens $ hashTip . blocks . preferredChain
     let
       wakeup = cpuTime stats `addUTCTime` clock
       outTime = wakeup
@@ -276,16 +300,8 @@ makeResult NodeContext{..} stats' messages =
        where
         outId = mkUniqueId (outTime, source, destination, outMessage)
         outBytes = messageSize outMessage
-      -- Send the messages in order, and not simultaneously.
-      outputs =
-        zipWith (\i out -> out{outTime = fromRational (i % 1_000_000) `addUTCTime` outTime}) [1 ..] $
-          uncurry outEnvelope <$> messages
-      stats =
-        stats'
-          <> mempty
-            { preferredTip = pure (slot, tip)
-            , txBytes = sum $ messageSize . snd <$> messages
-            }
+      outputs = uncurry outEnvelope <$> messages
+      stats = stats' <> mempty{txBytes = sum $ messageSize . snd <$> messages}
     pure NodeResult{..}
 
 nextSlot ::
