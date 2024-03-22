@@ -39,7 +39,6 @@ import Control.Tracer (Tracer)
 import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromMaybe)
-import Peras.Chain (Chain (blocks))
 import Peras.Event (Event, UniqueId (..))
 import Peras.IOSim.Experiment
 import Peras.IOSim.Hash (genesisHash, hashBlock, hashVote)
@@ -255,7 +254,7 @@ routeEnvelope parameters Network{nodesIn, veto} = \case
             case outMessage of
               NewChain chain -> do
                 chainsSeen %= M.insert source chain
-                case blocks chain of
+                case chain of
                   tip : prior : _ -> blocksSeen %= M.insertWith S.union (hashBlock prior) (S.singleton tip)
                   [tip] -> blocksSeen %= M.insertWith S.union genesisHash (S.singleton tip)
                   _ -> pure ()

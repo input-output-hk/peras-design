@@ -1,314 +1,104 @@
 {
     "samples": [
         {
-            "bestChain": {
-                "blocks": [
-                    {
-                        "bodyHash": "6e00e4ed6c70c012",
-                        "creatorId": 6,
-                        "includedVotes": [
-                            "2ff8f5001f5186a5",
-                            "e5573c8d56b94cf3",
-                            "24e1e37bd06006d7",
-                            "eecd7e04b1a4b84d",
-                            "2a8789c423d88f8d",
-                            "9723dfdb323f1746",
-                            "fe60c075c5c9731a",
-                            "fe9789906e19505d",
-                            "bc3eab8738387c7d",
-                            "564f32f3d914ec4d",
-                            "d1d69db4868e745d",
-                            "af66da827f49d6e9",
-                            "4f148a9386a70a50",
-                            "3cc54bee3c9126f4",
-                            "5a66d3f4a9fa373a",
-                            "6623fbfb891cc918",
-                            "b80167a84b5114d5",
-                            "a3f71d34a7d87dc3",
-                            "a106166c759f6747",
-                            "ed3f958d56a57fd7",
-                            "7aa32c9c4112a2b1",
-                            "4974036a18299a34",
-                            "994f8b8c991f8a84",
-                            "54b0a5ccfc656988",
-                            "3d861d5875db6316",
-                            "0909a9c6e19ebe0a",
-                            "969ef1a574d25f9c",
-                            "d6944b7a3384cafd"
-                        ],
-                        "leadershipProof": "ec4d1c372fcfc143",
-                        "parentBlock": "71e536d6abb42e99",
-                        "signature": "d6cc7b80498f30dc",
-                        "slotNumber": 19
+            "bestChain": [
+                {
+                    "bodyHash": "93cbef3497e086a7",
+                    "certificate": null,
+                    "creatorId": 15,
+                    "leadershipProof": "30f6d131466ba693",
+                    "parentBlock": "b81f9dbbc6af2b12",
+                    "signature": "197dc147b6d8a64d",
+                    "slotNumber": 4
+                },
+                {
+                    "bodyHash": "70207cfd6b2dab93",
+                    "certificate": {
+                        "blockRef": "b692488de2759d76",
+                        "votingRoundNumber": 19
                     },
-                    {
-                        "bodyHash": "5f6879c9f460a477",
-                        "creatorId": 30,
-                        "includedVotes": [
-                            "7664f00dd7774754",
-                            "1967de339fe4bb8d",
-                            "71a6e544579a4a45",
-                            "9123f559fcd47a55",
-                            "c2af0dae9094d67a",
-                            "3549c5de84423c55",
-                            "55d6bfdaa372c682",
-                            "957ce48691847ea2",
-                            "bc510535e5de734c",
-                            "0db494f5a305ec0c",
-                            "3ed83e1b88cb4e90",
-                            "992f5d40da28fc9d",
-                            "39d0b14276d8e8fe",
-                            "699a42bf144b37d0",
-                            "0b09e44874145acc",
-                            "3d334c0de4375491",
-                            "90d814544e9e805b",
-                            "d853a32c25078b85"
-                        ],
-                        "leadershipProof": "1d85e08ca346e2cf",
-                        "parentBlock": "4aaf8873ea7fc68e",
-                        "signature": "230b7be7e045d082",
-                        "slotNumber": 21
+                    "creatorId": 7,
+                    "leadershipProof": "8e58985244e9b588",
+                    "parentBlock": "742d3ac69a54d40b",
+                    "signature": "cdf187944fa798e5",
+                    "slotNumber": 20
+                },
+                {
+                    "bodyHash": "abe6fe2aaf10c0bd",
+                    "certificate": {
+                        "blockRef": "0deacfa5958a41ef",
+                        "votingRoundNumber": 20
                     },
-                    {
-                        "bodyHash": "a029133a14905214",
-                        "creatorId": 5,
-                        "includedVotes": [
-                            "22d6fcde430b2e5b",
-                            "839224354550b78e",
-                            "1eceb07b6316f74e",
-                            "1ab7287d2d4d3e78",
-                            "b918e16c9e829941",
-                            "c7bae566fb1e6fb8",
-                            "402fdb591b559410",
-                            "51575113121d45ea",
-                            "0e096af60e445a12",
-                            "9920ffd74f95112b",
-                            "41108f8c6365e610",
-                            "5d45fe757c7714a9",
-                            "7646ae850af835e9",
-                            "ecdae22962e37a09",
-                            "7d5cfbfd98d0aa19",
-                            "0aa5231fb5db51f5",
-                            "497c4f8f9592c079",
-                            "b60eda9ce770f618",
-                            "deb737c51e0a629d",
-                            "b8182405f957db78",
-                            "4729cbc6b6bbec8b",
-                            "b921395ae46d7051",
-                            "3fdb748ae97501ef",
-                            "d47d52cf56c1208b",
-                            "4d6c4700173bfbdb",
-                            "797f7dba644574f4",
-                            "9245b8c70048454e",
-                            "9f4a6ffef6cdcb9e",
-                            "c74bd67da6ebe29e",
-                            "f3797b91f5e0657c"
-                        ],
-                        "leadershipProof": "1ca790d38503309a",
-                        "parentBlock": "eeedb0faf7261342",
-                        "signature": "ba7e40d48cc6e6e1",
-                        "slotNumber": 8
+                    "creatorId": 11,
+                    "leadershipProof": "46e0deedb503335b",
+                    "parentBlock": "de80c9ed17a4f001",
+                    "signature": "a4929076a36107db",
+                    "slotNumber": 6
+                },
+                {
+                    "bodyHash": "ea0427f57fb82f3c",
+                    "certificate": null,
+                    "creatorId": 20,
+                    "leadershipProof": "7c9de382aaaa640d",
+                    "parentBlock": "e3892cc0cbb8982e",
+                    "signature": "0f7e555d5113ba67",
+                    "slotNumber": 8
+                },
+                {
+                    "bodyHash": "152fe4b85258945e",
+                    "certificate": null,
+                    "creatorId": 6,
+                    "leadershipProof": "2388b4fb572e55a1",
+                    "parentBlock": "4416f2969d9b9ebe",
+                    "signature": "a5c93e5bb020026e",
+                    "slotNumber": 1
+                },
+                {
+                    "bodyHash": "e3f6bbde358ab822",
+                    "certificate": null,
+                    "creatorId": 14,
+                    "leadershipProof": "4b05bbe1cba51d0a",
+                    "parentBlock": "57db059639e7ca5c",
+                    "signature": "2ae7ea3ae62adc09",
+                    "slotNumber": 18
+                },
+                {
+                    "bodyHash": "3befb25a7aa0ab21",
+                    "certificate": {
+                        "blockRef": "81bfd7faf111f400",
+                        "votingRoundNumber": 17
                     },
-                    {
-                        "bodyHash": "8a917d4b33dd54aa",
-                        "creatorId": 29,
-                        "includedVotes": [
-                            "0e16173fc589c797"
-                        ],
-                        "leadershipProof": "98378eaa3afeeed2",
-                        "parentBlock": "3cbf4d8f8f9131c1",
-                        "signature": "b784507629b2d949",
-                        "slotNumber": 1
+                    "creatorId": 0,
+                    "leadershipProof": "e220ee62f4d1bfab",
+                    "parentBlock": "bb01a6b17e030914",
+                    "signature": "3bbb2b9506a2c45a",
+                    "slotNumber": 18
+                },
+                {
+                    "bodyHash": "9a752a77b1892c95",
+                    "certificate": {
+                        "blockRef": "6bb70fa9ff727d11",
+                        "votingRoundNumber": 19
                     },
-                    {
-                        "bodyHash": "2322735bffd8371b",
-                        "creatorId": 23,
-                        "includedVotes": [
-                            "a602066be03e25e8",
-                            "9585ba3293e3fc43",
-                            "4abb4d0631d8fef8",
-                            "6617f08ac9a324ce",
-                            "ecf2fc88378002eb",
-                            "8849df72d5ab0a15",
-                            "dbff781d203ac700",
-                            "ab13545195f6752b",
-                            "85f6cac2fbb23044",
-                            "7079b189039ad160"
-                        ],
-                        "leadershipProof": "6073f3fcaecbd937",
-                        "parentBlock": "3f236fe8ba6c44e0",
-                        "signature": "3e4ee0b60b257dc6",
-                        "slotNumber": 25
+                    "creatorId": 25,
+                    "leadershipProof": "d51f50a35405244c",
+                    "parentBlock": "992b9f26fd24d98d",
+                    "signature": "5a2e653ae50a7132",
+                    "slotNumber": 5
+                },
+                {
+                    "bodyHash": "fd147643a1ec84fb",
+                    "certificate": {
+                        "blockRef": "22f0a6df85bb479f",
+                        "votingRoundNumber": 6
                     },
-                    {
-                        "bodyHash": "17831eb08d095ff5",
-                        "creatorId": 20,
-                        "includedVotes": [
-                            "71e047b505ea395b",
-                            "4521c7aef1af27f4",
-                            "121c8886ea995a20",
-                            "9c9b9e8ad79ffe89",
-                            "0c2b1a3aa643f801",
-                            "e9e99206d12645b7",
-                            "7c693c890668210b",
-                            "c0e63b7070c964be",
-                            "dd8efd7b0d7c96d1",
-                            "1cfa6d84153b93cb",
-                            "311d07a247af9433",
-                            "b9753abc54e4d337",
-                            "98fc67e1259f206a",
-                            "bac425258c1cffb9",
-                            "f12d75d7bd098ac5"
-                        ],
-                        "leadershipProof": "7d151ec44a314b1f",
-                        "parentBlock": "cba49982bae02cda",
-                        "signature": "f08c389ac4c307f7",
-                        "slotNumber": 2
-                    },
-                    {
-                        "bodyHash": "d75f0bcd46362ee0",
-                        "creatorId": 0,
-                        "includedVotes": [
-                            "3642152430239a0d",
-                            "d61ec86c7cfd0db5",
-                            "3ce94a76c2206042",
-                            "9de977accfc77b34",
-                            "05f495e0ffcd75f2",
-                            "10bbe427e1a45510",
-                            "b43c06fd23e9ea92",
-                            "c1c48949434d1709",
-                            "32d8aecb9c262d8f",
-                            "51b0a8b14ec521f0",
-                            "9aa05817a266f4d4"
-                        ],
-                        "leadershipProof": "9a1d114dae8c54b9",
-                        "parentBlock": "0fb4c9a485fe813b",
-                        "signature": "37e722ee364b03d0",
-                        "slotNumber": 17
-                    }
-                ],
-                "votes": [
-                    {
-                        "blockHash": "30f6d131466ba693",
-                        "committeeMembershipProof": "b911a3fb21526a75",
-                        "creatorId": 16,
-                        "signature": "f693cbef3497e086",
-                        "votingRound": 13
-                    },
-                    {
-                        "blockHash": "601ad19b8d2ec29a",
-                        "committeeMembershipProof": "76a69a60f092f3c2",
-                        "creatorId": 8,
-                        "signature": "cacd2782689b0abe",
-                        "votingRound": 5
-                    },
-                    {
-                        "blockHash": "734cbcf37cc8c20f",
-                        "committeeMembershipProof": "16627d372c76a2e3",
-                        "creatorId": 23,
-                        "signature": "12b63338b6529804",
-                        "votingRound": 15
-                    },
-                    {
-                        "blockHash": "4aedd73b80a18977",
-                        "committeeMembershipProof": "83c3d63a7a9304ba",
-                        "creatorId": 25,
-                        "signature": "68b9e3ae60329d4f",
-                        "votingRound": 7
-                    },
-                    {
-                        "blockHash": "0c459ae3fea5f384",
-                        "committeeMembershipProof": "bae917ede57bbf42",
-                        "creatorId": 25,
-                        "signature": "6571fd856c41f986",
-                        "votingRound": 30
-                    },
-                    {
-                        "blockHash": "566fed243886d628",
-                        "committeeMembershipProof": "e4716b3cea5077fc",
-                        "creatorId": 17,
-                        "signature": "112b786bd3deccdd",
-                        "votingRound": 2
-                    },
-                    {
-                        "blockHash": "1656176ff601d9f1",
-                        "committeeMembershipProof": "3789d4bbe4bf9df0",
-                        "creatorId": 1,
-                        "signature": "377b1b9c18599422",
-                        "votingRound": 9
-                    },
-                    {
-                        "blockHash": "c951b220e3beef48",
-                        "committeeMembershipProof": "f800dd92527202c6",
-                        "creatorId": 9,
-                        "signature": "b3335f569d8c8b65",
-                        "votingRound": 21
-                    },
-                    {
-                        "blockHash": "ac0b79e289d90b76",
-                        "committeeMembershipProof": "785f3ce86ba0bd29",
-                        "creatorId": 29,
-                        "signature": "dcf1c6d4755bad94",
-                        "votingRound": 10
-                    },
-                    {
-                        "blockHash": "ca2e972495dd807a",
-                        "committeeMembershipProof": "7ebd1d6ba87aa950",
-                        "creatorId": 27,
-                        "signature": "67ab1c4e53459e5c",
-                        "votingRound": 8
-                    },
-                    {
-                        "blockHash": "041f72d70ecea965",
-                        "committeeMembershipProof": "c15fc8dccb8ecfa8",
-                        "creatorId": 1,
-                        "signature": "532511e1fc51205e",
-                        "votingRound": 0
-                    },
-                    {
-                        "blockHash": "697c5b3386066930",
-                        "committeeMembershipProof": "d89350684a9d1c86",
-                        "creatorId": 10,
-                        "signature": "436722347d7f77f3",
-                        "votingRound": 9
-                    },
-                    {
-                        "blockHash": "9cab702902173297",
-                        "committeeMembershipProof": "89f6f672fa7d68e1",
-                        "creatorId": 11,
-                        "signature": "4041a4845b2f1d1a",
-                        "votingRound": 14
-                    },
-                    {
-                        "blockHash": "d820f9e35c43428b",
-                        "committeeMembershipProof": "2601fee39d563526",
-                        "creatorId": 21,
-                        "signature": "ac0db70059a0aa25",
-                        "votingRound": 23
-                    },
-                    {
-                        "blockHash": "a9d112f88875bbb0",
-                        "committeeMembershipProof": "960a1488aa3cd43f",
-                        "creatorId": 10,
-                        "signature": "44c5f25c83936800",
-                        "votingRound": 16
-                    },
-                    {
-                        "blockHash": "c4be6cb5c157e402",
-                        "committeeMembershipProof": "c6388b7305759e16",
-                        "creatorId": 15,
-                        "signature": "96a590060f9988f5",
-                        "votingRound": 12
-                    },
-                    {
-                        "blockHash": "4a1012c2bb319b96",
-                        "committeeMembershipProof": "66009b8559ba04ed",
-                        "creatorId": 4,
-                        "signature": "02c4df8944863719",
-                        "votingRound": 3
-                    }
-                ]
-            },
+                    "creatorId": 8,
+                    "leadershipProof": "7e7c8b2cf72c49bd",
+                    "parentBlock": "5798cc2fd835efd1",
+                    "signature": "ec43162e8c578244",
+                    "slotNumber": 8
+                }
+            ],
             "source": "Node-6",
             "tag": "Idle",
             "timestamp": "1864-05-24T23:01:12.462940278099Z"
@@ -319,10 +109,7 @@
                     "blockIndex": {},
                     "danglingBlocks": [],
                     "danglingVotes": [],
-                    "preferredChain": {
-                        "blocks": [],
-                        "votes": []
-                    },
+                    "preferredChain": [],
                     "voteIndex": {},
                     "votesByRound": {}
                 },
@@ -543,178 +330,155 @@
             "timestamp": "1864-04-28T11:03:51.887855178429Z"
         },
         {
-            "bestChain": {
-                "blocks": [
-                    {
-                        "bodyHash": "f08230df9afc00d2",
-                        "creatorId": 5,
-                        "includedVotes": [
-                            "54d8f94b1f8124fa",
-                            "d6200bf9bed9a34c",
-                            "938885276a751450",
-                            "002ea20c8649b058",
-                            "30463f8b22cec0f6",
-                            "11dd518d0ec7da59",
-                            "94affdc22ea6bb3c",
-                            "027b28a910687f6f",
-                            "3d2863eaca005d93",
-                            "102827882bb3e850",
-                            "e94e336b24c0a1da",
-                            "3851ee4cb431b3a2",
-                            "3b92fff0f0dbfca5",
-                            "16258243ae340c66",
-                            "c13d8629e9eb0c86",
-                            "b755e4e0405c47eb",
-                            "7e37c3f881372f4b",
-                            "5662142bdbcacb66",
-                            "1023a09370f4e168",
-                            "f4b279b5b1a0144b",
-                            "1c92aa3e330abdba",
-                            "86add0f972dc7df4",
-                            "92427f198db6e336",
-                            "9b4869299f073b5a",
-                            "c39c73a804cb3796",
-                            "e38902b96106e493"
-                        ],
-                        "leadershipProof": "62d4f9e131bffa5a",
-                        "parentBlock": "25db427332156a9c",
-                        "signature": "26252831ef996494",
-                        "slotNumber": 4
+            "bestChain": [
+                {
+                    "bodyHash": "91ab90d4bb2418e6",
+                    "certificate": {
+                        "blockRef": "5ad7956ffa2de5bf",
+                        "votingRoundNumber": 8
                     },
-                    {
-                        "bodyHash": "fcb97d6a825109a8",
-                        "creatorId": 21,
-                        "includedVotes": [
-                            "ba35ecb29b00e97f"
-                        ],
-                        "leadershipProof": "8ee3febc65a89d2f",
-                        "parentBlock": "42b5e9675d92f2b1",
-                        "signature": "f689b20319299faa",
-                        "slotNumber": 8
+                    "creatorId": 26,
+                    "leadershipProof": "a0bdbe624f6bfa55",
+                    "parentBlock": "2ed2f561f0ddb330",
+                    "signature": "bc3429edcb65150b",
+                    "slotNumber": 23
+                },
+                {
+                    "bodyHash": "3a97220461861fab",
+                    "certificate": {
+                        "blockRef": "570dc250948dc318",
+                        "votingRoundNumber": 27
                     },
-                    {
-                        "bodyHash": "0c733974a3d0b8d4",
-                        "creatorId": 25,
-                        "includedVotes": [
-                            "f6c117a4cd8d73cb",
-                            "f8f3f71954d3e452",
-                            "7559b0eca23c707a",
-                            "0613e3b7b5a8683d",
-                            "b8f30d25de82c7cf",
-                            "7684834b65779f17",
-                            "b0749f59503b4cf5",
-                            "45e7baeccfee9144",
-                            "6ce1d459bd26ce9e",
-                            "2a4aa8c2b6c818a6",
-                            "acde698b12f1b0e1",
-                            "bc74e7501c3e096d",
-                            "83e133cdcbf436ec",
-                            "9f61136c0622e089",
-                            "2f14982b67b115d5",
-                            "520f6093a4bf4570",
-                            "a37b6e4f9ecff81f",
-                            "429f26079a37baa5",
-                            "936ebf938ae3fa87",
-                            "14c8cc916d8ea0bd",
-                            "de901c4ce177426f",
-                            "52ecce4954da4303",
-                            "a818d63cddcce0f1",
-                            "ce4d219327edbd92",
-                            "20b419dd5f881323",
-                            "a31f80dd93df3cbb"
-                        ],
-                        "leadershipProof": "f15373bfc5a0fd16",
-                        "parentBlock": "00c19aed7a9facec",
-                        "signature": "ccf1bc81f946a46f",
-                        "slotNumber": 29
+                    "creatorId": 11,
+                    "leadershipProof": "cc12f25b25e23d7d",
+                    "parentBlock": "b79b04b154fc3f86",
+                    "signature": "bf921afb367e6b51",
+                    "slotNumber": 11
+                },
+                {
+                    "bodyHash": "f92aa81c509668c8",
+                    "certificate": {
+                        "blockRef": "ba84cd1565362424",
+                        "votingRoundNumber": 0
                     },
-                    {
-                        "bodyHash": "761f3bfe3b73c3d8",
-                        "creatorId": 16,
-                        "includedVotes": [
-                            "bb9ba5b394c4f7c1",
-                            "4f20bcfe85ac2a67",
-                            "685044c647d658b8",
-                            "88f5a6faaa30091a",
-                            "e025305bd7030385",
-                            "7a7b47f168ba4f71",
-                            "7e1b19d1e458b74a",
-                            "a13cc2ea1aa3f7cd"
-                        ],
-                        "leadershipProof": "c34bdf3b284542df",
-                        "parentBlock": "cc004ed8fc26b651",
-                        "signature": "b4e983ce94672715",
-                        "slotNumber": 6
+                    "creatorId": 13,
+                    "leadershipProof": "d2750f9caf528047",
+                    "parentBlock": "8fed6829c0c02770",
+                    "signature": "726a0c3e1e0cc036",
+                    "slotNumber": 23
+                },
+                {
+                    "bodyHash": "e3f545643cf2eefa",
+                    "certificate": null,
+                    "creatorId": 18,
+                    "leadershipProof": "abbc9711035daf86",
+                    "parentBlock": "8196a74ce5bf1537",
+                    "signature": "5d62f6e105a0861d",
+                    "slotNumber": 2
+                },
+                {
+                    "bodyHash": "d073ebdf7384e669",
+                    "certificate": {
+                        "blockRef": "76a69f331aab983d",
+                        "votingRoundNumber": 15
                     },
-                    {
-                        "bodyHash": "49746774d2828576",
-                        "creatorId": 10,
-                        "includedVotes": [
-                            "3511ea2356547341",
-                            "52b16678858ea6b6",
-                            "401cca18de2846da",
-                            "c09018ac48e21e68",
-                            "90fb4943c775637d",
-                            "07f26a30b72e75b8",
-                            "5b053da29e6cbbca",
-                            "1704db4e77f2fd9c",
-                            "1a9381619e9b7de0",
-                            "5b423def907b4f8c",
-                            "8f6b89555e9211f4",
-                            "e9f55c4bd722f172",
-                            "2816f8464ca669d7",
-                            "3746287c037f911a",
-                            "22b898f91b5a74f3",
-                            "b0eacc80976e0570",
-                            "937256a126f4b529",
-                            "5054bc09ae2f1000",
-                            "1a7808bf77cfadeb",
-                            "b4fe3dc4ffde0f4f",
-                            "5f560a45a6d0387e",
-                            "344a38946929bf19"
-                        ],
-                        "leadershipProof": "3ac5709ef94756f5",
-                        "parentBlock": "23d29067697be952",
-                        "signature": "483bbd75e79b637c",
-                        "slotNumber": 16
+                    "creatorId": 20,
+                    "leadershipProof": "9d79443f3c5499ff",
+                    "parentBlock": "6bc4aebc57a332cc",
+                    "signature": "c3180832bcdd91a5",
+                    "slotNumber": 22
+                },
+                {
+                    "bodyHash": "2a8a54ed80f1963f",
+                    "certificate": null,
+                    "creatorId": 18,
+                    "leadershipProof": "21d441cc1e07d6b3",
+                    "parentBlock": "2562e4448be87eb6",
+                    "signature": "7932b7b99e871172",
+                    "slotNumber": 28
+                },
+                {
+                    "bodyHash": "4de3ac19bb013046",
+                    "certificate": {
+                        "blockRef": "ff5a8555ae34e3f6",
+                        "votingRoundNumber": 17
                     },
-                    {
-                        "bodyHash": "41d51c7358dca4e9",
-                        "creatorId": 1,
-                        "includedVotes": [
-                            "c888cef85c454b53",
-                            "5fb62bd83d81cf8c",
-                            "d808713a562794db",
-                            "e8fd526ec43fe381",
-                            "e0d529fb74020200",
-                            "1edb113622bfc601",
-                            "51a54185c81414c7",
-                            "b641dfc165b5a750",
-                            "69258b72141b5311"
-                        ],
-                        "leadershipProof": "a04f0aa782d29f99",
-                        "parentBlock": "b025ebbb4479d851",
-                        "signature": "0bce03b6b976d2ca",
-                        "slotNumber": 13
-                    }
-                ],
-                "votes": [
-                    {
-                        "blockHash": "a0bdbe624f6bfa55",
-                        "committeeMembershipProof": "ba5ad7956ffa2de5",
-                        "creatorId": 20,
-                        "signature": "2991ab90d4bb2418",
-                        "votingRound": 12
+                    "creatorId": 27,
+                    "leadershipProof": "199b99e23067cd00",
+                    "parentBlock": "e67bdccb2ae8adad",
+                    "signature": "032b0b7f5c64650c",
+                    "slotNumber": 1
+                },
+                {
+                    "bodyHash": "78e9e84b4018bd34",
+                    "certificate": {
+                        "blockRef": "2a0203269abd58dc",
+                        "votingRoundNumber": 20
                     },
-                    {
-                        "blockHash": "115e5a50ec18ef74",
-                        "committeeMembershipProof": "4e1538219b82565b",
-                        "creatorId": 16,
-                        "signature": "1b8a112663ecb488",
-                        "votingRound": 26
-                    }
-                ]
-            },
+                    "creatorId": 19,
+                    "leadershipProof": "e31f5948d93a28c8",
+                    "parentBlock": "8036e4ed419edbcb",
+                    "signature": "51d11ba56d63ce4e",
+                    "slotNumber": 12
+                },
+                {
+                    "bodyHash": "2f3c8c2e99ef0fe4",
+                    "certificate": {
+                        "blockRef": "bd83ecf748f7ead4",
+                        "votingRoundNumber": 30
+                    },
+                    "creatorId": 6,
+                    "leadershipProof": "2552e2ef05deda09",
+                    "parentBlock": "b58a78fdb227dbdb",
+                    "signature": "44a4072c87427d19",
+                    "slotNumber": 23
+                },
+                {
+                    "bodyHash": "ea2898fada30f0ce",
+                    "certificate": {
+                        "blockRef": "5f1f0d4ced461e8b",
+                        "votingRoundNumber": 16
+                    },
+                    "creatorId": 0,
+                    "leadershipProof": "47d38cebc80ce5da",
+                    "parentBlock": "1e33cdaf70387a20",
+                    "signature": "9d9cd4e63557fc0b",
+                    "slotNumber": 24
+                },
+                {
+                    "bodyHash": "2d055ce978efd6a4",
+                    "certificate": {
+                        "blockRef": "67ac7907a8ab3d5e",
+                        "votingRoundNumber": 23
+                    },
+                    "creatorId": 23,
+                    "leadershipProof": "9656b95416ab01cd",
+                    "parentBlock": "bfe645cf1e3a8d33",
+                    "signature": "cc472658f187d627",
+                    "slotNumber": 6
+                },
+                {
+                    "bodyHash": "52e6c4184e74b6f8",
+                    "certificate": {
+                        "blockRef": "00ded56ff7241a16",
+                        "votingRoundNumber": 29
+                    },
+                    "creatorId": 11,
+                    "leadershipProof": "f0180475a812ae85",
+                    "parentBlock": "1bf3d23330046327",
+                    "signature": "88b0609922df643a",
+                    "slotNumber": 21
+                },
+                {
+                    "bodyHash": "e59d1fa7836c7be2",
+                    "certificate": null,
+                    "creatorId": 26,
+                    "leadershipProof": "c59f0495132b24bc",
+                    "parentBlock": "b22707c00d8ffbe0",
+                    "signature": "55f391eb74c61b72",
+                    "slotNumber": 14
+                }
+            ],
             "source": "Node-17",
             "tag": "Idle",
             "timestamp": "1864-04-21T20:05:37.162748602378Z"
@@ -726,38 +490,17 @@
             "outMessage": {
                 "contents": {
                     "bodyHash": "bf9b18dcbf47a66f",
+                    "certificate": {
+                        "blockRef": "54b3a6a0bda13d73",
+                        "votingRoundNumber": 13
+                    },
                     "creatorId": 27,
-                    "includedVotes": [
-                        "1654b3a6a0bda13d",
-                        "9b7722e76c703107",
-                        "46b3ab7e32a0093e",
-                        "f061c66140f7bd6c",
-                        "ca7aa5f8ab14139c",
-                        "9a940cc868437b2e",
-                        "f8f395b93eb1e98e",
-                        "a81c55c260183463",
-                        "61a39f3eb36d5391",
-                        "54f7b15ba202b25e",
-                        "295f803562ea3177",
-                        "9988c87ef2a19356",
-                        "a8e405571f11c6f8",
-                        "ba5c25437875156d",
-                        "1e0cafb6369e1ce4",
-                        "e6a2942fbed2780c",
-                        "d53f475ab845be28",
-                        "faaaa2bcc5d949aa",
-                        "3ef73a36749239bd",
-                        "e70ca203d04ad228",
-                        "0fd6f39dbfca3fd6",
-                        "3676313d8291f226",
-                        "c017e22d6eea8888"
-                    ],
                     "leadershipProof": "f5e4450514c8c03b",
                     "parentBlock": "c946101c65ff565d",
                     "signature": "c81e3df8775b92cc",
                     "slotNumber": 12
                 },
-                "tag": "RollBack"
+                "tag": "RollForward"
             },
             "source": "Node-8",
             "tag": "OutEnvelope",
@@ -769,10 +512,7 @@
                     "blockIndex": {},
                     "danglingBlocks": [],
                     "danglingVotes": [],
-                    "preferredChain": {
-                        "blocks": [],
-                        "votes": []
-                    },
+                    "preferredChain": [],
                     "voteIndex": {},
                     "votesByRound": {}
                 },
