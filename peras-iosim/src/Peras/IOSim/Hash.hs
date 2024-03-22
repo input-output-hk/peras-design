@@ -11,14 +11,14 @@ module Peras.IOSim.Hash (
   hashVote,
 ) where
 
-import Peras.Block as Block (Block (bodyHash), BlockBody (blockHash), Tx)
+import Peras.Block as Block (Block, BlockBody (blockHash), Tx)
 import Peras.Chain as Chain (Vote (signature))
-import Peras.Crypto as Crypto (Hash (Hash), Signature (bytes))
+import Peras.Crypto as Crypto (Hash (Hash), Hashable (hash), Signature (bytes))
 
-type BlockHash = Hash [Tx]
+type BlockHash = Hash Block
 
 hashBlock :: Block -> BlockHash
-hashBlock = Block.bodyHash
+hashBlock = hash
 
 genesisHash :: BlockHash
 genesisHash = Hash mempty
