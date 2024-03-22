@@ -108,7 +108,7 @@ getDelay ::
   NodeId ->
   Maybe CpuTime
 getDelay Topology{connections} from to =
-  (messageDelay <$> forward) <|> (messageDelay <$> backward)
+  messageDelay <$> forward <|> messageDelay <$> backward
  where
   messageDelay NodeLink{latency} = fromRational $ fromIntegral latency % 1_000_000
   forward = M.lookup from connections >>= M.lookup to

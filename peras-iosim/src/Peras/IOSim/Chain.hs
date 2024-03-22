@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Chain (
@@ -22,25 +21,20 @@ module Peras.IOSim.Chain (
   lookupRoundForChain,
   lookupVote,
   missingBlocks,
-  missingIncludedVotes,
   missingParents,
   missingVotedBlocks,
-  missingVotes,
   preferChain,
   resolveBlock,
   resolveBlocksOnChain,
-  voteRecorded,
-  votesMissingFromChain,
 ) where
 
 import Control.Monad.Except (throwError)
 import Data.Default (Default (def))
-import Data.Either (rights)
 import Data.Foldable (foldr')
 import Data.List (nub)
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe)
 import Peras.Block (Block (..), BlockBody, Slot)
-import Peras.Chain (Chain (..), RoundNumber, Vote (..))
+import Peras.Chain (Chain, RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
 import Peras.IOSim.Hash (BlockHash, BodyHash, VoteHash, genesisHash, hashBlock, hashBody, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
@@ -68,26 +62,19 @@ blockTree :: ChainState -> BlockTree
 blockTree = blockTrees . pure
 
 preferChain :: Chain -> ChainState -> ChainState
-preferChain chain state =
-  let state' = addChain chain state
+preferChain blocks state =
+  let state' = addChain blocks state
    in state'
-        { preferredChain = chain
-        , danglingBlocks = M.keysSet (blockIndex state') `S.difference` S.fromList (hashBlock <$> blocks chain)
-        , danglingVotes = M.keysSet (voteIndex state') `S.difference` S.fromList (concatMap includedVotes $ blocks chain)
+        { preferredChain = blocks
+        , danglingBlocks = M.keysSet (blockIndex state') `S.difference` S.fromList (hashBlock <$> blocks)
         }
 
 appendBlock :: Block -> ChainState -> ChainState
 appendBlock block state =
-  let votes' = rights $ (`lookupVote'` state) <$> includedVotes block
-   in state
-        { preferredChain =
-            MkChain
-              { blocks = block : blocks (preferredChain state)
-              , votes = nub $ votes' <> votes (preferredChain state)
-              }
-        , blockIndex = M.insert (hashBlock block) block $ blockIndex state
-        , danglingVotes = danglingVotes state `S.difference` S.fromList (includedVotes block)
-        }
+  state
+    { preferredChain = block : preferredChain state
+    , blockIndex = M.insert (hashBlock block) block $ blockIndex state
+    }
 
 -- Ordered in decreasing age.
 missingParents :: [Block] -> ChainState -> [BlockHash]
@@ -101,42 +88,19 @@ missingVotedBlocks votes ChainState{blockIndex} =
   reverse . filter (`M.notMember` blockIndex) $
     blockHash <$> votes
 
--- Ordered in decreasing age.
-missingIncludedVotes :: [Block] -> ChainState -> [VoteHash]
-missingIncludedVotes blocks ChainState{voteIndex} =
-  reverse . concatMap (filter (`M.notMember` voteIndex) . includedVotes) $
-    blocks
-
 blocksMissingFromChain :: Chain -> ChainState -> [BlockHash]
-blocksMissingFromChain MkChain{..} state =
-  nub $
-    missingParents blocks state
-      <> missingVotedBlocks votes state
-
-votesMissingFromChain :: Chain -> ChainState -> [VoteHash]
-votesMissingFromChain = missingIncludedVotes . blocks
+blocksMissingFromChain = (nub .) . missingParents
 
 missingBlocks :: ChainState -> [BlockHash]
 missingBlocks state@ChainState{preferredChain} = blocksMissingFromChain preferredChain state
 
-missingVotes :: ChainState -> [VoteHash]
-missingVotes state@ChainState{preferredChain} = votesMissingFromChain preferredChain state
-
 addChain :: Chain -> ChainState -> ChainState
-addChain MkChain{..} state =
+addChain blocks state =
   let
     indexBlock block = M.insert (hashBlock block) block
-    indexVote vote = M.insert (hashVote vote) vote
-    indexRound v =
-      M.insertWith
-        (M.unionWith S.union)
-        (votingRound v)
-        (M.singleton (blockHash v) (S.singleton $ hashVote v))
    in
     state
       { blockIndex = foldr' indexBlock (blockIndex state) blocks
-      , voteIndex = foldr' indexVote (voteIndex state) votes
-      , votesByRound = foldr' indexRound (votesByRound state) votes
       }
 
 addBlock :: Block -> ChainState -> ChainState
@@ -146,11 +110,11 @@ addBlock block state =
    in
     if bhash `M.member` blockIndex state
       then state
-      else do
+      else
         state
           { blockIndex = M.insert (hashBlock block) block $ blockIndex state
           , danglingBlocks =
-              (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
+              (if bhash `elem` fmap hashBlock (preferredChain state) then id else S.insert bhash) $
                 danglingBlocks state
           }
 
@@ -167,7 +131,7 @@ addVote vote state =
         state
           { voteIndex = M.insert vhash vote $ voteIndex state
           , danglingBlocks =
-              (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
+              (if bhash `elem` fmap hashBlock (preferredChain state) then id else S.insert bhash) $
                 danglingBlocks state
           , danglingVotes = S.insert vhash $ danglingVotes state
           , votesByRound = M.insertWith M.union r (M.singleton bhash $ S.singleton vhash) $ votesByRound state
@@ -178,7 +142,7 @@ addBody body state =
   let
     bhash = hashBody body
    in
-    if bhash `M.member` blockIndex state
+    if bhash `M.member` bodyIndex state
       then state{bodyIndex = M.insert bhash body $ bodyIndex state}
       else state
 
@@ -204,10 +168,10 @@ lookupRound :: RoundNumber -> ChainState -> M.Map BlockHash (S.Set VoteHash)
 lookupRound r state = fromMaybe mempty $ r `M.lookup` votesByRound state
 
 lookupRoundForChain :: RoundNumber -> ChainState -> Chain -> M.Map BlockHash (S.Set VoteHash)
-lookupRoundForChain r state chain =
+lookupRoundForChain r state blocks =
   M.restrictKeys
     (r `lookupRound` state)
-    (S.fromList $ hashBlock <$> blocks chain)
+    (S.fromList $ hashBlock <$> blocks)
 
 isBlockOnChain :: ChainState -> BlockHash -> Bool
 isBlockOnChain = flip S.notMember . danglingBlocks
@@ -223,13 +187,15 @@ resolveBlocksOnChain state =
   mapM (resolveBlock state) . M.elems $
     M.withoutKeys (voteIndex state) (danglingVotes state)
 
-eligibleDanglingVotes :: ChainState -> [VoteHash]
+eligibleDanglingVotes :: ChainState -> [Vote]
 eligibleDanglingVotes state =
-  do
-    let hashes = M.keysSet (blockIndex state) `S.difference` danglingBlocks state
-    filter ((== Right True) . fmap (flip S.member hashes . blockHash) . flip lookupVote' state)
-      . S.toList
-      $ danglingVotes state
+  -- FIXME: This is not faithful to the March version of the Peras pseudo-code.
+  let hashes = M.keysSet (blockIndex state) `S.difference` danglingBlocks state
+      votes =
+        filter ((== Right True) . fmap (flip S.member hashes . blockHash) . flip lookupVote' state)
+          . S.toList
+          $ danglingVotes state
+   in M.elems . M.restrictKeys (voteIndex state) $ S.fromList votes
 
 filterDanglingVotes :: (VoteWithBlock -> Bool) -> ChainState -> ChainState
 filterDanglingVotes f state =
@@ -241,24 +207,19 @@ blockInWindow :: (Slot, Slot) -> Block -> Bool
 blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotNumber <= newest
 
 blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
-blocksInWindow window = filter (blockInWindow window) . blocks
+blocksInWindow window = filter (blockInWindow window)
 
-voteRecorded :: Chain -> Vote -> [Block]
-voteRecorded MkChain{blocks} vote = filter ((hashVote vote `elem`) . includedVotes) blocks
-
-buildChain :: Block -> ChainState -> Either ([BlockHash], [VoteHash]) Chain
-buildChain block ChainState{blockIndex, voteIndex} =
+buildChain :: Block -> ChainState -> Either [BlockHash] Chain
+buildChain block ChainState{blockIndex} =
   let
-    buildChain' block'@Block{parentBlock, includedVotes} (blocksFound, votesFound, blocksMissing, votesMissing)
-      | parentBlock == genesisHash = (blocksFound', votesFound', blocksMissing, votesMissing')
+    buildChain' block'@Block{parentBlock} (blocksFound, blocksMissing)
+      | parentBlock == genesisHash = (blocksFound', blocksMissing)
       | otherwise = case parentBlock `M.lookup` blockIndex of
-          Just block'' -> buildChain' block'' (blocksFound', votesFound', blocksMissing, votesMissing')
-          Nothing -> (blocksFound', votesFound', pure parentBlock, votesMissing')
+          Just block'' -> buildChain' block'' (blocksFound', blocksMissing)
+          Nothing -> (blocksFound', pure parentBlock)
      where
       blocksFound' = block' : blocksFound
-      votesFound' = mapMaybe (`M.lookup` voteIndex) includedVotes <> votesFound
-      votesMissing' = filter (`M.notMember` voteIndex) includedVotes <> votesMissing
    in
     case buildChain' block mempty of
-      (blocksFound, votesFound, [], []) -> Right $ MkChain (reverse blocksFound) (nub votesFound)
-      (_, _, blocksMissing, votesMissing) -> Left (blocksMissing, nub votesMissing)
+      (blocksFound, []) -> Right $ reverse blocksFound
+      (_, blocksMissing) -> Left blocksMissing

@@ -1,122 +1,46 @@
 {
     "samples": [
         {
-            "inId": "7b59d123541bfc93",
-            "inMessage": {
-                "contents": [
-                    "6217fcc01ff1f8c1",
-                    "5f0ff30170b76e52",
-                    "120602d6186ad0b9",
-                    "0eb7b74716d495a2",
-                    "97540af489457ab2",
-                    "a8a59c8df22ca2ca",
-                    "9daffecf19f2fe46"
-                ],
-                "tag": "FetchBlocks"
-            },
-            "origin": "Node-12",
-            "tag": "InEnvelope"
-        },
-        {
-            "inId": "144b93bb7914a92f",
-            "inMessage": {
-                "contents": "8edb5e95d28bb989",
-                "tag": "FollowChain"
-            },
-            "origin": "Node-30",
-            "tag": "InEnvelope"
-        },
-        {
-            "inId": "2c6ab3a724c8f1cb",
-            "inMessage": {
-                "contents": [
-                    {
-                        "bodyHash": "177fd72c9b407649",
-                        "certificate": {
-                            "blockRef": "d7848de691eccffb",
-                            "votingRoundNumber": 24
-                        },
-                        "creatorId": 7,
-                        "leadershipProof": "e6bf0053f2c3c39a",
-                        "parentBlock": "fe5390d4071b9238",
-                        "signature": "1bc04ba978e1914c",
-                        "slotNumber": 8
-                    },
-                    {
-                        "bodyHash": "8d72a7feddd174bd",
-                        "certificate": {
-                            "blockRef": "5e1e2e847f6f4657",
-                            "votingRoundNumber": 5
-                        },
-                        "creatorId": 11,
-                        "leadershipProof": "87476742d8331455",
-                        "parentBlock": "a0474f1c8ca55433",
-                        "signature": "8f564c4ab24c1abc",
-                        "slotNumber": 30
-                    },
-                    {
-                        "bodyHash": "9b877c9af69abc3a",
-                        "certificate": {
-                            "blockRef": "f2ec2e176c056ca2",
-                            "votingRoundNumber": 5
-                        },
-                        "creatorId": 17,
-                        "leadershipProof": "a99b66cf04f4bd10",
-                        "parentBlock": "ef28462e3bcad27e",
-                        "signature": "9aff694e1f974bd5",
-                        "slotNumber": 10
-                    },
-                    {
-                        "bodyHash": "ac6b5c349ba79ba9",
-                        "certificate": {
-                            "blockRef": "a1cccef7b2f1135b",
-                            "votingRoundNumber": 7
-                        },
-                        "creatorId": 19,
-                        "leadershipProof": "855cbba5948624c7",
-                        "parentBlock": "de6924d209738f3e",
-                        "signature": "a77728de228685d9",
-                        "slotNumber": 14
-                    },
-                    {
-                        "bodyHash": "3b879f13e8c8d768",
-                        "certificate": {
-                            "blockRef": "6eb10717b2bc3c9e",
-                            "votingRoundNumber": 12
-                        },
-                        "creatorId": 30,
-                        "leadershipProof": "63ccb41f95a90340",
-                        "parentBlock": "916438ee96b23fa9",
-                        "signature": "6096c1dc207668a9",
-                        "slotNumber": 30
-                    }
-                ],
-                "tag": "NewChain"
-            },
-            "origin": null,
-            "tag": "InEnvelope"
-        },
-        {
-            "inId": "d63dfdb809674f77",
+            "inBytes": 3,
+            "inId": "09fd52c610b1adcc",
             "inMessage": {
                 "contents": {
-                    "blockHash": "2c8bccfad798da49",
-                    "committeeMembershipProof": "72433254ebc17aa8",
-                    "creatorId": 13,
-                    "signature": "3ded8d5d609cb1ec",
-                    "votingRound": 23
+                    "blockHash": "d0e66cb9cfeb8819",
+                    "committeeMembershipProof": "09e77f145614a1aa",
+                    "creatorId": 6,
+                    "signature": "eb474f2c3341cebd",
+                    "votingRound": 1
                 },
                 "tag": "SomeVote"
             },
-            "origin": "Node-5",
-            "tag": "InEnvelope"
+            "inTime": "1864-04-11T06:10:23.460438769307Z",
+            "origin": "Node-26"
         },
         {
-            "inId": "2bfdaed8c6625695",
+            "inBytes": 13,
+            "inId": "fb9a0fc88c851312",
+            "inMessage": {
+                "contents": 4,
+                "tag": "NextSlot"
+            },
+            "inTime": "1864-04-22T21:37:23.834232258523Z",
+            "origin": "Node-18"
+        },
+        {
+            "inBytes": 0,
+            "inId": "6a8118e79c52635d",
             "inMessage": {
                 "contents": {
-                    "blockHash": "698dec7008285fd1",
+                    "blockHash": "7843cf4a0922241a",
                     "payload": [
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
                         [],
                         [],
                         [],
@@ -138,8 +62,110 @@
                 },
                 "tag": "SomeBlock"
             },
-            "origin": null,
-            "tag": "InEnvelope"
+            "inTime": "1864-05-11T02:21:58.567370728915Z",
+            "origin": "Node-25"
+        },
+        {
+            "inBytes": 13,
+            "inId": "d977aa55e39d3902",
+            "inMessage": {
+                "contents": [
+                    {
+                        "bodyHash": "0bac9639ccc79e32",
+                        "certificate": {
+                            "blockRef": "2b3b63504d484b71",
+                            "votingRoundNumber": 2
+                        },
+                        "creatorId": 28,
+                        "leadershipProof": "aa0fded51d5edb35",
+                        "parentBlock": "ead6a31d761c1c32",
+                        "signature": "18b831a4c026ead2",
+                        "slotNumber": 7
+                    },
+                    {
+                        "bodyHash": "fcb2dba7af12e278",
+                        "certificate": {
+                            "blockRef": "22162ced8d131c2e",
+                            "votingRoundNumber": 6
+                        },
+                        "creatorId": 10,
+                        "leadershipProof": "1c5ee8888ab9af41",
+                        "parentBlock": "77bb55e5f85efd59",
+                        "signature": "43389199dbd544f1",
+                        "slotNumber": 3
+                    },
+                    {
+                        "bodyHash": "963a4b11c7f376ad",
+                        "certificate": {
+                            "blockRef": "9458086e345bac95",
+                            "votingRoundNumber": 1
+                        },
+                        "creatorId": 28,
+                        "leadershipProof": "76987919630913b4",
+                        "parentBlock": "2022539f32d27926",
+                        "signature": "f98ec2fcfa994e4e",
+                        "slotNumber": 12
+                    },
+                    {
+                        "bodyHash": "a9b46baeca2a0e6f",
+                        "certificate": {
+                            "blockRef": "63e870b529693c6d",
+                            "votingRoundNumber": 13
+                        },
+                        "creatorId": 12,
+                        "leadershipProof": "e90b25976f8bfe60",
+                        "parentBlock": "a3e03f598a53f634",
+                        "signature": "c9af3933e6ccdfd7",
+                        "slotNumber": 1
+                    },
+                    {
+                        "bodyHash": "1055a5df4f89fc40",
+                        "certificate": null,
+                        "creatorId": 23,
+                        "leadershipProof": "29a9843754c073d9",
+                        "parentBlock": "875dbb5c63319b83",
+                        "signature": "b07193c7b75b030a",
+                        "slotNumber": 25
+                    },
+                    {
+                        "bodyHash": "232994f4542f5886",
+                        "certificate": {
+                            "blockRef": "b85ed0453de2818b",
+                            "votingRoundNumber": 20
+                        },
+                        "creatorId": 29,
+                        "leadershipProof": "75d06cfa08f2c98f",
+                        "parentBlock": "53e222cda6c956c8",
+                        "signature": "86b4864fa413d878",
+                        "slotNumber": 6
+                    },
+                    {
+                        "bodyHash": "bddf68c5a22890ee",
+                        "certificate": {
+                            "blockRef": "9acb7fff65b3d8ef",
+                            "votingRoundNumber": 12
+                        },
+                        "creatorId": 27,
+                        "leadershipProof": "47c484bde7b768ac",
+                        "parentBlock": "bf4ca6632b7c9da7",
+                        "signature": "971b71cc0e500eb3",
+                        "slotNumber": 11
+                    }
+                ],
+                "tag": "NewChain"
+            },
+            "inTime": "1864-05-01T18:50:09.879335314282Z",
+            "origin": "Node-22"
+        },
+        {
+            "inBytes": 7,
+            "inId": "054832fea0ec1e89",
+            "inMessage": {
+                "contents": "c5ceb5ab83706faf",
+                "tag": "FollowChain"
+            },
+            "inTime": "1864-05-09T20:21:51.408016703237Z",
+            "origin": "Node-17"
         }
     ],
     "seed": -561087434

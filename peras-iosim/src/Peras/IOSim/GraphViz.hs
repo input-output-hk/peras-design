@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.IOSim.GraphViz (
@@ -10,7 +9,7 @@ module Peras.IOSim.GraphViz (
 import Control.Lens ((^.))
 import Peras.Block (Block (..))
 import Peras.IOSim.Hash (genesisHash)
-import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
+import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates)
 import Peras.IOSim.Node.Types (PerasNode (..))
 import Peras.Message (NodeId (..))
 
@@ -59,7 +58,6 @@ chainGraph ::
   G.Graph
 chainGraph networkState =
   let tree = blocksSeen networkState
-      allVotes = votesSeen networkState
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement
@@ -70,11 +68,11 @@ chainGraph networkState =
       nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
       mkNode Block{..} =
         G.NodeStatement
-          (nodeId bodyHash)
+          (nodeId signature)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
           , G.AttributeSetValue (G.NameId "label") . G.XmlId . G.XmlText $
               "<b>"
-                <> show' bodyHash
+                <> show' signature
                 <> "</b>"
                 <> "|Slot "
                 <> show slotNumber
@@ -85,8 +83,8 @@ chainGraph networkState =
       nodes = mkNode <$> blocks
       mkEdge bid bid' = G.EdgeStatement [G.ENodeId G.NoEdge bid', G.ENodeId G.DirectedEdge bid] mempty
       mkEdges bid bs
-        | bid == genesisHash = mkEdge genesisId . nodeId . Peras.Block.bodyHash <$> S.toList bs
-        | otherwise = mkEdge (nodeId bid) . nodeId . Peras.Block.bodyHash <$> S.toList bs
+        | bid == genesisHash = mkEdge genesisId . nodeId . Peras.Block.signature <$> S.toList bs
+        | otherwise = mkEdge (nodeId bid) . nodeId . Peras.Block.signature <$> S.toList bs
       edges = M.foldMapWithKey mkEdges tree
    in G.Graph G.StrictGraph G.DirectedGraph (pure $ G.StringId "Chains") $
         [G.AssignmentStatement (G.NameId "rankdir") (G.StringId "RL")] <> pure genesis <> nodes <> edges

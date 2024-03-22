@@ -81,6 +81,7 @@ data MessageSizes = MessageSizes
   , sizeRollBack :: ByteSize
   , sizeFetchBlocks :: ByteSize
   , sizeSomeBlock :: ByteSize
+  , sizeSomeCertificate :: ByteSize
   }
   deriving stock (Eq, Generic, Read, Show)
 
@@ -99,6 +100,7 @@ instance Default MessageSizes where
       , sizeRollBack = 1_100 -- Size of block header.
       , sizeFetchBlocks = 75 -- Size per vote hash.
       , sizeSomeBlock = 90_112 -- Worst case scenario.
+      , sizeSomeCertificate = 999 -- Just a guess.
       }
 
 -- | The estimated serialized size of the message, in bytes
@@ -113,5 +115,6 @@ messageSize = \case
   RollBack{} -> sizeRollBack def
   FetchBlocks bs -> sizeFetchBlocks def * fromIntegral (length bs)
   SomeBlock{} -> sizeSomeBlock def
+  SomeCertificate{} -> sizeSomeCertificate def
 
 -- FIXME: Add TCP overhead.

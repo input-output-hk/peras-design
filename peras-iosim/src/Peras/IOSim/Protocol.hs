@@ -28,13 +28,12 @@ import Control.Monad (forM_, unless)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Function (on)
 import Peras.Block (Block (Block, slotNumber), Slot)
-import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
+import Peras.Chain (Chain, RoundNumber (..), Vote (..))
 import Peras.IOSim.Chain (
   filterDanglingVotes,
   isBlockOnChain,
   lookupRoundForChain,
   resolveBlocksOnChain,
-  voteRecorded,
  )
 import Peras.IOSim.Chain.Types (ChainState (preferredChain, voteIndex))
 import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, slotLeaderRandom)
@@ -124,8 +123,8 @@ validChain protocol state =
 
 -- | Check whether a chain is valid Praos.
 validPraos :: Chain -> Either Invalid ()
-validPraos MkChain{blocks = []} = pure ()
-validPraos MkChain{blocks} =
+validPraos [] = pure ()
+validPraos blocks =
   -- FIXME: Also check signatures and proofs.
   unless (and $ zipWith ((>) `on` slotNumber) (init blocks) (tail blocks)) $
     throwError InvalidPraosChain
@@ -161,17 +160,9 @@ validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{voting
 --   unique block* with a slot number s inside the *vote-inclusions window*
 --   $\[s + 1, s + A\]$."
 validInclusion :: Protocol -> ChainState -> Vote -> Either Invalid ()
-validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound = r} =
-  let
-    s = firstSlotInRound protocol r
-   in
-    -- FIXME: Use `ChainState` to make this more efficient.
-    case voteRecorded (preferredChain state) vote of
-      [Block{slotNumber}] ->
-        unless (s + 1 <= slotNumber && slotNumber <= s + aa) $
-          throwError VoteOutsideInclusionWindow
-      [] -> throwError VoteNeverRecorded
-      _ -> throwError VoteRecordedMultipleTimes
+validInclusion _ _ _ =
+  -- FIXME: Currently it is impossible to verify that a vote was included in a certificate.
+  pure ()
 
 voteAllowedInRound :: Protocol -> ChainState -> Vote -> Either Invalid ()
 voteAllowedInRound protocol state MkVote{votingRound} =
@@ -190,7 +181,7 @@ isFirstSlotInRound Peras{roundDuration = tt} s = s `mod` tt == 0
 chainWeight :: Protocol -> ChainState -> Double
 chainWeight protocol state =
   let
-    chain@MkChain{blocks} = preferredChain state
+    blocks = preferredChain state
     s = if null blocks then 0 else slotNumber (head blocks)
     rCurrent = currentRound protocol s
     w0 = length blocks
@@ -199,7 +190,7 @@ chainWeight protocol state =
         [ sum $ S.size <$> M.elems vs
         | r <- [0 .. rCurrent]
         , voteInRound protocol r state
-        , let vs = lookupRoundForChain r state chain
+        , let vs = lookupRoundForChain r state blocks
         ]
    in
     fromIntegral w0
