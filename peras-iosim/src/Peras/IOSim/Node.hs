@@ -49,11 +49,12 @@ initializeNode ::
   NodeId ->
   S.Set NodeId ->
   m SomeNode
-initializeNode Parameters{maximumStake} nodeId downstreams =
+initializeNode Parameters{maximumStake, messageBandwidth} nodeId downstreams =
   fmap HonestNode $
     Honest.Node nodeId
       <$> ((fromIntegral . abs :: Int -> Natural) <$> getRandom)
       <*> getRandomR (1, maximumStake)
+      <*> pure messageBandwidth
       <*> getRandomR (0, 1)
       <*> pure downstreams
       <*> pure def

@@ -33,7 +33,6 @@ import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Block (Block (parentBlock), Slot)
 import Peras.Chain (Chain, Vote)
-import Peras.Event (ByteSize)
 import Peras.IOSim.Experiment (Veto)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
@@ -59,14 +58,13 @@ newtype Reliability = Reliability Double
 data NodeLink = NodeLink
   { reliability :: Reliability
   , latency :: Delay
-  , bandwidth :: ByteSize
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
 
 instance ToJSON NodeLink
 instance FromJSON NodeLink
 
-reliableLink :: Delay -> ByteSize -> NodeLink
+reliableLink :: Delay -> NodeLink
 reliableLink = NodeLink 1
 
 instance Arbitrary NodeLink where
