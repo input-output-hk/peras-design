@@ -3,14 +3,16 @@
         {
             "inId": "7b59d123541bfc93",
             "inMessage": {
-                "contents": {
-                    "blockHash": "3a2fde89afd179d0",
-                    "payload": [
-                        [],
-                        []
-                    ]
-                },
-                "tag": "SomeBlock"
+                "contents": [
+                    "6217fcc01ff1f8c1",
+                    "5f0ff30170b76e52",
+                    "120602d6186ad0b9",
+                    "0eb7b74716d495a2",
+                    "97540af489457ab2",
+                    "a8a59c8df22ca2ca",
+                    "9daffecf19f2fe46"
+                ],
+                "tag": "FetchBlocks"
             },
             "origin": "Node-12",
             "tag": "InEnvelope"
@@ -18,39 +20,8 @@
         {
             "inId": "144b93bb7914a92f",
             "inMessage": {
-                "contents": {
-                    "bodyHash": "95d28bb9890e240c",
-                    "creatorId": 5,
-                    "includedVotes": [
-                        "547f0c980c84f808",
-                        "df7d2fb3da2d9514",
-                        "8477740e2110a45f",
-                        "c1aebdbe72bce6be",
-                        "4a577c58f77d882b",
-                        "c6ac2be5d2c50d70",
-                        "9bae9735d777fa71",
-                        "abd2d5f57388aeb0",
-                        "4371e4e23412f141",
-                        "aae9f15fffb30e83",
-                        "1f064d931be01e6f",
-                        "1e4f87bd2cd37986",
-                        "2105401c6c023b54",
-                        "7cd20e0743625a88",
-                        "d031ce5e15e1f71d",
-                        "9140dc566b216232",
-                        "1a91097d75560d7b",
-                        "69b6d4ef2034042d",
-                        "c19cde5e01278d12",
-                        "c3ee81dd1308fd47",
-                        "7ef5217e036b59ad",
-                        "acc420e1dccbdaf4"
-                    ],
-                    "leadershipProof": "b29d47d78d5074fe",
-                    "parentBlock": "83831db68f6c0e70",
-                    "signature": "f7bd534a1823b391",
-                    "slotNumber": 1
-                },
-                "tag": "RollForward"
+                "contents": "8edb5e95d28bb989",
+                "tag": "FollowChain"
             },
             "origin": "Node-30",
             "tag": "InEnvelope"
@@ -58,197 +29,68 @@
         {
             "inId": "2c6ab3a724c8f1cb",
             "inMessage": {
-                "contents": {
-                    "blocks": [
-                        {
-                            "bodyHash": "d671c19bcff42b93",
-                            "creatorId": 30,
-                            "includedVotes": [
-                                "705dce7b2905cc64",
-                                "6eb5c58322fdb25e",
-                                "a0914d3168a2b8dd",
-                                "c37fc95a3744eb23",
-                                "dcd00e9d5e3f6928",
-                                "7b94b5af701998bb",
-                                "cd9dae305a83fa57",
-                                "4307744ac1dfefba"
-                            ],
-                            "leadershipProof": "152fe8bb65ae121a",
-                            "parentBlock": "a502f50d2afde685",
-                            "signature": "b78027894f694bbd",
-                            "slotNumber": 5
+                "contents": [
+                    {
+                        "bodyHash": "177fd72c9b407649",
+                        "certificate": {
+                            "blockRef": "d7848de691eccffb",
+                            "votingRoundNumber": 24
                         },
-                        {
-                            "bodyHash": "7c3578442c27f9a4",
-                            "creatorId": 23,
-                            "includedVotes": [
-                                "14ae9f1372d32538",
-                                "24fe73c1c0d5a3f1"
-                            ],
-                            "leadershipProof": "e667a83c8ab08cf5",
-                            "parentBlock": "bec79334d3386f14",
-                            "signature": "5d9713aa881a1edf",
-                            "slotNumber": 18
+                        "creatorId": 7,
+                        "leadershipProof": "e6bf0053f2c3c39a",
+                        "parentBlock": "fe5390d4071b9238",
+                        "signature": "1bc04ba978e1914c",
+                        "slotNumber": 8
+                    },
+                    {
+                        "bodyHash": "8d72a7feddd174bd",
+                        "certificate": {
+                            "blockRef": "5e1e2e847f6f4657",
+                            "votingRoundNumber": 5
                         },
-                        {
-                            "bodyHash": "fd22b3b4ba633caf",
-                            "creatorId": 29,
-                            "includedVotes": [
-                                "f448cb9ac688ffb1",
-                                "9abe487f6faee983",
-                                "cb412af7c1c0e6b3",
-                                "cfd97a8045d981aa",
-                                "e2ad8b8acd548e7c",
-                                "c4eb8e417d5cd442"
-                            ],
-                            "leadershipProof": "83d619406a412667",
-                            "parentBlock": "cb63ef87a78a63c0",
-                            "signature": "5f82404087f0f316",
-                            "slotNumber": 3
+                        "creatorId": 11,
+                        "leadershipProof": "87476742d8331455",
+                        "parentBlock": "a0474f1c8ca55433",
+                        "signature": "8f564c4ab24c1abc",
+                        "slotNumber": 30
+                    },
+                    {
+                        "bodyHash": "9b877c9af69abc3a",
+                        "certificate": {
+                            "blockRef": "f2ec2e176c056ca2",
+                            "votingRoundNumber": 5
                         },
-                        {
-                            "bodyHash": "028081772ae40122",
-                            "creatorId": 8,
-                            "includedVotes": [
-                                "842fe06436cccc5d",
-                                "40f504227d37996a",
-                                "e76386a76eb3a99f",
-                                "9a6578bd15dd4943",
-                                "b469a3104f6fe329",
-                                "9ff73d52bcc1e078",
-                                "691b257413aec0fa",
-                                "73f922c7a63488a4",
-                                "e0a6ec7d6b3f55fe",
-                                "6b188a8e4a0ecbee",
-                                "1c9b4471da2170db",
-                                "6d47aa67257b2126",
-                                "0acb47158e1bb852",
-                                "53e1662665b456e4",
-                                "d95eac396bea8dc4",
-                                "4d3b6b3990b74d28",
-                                "63270cb65f8b6b28",
-                                "ff10ee5bc6f2ef05",
-                                "954dc6b6f53a5ddb",
-                                "9af6d37d97108472",
-                                "3653cc0974bf2a42",
-                                "d224fb2f3a7d471b",
-                                "d410de5da5482876",
-                                "0b0731a29665aaf9"
-                            ],
-                            "leadershipProof": "714fb7cfa38b7897",
-                            "parentBlock": "6775efdd9d7eba46",
-                            "signature": "08145cc224689d07",
-                            "slotNumber": 17
+                        "creatorId": 17,
+                        "leadershipProof": "a99b66cf04f4bd10",
+                        "parentBlock": "ef28462e3bcad27e",
+                        "signature": "9aff694e1f974bd5",
+                        "slotNumber": 10
+                    },
+                    {
+                        "bodyHash": "ac6b5c349ba79ba9",
+                        "certificate": {
+                            "blockRef": "a1cccef7b2f1135b",
+                            "votingRoundNumber": 7
                         },
-                        {
-                            "bodyHash": "6dccc27ba71f87c8",
-                            "creatorId": 3,
-                            "includedVotes": [
-                                "7cd2767ab6c885c1",
-                                "074e5ca0b7d81a76",
-                                "660ee660a1c7fb57",
-                                "5037b811d591a5a9",
-                                "c39ca6f1ccff501f",
-                                "719b245c0b51db66",
-                                "90275e6ae4f2644e",
-                                "8842b91662c39efd",
-                                "577a2ddf0239d1a0",
-                                "3cb489da7819359c",
-                                "67b3517a23e079b8"
-                            ],
-                            "leadershipProof": "90abadce45864560",
-                            "parentBlock": "1bd59cacfb5d7d88",
-                            "signature": "3af28f7bce3d886b",
-                            "slotNumber": 28
+                        "creatorId": 19,
+                        "leadershipProof": "855cbba5948624c7",
+                        "parentBlock": "de6924d209738f3e",
+                        "signature": "a77728de228685d9",
+                        "slotNumber": 14
+                    },
+                    {
+                        "bodyHash": "3b879f13e8c8d768",
+                        "certificate": {
+                            "blockRef": "6eb10717b2bc3c9e",
+                            "votingRoundNumber": 12
                         },
-                        {
-                            "bodyHash": "01e5dee2671c2edb",
-                            "creatorId": 5,
-                            "includedVotes": [
-                                "44c7ec72d46cb29f",
-                                "c0700f38e8a52347",
-                                "9d76abb76dae503d",
-                                "a19d8441008aec9e",
-                                "3a263e9262103b6e",
-                                "e01eff16a80ed223",
-                                "4fc88d3f662cf9d8",
-                                "05667be439c0aead",
-                                "24f56ac394d58366",
-                                "cdb9162b64d22e0f",
-                                "99a770bc84c5856a",
-                                "c9675b376894efe1",
-                                "1a18fefce84c9de1",
-                                "72d8a49abab35e70",
-                                "797cb16f02e779df",
-                                "2c2f3f3bf2bc6839",
-                                "121df94428cc777b",
-                                "89604ed437eb7ebe",
-                                "358890919cb1dcf0",
-                                "0ca8498f9ceee27a",
-                                "1c2fb87e195324cc",
-                                "9c91cd9fcc075e40",
-                                "a70923a58783238b",
-                                "12b24fcb49ad2c3a",
-                                "fcf2d9690b554de1"
-                            ],
-                            "leadershipProof": "55e3db2b7cd5a48f",
-                            "parentBlock": "25e922ae97e7040b",
-                            "signature": "2aad15dd6c2ae3d7",
-                            "slotNumber": 10
-                        },
-                        {
-                            "bodyHash": "2978d267357bbd67",
-                            "creatorId": 3,
-                            "includedVotes": [
-                                "9b76f7cf1caef34b",
-                                "25e2d9b93067d5fd",
-                                "36a78aff4e5bcda3",
-                                "cf2aaad680989685",
-                                "ada8420bf94ec298",
-                                "0591caec51be8ca5",
-                                "67e3f35a6d0d3f25",
-                                "69bcb231fc71912f",
-                                "dff6c010f99c3569",
-                                "218b8fbb03a50795",
-                                "7248747d3842c9bf",
-                                "336e55c594d54e8e",
-                                "7329c55e69bc7a54",
-                                "d65ca9588dc96d94",
-                                "52480a97b15f4b8b",
-                                "b89b6be6cc3d4838"
-                            ],
-                            "leadershipProof": "6b3e6a9e5f35fe0e",
-                            "parentBlock": "e9a28139984b0a8b",
-                            "signature": "3b34254528e8e2ed",
-                            "slotNumber": 20
-                        },
-                        {
-                            "bodyHash": "3514f68a76b3d828",
-                            "creatorId": 12,
-                            "includedVotes": [
-                                "5ac30e5fdd71248a",
-                                "dfcd8bee14d1650f",
-                                "cb69fbce687dd6d1",
-                                "0cbe5052cd52e6ee",
-                                "3be48e735797c8fd",
-                                "ff3e5b2045b67540",
-                                "e5896834babf8020",
-                                "06889df4effa7651",
-                                "25ce0969f2b43431",
-                                "9678e7120bcdce35",
-                                "83a2e57338096034",
-                                "a47fd7db13b8fc71",
-                                "bc7baa6c0817c804",
-                                "50e6e50c10386418"
-                            ],
-                            "leadershipProof": "a5f58a6f475be94e",
-                            "parentBlock": "fabef4e8fa40d21d",
-                            "signature": "028b6a14338df4a9",
-                            "slotNumber": 26
-                        }
-                    ],
-                    "votes": []
-                },
+                        "creatorId": 30,
+                        "leadershipProof": "63ccb41f95a90340",
+                        "parentBlock": "916438ee96b23fa9",
+                        "signature": "6096c1dc207668a9",
+                        "slotNumber": 30
+                    }
+                ],
                 "tag": "NewChain"
             },
             "origin": null,
@@ -272,12 +114,29 @@
         {
             "inId": "2bfdaed8c6625695",
             "inMessage": {
-                "contents": [
-                    "11c60247176e210e",
-                    "a9317132e501dac4",
-                    "30ecb31df6e7765f"
-                ],
-                "tag": "FetchVotes"
+                "contents": {
+                    "blockHash": "698dec7008285fd1",
+                    "payload": [
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        []
+                    ]
+                },
+                "tag": "SomeBlock"
             },
             "origin": null,
             "tag": "InEnvelope"

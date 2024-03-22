@@ -8,12 +8,9 @@ module Peras.IOSim.GraphViz (
 ) where
 
 import Control.Lens ((^.))
-import Data.Function (on)
-import Data.List (intercalate, sortBy)
 import Peras.Block (Block (..))
-import Peras.Chain (RoundNumber (roundNumber), Vote (..))
 import Peras.IOSim.Hash (genesisHash)
-import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates, votesSeen)
+import Peras.IOSim.Network.Types (NetworkState, blocksSeen, currentStates)
 import Peras.IOSim.Node.Types (committeeMember, downstreams, rxBytes, slotLeader, stake, txBytes, vrfOutput)
 import Peras.Message (NodeId (..))
 
@@ -70,7 +67,6 @@ chainGraph ::
   G.Graph
 chainGraph networkState =
   let tree = networkState ^. Peras.IOSim.Network.Types.blocksSeen
-      allVotes = networkState ^. votesSeen
       genesisId = G.NodeId (G.StringId "genesis") Nothing
       genesis =
         G.NodeStatement
@@ -79,13 +75,7 @@ chainGraph networkState =
           , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
           ]
       nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
-      sortVotes = compare `on` (\MkVote{..} -> (votingRound, creatorId, blockHash))
-      votesInBlock = fmap (allVotes M.!) . includedVotes
-      showVotes [] = ""
-      showVotes vs = "|" <> intercalate "|" (showVote <$> sortBy sortVotes vs)
-      showVote MkVote{votingRound, creatorId, blockHash} =
-        "Round " <> show (roundNumber votingRound) <> ": " <> show creatorId <> " voted for " <> show' blockHash
-      mkNode block@Block{..} =
+      mkNode Block{..} =
         G.NodeStatement
           (nodeId signature)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")
@@ -97,7 +87,6 @@ chainGraph networkState =
                 <> show slotNumber
                 <> "|Creator "
                 <> show creatorId
-                <> showVotes (votesInBlock block)
           ]
       blocks = S.toList . S.unions $ M.elems tree
       nodes = mkNode <$> blocks

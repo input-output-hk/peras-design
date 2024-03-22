@@ -10,7 +10,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Peras.Block (Block (..))
-import Peras.Chain (Chain (..), RoundNumber, Vote)
+import Peras.Chain (Chain, RoundNumber, Vote)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
@@ -35,7 +35,7 @@ instance FromJSON ChainState
 instance ToJSON ChainState
 
 instance Default ChainState where
-  def = ChainState def def def def def def
+  def = ChainState mempty def def def def def
 
 instance Arbitrary ChainState where
   arbitrary = pure def
