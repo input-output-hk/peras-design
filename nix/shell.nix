@@ -7,6 +7,9 @@ cabalProject:
 
   packages = [
 
+    # Haskell dependencies.
+    pkgs.cairo
+
     # Agda packages.
     repoRoot.nix.agda-with-stdlib
     repoRoot.nix.agda-stdlib
