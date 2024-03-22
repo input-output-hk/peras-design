@@ -40,6 +40,8 @@ library
 
 executable plot-dqsd
   build-depends:      delta-q
+                    , Chart >= 1.9
+                    , Chart-cairo >= 1.9
                     , base
                     , mwc-random
                     , process
