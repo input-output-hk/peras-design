@@ -17,7 +17,7 @@ open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj�
 open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym; subst; trans)
+open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
 
@@ -55,10 +55,10 @@ data Message : Set where
   VoteMsg : Vote → Message
   CertMsg : Certificate → Message
 ```
-Messages can be delayed by an adversary. Delay is either 0 (not delay) or 1 (in the next slot)
+Messages can be delayed by an adversary. Delay is either 0, 1, 2
 
 ```agda
-Delay = Fin 2
+Delay = Fin 3
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
@@ -324,6 +324,13 @@ The global state consists of the following fields:
 ```agda
         adversarialState : AdversarialState
 ```
+
+```agda
+    Delivered : Stateᵍ → Set
+    Delivered = All (λ { ⦅ _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
+```
+
+
 Updating global state
 ```agda
     updateᵍ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
@@ -421,7 +428,7 @@ A party can cast a vote for a block, if
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
+          updateᵍ (VoteMsg v) (suc zero) p ⟪ addVote blockTree t v ⟫ M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -460,7 +467,7 @@ state.
 
         → IsSlotLeader p clock prf
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (suc zero) p
              ⟪ extendTree blockTree t b ⟫ M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
@@ -478,16 +485,21 @@ The small-step semantics describe the evolution of the global state.
         → M ↝ N
 
       CastVote : ∀ {M N p} {h : Honesty p}
+        → Delivered M
         → M [ h ]⇉ N
           -----------
         → M ↝ N
 
+      -- TODO: Create Cert
+
       CreateBlock : ∀ {M N p} {h : Honesty p}
+        → Delivered M
         → M [ h ]↷ N
           -----------
         → M ↝ N
 
       NextSlot : ∀ {M}
+        → Delivered M
           ------------
         → M ↝ tick M
 ```
@@ -644,9 +656,9 @@ When the current state is collision free, the pervious state was so too
 <!--
 ```agda
     ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
-    ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
-    ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
-    ↝-collision-free NextSlot (collision-free x) = collision-free x
+    ↝-collision-free (CastVote _ x) cf-N₂ = []⇉-collision-free cf-N₂ x
+    ↝-collision-free (CreateBlock _ x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
 ```
 -->
 
