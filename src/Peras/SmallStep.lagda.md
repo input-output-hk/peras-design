@@ -524,7 +524,9 @@ In the paper mentioned above this is big-step semantics.
         → M ↝⋆ N
           ------
         → L ↝⋆ N
-
+```
+Post-composition
+```agda
     ↝∘↝⋆ : ∀ {M N O}
       → M ↝⋆ N
       → N ↝ O
