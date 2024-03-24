@@ -1,14 +1,28 @@
 ```agda
+{-# OPTIONS --allow-unsolved-metas #-}
 module Peras.SmallStep.Properties where
 ```
 
 <!--
 ```agda
 open import Data.Bool using (Bool)
-open import Data.List using (List)
+open import Data.List using (List; []; _∷_)
+open import Data.List.Membership.Propositional using (_∈_; _∉_)
+open import Data.List.Membership.DecPropositional using (_∈?_)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
+open import Data.List.Relation.Unary.All using (All; map)
+open import Data.List.Relation.Unary.All.Properties using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
 open import Data.Maybe using (just)
-open import Data.Nat using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
+open import Data.Fin using (zero; suc; _≟_)
+open import Data.Fin.Properties using (0≢1+n)
+open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
+open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+
+open import Function.Base using (_∘_; id; _$_; flip)
+
+open import Relation.Nullary using (yes; no; ¬_)
+open import Relation.Nullary.Negation using (contradiction)
 
 open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate)
 open import Peras.Chain using (RoundNumber; Vote)
@@ -18,7 +32,7 @@ open import Peras.Params using (Params)
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym; subst; trans)
+open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 ```
 -->
 
@@ -46,10 +60,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            where
 
     open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-    open import Peras.SmallStep using (Stateˡ; Stateᵍ; _↝_; _↝⋆_; ⟪_⟫; CollisionFree; ForgingFree)
+    open import Peras.SmallStep
 ```
 ```agda
     module _ ⦃ N₀ : Stateᵍ ⦄ where
+
+      GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
       open TreeType
       open Stateᵍ
@@ -59,29 +75,114 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 The lemma describes how knowledge is propagated between honest parties in the system.
 
 ```agda
+      open Honesty
+      open import Data.Sum using (_⊎_; inj₁; inj₂)
+      open import Peras.Chain
+      open _↝_
+```
+```agda
+{-
+      Ready : GlobalState → Set
+      Ready = All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ∘ messages
+
+      Transition : GlobalState → Set
+      Transition = Any (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ∘ messages
+-}
+```
+```agda
+      clock-incr : ∀ {M N : GlobalState}
+        → M ↝ N
+        → clock M ≤ clock N
+      clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
+      clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
+      clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote _ (honest _ _ _ _ _)) = ≤-refl
+      clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest _ _ _ _)) = ≤-refl
+      clock-incr {M} (NextSlot _) = n≤1+n (clock M)
+
+      clock-incr⋆ : ∀ {M N : GlobalState}
+        → M ↝⋆ N
+        → clock M ≤ clock N
+      clock-incr⋆ (_ ∎) = ≤-refl
+      clock-incr⋆ (_ ↝⟨ x ⟩ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
+
       postulate
-        knowledge-propagation : ∀ {N₁ N₂ : Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}}
-          → {p₁ p₂ : PartyId}
-          → {t₁ t₂ : A}
-          → N₀ ↝ N₁
-          → N₁ ↝ N₂
-          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
-          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ ⟫
-          → clock N₁ ≡ clock N₂
-          → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+        tree-inv : ∀ {p q} {N : GlobalState} {l}
+          → p ≢ q
+          → lookup (stateMap N) p ≡ lookup (insert q l (stateMap N)) p
 ```
 
 ```agda
-      open import Data.Sum using (_⊎_; inj₁; inj₂)
-      open import Peras.Chain
-      open Honesty
+      knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
+        → {p₁ p₂ : PartyId}
+        → {t₁ t₂ : A}
+        → N₀ ↝⋆ N₁ -- needed as precondition for N₁ (starting from empty local states)
+        → N₁ ↝⋆ N₂
+        → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+        → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+--        → Ready N₁ -- TODO
+        → Delivered N₂
+        → clock N₁ ≡ clock N₂
+        → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
 
+      -- base case
+      knowledge-propagation _ (_ ∎) _ _ x₄ n₂ _ = {!!} -- contradiction x₄ (All¬⇒¬Any n₂) -- TODO: at least one step
+
+      -- Deliver
+      knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {lₚ′} {m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ with p₁ ℕ.≟ p
+      ... | no ¬e =    -- adds a block/vote/cert to some p's blocktree
+        let xx = tree-inv {p₁} {p} {N₁} {lₚ′} ¬e
+            yy = trans (sym xx) N₁×p₁≡t₁
+        in knowledge-propagation {p₁ = p₁} (↝∘↝⋆ x d) N′↝⋆N₂ yy x₃ {- (─⁺ m∈ms n₁) -} n₂ x₆ x₇
+
+      ... | yes refl -- with b ∈? allBlocks t₂  -- adds a block/vote/cert to p₁'s blocktree
+                       -- proof: p₂ either already has the block in the local blocktree or
+                       --        it is in the message buffer with delay 0 (honest create in prev slot)
+      -- ... | xx = ?
+        = knowledge-propagation {p₁ = p₁} (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+
+      knowledge-propagation x (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
+
+      -- CastVote
+      knowledge-propagation x (_ ↝⟨ d@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
+        let xx = knowledge-propagation (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+        in xx -- cast vote not relevant for allBlocks
+
+      -- CreateBlock
+      knowledge-propagation x (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
+
+      -- NextSlot
+      knowledge-propagation {N₁} {N₂} _ (_ ↝⟨ (NextSlot _) ⟩ N′↝⋆N₂) _ _ _ x₆ _ =
+        let 1+c≤c = ≤-trans (≤-reflexive (cong ℕ.suc (sym x₆))) (clock-incr⋆ N′↝⋆N₂)
+            1+c≰c = 1+n≰n {clock N₂}
+        in contradiction 1+c≤c 1+c≰c
+```
+## Chain growth
+
+
+```agda
+      postulate
+        honest-chain-growth : ∀ {N₁ N₂ : GlobalState}
+          → {p₁ p₂ : PartyId}
+          → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
+          → {t₁ t₂ : A}
+          → h₁ ≡ Honest {p₁}
+          → h₂ ≡ Honest {p₂}
+          → N₀ ↝ N₁
+          → N₁ ↝ N₂
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+          → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+          → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
+                c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
+                cs₁ = certs blockTree t₁ c₁
+                cs₂ = certs blockTree t₂ c₂
+            in ∥ c₁ , cs₁ ∥ ≤ ∥ c₂ , cs₂ ∥
+```
+```agda
       postulate
         luckySlots : Slot × Slot → ℕ
         superSlots : Slot × Slot → ℕ
         adversarialSlots : Slot × Slot → ℕ
 ```
-## Chain growth
 
 The chain growth property informally says that in each period, the best chain of any honest
 party will increase at least by a number that is proportional to the number of lucky slots in
@@ -89,25 +190,23 @@ that period.
 
 ```agda
       postulate
-        chain-growth : ∀ {N₁ N₂ : Stateᵍ}
+        chain-growth : ∀ {N₁ N₂ : GlobalState}
           → {p₁ p₂ : PartyId}
           → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-          → {d₁ d₂ : List Vote}
           → {t₁ t₂ : A}
           → {w : ℕ}
+          → h₁ ≡ Honest {p₁}
+          → h₂ ≡ Honest {p₂}
+          → N₀ ↝⋆ N₁
+          → N₁ ↝⋆ N₂
+          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+          → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+          → luckySlots (clock N₁ , clock N₂) ≥ w
           → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
                 c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
                 cs₁ = certs blockTree t₁ c₁
                 cs₂ = certs blockTree t₂ c₂
-            in
-            h₁ ≡ Honest {p₁}
-          → h₂ ≡ Honest {p₂}
-          → N₀ ↝ N₁
-          → N₁ ↝ N₂
-          → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
-          → lookup (stateMap N₁) p₂ ≡ just ⟪ t₂ ⟫
-          → luckySlots (clock N₁ , clock N₂) ≥ w
-          → ∥ c₁ , cs₁ ∥ + w ≤ ∥ c₂ , cs₂ ∥
+            in ∥ c₁ , cs₁ ∥ + w ≤ ∥ c₂ , cs₂ ∥
 ```
 
 ## Chain quality
@@ -127,7 +226,7 @@ chains of honest parties will always be a common prefix of each other.
 
 ```agda
       postulate
-        common-prefix : ∀ {N : Stateᵍ}
+        common-prefix : ∀ {N : GlobalState}
           → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
           → lookup (stateMap N) p ≡ just ⟪ t ⟫
           → N₀ ↝ N
