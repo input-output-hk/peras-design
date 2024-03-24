@@ -29,20 +29,19 @@ module Peras.IOSim.Chain (
   resolveBlocksOnChain,
   voteOnChain',
   voteOnChain,
-  voteRecorded,
   votesForBlocksOnChain',
   votesForBlocksOnChain,
   votesRecordedOnChain',
   votesRecordedOnChain,
 ) where
 
-import Control.Monad (filterM, unless, (<=<))
+import Control.Monad (filterM, (<=<))
 import Control.Monad.Except (throwError)
 import Data.Default (Default (def))
 import Data.Foldable (foldr')
 import Data.Maybe (fromMaybe)
 import Peras.Block (Block (..), Slot)
-import Peras.Chain (Chain (..), RoundNumber, Vote (..))
+import Peras.Chain (Chain, RoundNumber, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
 import Peras.IOSim.Hash (BlockHash, VoteHash, genesisHash, hashBlock, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
@@ -73,54 +72,33 @@ indexChain :: Chain -> Either Invalid ChainState
 indexChain = flip preferChain def
 
 preferChain :: Chain -> ChainState -> Either Invalid ChainState
-preferChain chain state =
+preferChain blocks state =
   do
-    state' <- addChain chain state
+    state' <- addChain blocks state
     pure
       state'
-        { preferredChain = chain
-        , danglingBlocks = M.keysSet (blockIndex state') `S.difference` S.fromList (hashBlock <$> blocks chain)
-        , danglingVotes = M.keysSet (voteIndex state') `S.difference` S.fromList (concatMap includedVotes $ blocks chain)
+        { preferredChain = blocks
+        , danglingBlocks = M.keysSet (blockIndex state') `S.difference` S.fromList (hashBlock <$> blocks)
         }
 
 appendBlock :: Block -> ChainState -> Either Invalid ChainState
 appendBlock block state =
   do
-    votes' <- mapM (`lookupVote'` state) $ includedVotes block
     pure
       state
-        { preferredChain =
-            MkChain
-              { blocks = block : blocks (preferredChain state)
-              , votes = votes' <> votes (preferredChain state) -- We don't need to guard against duplicates here.
-              }
+        { preferredChain = block : preferredChain state
         , blockIndex = M.insert (hashBlock block) block $ blockIndex state
-        , danglingVotes = danglingVotes state `S.difference` S.fromList (includedVotes block)
         }
 
 addChain :: Chain -> ChainState -> Either Invalid ChainState
-addChain MkChain{..} state =
+addChain blocks state =
   do
     let
       indexBlock block = M.insert (hashBlock block) block
-      indexVote vote = M.insert (hashVote vote) vote
-      indexRound v =
-        M.insertWith
-          (M.unionWith S.union)
-          (votingRound v)
-          (M.singleton (blockHash v) (S.singleton $ hashVote v))
       state' =
         state
           { blockIndex = foldr' indexBlock (blockIndex state) blocks
-          , voteIndex = foldr' indexVote (voteIndex state) votes
-          , votesByRound = foldr' indexRound (votesByRound state) votes
           }
-      blockReferencesOkay = all ((`M.member` blockIndex state') . blockHash) votes
-      voteReferencesOkay = all (all (`M.member` voteIndex state') . includedVotes) blocks
-    unless blockReferencesOkay $
-      throwError VoteReferencesUnknownBlock
-    unless voteReferencesOkay $
-      throwError BlockIncludesUnknownVote
     pure state'
 
 addBlock :: Block -> ChainState -> Either Invalid ChainState
@@ -131,12 +109,11 @@ addBlock block state =
     if bhash `M.member` blockIndex state
       then pure state
       else do
-        mapM_ (`lookupVote'` state) $ includedVotes block
         pure
           state
             { blockIndex = M.insert (hashBlock block) block $ blockIndex state
             , danglingBlocks =
-                (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
+                (if bhash `elem` fmap hashBlock (preferredChain state) then id else S.insert bhash) $
                   danglingBlocks state
             }
 
@@ -155,7 +132,7 @@ addVote (vote, block) state =
             { blockIndex = M.insert (hashBlock block) block $ blockIndex state
             , voteIndex = M.insert vhash vote $ voteIndex state
             , danglingBlocks =
-                (if bhash `elem` fmap hashBlock (blocks $ preferredChain state) then id else S.insert bhash) $
+                (if bhash `elem` fmap hashBlock (preferredChain state) then id else S.insert bhash) $
                   danglingBlocks state
             , danglingVotes = S.insert vhash $ danglingVotes state
             , votesByRound = M.insertWith M.union r (M.singleton bhash $ S.singleton vhash) $ votesByRound state
@@ -178,10 +155,10 @@ lookupRound :: RoundNumber -> ChainState -> M.Map BlockHash (S.Set VoteHash)
 lookupRound r state = fromMaybe mempty $ r `M.lookup` votesByRound state
 
 lookupRoundForChain :: RoundNumber -> ChainState -> Chain -> M.Map BlockHash (S.Set VoteHash)
-lookupRoundForChain r state chain =
+lookupRoundForChain r state blocks =
   M.restrictKeys
     (r `lookupRound` state)
-    (S.fromList $ hashBlock <$> blocks chain)
+    (S.fromList $ hashBlock <$> blocks)
 
 isBlockOnChain :: ChainState -> BlockHash -> Bool
 isBlockOnChain = flip S.notMember . danglingBlocks
@@ -250,16 +227,13 @@ blockInWindow :: (Slot, Slot) -> Block -> Bool
 blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotNumber <= newest
 
 blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
-blocksInWindow window = filter (blockInWindow window) . blocks
+blocksInWindow window = filter (blockInWindow window)
 
 voteOnChain :: Chain -> Vote -> Bool
-voteOnChain MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
+voteOnChain blocks MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
 
 voteOnChain' :: Chain -> Vote -> Bool
-voteOnChain' MkChain{blocks} MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
+voteOnChain' blocks MkVote{blockHash} = any ((== blockHash) . hashBlock) blocks
 
 blockOnChain :: Chain -> Block -> Bool
-blockOnChain MkChain{blocks} block = any ((== hashBlock block) . hashBlock) blocks
-
-voteRecorded :: Chain -> Vote -> [Block]
-voteRecorded MkChain{blocks} vote = filter ((hashVote vote `elem`) . includedVotes) blocks
+blockOnChain blocks block = any ((== hashBlock block) . hashBlock) blocks

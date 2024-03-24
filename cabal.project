@@ -18,6 +18,7 @@ packages:
   peras-hs
   peras-iosim
   peras-quickcheck
+  peras-delta-q
 
 tests: True
 test-show-details: direct

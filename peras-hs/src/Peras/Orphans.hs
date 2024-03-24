@@ -145,8 +145,15 @@ deriving via Bytes instance Show a => Show (Hash a)
 deriving via Bytes instance IsString a => IsString (Hash a)
 deriving via Bytes instance FromJSON a => FromJSON (Hash a)
 deriving via Bytes instance ToJSON a => ToJSON (Hash a)
-deriving via Bytes instance FromJSONKey a => FromJSONKey (Hash a)
-deriving via Bytes instance ToJSONKey a => ToJSONKey (Hash a)
+
+instance FromJSON a => FromJSONKey (Hash a) where
+  fromJSONKey = FromJSONKeyTextParser $ \t ->
+    case B16.decode . BS8.pack . T.unpack $ t of
+      Left err -> fail err
+      Right k -> pure $ Hash k
+
+instance ToJSON a => ToJSONKey (Hash a) where
+  toJSONKey = toJSONKeyText $ T.pack . init . tail . show . hashBytes
 
 deriving stock instance Generic MembershipProof
 deriving stock instance Ord MembershipProof

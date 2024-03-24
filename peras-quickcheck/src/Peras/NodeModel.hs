@@ -124,7 +124,7 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
       receive >>= \case
         Idle{} -> pure acc
         OutEnvelope
-          { outMessage = NewChain (MkChain (b : _) _)
+          { outMessage = NewChain (b : _)
           } -> waitForIdle receive (b : acc)
         _other -> waitForIdle receive acc
 

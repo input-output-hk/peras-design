@@ -178,7 +178,7 @@ impl Node {
             self.seed.fill_bytes(&mut leadership_proof);
             let mut body_hash = [0u8; 8];
             self.seed.fill_bytes(&mut body_hash);
-            let parent_hash = match self.best_chain.blocks.first() {
+            let parent_hash = match self.best_chain.first() {
                 Some(b) => b.body_hash.clone(),
                 None => Block::genesis_hash(),
             };
@@ -186,14 +186,14 @@ impl Node {
                 slot_number: slot,
                 creator_id: 1,
                 parent_block: parent_hash,
-                included_votes: vec![],
+                certificate: None,
                 leadership_proof: crypto::LeadershipProof {
                     proof: leadership_proof,
                 },
                 signature: crypto::Signature { signature },
                 body_hash: crypto::Hash { hash: body_hash },
             };
-            self.best_chain.blocks.insert(0, new_block);
+            self.best_chain.insert(0, new_block);
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
                 timestamp: Utc::now(),
@@ -209,8 +209,8 @@ impl Node {
     }
 
     fn handle_new_chain(&mut self, chain: Chain) -> Option<OutEnvelope> {
-        let new_length = chain.blocks.len();
-        let cur_length = self.best_chain.blocks.len();
+        let new_length = chain.len();
+        let cur_length = self.best_chain.len();
 
         if new_length > cur_length {
             self.best_chain = chain;

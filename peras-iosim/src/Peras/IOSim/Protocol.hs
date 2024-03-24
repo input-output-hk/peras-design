@@ -26,7 +26,7 @@ module Peras.IOSim.Protocol (
 ) where
 
 import Control.Lens (Lens', use, uses, (%=), (&), (.=))
-import Control.Monad (forM_, unless, (<=<))
+import Control.Monad (forM_, unless)
 import Control.Monad.Class.MonadSay (MonadSay (..))
 import Control.Monad.Except (
   ExceptT,
@@ -40,7 +40,7 @@ import Control.Tracer (Tracer)
 import Data.Function (on)
 import Data.List (partition)
 import Peras.Block (Block (Block, slotNumber), Slot)
-import Peras.Chain (Chain (..), RoundNumber (..), Vote (..))
+import Peras.Chain (Chain, RoundNumber (..), Vote (..))
 import Peras.Crypto (Hash (Hash))
 import Peras.Event (Event)
 import Peras.IOSim.Chain (
@@ -49,7 +49,6 @@ import Peras.IOSim.Chain (
   addVote,
   appendBlock,
   blocksInWindow,
-  eligibleDanglingVotes,
   filterDanglingVotes,
   isBlockOnChain,
   lookupBlock,
@@ -58,7 +57,6 @@ import Peras.IOSim.Chain (
   preferChain,
   resolveBlock,
   resolveBlocksOnChain,
-  voteRecorded,
  )
 import Peras.IOSim.Chain.Types (ChainState (preferredChain, voteIndex))
 import Peras.IOSim.Crypto (VrfOutput, VrfUsage (VrfBodyHash), committeMemberRandom, nextVrf, proveLeadership, proveMembership, randomBytes, signBlock, signVote, slotLeaderRandom)
@@ -124,8 +122,8 @@ doLeading slotNumber vrf =
     block <-
       Block slotNumber
         <$> use owner
-        <*> uses chainState (hashTip . Peras.Chain.blocks . preferredChain)
-        <*> uses' chainState eligibleDanglingVotes
+        <*> uses chainState (hashTip . preferredChain)
+        <*> pure Nothing
         <*> pure (proveLeadership vrf ())
         <*> pure (signBlock vrf ())
         <*> pure (Hash $ randomBytes VrfBodyHash vrf)
@@ -166,15 +164,12 @@ newChain ::
 newChain _tracer protocol proposed =
   sayInvalid "Peras.IOSim.Protocol.newChain" mempty $ do
     fromWeight <- chainState `uses` chainWeight protocol
-    notEquivocated <- chainState `uses` (((/= Left EquivocatedVote) .) . checkEquivocation)
-    let proposed' = proposed{votes = filter notEquivocated $ votes proposed}
+    let proposed' = proposed
     state' <- chainState `uses'` preferChain proposed'
     -- FIXME: Should the whole chain be rejected if any part of it or the its dangling votes is invalid?
-    liftEither $ do
-      validChain protocol state'
-      mapM_ (validCandidateWindow protocol <=< resolveBlock state') $ votes proposed'
+    liftEither $ validChain protocol state'
     let toWeight = chainWeight protocol state'
-        checkRollback MkChain{blocks = olds} MkChain{blocks = news} =
+        checkRollback olds news =
           partition (`elem` news) olds
             & \case
               (_, []) -> pure ()
@@ -192,7 +187,7 @@ newChain _tracer protocol proposed =
         pure [NewChain proposed']
       else do
         chainState %#= addChain proposed'
-        newVotes protocol $ Peras.Chain.votes proposed'
+        pure []
 
 newBlock ::
   MonadSay m =>
@@ -246,18 +241,6 @@ newVote' protocol vote =
               Right block -> pure [RollForward block, SomeVote vote]
               Left HashOfUnknownBlock -> pure [SomeVote vote] -- FIXME: Ideally, we should request the block from the peers.
               Left e -> throwError e
-
-newVotes ::
-  MonadError Invalid m =>
-  MonadState NodeState m =>
-  Protocol ->
-  [Vote] ->
-  m [Message]
-newVotes protocol votes =
-  do
-    -- FIXME: This results in only the valid votes before the
-    --        the first invalid vote.
-    concat <$> mapM (newVote' protocol) votes
 
 isSlotLeader ::
   Double ->
@@ -354,8 +337,8 @@ validChain protocol state =
 
 -- | Check whether a chain is valid Praos.
 validPraos :: Chain -> Either Invalid ()
-validPraos MkChain{blocks = []} = pure ()
-validPraos MkChain{blocks} =
+validPraos [] = pure ()
+validPraos blocks =
   -- FIXME: Also check signatures and proofs.
   unless (and $ zipWith ((>) `on` slotNumber) (init blocks) (tail blocks)) $
     throwError InvalidPraosChain
@@ -391,17 +374,9 @@ validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{voting
 --   unique block* with a slot number s inside the *vote-inclusions window*
 --   $\[s + 1, s + A\]$."
 validInclusion :: Protocol -> ChainState -> Vote -> Either Invalid ()
-validInclusion protocol@Peras{voteMaximumAge = aa} state vote@MkVote{votingRound = r} =
-  let
-    s = firstSlotInRound protocol r
-   in
-    -- FIXME: Use `ChainState` to make this more efficient.
-    case voteRecorded (preferredChain state) vote of
-      [Block{slotNumber}] ->
-        unless (s + 1 <= slotNumber && slotNumber <= s + aa) $
-          throwError VoteOutsideInclusionWindow
-      [] -> throwError VoteNeverRecorded
-      _ -> throwError VoteRecordedMultipleTimes
+validInclusion _ _ _ =
+  -- FIXME: It is impossible to know if a vote was recorded in a certificate.
+  pure ()
 
 voteAllowedInRound :: Protocol -> ChainState -> Vote -> Either Invalid ()
 voteAllowedInRound protocol state MkVote{votingRound} =
@@ -420,7 +395,7 @@ isFirstSlotInRound Peras{roundDuration = tt} s = s `mod` tt == 0
 chainWeight :: Protocol -> ChainState -> Double
 chainWeight protocol state =
   let
-    chain@MkChain{blocks} = preferredChain state
+    blocks = preferredChain state
     s = if null blocks then 0 else slotNumber (head blocks)
     rCurrent = currentRound protocol s
     w0 = length blocks
@@ -429,7 +404,7 @@ chainWeight protocol state =
         [ sum $ S.size <$> M.elems vs
         | r <- [0 .. rCurrent]
         , voteInRound protocol r state
-        , let vs = lookupRoundForChain r state chain
+        , let vs = lookupRoundForChain r state blocks
         ]
    in
     fromIntegral w0
