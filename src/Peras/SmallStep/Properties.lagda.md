@@ -13,6 +13,7 @@ open import Data.List.Membership.DecPropositional using (_∈?_)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
+open import Data.List.Relation.Unary.Any.Properties using (¬Any[])
 open import Data.List.Relation.Unary.All using (All; map)
 open import Data.List.Relation.Unary.All.Properties using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
 
@@ -152,7 +153,8 @@ The lemma describes how knowledge is propagated between honest parties in the sy
           a₁ = cong (allBlocks blockTree) (tree-inj refl refl z₁)
           a₂ = cong (allBlocks blockTree) (tree-inj refl refl z₂)
       in ⊆-reflexive (trans (sym a₁) a₂)
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver x ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- imp, no messages in N₀
+    knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver (honest {ms = ms} x m∈ms x₆) ⟩ x₅) x₁ x₂ x₃ = contradiction m∈ms ¬Any[]
+    knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver (corrupt m∈ms) ⟩ x₅) x₁ x₂ x₃ x₄ = contradiction m∈ms ¬Any[]
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ CastVote x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- votes don't affect allBlocks
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ CreateBlock x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- CreateBlock : b ∈ t₁ , next slot Receive: b ∈ t₂
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ NextSlot x ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- trivial
@@ -162,7 +164,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       → {t₁ t₂ : A}
       → p₁ ∈ parties
       → p₂ ∈ parties
-      → N₀ ↝⋆ N₁ -- needed as precondition for N₁ (starting from empty local states)
+      → N₀ ↝⋆ N₁ -- needed as precondition for N₁ (starting from empty local states and empty messages)
       → N₁ ↝⋆ N₂
       → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
       → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
