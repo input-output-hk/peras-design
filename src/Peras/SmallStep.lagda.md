@@ -229,6 +229,13 @@ The block tree type
       tree : A
 
   open LocalState
+
+  tree-inj : ∀ {A : Set} {blockTree : TreeType A} {x y : A} {xx : LocalState blockTree} {yy : LocalState blockTree}
+    → xx ≡ ⟪ x ⟫
+    → yy ≡ ⟪ y ⟫
+    → xx ≡ yy
+    → x ≡ y
+  tree-inj refl refl refl = refl
 ```
 # Parameterized module
 

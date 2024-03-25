@@ -8,11 +8,16 @@ module Peras.SmallStep.Properties where
 open import Data.Bool using (Bool)
 open import Data.List as List using (List; []; _∷_)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
+open import Data.List.Membership.Propositional.Properties using (∈-map⁺)
 open import Data.List.Membership.DecPropositional using (_∈?_)
+
+open import Data.List.Relation.Binary.Subset.Propositional.Properties
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
 open import Data.List.Relation.Unary.All using (All; map)
 open import Data.List.Relation.Unary.All.Properties using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
+
 open import Data.Maybe using (just)
+open import Data.Maybe.Properties using (just-injective)
 open import Data.Fin using (zero; suc; _≟_)
 open import Data.Fin.Properties using (0≢1+n)
 open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
@@ -30,6 +35,7 @@ open import Peras.Crypto
 open import Peras.Params using (Params)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
+open import Data.Tree.AVL.Map.Membership.Propositional PartyIdO
 open import Data.Tree.AVL.Map.Membership.Propositional.Properties PartyIdO
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -66,11 +72,19 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ### Initial state
 ```agda
+    LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+
     GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+
+    state₀ : LocalState′
+    state₀ = ⟪ tree₀ blockTree ⟫
+
+    states₀ : Map LocalState′
+    states₀ = List.foldr (λ { p m → insert p state₀ m }) empty parties
 
     N₀ : GlobalState
     N₀ = ⟦ 0
-         , fromList (List.map (λ {p → (p , ⟪ tree₀ blockTree ⟫)}) parties)
+         , states₀
          , []
          , []
          , adversarialState₀
@@ -79,10 +93,16 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     open TreeType
     open Stateᵍ
 
+    postulate
+      init-state₀ : ∀ {p}
+        → p ∈ parties
+        → (p , state₀) ∈ₖᵥ states₀
+      -- init-state₀ p∈ps = {!!}
+
     init-tree₀ : ∀ {p}
       → p ∈ parties
       → lookup (stateMap N₀) p ≡ just ⟪ tree₀ blockTree ⟫
-    init-tree₀ {p} x = ∈ₖᵥ-lookup⁺ {!!}
+    init-tree₀ = ∈ₖᵥ-lookup⁺ ∘ init-state₀
 ```
 ### Knowledge propagation
 
@@ -121,15 +141,17 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       → {t₁ t₂ : A}
       → p₁ ∈ parties
       → p₂ ∈ parties
-      → N₀ ↝⋆ N -- needed as precondition for N₁ (starting from empty local states)
+      → N₀ ↝⋆ N -- needed as precondition for N₁ (starting from empty local states and empty messages)
       → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
       → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
       → Delivered N
       → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
-    knowledge-propagation₀ {N} {p₁} {p₂} p₁∈p p₂∈p (_ ∎) x₁ x₂ x₃ x₄ =
-      let xx = sym (init-tree₀ {p₁} {!!})
-          yy = trans xx x₁
-      in {!!} -- [] ⊆ []
+    knowledge-propagation₀ {N} {p₁} {p₂} p₁∈ps p₂∈ps (_ ∎) x₁ x₂ x₃  =
+      let z₁ = just-injective $ trans (sym (init-tree₀ {p₁} p₁∈ps)) x₁
+          z₂ = just-injective $ trans (sym (init-tree₀ {p₂} p₂∈ps)) x₂
+          a₁ = cong (allBlocks blockTree) (tree-inj refl refl z₁)
+          a₂ = cong (allBlocks blockTree) (tree-inj refl refl z₂)
+      in ⊆-reflexive (trans (sym a₁) a₂)
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver x ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- imp, no messages in N₀
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ CastVote x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- votes don't affect allBlocks
     knowledge-propagation₀ _ _ (.N₀ ↝⟨ CreateBlock x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- CreateBlock : b ∈ t₁ , next slot Receive: b ∈ t₂
