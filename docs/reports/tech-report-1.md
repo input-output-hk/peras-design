@@ -207,6 +207,7 @@ While this would require some more rigorous analysis to be asserted in a sound w
 ## Peras ΔQ Model - Blocks
 
 Things to take into account for modelling peras:
+
 * Impact of the size of the certificate: If adding the certificate increases the size of the header beyond the MSS (or MTU?), this will impact header diffusion
   * We might need to just add a hash to the header (32 bytes) and then have the node request the certificate, which also increases (full) header diffusion time
 * Impact of validating the certificate: If it's not cheap (eg. a few ms like a signature verification), this could also lead to an increase in block adoption time as a node receiving a header will have to add more time to validate it before sharing it with its peers
@@ -214,12 +215,21 @@ Things to take into account for modelling peras:
   * Model must take into account different path for retrieving a header, one with a certificate and one without
 * Diffusion of votes and certificates does not seem to have other impact on diffusion of blocks, eg. just because we have more messages to handle and therefore we consume more bandwidth between nodes could lead to delays for block propagation, but it seems there's enough bandwidth (in steady state, perhaps not when syncing) to diffuse both votes, certificates, transactions, and blocks without one impacting the other
 
-* ΔQ model of Peras
-  * model the impact of larger headers
-  * more data to pull from nodes
+The following diagram compares the ΔQ distribution of block diffusion (for 4 hops) under different assumptions:
 
-* impact on block diffusion
-* impact on security?
+1. Standard block without a certificate,
+2. One-third of block headers point to a certificate which is requires another roundtrip to be retrieved,
+3. All block headers point to a certificate.
+
+Certificate validation is assumed to be a constant 50ms.
+
+![Impact of certificate](../diagrams/block-with-cert.svg)
+
+Obviously, adding a roundtrip network exchange to retrieve the certificate for a given header degrades the "timeliness" of block diffusion.
+
+For the case of 2500 nodes with average degree 15, we get the following distributions, comparing blocks without certificates, 1/3rd of blocks with certificates, and every block has a certificate:
+
+![Diffusion with and without certificate](../diagrams/network-with-cert.svg)
 
 ## Peras ΔQ Model - Transactions
 
@@ -228,7 +238,7 @@ From the point of view of the users, the thing that matters is the _settlement t
 
 From this point of view, the whole path from transaction submission to observing a (deep enough) block matters which means we need to take into account in our modelling the propagation of the transaction through the mempools of various nodes in the network until it reached a block producer. This also means we need to take into account the potential _delays_ incurred in that journey that can occur because of _mempool congestion_ in the system: When the mempool of a node is full, it won't pull more transactions from the peers that are connected to it.
 
-The following diagram illustrates the "happy path" of a transaction until the block it's part of gets adopted by the emitting node.
+The following diagram illustrates the "happy path" of a transaction until the block it's part of gets adopted by the emitting node, in Praos.
 
 ```mermaid
 sequenceDiagram
@@ -256,7 +266,7 @@ N1 ->> +N2: Next block
 N2 ->> N1: Block header
 N1 ->> N2: Get block
 N2 ->> N1: Send block
-N1 --> Alice: Tx in block
+N1 -->> Alice: Tx in block
 ```
 
 ## Impact of Load congestion
