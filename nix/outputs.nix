@@ -4,11 +4,8 @@ let
   project = repoRoot.nix.project;
   peras-agda = repoRoot.nix.peras-agda;
   rust = repoRoot.nix.rust;
-in
-[
-  (
-    project.flake
-  )
+in [
+  (project.flake)
   {
     inherit repoRoot;
     packages.peras = peras-agda;

@@ -1,6 +1,3 @@
-{ repoRoot, inputs, pkgs, lib, system }:
+{ pkgs, ... }:
 
-pkgs.emacs.pkgs.withPackages (epkgs: [
-  epkgs.agda2-mode
-  pkgs.mononoki
-])
+pkgs.emacs.pkgs.withPackages (epkgs: [ epkgs.agda2-mode pkgs.mononoki ])

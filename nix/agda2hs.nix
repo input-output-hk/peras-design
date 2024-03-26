@@ -1,4 +1,4 @@
-{ repoRoot, inputs, pkgs, lib, system }:
+{ repoRoot, inputs, pkgs, lib, ... }:
 
 let
 
@@ -11,8 +11,10 @@ let
       # The `agda` and `agda2hs` executables must have the same version in order
       # to avoid recompiling the standard library during other compilations.
       packages.Agda.package.buildType = lib.mkForce "Simple";
-      packages.Agda.components.library.enableSeparateDataOutput = lib.mkForce true;
-      packages.Agda.components.library.postInstall = repoRoot.nix.agda-project.hsPkgs.Agda.components.library.postInstall;
+      packages.Agda.components.library.enableSeparateDataOutput =
+        lib.mkForce true;
+      packages.Agda.components.library.postInstall =
+        repoRoot.nix.agda-project.hsPkgs.Agda.components.library.postInstall;
     }];
   };
 
@@ -20,9 +22,7 @@ let
     pname = "agda2hs";
     version = "1.2";
     src = inputs.agda2nix;
-    meta = {
-      description = "agda2hs";
-    };
+    meta = { description = "agda2hs"; };
     everythingFile = "./lib/Everything.agda";
     preBuild = ''
       # Create the missing everything file.
@@ -36,9 +36,7 @@ let
     '';
   };
 
-in
-
-{
+in {
   exe = haskellProject.hsPkgs.agda2hs.components.exes.agda2hs;
   lib = agdaLib;
 }

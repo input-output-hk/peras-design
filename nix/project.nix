@@ -1,4 +1,4 @@
-{ repoRoot, inputs, pkgs, system, lib }:
+{ repoRoot, inputs, pkgs, system, lib, ... }:
 
 let
 
@@ -12,29 +12,25 @@ let
     ];
   };
 
-  cabalProject' = pkgs.haskell-nix.cabalProject' ({ pkgs, config, ... }:
-    let
-      isCross = pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform;
-    in
-    {
-      src = ../.;
-      shell.withHoogle = false;
-      inputMap = {
-        "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.iogx.inputs.CHaP;
-      };
-      name = "peras-design";
-      compiler-nix-name = lib.mkDefault "ghc96";
-      modules = [
-        {
-          packages.peras-quickcheck.components.library = customSettings;
-          packages.peras-quickcheck.components.tests.peras-quickcheck-test = customSettings;
-        }
-      ];
-      flake.variants.profiled.modules = [{
-        enableProfiling = true;
-        enableLibraryProfiling = true;
-      }];
-    });
+  cabalProject' = pkgs.haskell-nix.cabalProject' ({ pkgs, config, ... }: {
+    src = ../.;
+    shell.withHoogle = false;
+    inputMap = {
+      "https://input-output-hk.github.io/cardano-haskell-packages" =
+        inputs.iogx.inputs.CHaP;
+    };
+    name = "peras-design";
+    compiler-nix-name = lib.mkDefault "ghc96";
+    modules = [{
+      packages.peras-quickcheck.components.library = customSettings;
+      packages.peras-quickcheck.components.tests.peras-quickcheck-test =
+        customSettings;
+    }];
+    flake.variants.profiled.modules = [{
+      enableProfiling = true;
+      enableLibraryProfiling = true;
+    }];
+  });
 
   cabalProject = cabalProject'.appendOverlays [ ];
 
@@ -44,6 +40,4 @@ let
     shellArgs = repoRoot.nix.shell;
   };
 
-in
-
-project
+in project

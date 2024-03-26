@@ -1,4 +1,4 @@
-{ repoRoot, inputs, pkgs, system, lib }:
+{ repoRoot, pkgs, ... }:
 
 repoRoot.nix.agda-packages.standard-library.overrideAttrs (oldAtts: rec {
 

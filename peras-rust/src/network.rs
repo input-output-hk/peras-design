@@ -19,7 +19,7 @@ use chrono::Utc;
 use crate::{
     chain::{empty_chain, Chain},
     event::UniqueId,
-    message::{Message, OutMessage},
+    message::{Message},
     peras_node::{InEnvelope, Node, NodeHandle, NodeParameters, OutEnvelope, ProtocolParameters},
 };
 
@@ -41,6 +41,7 @@ pub struct NodeInterface {
     socket_id: SimId,
 }
 
+#[allow(dead_code)]
 pub struct Network {
     topology: Topology,
     parameters: Parameters,
@@ -73,6 +74,7 @@ impl Network {
 
         let mut seed = StdRng::seed_from_u64(parameters.randomSeed);
 
+        #[allow(non_snake_case)]
         let nodes: HashMap<NodeId, NodeInterface> = topology
             .connections
             .iter()
@@ -103,11 +105,11 @@ impl Network {
         }
     }
 
-    pub fn start(mut self) -> NetworkHandle {
+    pub fn start(self) -> NetworkHandle {
         // creat communication channels with sub threads
         let (tx, rx) = std::sync::mpsc::channel();
         // start all nodes
-        let mut threads = self
+        let _threads = self
             .nodes
             .iter()
             .map(|(node_id, iface)| {
@@ -122,7 +124,7 @@ impl Network {
                     .get(&node_id_1)
                     .unwrap()
                     .iter()
-                    .map(|(nid, n)| self.nodes.get(nid).unwrap().socket_id.clone())
+                    .map(|(nid, _n)| self.nodes.get(nid).unwrap().socket_id.clone())
                     .collect();
                 // start dispatching thread for each node
                 thread::spawn(move || {

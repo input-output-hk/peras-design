@@ -1,4 +1,4 @@
-{ repoRoot, inputs, pkgs, system, lib }:
+{ repoRoot, pkgs, ... }:
 
 # We want to keep control of which version of Agda we use, so we supply our own and override
 # the one from nixpkgs.
@@ -20,26 +20,18 @@ let
 
   frankenAgda = (pkgs.symlinkJoin {
     name = "agda";
-    paths = [
-      Agda.components.exes.agda
-      Agda.components.exes.agda-mode
-    ];
-  }) //
-  {
+    paths = [ Agda.components.exes.agda Agda.components.exes.agda-mode ];
+  }) // {
     version = Agda.identifier.version;
   };
 
-  frankenPkgs =
-    pkgs //
-    {
-      haskellPackages = pkgs.haskellPackages //
-      {
-        inherit (repoRoot.nix.agda-project) ghcWithPackages;
-      };
+  frankenPkgs = pkgs // {
+    haskellPackages = pkgs.haskellPackages // {
+      inherit (repoRoot.nix.agda-project) ghcWithPackages;
     };
-in
+  };
 
-pkgs.agdaPackages.override {
+in pkgs.agdaPackages.override {
   Agda = frankenAgda;
   pkgs = frankenPkgs;
 }
