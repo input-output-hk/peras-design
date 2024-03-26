@@ -237,7 +237,10 @@ instance PerasNode Node where
           RollForward block -> roll context' (costRollForward def) origin block
           RollBack block -> roll context' (costRollBack def) origin block
           FetchVotes hashes -> fetchVotes context' origin hashes
-          SomeVote vote -> newVote context' origin vote
+          SomeVote vote ->
+            if False -- FIXME: Supress propagation of votes because the deficiency in the Agda certificate type makes that meaningless.
+              then newVote context' origin vote
+              else pure mempty
           FetchBlocks hashes -> fetchBodies context' origin hashes
           SomeBlock body -> recordBody context' body
           SomeCertificate{} -> error "Certificate messages are not yet supported." -- FIXME
@@ -289,22 +292,21 @@ makeResult ::
 makeResult NodeContext{..} stats' messages =
   do
     source <- use nodeIdLens
-    let
-      messages' =
-        flip filter messages $
-          \case
-            (_, FetchVotes []) -> False
-            (_, FetchBlocks []) -> False
-            _ -> True
-      wakeup = cpuTime stats `addUTCTime` clock
-      outTime = wakeup
-      outEnvelope destination outMessage =
-        OutEnvelope{..}
-       where
-        outId = mkUniqueId (outTime, source, destination, outMessage)
-        outBytes = messageSize outMessage
-      outputs = uncurry outEnvelope <$> messages'
-      stats = stats' <> mempty{txBytes = sum $ messageSize . snd <$> messages'}
+    let messages' =
+          flip filter messages $
+            \case
+              (_, FetchVotes []) -> False
+              (_, FetchBlocks []) -> False
+              _ -> True
+        wakeup = cpuTime stats `addUTCTime` clock
+        outTime = wakeup
+        outEnvelope destination outMessage =
+          OutEnvelope{..}
+         where
+          outId = mkUniqueId (outTime, source, destination, outMessage)
+          outBytes = messageSize outMessage
+        outputs = uncurry outEnvelope <$> messages'
+        stats = stats' <> mempty{txBytes = sum $ messageSize . snd <$> messages'}
     pure NodeResult{..}
 
 nextSlot ::
@@ -429,10 +431,16 @@ newChain context@NodeContext{..} proposed =
         chainStateLens .= state'
         preferred <- chainStateLens `uses` preferredChain
         let rollbacks' = checkRollback preferred proposed
-        makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def, rollbacks = rollbacks'} $
-          if null rollbacks'
-            then reverse $ RollForward <$> forwardBlocks
-            else [RollBack $ head proposed]
+        if null rollbacks'
+          then do
+            makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def}
+              . reverse
+              $ RollForward <$> forwardBlocks
+          else
+            makeResultDownstreams
+              context'
+              mempty{cpuTime = costEvaluateChain def, rollbacks = rollbacks'}
+              [RollBack $ head proposed]
       else
         makeResultDownstreams context' mempty{cpuTime = costEvaluateChain def}
           =<< do

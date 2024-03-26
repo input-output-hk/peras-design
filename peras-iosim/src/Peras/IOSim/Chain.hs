@@ -143,8 +143,8 @@ addBody body state =
     bhash = hashBody body
    in
     if bhash `M.member` bodyIndex state
-      then state{bodyIndex = M.insert bhash body $ bodyIndex state}
-      else state
+      then state
+      else state{bodyIndex = M.insert bhash body $ bodyIndex state}
 
 lookupBlock :: BlockHash -> ChainState -> Either Invalid Block
 lookupBlock hash ChainState{blockIndex} =
