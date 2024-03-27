@@ -188,29 +188,34 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```
 adds a block/vote/cert to some p's blocktree
 ```agda
-    ... | no ¬e =
-      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ ¬e (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
       in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
 ```
 adds a block/vote/cert to p₁'s blocktree
+proof: p₂ either already has the block in the local blocktree
 ```agda
     ... | yes p₁≡p with b ∈? allBlocks blockTree t₂
-    -- proof: p₂ either already has the block in the local blocktree or
-    --        it is in the message buffer with delay 0 (honest create in prev slot)
     ... | yes b∈t₂ =
       let H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆
           e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
       in ⊆-trans
            (xs⊆x∷xs (allBlocks blockTree t₁) b)
            (⊆-trans e H₀)
-
+```
+or it is in the message buffer with delay 0 (honest create in prev slot)
+```agda
     ... | no b∉t₂ = {!!}
-
+```
+```agda
     knowledge-propagation {.(⟦ _ , _ , _ , _ , _ ⟧)} {N₂} {p₁} {p₂} {t₁} {t₂}
       p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {.(⟪ _ ⟫)} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms VoteReceived)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+```
+```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
       p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {lₚ′} {CertMsg m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
-
+```
+```agda
     knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
 ```
 #### CastVote
