@@ -183,14 +183,14 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 #### Deliver
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {.(⟪ extendTree blockTree _ _ ⟫)} {.(BlockMsg _)} x₁ m∈ms (BlockReceived {b} {t}))) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆
+      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {lₚ} {.(⟪ extendTree blockTree _ _ ⟫)} {.(BlockMsg _)} x₁ m∈ms (BlockReceived {b} {t}))) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆
       with p₁ ℕ.≟ p
 ```
 adds a block/vote/cert to some p's blocktree
 ```agda
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
 ```
 adds a block/vote/cert to p₁'s blocktree
 proof: p₂ either already has the block in the local blocktree
@@ -203,7 +203,7 @@ proof: p₂ either already has the block in the local blocktree
                  (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
           pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
                (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
-          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ pr x₃ n₂ x₆
+          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr x₃ n₂ x₆
           e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
       in ⊆-trans
            (xs⊆x∷xs (allBlocks blockTree t₁) b)
@@ -220,24 +220,24 @@ or it is in the message buffer with delay 0 (honest create in prev slot)
 ```
 ```agda
     knowledge-propagation {.(⟦ _ , _ , _ , _ , _ ⟧)} {N₂} {p₁} {p₂} {t₁} {t₂}
-      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {.(⟪ _ ⟫)} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms VoteReceived)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {.(⟪ _ ⟫)} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms VoteReceived)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
 ```
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {lₚ′} {CertMsg m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {lₚ} {lₚ′} {CertMsg m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
 ```
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
+    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
 ```
 #### CastVote
 CastVote is not relevant for allBlocks
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ d@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
-      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
+      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
 ```
 #### CreateBlock
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
+    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
 ```
 #### NextSlot
 ```agda
@@ -257,8 +257,8 @@ CastVote is not relevant for allBlocks
         → {t₁ t₂ : A}
         → h₁ ≡ Honest {p₁}
         → h₂ ≡ Honest {p₂}
-        → N₀ ↝ N₁
-        → N₁ ↝ N₂
+        → N₀ ↝⋆ N₁
+        → N₁ ↝⋆ N₂
         → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
         → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
         → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
@@ -319,7 +319,7 @@ chains of honest parties will always be a common prefix of each other.
       common-prefix : ∀ {N : GlobalState}
         → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
-        → N₀ ↝ N
+        → N₀ ↝⋆ N
         → ForgingFree N
         → CollisionFree N
         → h ≡ Honest {p}
