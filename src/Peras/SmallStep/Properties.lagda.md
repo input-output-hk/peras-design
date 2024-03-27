@@ -197,11 +197,22 @@ proof: p₂ either already has the block in the local blocktree
 ```agda
     ... | yes p₁≡p with b ∈? allBlocks blockTree t₂
     ... | yes b∈t₂ =
-      let H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆
+      let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ injective $ just-injective $ trans (sym N₁×p₁≡t₁)
+                 (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
+          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
+               (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
+          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ pr x₃ n₂ x₆
           e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
       in ⊆-trans
            (xs⊆x∷xs (allBlocks blockTree t₁) b)
            (⊆-trans e H₀)
+      where
+         injective : ∀ {ta tb}
+           → ⟪ ta ⟫ ≡ ⟪ tb ⟫
+           → ta ≡ tb
+         injective refl = refl
 ```
 or it is in the message buffer with delay 0 (honest create in prev slot)
 ```agda
