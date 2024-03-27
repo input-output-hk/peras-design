@@ -114,13 +114,13 @@ Average latency numbers are drawn from table 1 in the paper and depend on the (p
 | Medium   | 69                | 143            |
 | Long     | 268               | 531            |
 
-For each step in the diffusion of block, we assume an equal ($frac{1}{3}$) chance for each class of distance.
+For each step in the diffusion of block, we assume an equal ($\frac{1}{3}$) chance for each class of distance.
 
 > [!NOTE]
 > The actual block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available.
-> We should actually measure the real value for this block size.
+> We need to actually measure the real value for this block size and other significant increments.
 
-We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Note the current target valency for cardano-node's connection is 20 but the actual value might be lower in practice (?). Table 2 gives us the following distribution of paths length:
+We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Table 2 gives us the following distribution of paths length:
 
 | Length | Degree = 10 | Degree = 15 |
 |--------|-------------|-------------|
@@ -131,6 +131,13 @@ We have chosen to define two models of ΔQ diffusion, one based on an average no
 | 5      | 2.78%       | 0           |
 
 These numbers are reflected (somewhat inaccurately) in the above graph, representing the probabilities for the number of hops a block will have to go through before reaching another node.
+
+::: [!NOTE]
+
+The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
+
+:::
+
 
 ### Modeling process
 
@@ -218,18 +225,25 @@ Things to take into account for modelling peras:
 The following diagram compares the ΔQ distribution of block diffusion (for 4 hops) under different assumptions:
 
 1. Standard block without a certificate,
-2. One-third of block headers point to a certificate which is requires another roundtrip to be retrieved,
-3. All block headers point to a certificate.
+3. Block header point to a certificate.
 
 Certificate validation is assumed to be a constant 50ms.
 
 ![Impact of certificate](../diagrams/block-with-cert.svg)
 
 Obviously, adding a roundtrip network exchange to retrieve the certificate for a given header degrades the "timeliness" of block diffusion.
-
-For the case of 2500 nodes with average degree 15, we get the following distributions, comparing blocks without certificates, 1/3rd of blocks with certificates, and every block has a certificate:
+For the case of 2500 nodes with average degree 15, we get the following distributions, comparing blocks with and without certificates:
 
 ![Diffusion with and without certificate](../diagrams/network-with-cert.svg)
+
+The obvious conclusion from this analysis is that it's critical for Peras feasibility the certificate be small enough to be included in the block header.
+
+::: [!NOTE]
+
+Depending on the value of $T$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, eg. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that's misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
+We need to refine our analysis and model to better expose this impact.
+
+:::
 
 ## Peras ΔQ Model - Transactions
 
