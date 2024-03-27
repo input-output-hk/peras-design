@@ -12,7 +12,7 @@ import DeltaQ.Algebra.Simplification (normaliseDeltaQ)
 import DeltaQ.Numeric.CDF
 import DeltaQ.QTA.Support
 import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), toFile)
-import Graphics.Rendering.Chart.Easy (def, layout_title, line, plot, (.=))
+import Graphics.Rendering.Chart.Easy (axis_labels, def, laxis_title, layout_title, layout_x_axis, layout_y_axis, line, plot, (.=))
 import System.IO (IOMode (ReadMode), hGetLine, withFile)
 import System.Process
 import System.Random.MWC
@@ -66,17 +66,16 @@ networkWithCertsProbability = do
   gen <- createSystemRandom
   cdf15 <- empiricalCDF gen 500 deltaq15
   certAllCdf <- empiricalCDF gen 500 certAllDeltaQ15
-  certOneThirdCdf <- empiricalCDF gen 500 certOneThirdDeltaQ15
   let samples = fromRational . (% 1000) <$> [0 .. 6000]
       cdf15Data = zip samples (fromRational @Double . _ecdf cdf15 <$> samples)
       certAllData = zip samples (fromRational @Double . _ecdf certAllCdf <$> samples)
-      certOneThirdData = zip samples (fromRational @Double . _ecdf certOneThirdCdf <$> samples)
 
   toFile def{_fo_format = SVG} "network-with-cert.svg" $ do
     layout_title .= "Peras Network Diffusion (δ=15)"
+    layout_x_axis . laxis_title .= "time (seconds)"
+    layout_y_axis . laxis_title .= "probability (cumul.)"
     plot (line "block diffusion w/o cert" [cdf15Data])
-    plot (line "block diffusion w/o 1/3 cert" [certOneThirdData])
-    plot (line "block diffusion w/o 100% cert" [certAllData])
+    plot (line "block diffusion w/ cert" [certAllData])
     plot (line "95%" [[(0.0, 0.95), (6.0, 0.95)]])
 
 hopsProbability = do
@@ -120,17 +119,16 @@ multiHop n dq =
 
 oneHop = do
   gen <- createSystemRandom
-  certified_block_cdf <- empiricalCDF gen 500 (multiHop 4 certBlockOneThird)
   certified_block_all_cdf <- empiricalCDF gen 500 (multiHop 4 certBlockAll)
   plain_block_cdf <- empiricalCDF gen 500 (multiHop 4 oneBlockDiffusion)
   let samples = fromRational . (% 1000) <$> [0 .. 5000]
-      cert_block_data = zip samples (fromRational @Double . _ecdf certified_block_cdf <$> samples)
       cert_block_all_data = zip samples (fromRational @Double . _ecdf certified_block_all_cdf <$> samples)
       plain_block_data = zip samples (fromRational @Double . _ecdf plain_block_cdf <$> samples)
 
   toFile def{_fo_format = SVG} "block-with-cert.svg" $ do
     layout_title .= "4-Hops Block Diffusion w/ Certificate"
-    plot (line "1/3 certified block" [cert_block_data])
-    plot (line "All certified block" [cert_block_all_data])
+    layout_x_axis . laxis_title .= "time (seconds)"
+    layout_y_axis . laxis_title .= "probability (cumul.)"
+    plot (line "certified block" [cert_block_all_data])
     plot (line "plain block" [plain_block_data])
     plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
