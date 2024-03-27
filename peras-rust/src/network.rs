@@ -14,6 +14,8 @@ use peras_topology::{
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
+use chrono::Utc;
+
 use crate::{
     chain::{empty_chain, Chain},
     event::UniqueId,
@@ -223,6 +225,8 @@ fn receive_and_forward_loop(
                     origin: None,
                     in_id: UniqueId::new(&msg),
                     in_message: msg,
+                    in_time: Utc::now(),
+                    in_bytes: 0,
                 });
             }
             TryRecv::NoMsg => {
@@ -239,10 +243,10 @@ fn receive_and_forward_loop(
             match envelope {
                 OutEnvelope::SendMessage {
                     out_message,
-                    timestamp: _,
+                    out_time: _,
                     source: _,
                     destination: _,
-                    bytes: _,
+                    out_bytes: _,
                     out_id: _,
                 } => {
                     downstreams.iter().for_each(|id| {

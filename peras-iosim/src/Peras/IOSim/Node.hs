@@ -1,148 +1,126 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.IOSim.Node (
-  NodeProcess (..),
   initializeNode,
   initializeNodes,
-  runNode,
+  makeContext,
+  observeNode,
+  stepNode,
 ) where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically)
-import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
-import Control.Lens (use, uses, (%=), (.=))
-import Control.Monad.Class.MonadSay (MonadSay (..))
-import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime)
-import Control.Monad.Class.MonadTimer (MonadDelay (..))
-import Control.Monad.IOSim.Orphans ()
+import Control.Monad (forM_)
+import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime, diffUTCTime)
 import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
-import Control.Monad.State (
-  MonadState (get),
-  MonadTrans (lift),
-  StateT,
-  evalStateT,
- )
-import Control.Tracer (Tracer, natTracer, traceWith)
+import Control.Monad.Writer
+import Control.Tracer (Tracer, traceWith)
 import Data.Default (def)
-import GHC.Generics (Generic)
+import Data.Map (keysSet)
 import Numeric.Natural (Natural)
-import Peras.Event (Event (..))
-import Peras.IOSim.Chain.Types (preferredChain)
-import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
+import Peras.Block (Slot)
+import Peras.Event (Event (CommitteeMember, Compute, Receive, Rolledback, Send, SlotLeader, Trace))
+import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeState (NodeState), chainState, clock, downstreams, nodeId, rxBytes, txBytes)
-import Peras.IOSim.Protocol (newBlock, newChain, newVote, nextSlot)
+import Peras.IOSim.Node.Types (NodeContext (..), NodeResult (..), NodeStats (..), PerasNode (..), StepResult (..), TraceReport (..))
+import Peras.IOSim.Nodes (SomeNode (HonestNode))
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
-import Peras.IOSim.Types (Coin, messageSize)
-import Peras.Message (Message (..), NodeId (MkNodeId))
+import Peras.IOSim.Types (Coin, simulationStart)
+import Peras.Message (NodeId)
 
-import Data.Map (keysSet)
+import qualified Peras.IOSim.Nodes.Honest as Honest (Node (Node))
+
+import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-
-data NodeProcess m = NodeProcess
-  { incoming :: TQueue m InEnvelope
-  , outgoing :: TQueue m OutEnvelope
-  }
-  deriving stock (Generic)
 
 initializeNodes ::
   MonadRandom m =>
   Parameters ->
-  UTCTime ->
   Topology ->
-  m (M.Map NodeId NodeState)
-initializeNodes parameters now Topology{connections} =
-  sequence $ initializeNode parameters now `M.mapWithKey` (keysSet <$> connections)
+  m (M.Map NodeId SomeNode)
+initializeNodes parameters Topology{connections} =
+  sequence $ initializeNode parameters `M.mapWithKey` (keysSet <$> connections)
 
 initializeNode ::
   MonadRandom m =>
   Parameters ->
-  UTCTime ->
   NodeId ->
   S.Set NodeId ->
-  m NodeState
-initializeNode Parameters{maximumStake} clock' nodeId' downstreams' =
-  NodeState nodeId'
-    <$> ((fromIntegral . abs :: Integer -> Natural) <$> getRandom)
-    <*> getRandom
-    <*> pure clock'
-    <*> pure 0
-    <*> getRandomR (1, maximumStake)
-    <*> getRandomR (0, 1)
-    <*> pure def
-    <*> pure downstreams'
-    <*> pure False
-    <*> pure False
-    <*> pure mempty
-    <*> pure 0
-    <*> pure 0
+  m SomeNode
+initializeNode Parameters{maximumStake, messageBandwidth} nodeId downstreams =
+  fmap HonestNode $
+    Honest.Node nodeId
+      <$> ((fromIntegral . abs :: Int -> Natural) <$> getRandom)
+      <*> getRandomR (1, maximumStake)
+      <*> pure messageBandwidth
+      <*> getRandomR (0, 1)
+      <*> pure downstreams
+      <*> pure def
 
-runNode ::
-  forall m.
-  MonadDelay m =>
-  MonadSay m =>
-  MonadSTM m =>
+makeContext ::
   MonadTime m =>
   Tracer m Event ->
   Protocol ->
   Coin ->
-  NodeState ->
-  NodeProcess m ->
+  NodeId ->
+  m (NodeContext m)
+makeContext tracer protocol totalStake self =
+  do
+    clock <- getCurrentTime
+    -- FIXME: Assumes that the slot length is one second.
+    let slot = floor . toRational $ clock `diffUTCTime` simulationStart
+        traceSelf value = traceWith tracer . Trace . A.toJSON $ TraceValue{..}
+    pure NodeContext{..}
+
+observeNode ::
+  Monad m =>
+  (Event -> m ()) ->
+  NodeId ->
+  Slot ->
+  UTCTime ->
+  InEnvelope ->
+  NodeResult ->
   m ()
-runNode tracer protocol total state NodeProcess{..} =
-  let go :: Int -> StateT NodeState m ()
-      go i =
-        do
-          let atomically' = lift . atomically
-              tracer' = natTracer lift tracer
-          nodeId'@(MkNodeId name) <- use nodeId
-          downstreams' <- downstreams `uses` S.toList
-          now <- lift getCurrentTime
-          atomically' (readTQueue incoming)
-            >>= \case
-              InEnvelope{..} ->
-                do
-                  (flip . maybe $ pure ()) origin $
-                    \origin' -> traceWith tracer' $ Receive inId now origin' nodeId' inMessage
-                  messages <-
-                    case inMessage of
-                      NextSlot slot ->
-                        do
-                          lift $ threadDelay 1_000_000
-                          nextSlot tracer' protocol slot total
-                      SomeVote vote -> newVote tracer' protocol vote
-                      RollForward block -> newBlock tracer' protocol block
-                      NewChain chain -> newChain tracer' protocol chain
-                      _ -> say ("Message not handled: " <> show inMessage) >> pure mempty
-                  rxBytes %= (+ messageSize inMessage)
-                  bestChain <- chainState `uses` preferredChain
-                  let out message outId j =
-                        OutEnvelope
-                          { timestamp = now
-                          , source = nodeId'
-                          , outMessage = message
-                          , outId = mkUniqueId (name, j)
-                          , bytes = messageSize message
-                          , destination = outId
-                          }
-                      outEvent OutEnvelope{..} = Send outId now source destination outMessage
-                      outEvent _ = error "impossible"
-                      outs = zipWith id (concatMap (flip fmap downstreams' . out) messages) [i ..]
-                  atomically' $
-                    do
-                      mapM_ (writeTQueue outgoing) outs
-                      writeTQueue outgoing $ Idle now nodeId' bestChain
-                  mapM_ (traceWith tracer' . outEvent) outs
-                  txBytes %= (\bs -> bs + (sum (messageSize <$> messages) * fromIntegral (length downstreams')))
-                  clock .= now
-                  go $ i + length outs
-              Stop -> atomically' . writeTQueue outgoing . Exit now nodeId' =<< get
-   in go 0 `evalStateT` state
+observeNode _ _ _ _ Stop _ = pure ()
+observeNode traceWith' self slot clock InEnvelope{..} NodeResult{outputs, stats = statistics@NodeStats{..}} =
+  do
+    traceWith' $ Receive inId inTime origin self inMessage inBytes
+    forM_ outputs $
+      \case
+        Idle -> pure ()
+        OutEnvelope{..} -> traceWith' $ Send outId outTime source destination outMessage outBytes
+    traceWith' $ Compute self cpuTime
+    forM_ rollbacks $ traceWith' . Rolledback self
+    forM_ slotLeader $ traceWith' . SlotLeader self
+    forM_ committeeMember $ traceWith' . CommitteeMember self
+    traceWith' . Trace . A.toJSON $ TraceStats{..}
+
+stepNode ::
+  PerasNode a =>
+  Protocol ->
+  Coin ->
+  a ->
+  Slot ->
+  UTCTime ->
+  InEnvelope ->
+  (StepResult, a)
+stepNode protocol totalStake node slot clock input =
+  let
+    -- Discard custom events.
+    traceSelf = const $ pure ()
+    -- Record standard events.
+    tracer = tell . pure
+    ((NodeResult stepTime stepOutputs _, node'), stepEvents) =
+      runWriter $ do
+        -- Handle the messsage.
+        (result, node'') <- handleMessage node NodeContext{..} input
+        -- Write the events.
+        observeNode tracer (getNodeId node) slot clock input result
+        pure (result, node'')
+   in
+    (StepResult{..}, node')

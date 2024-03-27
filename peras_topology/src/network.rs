@@ -47,7 +47,7 @@ pub fn MkNodeId(node_id: &str) -> NodeId {
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeLink {
-    message_delay: i64,
+    latency: i64,
     reliability: f64,
 }
 
@@ -73,7 +73,7 @@ fn map_singleton<K: Eq + Hash, V>(key: K, value: V) -> HashMap<K, V> {
 // FIXME: Consider revising memory allocation.
 pub fn connect_node(delay: i64, upstream: &NodeId, downstream: &NodeId, topology: &mut Topology) {
     let base_link = NodeLink {
-        message_delay: delay,
+        latency: delay,
         reliability: 1.0,
     };
 
@@ -108,7 +108,7 @@ pub fn random_topology(rng: &mut impl Rng, parameters: &Parameters) -> Topology 
     }
     node_ids.iter().for_each(|upstream| {
         random_connect(
-            parameters.messageDelay,
+            parameters.messageLatency,
             rng,
             upstream,
             node_ids.clone(),

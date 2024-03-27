@@ -1,145 +1,41 @@
 {
     "samples": [
         {
-            "inId": "7b59d123541bfc93",
-            "inMessage": {
-                "contents": [
-                    "6217fcc01ff1f8c1",
-                    "5f0ff30170b76e52",
-                    "120602d6186ad0b9",
-                    "0eb7b74716d495a2",
-                    "97540af489457ab2",
-                    "a8a59c8df22ca2ca",
-                    "9daffecf19f2fe46"
-                ],
-                "tag": "FetchBlocks"
-            },
-            "origin": "Node-12",
-            "tag": "InEnvelope"
+            "tag": "Stop"
         },
         {
+            "inBytes": 6,
             "inId": "144b93bb7914a92f",
             "inMessage": {
-                "contents": "8edb5e95d28bb989",
+                "contents": "2c07ece8aa7f9474",
                 "tag": "FollowChain"
             },
-            "origin": "Node-30",
+            "inTime": "1864-04-30T10:26:19.209818760005Z",
+            "origin": "Node-10",
             "tag": "InEnvelope"
         },
         {
-            "inId": "2c6ab3a724c8f1cb",
-            "inMessage": {
-                "contents": [
-                    {
-                        "bodyHash": "177fd72c9b407649",
-                        "certificate": {
-                            "blockRef": "d7848de691eccffb",
-                            "votingRoundNumber": 24
-                        },
-                        "creatorId": 7,
-                        "leadershipProof": "e6bf0053f2c3c39a",
-                        "parentBlock": "fe5390d4071b9238",
-                        "signature": "1bc04ba978e1914c",
-                        "slotNumber": 8
-                    },
-                    {
-                        "bodyHash": "8d72a7feddd174bd",
-                        "certificate": {
-                            "blockRef": "5e1e2e847f6f4657",
-                            "votingRoundNumber": 5
-                        },
-                        "creatorId": 11,
-                        "leadershipProof": "87476742d8331455",
-                        "parentBlock": "a0474f1c8ca55433",
-                        "signature": "8f564c4ab24c1abc",
-                        "slotNumber": 30
-                    },
-                    {
-                        "bodyHash": "9b877c9af69abc3a",
-                        "certificate": {
-                            "blockRef": "f2ec2e176c056ca2",
-                            "votingRoundNumber": 5
-                        },
-                        "creatorId": 17,
-                        "leadershipProof": "a99b66cf04f4bd10",
-                        "parentBlock": "ef28462e3bcad27e",
-                        "signature": "9aff694e1f974bd5",
-                        "slotNumber": 10
-                    },
-                    {
-                        "bodyHash": "ac6b5c349ba79ba9",
-                        "certificate": {
-                            "blockRef": "a1cccef7b2f1135b",
-                            "votingRoundNumber": 7
-                        },
-                        "creatorId": 19,
-                        "leadershipProof": "855cbba5948624c7",
-                        "parentBlock": "de6924d209738f3e",
-                        "signature": "a77728de228685d9",
-                        "slotNumber": 14
-                    },
-                    {
-                        "bodyHash": "3b879f13e8c8d768",
-                        "certificate": {
-                            "blockRef": "6eb10717b2bc3c9e",
-                            "votingRoundNumber": 12
-                        },
-                        "creatorId": 30,
-                        "leadershipProof": "63ccb41f95a90340",
-                        "parentBlock": "916438ee96b23fa9",
-                        "signature": "6096c1dc207668a9",
-                        "slotNumber": 30
-                    }
-                ],
-                "tag": "NewChain"
-            },
-            "origin": null,
-            "tag": "InEnvelope"
+            "tag": "Stop"
         },
         {
+            "inBytes": 2,
             "inId": "d63dfdb809674f77",
             "inMessage": {
                 "contents": {
-                    "blockHash": "2c8bccfad798da49",
-                    "committeeMembershipProof": "72433254ebc17aa8",
-                    "creatorId": 13,
-                    "signature": "3ded8d5d609cb1ec",
-                    "votingRound": 23
+                    "blockHash": "14086c5d0769a99b",
+                    "committeeMembershipProof": "fcab0836e6ee6825",
+                    "creatorId": 28,
+                    "signature": "3e3e8c6f7e12488f",
+                    "votingRound": 13
                 },
                 "tag": "SomeVote"
             },
-            "origin": "Node-5",
+            "inTime": "1864-05-17T17:56:06.244443976785Z",
+            "origin": "Node-20",
             "tag": "InEnvelope"
         },
         {
-            "inId": "2bfdaed8c6625695",
-            "inMessage": {
-                "contents": {
-                    "blockHash": "698dec7008285fd1",
-                    "payload": [
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        []
-                    ]
-                },
-                "tag": "SomeBlock"
-            },
-            "origin": null,
-            "tag": "InEnvelope"
+            "tag": "Stop"
         }
     ],
     "seed": -561087434

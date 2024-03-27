@@ -26,13 +26,13 @@ library
     Peras.IOSim.Network.Types
     Peras.IOSim.Node
     Peras.IOSim.Node.Types
+    Peras.IOSim.Nodes
+    Peras.IOSim.Nodes.Honest
     Peras.IOSim.Protocol
     Peras.IOSim.Protocol.Types
     Peras.IOSim.Simulate
     Peras.IOSim.Simulate.Types
     Peras.IOSim.Types
-  other-modules:
-    Control.Monad.IOSim.Orphans
   hs-source-dirs:   src
   build-depends:
     , aeson
@@ -51,6 +51,7 @@ library
     , MonadRandom
     , mtl
     , peras-hs
+    , pqueue
     , QuickCheck
     , quickcheck-instances
     , random
@@ -59,7 +60,7 @@ library
   ghc-options: 
     -Wall -Wnoncanonical-monad-instances -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wredundant-constraints -Widentities
-    -Wunused-packages -Werror
+    -Wunused-packages -Wno-deprecations -Werror
 
 executable peras-iosim
   hs-source-dirs:   app

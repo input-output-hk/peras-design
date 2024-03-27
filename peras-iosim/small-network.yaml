@@ -1,6 +1,7 @@
 randomSeed: 13234
 peerCount: 100
-downstreamCount: 3
+downstreamCount: 5
 maximumStake: 1000
-messageDelay: 350000
+messageLatency: 350000  # 0.35 seconds
+messageBandwidth: 250   # 2 Gbps = 250 bytes/microsecond
 endSlot: 600

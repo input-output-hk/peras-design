@@ -13,7 +13,6 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Ratio ((%))
-import Peras.IOSim.Message.Types (OutEnvelope)
 import Peras.Message (NodeId (..))
 import Peras.Node.Netsim.Rust (RustNode)
 import qualified Peras.Node.Netsim.Rust as Rust

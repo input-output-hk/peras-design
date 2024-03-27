@@ -28,7 +28,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain (..), commonPrefix)
+import Peras.Chain (Chain, commonPrefix)
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.Message (Message (..), NodeId (..))
@@ -188,12 +188,13 @@ defaultActiveSlotCoefficient = 0.05
 parameters :: Parameters
 parameters =
   Parameters
-    { randomSeed = 12345
+    { randomSeed = 12_345
     , peerCount = 10
     , downstreamCount = 3
     , totalStake = Nothing
     , maximumStake = 1000
     , endSlot = 1000
-    , messageDelay = 350_000
+    , messageLatency = 350_000
+    , messageBandwidth = 250
     , experiment = Nothing
     }

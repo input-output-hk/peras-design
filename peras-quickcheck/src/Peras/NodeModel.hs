@@ -16,6 +16,7 @@
 module Peras.NodeModel where
 
 import Control.Monad (forM)
+import Control.Monad.Class.MonadTime (addUTCTime)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, asks)
 import Control.Monad.Trans (MonadTrans (..))
 import qualified Data.Aeson as A
@@ -26,9 +27,9 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Slot)
-import Peras.Chain (Chain (..))
 import Peras.Event (UniqueId (UniqueId))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
+import Peras.IOSim.Types (simulationStart)
 import Peras.Message (Message (..), NodeId (..))
 import Peras.Orphans ()
 import Test.QuickCheck (choose, tabulate)
@@ -101,8 +102,11 @@ instance MonadTrans RunMonad where
 
 type instance Realized (RunMonad m) a = a
 
-dummyId :: UniqueId
-dummyId = UniqueId "00000000"
+dummyMessageId :: UniqueId
+dummyMessageId = UniqueId "00000000"
+
+dummyNodeId :: NodeId
+dummyNodeId = MkNodeId "Node"
 
 instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
   perform NodeModel{slot} action _context =
@@ -116,16 +120,17 @@ instance forall m. Monad m => RunModel NodeModel (RunMonad m) where
       Node{sendMessage, receiveMessage} <- ask
       -- tick the node
       lift $ do
-        sendMessage (InEnvelope Nothing dummyId $ NextSlot $ slot + k)
+        let slot' = slot + k
+            clock = fromRational (fromIntegral slot') `addUTCTime` simulationStart
+        sendMessage (InEnvelope dummyNodeId dummyMessageId (NextSlot slot') clock 0)
         -- collect outgoing messages until Idle
         waitForIdle receiveMessage []
 
     waitForIdle receive acc = do
       receive >>= \case
         Idle{} -> pure acc
-        OutEnvelope
-          { outMessage = NewChain (b : _)
-          } -> waitForIdle receive (b : acc)
+        OutEnvelope{outMessage = NewChain (b : _)} -> waitForIdle receive (b : acc)
+        OutEnvelope{outMessage = RollForward b} -> waitForIdle receive (b : acc)
         _other -> waitForIdle receive acc
 
   postcondition (_before, NodeModel{slot}) (ForgedBlocksRespectSchedule blockVars) env stakeRatio | slot > 0 = do

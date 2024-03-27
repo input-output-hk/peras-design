@@ -12,7 +12,6 @@ module Peras.IOSim.Simulate (
 ) where
 
 import Control.Lens ((&), (.~))
-import Control.Monad.Class.MonadTime (MonadTime (getCurrentTime))
 import Control.Monad.IOSim (Failure, IOSim, SimTrace, ppTrace, runSim, runSimTrace, selectTraceEventsDynamic, selectTraceEventsSay, traceM, traceResult)
 import Control.Monad.Random (evalRandT)
 import Control.Tracer (Tracer (Tracer), emit)
@@ -30,34 +29,35 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 
 simulation ::
   forall s.
+  Bool ->
   Parameters ->
   Protocol ->
   IOSim s NetworkState
-simulation parameters@Parameters{..} protocol =
+simulation verbose parameters@Parameters{..} protocol =
   do
     let (gen, gen') = split $ mkStdGen randomSeed
         tracer :: Tracer (IOSim s) Event
         tracer = Tracer $ emit traceM
-    now <- getCurrentTime
     -- FIXME: Read the topology and node states from files.
     (topology, states) <-
       flip evalRandT gen $
         do
           topology' <- randomTopology parameters
-          states' <- initializeNodes parameters now topology'
+          states' <- initializeNodes parameters topology'
           pure (topology', states')
-    network <- createNetwork experiment topology
-    runNetwork tracer parameters protocol states network $
-      def & networkRandom .~ gen'
+    runNetwork verbose tracer protocol
+      . createNetwork parameters topology states
+      $ def & networkRandom .~ gen'
 
 simulate ::
+  Bool ->
   Parameters ->
   Protocol ->
   Bool ->
   (Either Failure NetworkState, Maybe (SimTrace NetworkState))
-simulate parameters protocol False = (runSim $ simulation parameters protocol, Nothing)
-simulate parameters protocol True =
-  let trace = runSimTrace $ simulation parameters protocol
+simulate verbose parameters protocol False = (runSim $ simulation verbose parameters protocol, Nothing)
+simulate verbose parameters protocol True =
+  let trace = runSimTrace $ simulation verbose parameters protocol
    in (traceResult False trace, Just trace)
 
 writeTrace ::

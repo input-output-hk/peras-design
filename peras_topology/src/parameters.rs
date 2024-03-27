@@ -13,7 +13,8 @@ pub struct Parameters {
     pub downstreamCount: usize,
     pub totalStake: Option<Currency>,
     pub maximumStake: Currency,
-    pub messageDelay: i64,
+    pub messageLatency: i64,
+    pub messageBandwidth: i64,
 }
 
 impl Default for Parameters {
@@ -25,7 +26,8 @@ impl Default for Parameters {
             totalStake: None,
             maximumStake: 1000,
             endSlot: 1000,
-            messageDelay: 350000,
+            messageLatency: 350000,
+            messageBandwidth: 250,
         }
     }
 }

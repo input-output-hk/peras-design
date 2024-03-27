@@ -26,6 +26,8 @@ pub enum InEnvelope {
         origin: Option<NodeId>,
         in_id: UniqueId,
         in_message: Message,
+        in_time: DateTime<Utc>,
+        in_bytes: u32,
     },
 }
 
@@ -42,12 +44,12 @@ pub enum OutEnvelope {
     },
     #[serde(rename = "OutEnvelope")]
     SendMessage {
-        timestamp: DateTime<Utc>,
         source: String,
         destination: String,
         out_id: UniqueId,
         out_message: Message,
-        bytes: u32,
+        out_time: DateTime<Utc>,
+        out_bytes: u32,
     },
     Stopped(String),
 }
@@ -144,6 +146,8 @@ impl Node {
                     origin: _,
                     in_id: _,
                     in_message: Message::NextSlot(slot),
+                    in_time: _,
+                    in_bytes: _,
                 }) => match self.handle_slot(slot, total_stake) {
                     Some(out) => tx_out.send(out).expect("Failed to send message"),
                     None => (),
@@ -152,6 +156,8 @@ impl Node {
                     origin: _,
                     in_id: _,
                     in_message: Message::NewChain(chain),
+                    in_time: _,
+                    in_bytes: _,
                 }) => match self.handle_new_chain(chain) {
                     Some(out) => tx_out.send(out).expect("Failed to send message"),
                     None => (),
@@ -196,12 +202,12 @@ impl Node {
             self.best_chain.insert(0, new_block);
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
-                timestamp: Utc::now(),
                 source: self.node_id.clone(),
                 destination: self.node_id.clone(), // FIXME this does not make sense
                 out_id: UniqueId::new(&msg),
                 out_message: msg,
-                bytes: 0,
+                out_time: Utc::now(),
+                out_bytes: 0,
             })
         } else {
             None
@@ -216,12 +222,12 @@ impl Node {
             self.best_chain = chain;
             let msg = Message::NewChain(self.best_chain.clone());
             Some(OutEnvelope::SendMessage {
-                timestamp: Utc::now(),
                 source: self.node_id.clone(),
                 destination: self.node_id.clone(), // FIXME this does not make sense
                 out_id: UniqueId::new(&msg),
                 out_message: msg,
-                bytes: 0,
+                out_time: Utc::now(),
+                out_bytes: 0,
             })
         } else {
             None
