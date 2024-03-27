@@ -14,12 +14,15 @@ open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_
 open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
+
 open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
+open import Relation.Nullary.Negation using (contradiction)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
@@ -229,13 +232,6 @@ The block tree type
       tree : A
 
   open LocalState
-
-  tree-inj : ∀ {A : Set} {blockTree : TreeType A} {x y : A} {xx : LocalState blockTree} {yy : LocalState blockTree}
-    → xx ≡ ⟪ x ⟫
-    → yy ≡ ⟪ y ⟫
-    → xx ≡ yy
-    → x ≡ y
-  tree-inj refl refl refl = refl
 ```
 # Parameterized module
 
@@ -550,7 +546,22 @@ In the paper mentioned above this is big-step semantics.
     ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
     ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
 ```
-
+When transitioning from non-delivered there has to be a message
+that has been either honestly or dishonestly delivered
+```agda
+    consume : ∀ {M N : Stateᵍ}
+      → ¬ (Delivered M)
+      → M ↝ N
+      → let open Stateᵍ
+            open Envelope
+        in Σ[ m ∈ Envelope ] (Σ[ m∈ms ∈ (m ∈ messages M) ]
+           ((messages N ≡ (messages M ─ m∈ms)) ⊎ (messages N ≡ (m∈ms ∷= ⦅ partyId m , message m , suc zero ⦆))))
+    consume _ (Deliver {M} {N} {p} {h} {m} (honest _ m∈ms _)) = ⦅ p , m , zero ⦆ , m∈ms , inj₁ refl
+    consume _ (Deliver {M} {N} {p} {h} {m} (corrupt m∈ms)) = ⦅ p , m , zero ⦆ , m∈ms , inj₂ refl
+    consume ¬d (CastVote d x₃) = contradiction d ¬d
+    consume ¬d (CreateBlock d x₃) = contradiction d ¬d
+    consume ¬d (NextSlot d) = contradiction d ¬d
+```
 # Collision free predicate
 
 <!--

@@ -135,29 +135,6 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 <!--
 ```agda
-{-
-    block-message : ∀ {N N₁ N₂ : GlobalState} {p} {b} {d} {m} {c}
-      → (s : N₀ ↝⋆ N)
-      → ⦅ p , BlockMsg b , d ⦆ ∈ messages N
-      → Σ[ (s₀ , s₁ , s₂) ∈ ((N₀ ↝⋆ N₁) × (N₁ ↝ N₂) × (N₂ ↝⋆ N)) ]
-              (s  ≡ (↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂))
-            × (s₁ ≡ CreateBlock {p = p} {Honest {p}} m c))
-    block-message s x = ({!!} , {!!} , {!!}) , ({!!} , {!!})
--}
-{-
-    message-parties : ∀ {N : GlobalState} {p₁ p₂ : PartyId} {t₂ : A} {b : Block} {d}
-      → N₀ ↝⋆ N
-      → ⦅ p₁ , BlockMsg b , d ⦆ ∈ messages N
-      → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
-      → ⦅ p₂ , BlockMsg b , d ⦆ ∈ messages N
-         ⊎ b ∈ allBlocks blockTree t₂
-    message-parties {N} {p₁} {p₂} {t₂} {b} n m∈ms x₁ with b ∈? allBlocks blockTree t₂
-    ... | yes b∈t₂ = inj₂ b∈t₂
-    ... | no b∉t₂ =
-      let xx = block-message n m∈ms
-      in inj₁ {!!}
--}
-
     open IsTreeType
 ```
 -->
@@ -236,8 +213,12 @@ CastVote is not relevant for allBlocks
       knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
 ```
 #### CreateBlock
+
+When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
+those messages adds the blocks into the local trees.
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
+    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
+      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
 ```
 #### NextSlot
 ```agda
