@@ -532,7 +532,16 @@ In the paper mentioned above this is big-step semantics.
           ------
         → L ↝⋆ N
 ```
-Post-composition
+### Composition
+```agda
+    ↝⋆∘↝⋆ : ∀ {M N O}
+      → M ↝⋆ N
+      → N ↝⋆ O
+      → M ↝⋆ O
+    ↝⋆∘↝⋆ (_ ∎) M↝⋆O = M↝⋆O
+    ↝⋆∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝⋆O = (_ ↝⟨ M↝M₁ ⟩ (↝⋆∘↝⋆ M₁↝⋆N N↝⋆O))
+```
+### Post-composition
 ```agda
     ↝∘↝⋆ : ∀ {M N O}
       → M ↝⋆ N
