@@ -1,5 +1,13 @@
 ## 2024-03-20
 
+### Improvements to Haskell and Rust testing and simulation
+
+- Improved fidelity of the node's network interface, so the `bwbush/diffusion` branch is ready for a congestion experiment, but still uses the February version of the pseudo-code.
+- Fixed Haskell and Run on `main` so CI build, tests, and simulations pass.
+- Merged `main` into `bwbush/diffusion` branch to create `bwbush/diffusion-ci` branch.
+
+## 2024-03-20
+
 ### Block diffusion and resource tracking in `peras-iosim`
 
 The [diffusion](https://github.com/input-output-hk/peras-design/tree/bwbush/diffusion) branch now contains a generally faithful representation of pull-oriented block diffusion that mimic real-life block diffusion. Additionally, it now handles the latency and bandwidth of links along with the compute time at nodes. A provisional set of network, message, and CPU parameters provides coarsely representative modeling of delays in processing and tranmission.

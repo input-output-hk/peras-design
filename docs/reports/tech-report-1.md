@@ -1,6 +1,7 @@
 ---
-title: Peras Technical Report #1
-author: Peras Team
+title: "Peras Technical Report #1"
+author: ["Arnaud Bailly", "Brian W. Bush", "Yves Hauser"]
+date: 2024-04-01
 ---
 
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ since January 2024.
@@ -57,7 +58,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Overview
 
-This diagram attempts at depicting graphically how the Peras protocol works over a period of time. A high-fidelity version is [available](/docs/diagrams/peras-with-certs.pdf).
+This diagram attempts at depicting graphically how the Peras protocol works over a period of time. A high-fidelity version is [available](../diagrams/peras-with-certs.pdf).
 
 ![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
 
@@ -90,7 +91,7 @@ Note that one of the sub-goals for Peras project is to collaborate with PNSol, t
 
 Here is a graphical representation of the _outcome diagram_ for the ΔQ model of Cardano network under Praos protocol:
 
-![Outcome diagram for Praos](/docs/diagrams/praos-delta-q.svg)
+![Outcome diagram for Praos](../diagrams/praos-delta-q.svg)
 
 This model is based on the following assumptions:
 * Full block diffusion is separated in a number of steps: request and reply of the block header, then request and reply of the block body,
@@ -113,13 +114,13 @@ Average latency numbers are drawn from table 1 in the paper and depend on the (p
 | Medium   | 69                | 143            |
 | Long     | 268               | 531            |
 
-For each step in the diffusion of block, we assume an equal ($frac{1}{3}$) chance for each class of distance.
+For each step in the diffusion of block, we assume an equal ($\frac{1}{3}$) chance for each class of distance.
 
 > [!NOTE]
 > The actual block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available.
-> We should actually measure the real value for this block size.
+> We need to actually measure the real value for this block size and other significant increments.
 
-We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Note the current target valency for cardano-node's connection is 20 but the actual value might be lower in practice (?). Table 2 gives us the following distribution of paths length:
+We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Table 2 gives us the following distribution of paths length:
 
 | Length | Degree = 10 | Degree = 15 |
 |--------|-------------|-------------|
@@ -130,6 +131,13 @@ We have chosen to define two models of ΔQ diffusion, one based on an average no
 | 5      | 2.78%       | 0           |
 
 These numbers are reflected (somewhat inaccurately) in the above graph, representing the probabilities for the number of hops a block will have to go through before reaching another node.
+
+::: [!NOTE]
+
+The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
+
+:::
+
 
 ### Modeling process
 
@@ -166,7 +174,7 @@ deltaq15 = combine hopsProba15
 
 Then using `empiricalCDF` computation with 5000 different samples yield the following graph:
 
-![Praos ΔQ Model CDF](/docs/diagrams/plot-hops-distribution.svg)
+![Praos ΔQ Model CDF](../diagrams/plot-hops-distribution.svg)
 
 To calibrate our model, we have computed an empirical distribution of block adoption time[^2] observed on the mainnet over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/. The raw data is provided as a file with 12 millions entries similar to:
 
@@ -199,23 +207,81 @@ Therefore the total time for block diffusion is the sum of the last 4 columns.
 This data is gathered through a network of over 100 collaborating nodes that agreed to report various statistics to a central aggregator, so it's not exhausitve and could be biased.
 The following graph compares this observed CDF to various CDFs for different distances (in the graph sense, eg. number of hops one need to go through from an emitting node to a recipient node) between nodes.
 
-![Multiple hops & empirical CDF](/docs/diagrams/plot-praos-multi-hops.svg)
+![Multiple hops & empirical CDF](../diagrams/plot-praos-multi-hops.svg)
 
 While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
-## Peras ΔQ Model
+## Peras ΔQ Model - Blocks
 
 Things to take into account for modelling peras:
+
 * Impact of the size of the certificate: If adding the certificate increases the size of the header beyond the MSS (or MTU?), this will impact header diffusion
   * We might need to just add a hash to the header (32 bytes) and then have the node request the certificate, which also increases (full) header diffusion time
 * Impact of validating the certificate: If it's not cheap (eg. a few ms like a signature verification), this could also lead to an increase in block adoption time as a node receiving a header will have to add more time to validate it before sharing it with its peers
+* There might not be a certificate for each header, depending on the length of the rounds. Given round length R in slots and average block production length S, then frequency of headers with certificate is S/R
+  * Model must take into account different path for retrieving a header, one with a certificate and one without
+* Diffusion of votes and certificates does not seem to have other impact on diffusion of blocks, eg. just because we have more messages to handle and therefore we consume more bandwidth between nodes could lead to delays for block propagation, but it seems there's enough bandwidth (in steady state, perhaps not when syncing) to diffuse both votes, certificates, transactions, and blocks without one impacting the other
 
-* ΔQ model of Peras
-  * model the impact of larger headers
-  * more data to pull from nodes
+The following diagram compares the ΔQ distribution of block diffusion (for 4 hops) under different assumptions:
 
-* impact on block diffusion
-* impact on security?
+1. Standard block without a certificate,
+3. Block header point to a certificate.
+
+Certificate validation is assumed to be a constant 50ms.
+
+![Impact of certificate](../diagrams/block-with-cert.svg)
+
+Obviously, adding a roundtrip network exchange to retrieve the certificate for a given header degrades the "timeliness" of block diffusion.
+For the case of 2500 nodes with average degree 15, we get the following distributions, comparing blocks with and without certificates:
+
+![Diffusion with and without certificate](../diagrams/network-with-cert.svg)
+
+The obvious conclusion from this analysis is that it's critical for Peras feasibility the certificate be small enough to be included in the block header.
+
+::: [!NOTE]
+
+Depending on the value of $T$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, eg. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that's misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
+We need to refine our analysis and model to better expose this impact.
+
+:::
+
+## Peras ΔQ Model - Transactions
+
+We would like to model the outcomes of Peras in terms of _user experience_, eg. how does Peras impacts the user experience?
+From the point of view of the users, the thing that matters is the _settlement time_ of their transactions: How long does it take for a transaction submitted to be _settled_, eg. to have enough (how much?) guarantee that the transaction is definitely part of the chain?
+
+From this point of view, the whole path from transaction submission to observing a (deep enough) block matters which means we need to take into account in our modelling the propagation of the transaction through the mempools of various nodes in the network until it reached a block producer. This also means we need to take into account the potential _delays_ incurred in that journey that can occur because of _mempool congestion_ in the system: When the mempool of a node is full, it won't pull more transactions from the peers that are connected to it.
+
+The following diagram illustrates the "happy path" of a transaction until the block it's part of gets adopted by the emitting node, in Praos.
+
+```mermaid
+sequenceDiagram
+actor Alice
+participant N1 as Node1
+participant N2 as Node2
+participant N3 as Node3
+participant BP as Minter
+
+N2 -->> +N1: Next tx
+Alice ->> N1: Post tx
+N1 ->> +N2: Tx id
+N2 ->> +N1: Get tx
+N1 ->> +N2: Send tx
+BP -->> +N2: Next tx
+N2 ->> +BP: Tx id
+BP ->> +N2: Get tx
+N2 ->> +BP: Send tx
+BP ->> BP: Mint block
+N2 ->> +BP: Next block
+BP ->> N2: Block header
+N2 ->> BP: Get block
+BP ->> N2: Send block
+N1 ->> +N2: Next block
+N2 ->> N1: Block header
+N1 ->> N2: Get block
+N2 ->> N1: Send block
+N1 -->> Alice: Tx in block
+```
 
 ## Impact of Load congestion
 
