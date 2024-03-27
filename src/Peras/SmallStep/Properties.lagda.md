@@ -9,7 +9,6 @@ open import Data.Bool using (Bool)
 open import Data.List as List using (List; []; _∷_)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺)
-open import Data.List.Membership.DecPropositional using (_∈?_)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
@@ -30,12 +29,15 @@ open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Negation using (contradiction)
 
-open import Peras.Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate)
+open import Peras.Block as Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate; _≟-Block_)
 open import Peras.Chain using (RoundNumber; Vote)
 open import Peras.Crypto
 open import Peras.Params using (Params)
 
+open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
+
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
+
 open import Data.Tree.AVL.Map.Membership.Propositional PartyIdO
 open import Data.Tree.AVL.Map.Membership.Propositional.Properties PartyIdO
 
@@ -130,35 +132,36 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       → clock M ≤ clock N
     clock-incr⋆ (_ ∎) = ≤-refl
     clock-incr⋆ (_ ↝⟨ x ⟩ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
-
-    postulate
-      tree-inv : ∀ {p q} {N : GlobalState} {l}
-        → p ≢ q
-        → lookup (stateMap N) p ≡ lookup (insert q l (stateMap N)) p
 ```
+<!--
 ```agda
-    knowledge-propagation₀ : ∀ {N : GlobalState}
-      → {p₁ p₂ : PartyId}
-      → {t₁ t₂ : A}
-      → p₁ ∈ parties
-      → p₂ ∈ parties
-      → N₀ ↝⋆ N -- needed as precondition for N₁ (starting from empty local states and empty messages)
-      → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
+{-
+    block-message : ∀ {N N₁ N₂ : GlobalState} {p} {b} {d} {m} {c}
+      → (s : N₀ ↝⋆ N)
+      → ⦅ p , BlockMsg b , d ⦆ ∈ messages N
+      → Σ[ (s₀ , s₁ , s₂) ∈ ((N₀ ↝⋆ N₁) × (N₁ ↝ N₂) × (N₂ ↝⋆ N)) ]
+              (s  ≡ (↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂))
+            × (s₁ ≡ CreateBlock {p = p} {Honest {p}} m c))
+    block-message s x = ({!!} , {!!} , {!!}) , ({!!} , {!!})
+-}
+{-
+    message-parties : ∀ {N : GlobalState} {p₁ p₂ : PartyId} {t₂ : A} {b : Block} {d}
+      → N₀ ↝⋆ N
+      → ⦅ p₁ , BlockMsg b , d ⦆ ∈ messages N
       → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
-      → Delivered N
-      → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
-    knowledge-propagation₀ {N} {p₁} {p₂} p₁∈ps p₂∈ps (_ ∎) x₁ x₂ x₃  =
-      let z₁ = just-injective $ trans (sym (init-tree₀ {p₁} p₁∈ps)) x₁
-          z₂ = just-injective $ trans (sym (init-tree₀ {p₂} p₂∈ps)) x₂
-          a₁ = cong (allBlocks blockTree) (tree-inj refl refl z₁)
-          a₂ = cong (allBlocks blockTree) (tree-inj refl refl z₂)
-      in ⊆-reflexive (trans (sym a₁) a₂)
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver (honest {ms = ms} x m∈ms x₆) ⟩ x₅) x₁ x₂ x₃ = contradiction m∈ms ¬Any[]
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ Deliver (corrupt m∈ms) ⟩ x₅) x₁ x₂ x₃ x₄ = contradiction m∈ms ¬Any[]
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ CastVote x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- votes don't affect allBlocks
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ CreateBlock x x₆ ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- CreateBlock : b ∈ t₁ , next slot Receive: b ∈ t₂
-    knowledge-propagation₀ _ _ (.N₀ ↝⟨ NextSlot x ⟩ x₅) x₁ x₂ x₃ x₄ = {!!} -- trivial
+      → ⦅ p₂ , BlockMsg b , d ⦆ ∈ messages N
+         ⊎ b ∈ allBlocks blockTree t₂
+    message-parties {N} {p₁} {p₂} {t₂} {b} n m∈ms x₁ with b ∈? allBlocks blockTree t₂
+    ... | yes b∈t₂ = inj₂ b∈t₂
+    ... | no b∉t₂ =
+      let xx = block-message n m∈ms
+      in inj₁ {!!}
+-}
 
+    open IsTreeType
+```
+-->
+```
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
       → {p₁ p₂ : PartyId}
       → {t₁ t₂ : A}
@@ -170,36 +173,59 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
       → Delivered N₂
       → clock N₁ ≡ clock N₂
+-- TODO      → N₁ ≢ N₂
       → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+```
+#### base case
+```agda
+    knowledge-propagation p₁∈ps p₂∈ps n1 (_ ∎) s₁ s₂ x₄ n₂ _ = {!!} -- see TODO
+```
+#### Deliver
+```agda
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
+      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {.(⟪ extendTree blockTree _ _ ⟫)} {.(BlockMsg _)} x₁ m∈ms (BlockReceived {b} {t}))) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆
+      with p₁ ℕ.≟ p
+```
+adds a block/vote/cert to some p's blocktree
+```agda
+    ... | no ¬e =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ ¬e (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+```
+adds a block/vote/cert to p₁'s blocktree
+```agda
+    ... | yes p₁≡p with b ∈? allBlocks blockTree t₂
+    -- proof: p₂ either already has the block in the local blocktree or
+    --        it is in the message buffer with delay 0 (honest create in prev slot)
+    ... | yes b∈t₂ =
+      let H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆
+          e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
+      in ⊆-trans
+           (xs⊆x∷xs (allBlocks blockTree t₁) b)
+           (⊆-trans e H₀)
 
-    -- base case
-    knowledge-propagation p₁∈p p₂∈p n1 (_ ∎) s₁ s₂ x₄ n₂ = knowledge-propagation₀ p₁∈p p₂∈p n1 s₁ s₂ x₄
+    ... | no b∉t₂ = {!!}
 
-    -- Deliver
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} p₁∈p p₂∈p x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {lₚ′} {m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ with p₁ ℕ.≟ p
-    ... | no ¬e =    -- adds a block/vote/cert to some p's blocktree
-      let xx = tree-inv {p₁} {p} {N₁} {lₚ′} ¬e
-          yy = trans (sym xx) N₁×p₁≡t₁
-      in knowledge-propagation {p₁ = p₁} p₁∈p p₂∈p (↝∘↝⋆ x d) N′↝⋆N₂ yy x₃ n₂ x₆ x₇
+    knowledge-propagation {.(⟦ _ , _ , _ , _ , _ ⟧)} {N₂} {p₁} {p₂} {t₁} {t₂}
+      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {.(⟪ _ ⟫)} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms VoteReceived)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
+      p₁∈ps p₂∈ps x (_ ↝⟨ d@(Deliver (honest {p} {lₚ} {lₚ′} {CertMsg m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
 
-    ... | yes refl -- with b ∈? allBlocks t₂  -- adds a block/vote/cert to p₁'s blocktree
-                     -- proof: p₂ either already has the block in the local blocktree or
-                     --        it is in the message buffer with delay 0 (honest create in prev slot)
-    -- ... | xx = ?
-      = knowledge-propagation {p₁ = p₁} p₁∈p p₂∈p (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
-
-    knowledge-propagation p₁∈p p₂∈p x (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
-
-    -- CastVote
-    knowledge-propagation p₁∈p p₂∈p x (_ ↝⟨ d@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
-      let xx = knowledge-propagation p₁∈p p₂∈p (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
-      in xx -- cast vote not relevant for allBlocks
-
-    -- CreateBlock
-    knowledge-propagation p₁∈p p₂∈p x (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
-
-    -- NextSlot
-    knowledge-propagation {N₁} {N₂} p₁∈p p₂∈p _ (_ ↝⟨ (NextSlot _) ⟩ N′↝⋆N₂) _ _ _ x₆ _ =
+    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
+```
+#### CastVote
+CastVote is not relevant for allBlocks
+```agda
+    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ d@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
+      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ x d) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+```
+#### CreateBlock
+```agda
+    knowledge-propagation p₁∈ps p₂∈ps x (_ ↝⟨ CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!}
+```
+#### NextSlot
+```agda
+    knowledge-propagation {N₁} {N₂} p₁∈ps p₂∈ps _ (_ ↝⟨ (NextSlot _) ⟩ N′↝⋆N₂) _ _ _ x₆ _ =
       let 1+c≤c = ≤-trans (≤-reflexive (cong ℕ.suc (sym x₆))) (clock-incr⋆ N′↝⋆N₂)
           1+c≰c = 1+n≰n {clock N₂}
       in contradiction 1+c≤c 1+c≰c

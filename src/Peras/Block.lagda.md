@@ -11,7 +11,7 @@ open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.List using (List)
 open import Data.Unit using (⊤)
 open import Level using (0ℓ)
-open import Relation.Binary using (StrictTotalOrder)
+open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_)
@@ -123,6 +123,9 @@ record Block where
         bodyHash : Hash (List Tx)
 
 open Block public
+
+postulate
+  _≟-Block_ : DecidableEquality Block
 
 record BlockBody where
   field blockHash : Hash (List Tx)
