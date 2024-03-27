@@ -39,6 +39,7 @@ experimentFactory NoExperiment = noVeto
 experimentFactory SplitBrain{..} = splitBrain experimentStart experimentFinish
 
 splitBrain :: Slot -> Slot -> Veto
+splitBrain _ _ Idle _ = False
 splitBrain start finish OutEnvelope{..} now =
   let
     parity :: NodeId -> Bool

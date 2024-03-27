@@ -17,7 +17,7 @@ import Control.Monad.Random (evalRandT)
 import Control.Tracer (Tracer (Tracer), emit)
 import Data.Default (def)
 import Peras.Event (Event)
-import Peras.IOSim.Network (randomTopology, runNetwork)
+import Peras.IOSim.Network (createNetwork, randomTopology, runNetwork)
 import Peras.IOSim.Network.Types (NetworkState, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
 import Peras.IOSim.Protocol.Types (Protocol)
@@ -45,8 +45,9 @@ simulation verbose parameters@Parameters{..} protocol =
           topology' <- randomTopology parameters
           states' <- initializeNodes parameters topology'
           pure (topology', states')
-    runNetwork verbose tracer parameters protocol topology states $
-      def & networkRandom .~ gen'
+    runNetwork verbose tracer protocol
+      . createNetwork parameters topology states
+      $ def & networkRandom .~ gen'
 
 simulate ::
   Bool ->

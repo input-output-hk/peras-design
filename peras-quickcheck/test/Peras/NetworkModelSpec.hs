@@ -3,32 +3,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Peras.NetworkModelSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Lens (uses, (&), (.~))
+import Control.Lens ((&), (.~))
 import Control.Monad (forM)
-import Control.Monad.Class.MonadTime.SI (getCurrentTime)
 import Control.Monad.IOSim (IOSim, runSimTrace, selectTraceEventsSayWithTime', traceResult)
 import Control.Monad.Random (mkStdGen, runRand)
 import Control.Monad.Reader (ReaderT (..))
-import Control.Monad.State (StateT (..))
+import Control.Monad.State (StateT (..), gets)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
 import Data.Functor (void)
 import qualified Data.Map as Map
-import Peras.Chain (Chain (..))
-import Peras.IOSim.Network (createNetwork, randomTopology, startNodes, stepToIdle)
-import Peras.IOSim.Network.Types (NetworkState, chainsSeen, currentStates, networkRandom)
+import Peras.Chain (Chain)
+import Peras.IOSim.Network (createNetwork, randomTopology, stepNetwork)
+import Peras.IOSim.Network.Types (NetworkState, chainsSeen, networkRandom)
 import Peras.IOSim.Node (initializeNodes)
 import Peras.Message (NodeId)
 import Peras.Network.Netsim (runPropInNetSim)
 import Peras.NetworkModel (Action (..), Network (..), RunMonad, Simulator (..), parameters, protocol, runMonad)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
-import Test.QuickCheck (Gen, Property, Testable, counterexample, noShrinking, once, property, withMaxSuccess, within)
+import Test.QuickCheck (Gen, Property, Testable, counterexample, property, withMaxSuccess, within)
 import Test.QuickCheck.DynamicLogic (DL, action, anyAction, anyActions_, forAllDL, getModelStateDL)
 import Test.QuickCheck.Gen.Unsafe (Capture (..), capture)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadic')
@@ -48,7 +48,7 @@ spec = do
 
 prop_chain_progress :: (Actions Network -> Property) -> Property
 prop_chain_progress runProp =
-  within 50000000 $ -- FIXME: Is `within` working in the multi-threaded environment?
+  within 50_000_000 $
     forAllDL chainProgress runProp
 
 chainProgress :: DL Network ()
@@ -91,21 +91,17 @@ runPropInIOSim p = do
   mkPerasNetwork :: IOSim s (Simulator (IOSim s))
   mkPerasNetwork = do
     let (topology, gen') = runRand (randomTopology parameters) gen
-    now <- getCurrentTime
-    let (states, gen'') = runRand (initializeNodes parameters now topology) gen'
-    network <- createNetwork Nothing topology
-    let initState :: NetworkState = def & networkRandom .~ gen'' & currentStates .~ states
-    networkState <- newTVarIO initState
-    runWithState networkState $ startNodes nullTracer parameters protocol states network
+    let (states, gen'') = runRand (initializeNodes parameters topology) gen'
+    networkState <- newTVarIO $ createNetwork parameters topology states $ def & networkRandom .~ gen''
     pure $
       Simulator
-        { step = runWithState networkState $ stepToIdle parameters network
+        { step = runWithState networkState . StateT $ fmap ((),) . stepNetwork False nullTracer protocol
         , preferredChain = runWithState networkState . getPreferredChain
         , stop = pure ()
         }
 
 getPreferredChain :: Monad m => NodeId -> StateT NetworkState m Chain
-getPreferredChain nodeId = chainsSeen `uses` (Map.! nodeId)
+getPreferredChain nodeId = gets $ (Map.! nodeId) . chainsSeen
 
 runWithState :: (Monad m, MonadSTM m) => TVar m NetworkState -> StateT NetworkState m a -> m a
 runWithState stateVar act = do

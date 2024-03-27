@@ -4,4 +4,5 @@ peerCount: 10
 downstreamCount: 3
 totalStake: null
 maximumStake: 1000
-messageDelay: 350000
+messageLatency: 350000
+messageBandwidth: 250

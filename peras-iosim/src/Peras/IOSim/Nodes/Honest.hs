@@ -227,6 +227,7 @@ instance PerasNode Node where
   getPreferredChain = preferredChain . chainState
   getBlocks = blockIndex . chainState
   getVotes = voteIndex . chainState
+  handleMessage node NodeContext{clock} Stop = pure (mempty{wakeup = clock}, node)
   handleMessage node context InEnvelope{..} =
     flip runStateT node $
       adjustMessageDelays context' inMessage

@@ -25,16 +25,21 @@ import Test.QuickCheck.Instances.Time ()
 
 import qualified Data.Serialize as Serialize
 
-data InEnvelope = InEnvelope
-  { origin :: NodeId
-  , inId :: UniqueId
-  , inMessage :: Message
-  , inTime :: UTCTime
-  , inBytes :: ByteSize
-  }
+data InEnvelope
+  = InEnvelope
+      { origin :: NodeId
+      , inId :: UniqueId
+      , inMessage :: Message
+      , inTime :: UTCTime
+      , inBytes :: ByteSize
+      }
+  | Stop -- FIXME: Obsolete - remove this.
   deriving stock (Eq, Generic, Read, Show)
 
 instance Ord InEnvelope where
+  compare Stop Stop = EQ
+  compare Stop _ = LT
+  compare _ Stop = GT
   compare x y =
     compare
       (inTime x, inId x, origin x, inBytes x, inMessage x)
@@ -46,17 +51,22 @@ instance ToJSON InEnvelope
 instance Arbitrary InEnvelope where
   arbitrary = genericArbitrary uniform
 
-data OutEnvelope = OutEnvelope
-  { source :: NodeId
-  , destination :: NodeId
-  , outId :: UniqueId
-  , outMessage :: Message
-  , outTime :: UTCTime
-  , outBytes :: ByteSize
-  }
+data OutEnvelope
+  = OutEnvelope
+      { source :: NodeId
+      , destination :: NodeId
+      , outId :: UniqueId
+      , outMessage :: Message
+      , outTime :: UTCTime
+      , outBytes :: ByteSize
+      }
+  | Idle -- FIXME: Obsolete - remove this.
   deriving stock (Eq, Generic, Read, Show)
 
 instance Ord OutEnvelope where
+  compare Idle Idle = EQ
+  compare Idle _ = LT
+  compare _ Idle = GT
   compare x y =
     compare
       (outTime x, outId x, source x, destination x, outBytes x, outMessage x)

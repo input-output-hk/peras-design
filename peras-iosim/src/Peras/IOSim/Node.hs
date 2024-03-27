@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,11 +10,13 @@ module Peras.IOSim.Node (
   initializeNodes,
   makeContext,
   observeNode,
+  stepNode,
 ) where
 
 import Control.Monad (forM_)
 import Control.Monad.Class.MonadTime (MonadTime (..), UTCTime, diffUTCTime)
 import Control.Monad.Random.Class (MonadRandom (getRandom, getRandomR))
+import Control.Monad.Writer
 import Control.Tracer (Tracer, traceWith)
 import Data.Default (def)
 import Data.Map (keysSet)
@@ -22,7 +25,7 @@ import Peras.Block (Slot)
 import Peras.Event (Event (CommitteeMember, Compute, Receive, Rolledback, Send, SlotLeader, Trace))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.IOSim.Network.Types (Topology (..))
-import Peras.IOSim.Node.Types (NodeContext (..), NodeResult (..), NodeStats (..), TraceReport (..))
+import Peras.IOSim.Node.Types (NodeContext (..), NodeResult (..), NodeStats (..), PerasNode (..), StepResult (..), TraceReport (..))
 import Peras.IOSim.Nodes (SomeNode (HonestNode))
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
@@ -83,13 +86,41 @@ observeNode ::
   InEnvelope ->
   NodeResult ->
   m ()
+observeNode _ _ _ _ Stop _ = pure ()
 observeNode traceWith' self slot clock InEnvelope{..} NodeResult{outputs, stats = statistics@NodeStats{..}} =
   do
     traceWith' $ Receive inId inTime origin self inMessage inBytes
     forM_ outputs $
-      \OutEnvelope{..} -> traceWith' $ Send outId outTime source destination outMessage outBytes
+      \case
+        Idle -> pure ()
+        OutEnvelope{..} -> traceWith' $ Send outId outTime source destination outMessage outBytes
     traceWith' $ Compute self cpuTime
     forM_ rollbacks $ traceWith' . Rolledback self
     forM_ slotLeader $ traceWith' . SlotLeader self
     forM_ committeeMember $ traceWith' . CommitteeMember self
     traceWith' . Trace . A.toJSON $ TraceStats{..}
+
+stepNode ::
+  PerasNode a =>
+  Protocol ->
+  Coin ->
+  a ->
+  Slot ->
+  UTCTime ->
+  InEnvelope ->
+  (StepResult, a)
+stepNode protocol totalStake node slot clock input =
+  let
+    -- Discard custom events.
+    traceSelf = const $ pure ()
+    -- Record standard events.
+    tracer = tell . pure
+    ((NodeResult stepTime stepOutputs _, node'), stepEvents) =
+      runWriter $ do
+        -- Handle the messsage.
+        (result, node'') <- handleMessage node NodeContext{..} input
+        -- Write the events.
+        observeNode tracer (getNodeId node) slot clock input result
+        pure (result, node'')
+   in
+    (StepResult{..}, node')

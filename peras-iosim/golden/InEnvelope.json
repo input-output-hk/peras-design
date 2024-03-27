@@ -1,171 +1,41 @@
 {
     "samples": [
         {
-            "inBytes": 3,
-            "inId": "09fd52c610b1adcc",
+            "tag": "Stop"
+        },
+        {
+            "inBytes": 6,
+            "inId": "144b93bb7914a92f",
+            "inMessage": {
+                "contents": "2c07ece8aa7f9474",
+                "tag": "FollowChain"
+            },
+            "inTime": "1864-04-30T10:26:19.209818760005Z",
+            "origin": "Node-10",
+            "tag": "InEnvelope"
+        },
+        {
+            "tag": "Stop"
+        },
+        {
+            "inBytes": 2,
+            "inId": "d63dfdb809674f77",
             "inMessage": {
                 "contents": {
-                    "blockHash": "d0e66cb9cfeb8819",
-                    "committeeMembershipProof": "09e77f145614a1aa",
-                    "creatorId": 6,
-                    "signature": "eb474f2c3341cebd",
-                    "votingRound": 1
+                    "blockHash": "14086c5d0769a99b",
+                    "committeeMembershipProof": "fcab0836e6ee6825",
+                    "creatorId": 28,
+                    "signature": "3e3e8c6f7e12488f",
+                    "votingRound": 13
                 },
                 "tag": "SomeVote"
             },
-            "inTime": "1864-04-11T06:10:23.460438769307Z",
-            "origin": "Node-26"
+            "inTime": "1864-05-17T17:56:06.244443976785Z",
+            "origin": "Node-20",
+            "tag": "InEnvelope"
         },
         {
-            "inBytes": 13,
-            "inId": "fb9a0fc88c851312",
-            "inMessage": {
-                "contents": 4,
-                "tag": "NextSlot"
-            },
-            "inTime": "1864-04-22T21:37:23.834232258523Z",
-            "origin": "Node-18"
-        },
-        {
-            "inBytes": 0,
-            "inId": "6a8118e79c52635d",
-            "inMessage": {
-                "contents": {
-                    "blockHash": "7843cf4a0922241a",
-                    "payload": [
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        [],
-                        []
-                    ]
-                },
-                "tag": "SomeBlock"
-            },
-            "inTime": "1864-05-11T02:21:58.567370728915Z",
-            "origin": "Node-25"
-        },
-        {
-            "inBytes": 13,
-            "inId": "d977aa55e39d3902",
-            "inMessage": {
-                "contents": [
-                    {
-                        "bodyHash": "0bac9639ccc79e32",
-                        "certificate": {
-                            "blockRef": "2b3b63504d484b71",
-                            "votingRoundNumber": 2
-                        },
-                        "creatorId": 28,
-                        "leadershipProof": "aa0fded51d5edb35",
-                        "parentBlock": "ead6a31d761c1c32",
-                        "signature": "18b831a4c026ead2",
-                        "slotNumber": 7
-                    },
-                    {
-                        "bodyHash": "fcb2dba7af12e278",
-                        "certificate": {
-                            "blockRef": "22162ced8d131c2e",
-                            "votingRoundNumber": 6
-                        },
-                        "creatorId": 10,
-                        "leadershipProof": "1c5ee8888ab9af41",
-                        "parentBlock": "77bb55e5f85efd59",
-                        "signature": "43389199dbd544f1",
-                        "slotNumber": 3
-                    },
-                    {
-                        "bodyHash": "963a4b11c7f376ad",
-                        "certificate": {
-                            "blockRef": "9458086e345bac95",
-                            "votingRoundNumber": 1
-                        },
-                        "creatorId": 28,
-                        "leadershipProof": "76987919630913b4",
-                        "parentBlock": "2022539f32d27926",
-                        "signature": "f98ec2fcfa994e4e",
-                        "slotNumber": 12
-                    },
-                    {
-                        "bodyHash": "a9b46baeca2a0e6f",
-                        "certificate": {
-                            "blockRef": "63e870b529693c6d",
-                            "votingRoundNumber": 13
-                        },
-                        "creatorId": 12,
-                        "leadershipProof": "e90b25976f8bfe60",
-                        "parentBlock": "a3e03f598a53f634",
-                        "signature": "c9af3933e6ccdfd7",
-                        "slotNumber": 1
-                    },
-                    {
-                        "bodyHash": "1055a5df4f89fc40",
-                        "certificate": null,
-                        "creatorId": 23,
-                        "leadershipProof": "29a9843754c073d9",
-                        "parentBlock": "875dbb5c63319b83",
-                        "signature": "b07193c7b75b030a",
-                        "slotNumber": 25
-                    },
-                    {
-                        "bodyHash": "232994f4542f5886",
-                        "certificate": {
-                            "blockRef": "b85ed0453de2818b",
-                            "votingRoundNumber": 20
-                        },
-                        "creatorId": 29,
-                        "leadershipProof": "75d06cfa08f2c98f",
-                        "parentBlock": "53e222cda6c956c8",
-                        "signature": "86b4864fa413d878",
-                        "slotNumber": 6
-                    },
-                    {
-                        "bodyHash": "bddf68c5a22890ee",
-                        "certificate": {
-                            "blockRef": "9acb7fff65b3d8ef",
-                            "votingRoundNumber": 12
-                        },
-                        "creatorId": 27,
-                        "leadershipProof": "47c484bde7b768ac",
-                        "parentBlock": "bf4ca6632b7c9da7",
-                        "signature": "971b71cc0e500eb3",
-                        "slotNumber": 11
-                    }
-                ],
-                "tag": "NewChain"
-            },
-            "inTime": "1864-05-01T18:50:09.879335314282Z",
-            "origin": "Node-22"
-        },
-        {
-            "inBytes": 7,
-            "inId": "054832fea0ec1e89",
-            "inMessage": {
-                "contents": "c5ceb5ab83706faf",
-                "tag": "FollowChain"
-            },
-            "inTime": "1864-05-09T20:21:51.408016703237Z",
-            "origin": "Node-17"
+            "tag": "Stop"
         }
     ],
     "seed": -561087434

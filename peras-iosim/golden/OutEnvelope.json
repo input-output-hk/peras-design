@@ -1,81 +1,48 @@
 {
     "samples": [
         {
-            "destination": "Node-28",
-            "outBytes": 26,
-            "outId": "7c8b04f673699f55",
-            "outMessage": {
-                "contents": "0d38d9698df26bea",
-                "tag": "FollowChain"
-            },
-            "outTime": "1864-04-30T07:14:11.576603021519Z",
-            "source": "Node-0"
+            "tag": "Idle"
         },
         {
-            "destination": "Node-19",
-            "outBytes": 12,
-            "outId": "b415ef119028a9d9",
+            "destination": "Node-25",
+            "outBytes": 16,
+            "outId": "7f38db5a0557b011",
             "outMessage": {
                 "contents": {
-                    "bodyHash": "063e4b463ddf7492",
-                    "certificate": {
-                        "blockRef": "c45b086f1b98fc4d",
-                        "votingRoundNumber": 18
-                    },
-                    "creatorId": 16,
-                    "leadershipProof": "65de270d086ed903",
-                    "parentBlock": "810c228d3216cd59",
-                    "signature": "4b4e5bf59cb960d3",
-                    "slotNumber": 9
-                },
-                "tag": "RollForward"
-            },
-            "outTime": "1864-04-18T08:31:38.701405841897Z",
-            "source": "Node-16"
-        },
-        {
-            "destination": "Node-18",
-            "outBytes": 30,
-            "outId": "969aaaef6d18a019",
-            "outMessage": {
-                "contents": {
-                    "bodyHash": "0bc47a13ac615b14",
-                    "certificate": {
-                        "blockRef": "006908290309d61f",
-                        "votingRoundNumber": 15
-                    },
+                    "bodyHash": "aa27956f65cddb20",
+                    "certificate": null,
                     "creatorId": 27,
-                    "leadershipProof": "63984ee7e0ca73e3",
-                    "parentBlock": "b465de2723d24b8b",
-                    "signature": "b58de62fec04d930",
-                    "slotNumber": 12
+                    "leadershipProof": "493ec9b023a17b42",
+                    "parentBlock": "9852627102896c3a",
+                    "signature": "6271eddedc988cec",
+                    "slotNumber": 6
                 },
                 "tag": "RollBack"
             },
-            "outTime": "1864-05-15T18:06:58.692301950788Z",
-            "source": "Node-17"
+            "outTime": "1864-05-31T18:17:32.476577553781Z",
+            "source": "Node-19",
+            "tag": "OutEnvelope"
         },
         {
-            "destination": "Node-2",
-            "outBytes": 6,
-            "outId": "7be426f879847038",
-            "outMessage": {
-                "contents": 11,
-                "tag": "NextSlot"
-            },
-            "outTime": "1864-04-17T19:20:43.319572229913Z",
-            "source": "Node-2"
+            "tag": "Idle"
         },
         {
-            "destination": "Node-5",
-            "outBytes": 12,
-            "outId": "78fc81b4aba84a3d",
+            "tag": "Idle"
+        },
+        {
+            "destination": "Node-15",
+            "outBytes": 14,
+            "outId": "08d557e98b4a9f38",
             "outMessage": {
-                "contents": 6,
-                "tag": "NextSlot"
+                "contents": {
+                    "blockRef": "2dfacddf427ebd94",
+                    "votingRoundNumber": 19
+                },
+                "tag": "SomeCertificate"
             },
-            "outTime": "1864-04-14T07:37:23.964742510954Z",
-            "source": "Node-23"
+            "outTime": "1864-04-10T23:58:04.11060789469Z",
+            "source": "Node-10",
+            "tag": "OutEnvelope"
         }
     ],
     "seed": 819208099

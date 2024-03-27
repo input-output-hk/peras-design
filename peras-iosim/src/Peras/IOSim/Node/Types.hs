@@ -9,6 +9,7 @@ module Peras.IOSim.Node.Types (
   NodeResult (..),
   NodeStats (..),
   PerasNode (..),
+  StepResult (..),
   TraceReport (..),
   TraceSelf,
   hoistNodeContext,
@@ -24,7 +25,7 @@ import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
 import Peras.Block (Block, PartyId, Slot)
 import Peras.Chain (Chain, RoundNumber, Vote)
-import Peras.Event (ByteSize, CpuTime, Rollback)
+import Peras.Event (ByteSize, CpuTime, Event, Rollback)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Protocol.Types (Protocol)
@@ -136,3 +137,13 @@ class PerasNode a where
   getVotes :: a -> M.Map VoteHash Vote
   handleMessage :: Monad m => a -> NodeContext m -> InEnvelope -> m (NodeResult, a)
   stop :: Monad m => a -> NodeContext m -> m a
+
+data StepResult = StepResult
+  { stepTime :: UTCTime
+  , stepOutputs :: [OutEnvelope]
+  , stepEvents :: [Event]
+  }
+  deriving stock (Eq, Generic, Ord, Read, Show)
+
+instance FromJSON StepResult
+instance ToJSON StepResult

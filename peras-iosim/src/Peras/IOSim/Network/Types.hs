@@ -19,6 +19,9 @@ module Peras.IOSim.Network.Types (
   lastSlot,
   lastTime,
   networkRandom,
+  networkStake,
+  networkDelay,
+  networkVeto,
   pending,
   reliableLink,
   votesSeen,
@@ -33,12 +36,13 @@ import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Block (Block (parentBlock), Slot)
 import Peras.Chain (Chain, Vote)
-import Peras.IOSim.Experiment (Veto)
+import Peras.Event (CpuTime)
+import Peras.IOSim.Experiment (Veto, noVeto)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Node.Types (PerasNode (getBlocks, getPreferredChain, getVotes))
 import Peras.IOSim.Nodes (SomeNode)
-import Peras.IOSim.Types (simulationStart)
+import Peras.IOSim.Types (Coin, simulationStart)
 import Peras.Message (NodeId)
 import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
@@ -89,12 +93,30 @@ data NetworkState = NetworkState
   , _lastTime :: UTCTime
   , _currentStates :: Map NodeId SomeNode
   , _pending :: PQ.MinQueue OutEnvelope
+  , _networkStake :: Coin
+  , _networkVeto :: Veto
+  , _networkDelay :: NodeId -> NodeId -> Maybe CpuTime
   , _networkRandom :: StdGen
   }
-  deriving stock (Eq, Generic, Show)
+
+instance Show NetworkState where
+  show NetworkState{..} =
+    "NetworkState {lastSlot = "
+      <> show _lastSlot
+      <> ", lastTime ="
+      <> show _lastTime
+      <> ", currentStates ="
+      <> show _currentStates
+      <> ", pending = "
+      <> show _pending
+      <> ", networkStake = "
+      <> show _networkStake
+      <> ", networkRandom = "
+      <> show _networkRandom
+      <> "}"
 
 instance Default NetworkState where
-  def = NetworkState 0 simulationStart mempty mempty $ mkStdGen 12345
+  def = NetworkState 0 simulationStart mempty mempty def noVeto (const $ const def) $ mkStdGen 12345
 
 {-# DEPRECATED chainsSeen "Use observability instead." #-}
 chainsSeen :: NetworkState -> M.Map NodeId Chain

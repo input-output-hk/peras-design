@@ -8,11 +8,13 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.IOSim.Network (
+  createNetwork,
   emptyTopology,
   randomTopology,
   connectNode,
   getDelay,
   runNetwork,
+  stepNetwork,
 ) where
 
 import Control.Applicative ((<|>))
@@ -37,6 +39,9 @@ import Peras.IOSim.Network.Types (
   currentStates,
   lastSlot,
   lastTime,
+  networkDelay,
+  networkStake,
+  networkVeto,
   pending,
   reliableLink,
  )
@@ -114,55 +119,67 @@ getDelay Topology{connections} from to =
   forward = M.lookup from connections >>= M.lookup to
   backward = M.lookup to connections >>= M.lookup from
 
-runNetwork ::
+createNetwork ::
+  Parameters ->
+  Topology ->
+  M.Map NodeId SomeNode ->
+  NetworkState ->
+  NetworkState
+createNetwork Parameters{endSlot, experiment, totalStake} topology initialStates initialNetwork =
+  let controller = MkNodeId "controller"
+      delay source destination =
+        if source == controller
+          then Just 0
+          else getDelay topology source destination
+      makeNextSlot destination slot =
+        OutEnvelope
+          { source = controller
+          , destination = destination
+          , outId = mkUniqueId (controller, destination, slot)
+          , outMessage = NextSlot slot
+          , outTime = fromIntegral slot `addUTCTime` simulationStart
+          , outBytes = 0
+          }
+      initialMessages = PQ.fromList [makeNextSlot destination slot | destination <- M.keys initialStates, slot <- [0 .. endSlot]]
+   in initialNetwork
+        & currentStates .~ initialStates
+        & networkStake .~ fromMaybe (sum $ getStake <$> initialStates) totalStake
+        & networkVeto .~ maybe noVeto experimentFactory experiment
+        & networkDelay .~ delay
+        & pending .~ initialMessages
+
+stepNetwork ::
   forall m.
   MonadDelay m =>
   MonadTime m =>
   Bool ->
   Tracer m Event ->
-  Parameters ->
   Protocol ->
-  Topology ->
-  M.Map NodeId SomeNode ->
   NetworkState ->
   m NetworkState
-runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol topology initialStates initialNetwork =
-  do
-    let controller = MkNodeId "controller"
-        total = fromMaybe (sum $ getStake <$> initialStates) $ totalStake parameters
-        veto = maybe noVeto experimentFactory experiment
-        makeNextSlot destination slot =
-          OutEnvelope
-            { source = controller
-            , destination = destination
-            , outId = mkUniqueId (controller, destination, slot)
-            , outMessage = NextSlot slot
-            , outTime = fromIntegral slot `addUTCTime` simulationStart
-            , outBytes = 0
-            }
-        initialMessages = PQ.fromList [makeNextSlot destination slot | destination <- M.keys initialStates, slot <- [0 .. endSlot]]
-        go network =
-          case PQ.minView (network ^. pending) of
-            Nothing ->
-              do
-                let stop' state = stop state =<< makeContext tracer protocol total (getNodeId state)
-                states' <- mapM stop' $ network ^. currentStates
-                pure $ network & currentStates .~ states'
-            Just (outEnvelope@OutEnvelope{..}, pending') ->
-              do
-                now <- getCurrentTime
-                threadDelay . floor . (* 1_000_000) . toRational $ outTime `diffUTCTime` now
-                context@NodeContext{slot, clock} <- makeContext tracer protocol total destination
-                let
-                  delay =
-                    if source == controller
-                      then Just 0
-                      else getDelay topology source destination
+stepNetwork verbose tracer protocol =
+  let go network =
+        case PQ.minView (network ^. pending) of
+          Nothing ->
+            do
+              let stop' state = stop state =<< makeContext tracer protocol (network ^. networkStake) (getNodeId state)
+              states' <- mapM stop' $ network ^. currentStates
+              pure $ network & currentStates .~ states'
+          Just (Idle, _) -> go network
+          Just (outEnvelope@OutEnvelope{..}, pending') ->
+            do
+              now <- getCurrentTime
+              threadDelay . floor . (* 1_000_000) . toRational $ outTime `diffUTCTime` now
+              context@NodeContext{slot, clock} <- makeContext tracer protocol (network ^. networkStake) destination
+              let endOfSlot (Just OutEnvelope{outMessage = NextSlot slot'}) = slot /= slot'
+                  endOfSlot _ = False
+                  delay = (network ^. networkDelay) source destination
+              network' <-
                 showProgress verbose slot clock (PQ.size pending') $
-                  if veto outEnvelope slot || isNothing delay -- FIXME: Handle link reliability here.
+                  if (network ^. networkVeto) outEnvelope slot || isNothing delay -- FIXME: Handle link reliability here.
                     then do
                       traceWith tracer $ Drop outId clock source destination outMessage outBytes
-                      go $
+                      pure $
                         network
                           & pending .~ pending'
                           -- FIXME: Remove the following because they are redundant with the new observability.
@@ -181,14 +198,30 @@ runNetwork verbose tracer parameters@Parameters{endSlot, experiment} protocol to
                               }
                       (result, node') <- handleMessage node context inEnvelope
                       observeNode (traceWith tracer) destination slot clock inEnvelope result
-                      go $
+                      pure $
                         network
                           & currentStates .~ M.insert destination node' states
                           & pending .~ foldr PQ.insert pending' (outputs result)
                           -- FIXME: Remove the following because they are redundant with the new observability.
                           & lastSlot .~ slot
                           & lastTime .~ clock
-    go $
-      initialNetwork
-        & currentStates .~ initialStates
-        & pending .~ initialMessages
+              if endOfSlot . PQ.getMin $ network' ^. pending
+                then pure network'
+                else go network'
+   in go
+
+runNetwork ::
+  forall m.
+  MonadDelay m =>
+  MonadTime m =>
+  Bool ->
+  Tracer m Event ->
+  Protocol ->
+  NetworkState ->
+  m NetworkState
+runNetwork verbose tracer protocol network =
+  do
+    network' <- stepNetwork verbose tracer protocol network
+    if PQ.null $ network' ^. pending
+      then pure network'
+      else runNetwork verbose tracer protocol network'
