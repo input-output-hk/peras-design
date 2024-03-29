@@ -180,7 +180,7 @@ adds a block/vote/cert to some p's blocktree
 ```agda
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆
 ```
 adds a block/vote/cert to p₁'s blocktree
 proof: p₂ either already has the block in the local blocktree or it is in the message buffer with delay 0 (honest create in prev slot)
@@ -209,7 +209,7 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
       p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms (VoteReceived {v}))) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ with p₁ ℕ.≟ p
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆
     ... | yes p₁≡p =
       let
           lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addVote blockTree t v ⟫} {m = stateMap N₁})
@@ -234,7 +234,7 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
 
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆
     ... | yes p₁≡p =
       let
           lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addCert blockTree t c ⟫} {m = stateMap N₁})
@@ -265,7 +265,7 @@ CastVote is not relevant for allBlocks
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} x₂))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆
     ... | yes p₁≡p =
       let open Stateᵍ N₁
           r = v-round (clock N₁)
@@ -304,7 +304,7 @@ those messages adds the blocks into the local trees.
 ```agda
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} x₂))
-      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+      in knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆
     ... | yes p₁≡p =
       let open Stateᵍ N₁
           r = roundNumber (v-round (clock N₁))
