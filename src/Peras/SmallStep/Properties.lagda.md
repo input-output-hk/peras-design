@@ -20,7 +20,7 @@ open import Data.Maybe using (just)
 open import Data.Maybe.Properties using (just-injective)
 open import Data.Fin using (zero; suc; _≟_)
 open import Data.Fin.Properties using (0≢1+n)
-open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_)
+open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred)
 open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 
@@ -53,12 +53,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
          (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable Vote ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄
+  open Params ⦃...⦄
   open import Peras.SmallStep using (TreeType)
 
   module _ {A : Set}
@@ -136,6 +136,19 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 <!--
 ```agda
     open IsTreeType
+
+    subs : ∀ {b xs ys}
+      → b ∷ xs ⊆ ys
+      → xs ⊆ ys
+    subs {b} {xs} {ys} x = ⊆-trans (xs⊆x∷xs xs b) x
+
+    -- TODO: to blockTree
+    postulate
+      allBlocks-addCert : ∀ {t c}
+        → allBlocks blockTree t ⊆ allBlocks blockTree (addCert blockTree t c)
+
+      allBlocks-addVote : ∀ {t v}
+        → allBlocks blockTree t ⊆ allBlocks blockTree (addVote blockTree t v)
 ```
 -->
 ```agda
@@ -155,7 +168,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```
 #### base case
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps n1 (_ ∎) s₁ s₂ x₄ n₂ _ = {!!} -- see TODO
+    knowledge-propagation p₁∈ps p₂∈ps n1 (_ ∎) s₁ s₂ x₄ n₂ = {!!} -- see TODO
 ```
 #### Deliver
 ```agda
@@ -170,10 +183,10 @@ adds a block/vote/cert to some p's blocktree
       in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
 ```
 adds a block/vote/cert to p₁'s blocktree
-proof: p₂ either already has the block in the local blocktree
+proof: p₂ either already has the block in the local blocktree or it is in the message buffer with delay 0 (honest create in prev slot)
 ```agda
-    ... | yes p₁≡p with b ∈? allBlocks blockTree t₂
-    ... | yes b∈t₂ =
+    ... | yes p₁≡p = -- with b ∈? allBlocks blockTree t₂
+--    ... | yes b∈t₂ =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ injective $ just-injective $ trans (sym N₁×p₁≡t₁)
@@ -191,34 +204,141 @@ proof: p₂ either already has the block in the local blocktree
            → ta ≡ tb
          injective refl = refl
 ```
-or it is in the message buffer with delay 0 (honest create in prev slot)
 ```agda
-    ... | no b∉t₂ = {!!}
-```
-```agda
-    knowledge-propagation {.(⟦ _ , _ , _ , _ , _ ⟧)} {N₂} {p₁} {p₂} {t₁} {t₂}
-      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {.(⟪ _ ⟫)} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms VoteReceived)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
+      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} x₁ m∈ms (VoteReceived {v}))) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ with p₁ ℕ.≟ p
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+    ... | yes p₁≡p =
+      let
+          lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addVote blockTree t v ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addVote blockTree t v ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
+          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
+               (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
+
+          xx = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addVote blockTree t₁ v} {t₂} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr x₃ n₂ x₆
+          yy = allBlocks-addVote {t₁} {v}
+      in ⊆-trans yy xx
+      where
+         injective : ∀ {ta tb}
+           → ⟪ ta ⟫ ≡ ⟪ tb ⟫
+           → ta ≡ tb
+         injective refl = refl
+
 ```
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {lₚ} {lₚ′} {CertMsg m} x₁ m∈ms x₉)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ x₇ = {!!}
+      p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (honest {p} {⟪ t ⟫} {.(⟪ addCert blockTree _ _ ⟫)} {.(CertMsg _)} x₁ m∈ms (CertReceived {c}) )) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ x₃ n₂ x₆ with p₁ ℕ.≟ p
+
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+    ... | yes p₁≡p =
+      let
+          lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addCert blockTree t c ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addCert blockTree t c ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
+          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
+               (cong just $ cong ⟪_⟫ $ cong (flip (addCert blockTree) c) t≡t₁)
+
+          xx = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addCert blockTree t₁ c} {t₂} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr x₃ n₂ x₆
+          yy = allBlocks-addCert {t₁} {c}
+      in ⊆-trans yy xx
+      where
+         injective : ∀ {ta tb}
+           → ⟪ ta ⟫ ≡ ⟪ tb ⟫
+           → ta ≡ tb
+         injective refl = refl
 ```
+
+Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ Deliver (corrupt m∈ms) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ = {!!} -- potentially adds a block to p₂'s blocktree in the next slot
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (corrupt m∈ms)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ =
+      knowledge-propagation {N′} {N₂} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ x₂ x₃ n₂ x₆
 ```
 #### CastVote
 CastVote is not relevant for allBlocks
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote _ (honest x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
-      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote {N₁} {N′}_ (honest {p} {t} {N₁} {prf} {sig} x₁ x₉ x₁₀ x₁₁ x₁₂)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆
+      with p₁ ℕ.≟ p
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} x₂))
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+    ... | yes p₁≡p =
+      let open Stateᵍ N₁
+          r = v-round (clock N₁)
+          c = bestChain blockTree (clock N₁) t
+          cs = certs blockTree t c
+          v = record {
+                votingRound = r ;
+                creatorId = p ;
+                committeeMembershipProof = prf ;
+                blockHash = hash (tipBest blockTree ((clock N₁) ∸ L) t) ;
+                signature = sig
+              }
+          lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addVote blockTree t v ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addVote blockTree t v ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ injective $ just-injective $ trans (sym x₂) (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
+          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
+               (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
+          xx = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addVote blockTree t₁ v} {t₂} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr x₃ n₂ x₆
+          e = allBlocks-addVote {t₁} {v}
+          yy = ⊆-trans e xx
+      in yy
+      where
+         injective : ∀ {ta tb}
+           → ⟪ ta ⟫ ≡ ⟪ tb ⟫
+           → ta ≡ tb
+         injective refl = refl
 ```
 #### CreateBlock
 
 When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
 those messages adds the blocks into the local trees.
 ```agda
-    knowledge-propagation p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock _ (honest x₁ x₉ x₁₀ x₁₁)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆ x₇ =
-      knowledge-propagation p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ {!!} x₃ n₂ x₆ x₇
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} _ (honest {p} {t} {N₁} {prf = prf} {sig = sig} x₁ x₉ x₁₀ x₁₁)) ⟩ N′↝⋆N₂) x₂ x₃ n₂ x₆
+      with p₁ ℕ.≟ p
+```
+```agda
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} x₂))
+      in λ {x₇ → knowledge-propagation {p₁ = p₁} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r x₃ n₂ x₆ x₇}
+    ... | yes p₁≡p =
+      let open Stateᵍ N₁
+          r = roundNumber (v-round (clock N₁))
+          txs = txSelection (clock N₁) p
+          txh = hash txs
+          c = bestChain blockTree (pred (clock N₁)) t
+          cs = certs blockTree t c
+          body = record {
+              blockHash = txh ;
+              payload = txs
+              }
+          b = record {
+                slotNumber = (clock N₁) ;
+                creatorId = p ;
+                parentBlock = hash (tipBest blockTree (pred (clock N₁)) t) ;
+                certificate = just (latestCertSeen blockTree (pred (clock N₁)) t) ;
+                leadershipProof = prf ;
+                bodyHash = txh ;
+                signature = sig
+             }
+          lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ injective $ just-injective $ trans (sym x₂) (trans (cong (lookup (stateMap N₁)) p₁≡p) x₁)
+          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
+               (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
+          xx = knowledge-propagation {N′} {N₂} {p₁} {p₂} {extendTree blockTree t₁ b} {t₂} p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr x₃ n₂ x₆
+          e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
+          yy = ⊆-trans e xx
+      in subs yy
+      where
+         injective : ∀ {ta tb}
+           → ⟪ ta ⟫ ≡ ⟪ tb ⟫
+           → ta ≡ tb
+         injective refl = refl
 ```
 #### NextSlot
 ```agda
