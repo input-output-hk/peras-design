@@ -26,7 +26,7 @@
       nixpkgsArgs.overlays = [ (import inputs.rust-overlay) ];
       repoRoot = ./.;
       outputs = import ./nix/outputs.nix;
-      systems = [ "x86_64-linux" "x86_64-darwin" ];
+      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # debug = false;
     };
 
