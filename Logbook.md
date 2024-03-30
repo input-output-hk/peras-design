@@ -1,3 +1,38 @@
+## 2024-03-30
+
+### Congestion experiment
+
+We conducted a coarse study to exercise `peras-iosim` in a simulation experiment involving network congestion. It was meant to check capabilities in these areas:
+
+- simulation/analysis workflow
+- scalability and performance
+- observability
+
+It was a full factorial experiment where bandwidth and latency are varied on a small network with semi-realistic Peras parameters. Each block has its maximum size.
+
+- 250 nodes with fivefold connectivity
+- ~25 committee members
+- Full blocks (90.112 kB)
+- Latency from 0.25 s to 1.00 s
+- Bandwidth from 8 Mb/s to 400 Mb/s
+
+The experiment is not realistic in several aspects:
+
+- Memory pool and other non-block/non-vote messages not modeled
+- February version of Peras protocol
+- Simulation not validated - not suitable for making conclusions about Peras
+
+Several findings were apparent:
+
+- A threshold is readily detectable at a bandwidth of ~20 Mb/s.
+- Non-block and not-vote messages such as those related to the memory pool must be accounted for in congestion.
+- The event logging and statistics system easily supports analyses such as this.
+- Data on node processing times is needed.
+
+The following diagram shows the cumulative bytes received by nodes as a function of network latency and bandwidth, illustrating the ttheshold below which bandwidth is saturated by the protocol and block/vote diffusion.
+
+![Cumulative bytes received by nodes as a function of network latency and bandwidth](peras-iosim/analyses/congestion/congestion.png)
+
 ## 2024-03-20
 
 ### Improvements to Haskell and Rust testing and simulation

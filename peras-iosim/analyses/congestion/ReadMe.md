@@ -99,4 +99,6 @@ ggplot(results, aes(x=`Slot`, y=`Cumulative RX [MB]`)) +
 - The event logging and statistics system easily supports analyses such as this.
 - Data on node processing times is needed.
 
+The following diagram shows the cumulative bytes received by nodes as a function of network latency and bandwidth, illustrating the ttheshold below which bandwidth is saturated by the protocol and block/vote diffusion.
+
 ![Cumulative bytes received by nodes as a function of network latency and bandwidth](congestion.png)
