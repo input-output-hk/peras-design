@@ -5,6 +5,7 @@
 module Peras.IOSim.Hash (
   BlockHash,
   BodyHash,
+  CertificateHash,
   ChainHash,
   VoteHash,
   castHash,
@@ -16,7 +17,7 @@ module Peras.IOSim.Hash (
   hashVote,
 ) where
 
-import Peras.Block as Block (Block, BlockBody (blockHash), Tx)
+import Peras.Block as Block (Block, BlockBody (blockHash), Certificate, Tx)
 import Peras.Chain as Chain (Vote (signature))
 import Peras.Crypto as Crypto (Hash (..), Hashable (hash), Signature (bytes))
 
@@ -47,6 +48,8 @@ type ChainHash = Hash [Block]
 hashChain :: [Block] -> ChainHash
 hashChain [] = Hash . hashBytes $ genesisHash
 hashChain (block : _) = Hash . hashBytes $ hashBlock block
+
+type CertificateHash = Hash Certificate
 
 castHash :: Hash a -> Hash b
 castHash Hash{..} = Hash{..}

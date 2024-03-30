@@ -11,7 +11,8 @@ import Peras.IOSim.Node.Types (PerasNode (..))
 
 import qualified Peras.IOSim.Nodes.Honest as Honest (Node)
 
--- FIXME: Ideally, this would be an existential type, but that makes deriving instances problematic and it could also impact interoperability with Rust.
+-- FIXME: Ideally, this would be an existential type, but that makes deriving
+-- instances problematic and it could also impact interoperability with Rust.
 newtype SomeNode = HonestNode Honest.Node
   deriving (Eq, Generic, Ord, Read, Show)
 
@@ -25,7 +26,8 @@ instance PerasNode SomeNode where
   setStake (HonestNode n) = HonestNode . setStake n
   getDownstreams (HonestNode n) = getDownstreams n
   getPreferredChain (HonestNode n) = getPreferredChain n
-  getBlocks (HonestNode n) = getBlocks n
-  getVotes (HonestNode n) = getVotes n
+  getPreferredVotes (HonestNode n) = getPreferredVotes n
+  getPreferredCerts (HonestNode n) = getPreferredCerts n
+  getPreferredBodies (HonestNode n) = getPreferredBodies n
   handleMessage (HonestNode n) = (fmap (second HonestNode) .) . handleMessage n
   stop (HonestNode n) = fmap HonestNode . stop n

@@ -22,6 +22,7 @@ import Control.Monad.State (MonadState, StateT (runStateT), lift)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (..))
 import Data.Either (isRight)
+import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (group, maximumBy, partition, sort)
 import Data.Ratio ((%))
@@ -33,23 +34,7 @@ import Peras.Block (Block (..), BlockBody (BlockBody), Certificate (Certificate)
 import Peras.Chain (Chain, RoundNumber (roundNumber), Vote (..))
 import Peras.Crypto (Hash (Hash))
 import Peras.Event (ByteSize, CpuTime, Rollback (..))
-import Peras.IOSim.Chain (
-  Invalid (HashOfUnknownBlock),
-  addBlock,
-  addBody,
-  addChain,
-  addVote,
-  appendBlock,
-  blocksInWindow,
-  buildChain,
-  eligibleDanglingVotes,
-  lookupBlock,
-  lookupBody,
-  lookupVote,
-  preferChain,
-  resolveBlock,
- )
-import Peras.IOSim.Chain.Types (ChainState (blockIndex, bodyIndex, preferredChain, voteIndex))
+import Peras.IOSim.Chain
 import Peras.IOSim.Crypto (
   VrfUsage (VrfBodyHash),
   nextVrf,
@@ -62,19 +47,6 @@ import Peras.IOSim.Crypto (
 import Peras.IOSim.Hash (BlockHash, ChainHash, VoteHash, castHash, hashBlock, hashTip, hashVote)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), messageSize, mkUniqueId)
 import Peras.IOSim.Node.Types (NodeContext (..), NodeResult (..), NodeStats (..), PerasNode (..), TraceSelf, hoistNodeContext)
-import Peras.IOSim.Protocol (
-  candidateWindow,
-  chainWeight,
-  checkEquivocation,
-  currentRound,
-  discardExpiredVotes,
-  isCommitteeMember,
-  isFirstSlotInRound,
-  isSlotLeader,
-  validCandidateWindow,
-  validChain,
-  voteInRound,
- )
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Types (Coin)
 import Peras.Message (Message (..), NodeId)
@@ -84,75 +56,7 @@ import qualified Data.Aeson as A
 import qualified Data.Map as M
 import qualified Data.Set as S
 
-data NodeCosts = NodeCosts
-  { costForgeBlock :: CpuTime
-  -- ^ Slot leader forges a new block.
-  , costCastVote :: CpuTime
-  -- ^ Committee member casts a vote.
-  , costEvaluateChain :: CpuTime
-  -- ^ Weight a chain for adoption.
-  , costRollForward :: CpuTime
-  -- ^ Process
-  , costRollBack :: CpuTime
-  -- ^ Process a rollback message.
-  , costFollowChain :: CpuTime
-  -- ^ Process a chain-following message.
-  , costVerifyVote :: CpuTime
-  -- ^ Verify the validity of a vote.
-  , costVerifyBlock :: CpuTime
-  -- ^ Verify the validity of a block header.
-  , costVerifyBody :: CpuTime
-  -- ^ Verify the validity of a block body.
-  , costReportVote :: CpuTime
-  -- ^ Retrieve a vote from a local index.
-  , costReportBlock :: CpuTime
-  -- ^ Retrieve a block header from a local index.
-  , costReportBody :: CpuTime
-  -- ^ Retrieve a block body for a local index.
-  , costRecordVote :: CpuTime
-  -- ^ Store a vote in a local index.
-  , costRecordBlock :: CpuTime
-  -- ^ Store a block header in a local.
-  , costRecordBody :: CpuTime
-  -- ^ Store a block body in  a local
-  , costRequestVote :: CpuTime
-  -- ^ Decide to request a vote.
-  , costRequestBlock :: CpuTime
-  -- ^ Decide to request a block header.
-  , costRequestBody :: CpuTime
-  -- ^ Decide to request a block body.
-  , costSendMessage :: CpuTime
-  -- ^ Buffer and send a message to another node.
-  }
-  deriving stock (Eq, Generic, Ord, Read, Show)
-
-instance FromJSON NodeCosts
-instance ToJSON NodeCosts
-
-instance Default NodeCosts where
-  def =
-    NodeCosts
-      { costForgeBlock = fromRational $ 90 % 1_000_000
-      , costCastVote = fromRational $ 75 % 1_000_000
-      , costEvaluateChain = fromRational $ 40_000 % 1_000_000
-      , costRollForward = fromRational $ 750 % 1_000_000
-      , costRollBack = fromRational $ 700 % 1_000_000
-      , costFollowChain = fromRational $ 50 % 1_000_000
-      , costVerifyVote = fromRational $ 150 % 1_000_000
-      , costVerifyBlock = fromRational $ 150 % 1_000_000
-      , costVerifyBody = fromRational $ 150 % 1_000_000
-      , costReportVote = fromRational $ 1_000 % 1_000_000
-      , costReportBlock = fromRational $ 1_000 % 1_000_000
-      , costReportBody = fromRational $ 2_000 % 1_000_000
-      , costRecordVote = fromRational $ 3_000 % 1_000_000
-      , costRecordBlock = fromRational $ 3_000 % 1_000_000
-      , costRecordBody = fromRational $ 3_000 % 1_000_000
-      , costRequestVote = fromRational $ 50 % 1_000_000
-      , costRequestBlock = fromRational $ 50 % 1_000_000
-      , costRequestBody = fromRational $ 50 % 1_000_000
-      , costSendMessage = fromRational $ 100 % 1_000_000
-      }
-
+{-
 traceInvalid ::
   Monad m =>
   String ->
@@ -171,7 +75,6 @@ traceInvalid location def' x trace =
             , "location" A..= location
             ]
         pure def'
-
 traceInvalid' ::
   NodeContext m ->
   String ->
@@ -179,6 +82,7 @@ traceInvalid' ::
   m ()
 traceInvalid' NodeContext{traceSelf} location invalid =
   traceSelf $ A.object ["invalid" A..= invalid, "location" A..= location]
+-}
 
 data Node = Node
   { nodeId :: NodeId
@@ -186,7 +90,6 @@ data Node = Node
   , stake :: Coin
   , nicBandwidth :: ByteSize
   , vrfOutput :: Double
-  , downstreams :: Set NodeId
   , chainState :: ChainState
   }
   deriving stock (Eq, Generic, Ord, Read, Show)
@@ -215,43 +118,43 @@ vrfOutputLens = lens vrfOutput $ \s x -> s{vrfOutput = x}
 chainStateLens :: Lens' Node ChainState
 chainStateLens = lens chainState $ \s x -> s{chainState = x}
 
-downstreamsLens :: Lens' Node (Set NodeId)
-downstreamsLens = lens downstreams $ \s x -> s{downstreams = x}
-
 instance PerasNode Node where
   getNodeId = nodeId
   getOwner = owner
   getStake = stake
   setStake node = (node &) . (stakeLens .~)
   getDownstreams = downstreams
-  getPreferredChain = preferredChain . chainState
-  getBlocks = blockIndex . chainState
-  getVotes = voteIndex . chainState
-  handleMessage node NodeContext{clock} Stop = pure (mempty{wakeup = clock}, node)
-  handleMessage node context InEnvelope{..} =
-    flip runStateT node $
-      adjustMessageDelays context' inMessage
-        =<< case inMessage of
-          NextSlot _ -> nextSlot context'
-          NewChain chain -> newChain context' chain
-          FollowChain hash -> followChain context' origin hash
-          RollForward block -> roll context' (costRollForward def) origin block
-          RollBack block -> roll context' (costRollBack def) origin block
-          FetchVotes hashes -> fetchVotes context' origin hashes
-          SomeVote vote ->
-            if False -- FIXME: Supress propagation of votes because the deficiency in the Agda certificate type makes that meaningless.
-              then newVote context' origin vote
-              else pure mempty
-          FetchBlocks hashes -> fetchBodies context' origin hashes
-          SomeBlock body -> recordBody context' body
-          SomeCertificate{} -> error "Certificate messages are not yet supported." -- FIXME
+  getPreferredChain = preferredChain . tracker . chainState
+  getPreferredVotes = toList . preferredVotes . tracker . chainState
    where
+    {-
+      handleMessage node NodeContext{clock} Stop = pure (mempty{wakeup = clock}, node)
+      handleMessage node context InEnvelope{..} =
+        flip runStateT node $
+          adjustMessageDelays context' inMessage
+            =<< case inMessage of
+              NextSlot _ -> nextSlot context'
+              NewChain chain -> newChain context' chain
+              FollowChain hash -> followChain context' origin hash
+              RollForward block -> roll context' (costRollForward def) origin block
+              RollBack block -> roll context' (costRollBack def) origin block
+              FetchVotes hashes -> fetchVotes context' origin hashes
+              SomeVote vote ->
+                if False -- FIXME: Supress propagation of votes because the deficiency in the Agda certificate type makes that meaningless.
+                  then newVote context' origin vote
+                  else pure mempty
+              FetchBlocks hashes -> fetchBodies context' origin hashes
+              SomeBlock body -> recordBody context' body
+              SomeCertificate{} -> error "Certificate messages are not yet supported." -- FIXME
+    -}
+
     context' = hoistNodeContext lift context
   stop node NodeContext{traceSelf} =
     do
       traceSelf $ A.object ["finalState" A..= (node ^. chainStateLens)]
       pure node
 
+{-
 adjustMessageDelays ::
   MonadState Node m =>
   NodeContext m ->
@@ -604,3 +507,4 @@ fetchVotes context requester hashes =
     makeResult context mempty{cpuTime = fromIntegral (length hashes) * costReportVote def} $
       (requester,) . SomeVote
         <$> M.elems found
+-}

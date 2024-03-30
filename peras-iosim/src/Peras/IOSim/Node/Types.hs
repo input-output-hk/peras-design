@@ -23,7 +23,7 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
-import Peras.Block (Block, PartyId, Slot)
+import Peras.Block (Block, BlockBody, Certificate, PartyId, Slot)
 import Peras.Chain (Chain, RoundNumber, Vote)
 import Peras.Event (ByteSize, CpuTime, Event, Rollback)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
@@ -131,10 +131,11 @@ class PerasNode a where
   getOwner :: a -> PartyId
   getStake :: a -> Coin
   setStake :: a -> Coin -> a
-  getDownstreams :: a -> Set NodeId
+  getDownstreams :: a -> [NodeId]
   getPreferredChain :: a -> Chain
-  getBlocks :: a -> M.Map BlockHash Block
-  getVotes :: a -> M.Map VoteHash Vote
+  getPreferredVotes :: a -> [Vote]
+  getPreferredCerts :: a -> [Certificate]
+  getPreferredBodies :: a -> [BlockBody]
   handleMessage :: Monad m => a -> NodeContext m -> InEnvelope -> m (NodeResult, a)
   stop :: Monad m => a -> NodeContext m -> m a
 
