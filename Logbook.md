@@ -43,6 +43,31 @@ Finished in 0.0027 seconds
 
 Instead of migrating `peras-iosim` and `peras-netsim`, we might start with a clean slate and use a more TDD-focused approach that builds out from the Agda and Dynamic QuickCheck specifications. Those legacy, prototype codebased can be mined for lessons learned and code fragments in the new, cleaner framework.
 
+### Mini state machine refactoring of `peras-iosim`
+
+The branch [bwbush/march-sm](https://github.com/input-output-hk/peras-design/tree/bwbush/march-sm) contains work in progress for a major refactoring of `peras-iosim` that will use miniature state machines for each node's upstream/downstream channels and that will implement the full Peras protocol. The key features are:
+
+- Pure functions for each clause in the March pseudo-code specification for the Peras protocol.
+- Each node-to-node channel is implemented as a composition of state machines.
+    - Chains under evaluation or fully evaluated.
+    - Block bodies requested and successfully fetched.
+    - Certificates requested and successfully fetched.
+    - Votes seen.
+- A similar node-level state machine aggregates the activity of the individual channels so, for example, a block body is only requested from one peer instead of every peer that mentions it.
+- `InEnvelope` and `OutEnvelope` are redesigned for clean usage.
+- Time is managed via the network's centralized priority queue, which dispatched messages over the channels.
+- No use of threading or STM.
+    - The design is compatible with this, but the complexity outweighs the value that would be added.
+    - `IOSim` is single-threaded anyway, so implementing sophisticated parallel simulation would only have benefits outside of `IOSim`.
+-  Overall the node interface has been simplified.
+    - Each node receives a single message at a time.
+    - The node outputs a sequence of timestamped messages to specified recipients.
+    - The result of each message-handling call also includes statistics on CPU and bandwidth usage.
+    - Structured `Event`s (including ad-hoc debug tracing) are observable.
+    - Outgoing results are tagged with a guaranteed minimum time before which a node will not send any more messages.
+
+This branch is abandoned in favor a TDD approach using QuickCheck Dynamic, but lessons learned and design principles will be incorporated into a future faithful simulation of the March version of the Peras protocol.
+
 ### Congestion experiment
 
 We conducted a coarse study to exercise `peras-iosim` in [a simulation experiment involving network congestion](peras-iosim/analyses/congestion/ReadMe.md). It was meant to check capabilities in these areas:
