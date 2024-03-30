@@ -120,6 +120,7 @@ test-suite peras-quickcheck-test
     other-modules: Peras.NetworkModelSpec
                    Peras.NodeModelSpec
                    Peras.Node.IOSim
+                   Peras.OptimalModelSpec
                    Peras.Util
 
     -- The interface type and version of the test suite.

@@ -10,15 +10,58 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Peras.OptimalModel where
+module Peras.OptimalModel (
+  -- * Idealized Peras
+  BlockIdeal (..),
+  CertIdeal,
+  ChainIdeal,
+  IsCommitteeMember,
+  IsSlotLeader,
+  MessageIdeal (..),
+  Protocol (..),
+  VoteIdeal (..),
+  idealizeBlock,
+  idealizeCert,
+  idealizeChain,
+  idealizeMessage,
+  idealizeVote,
+  mkBlockIdeal,
+  realizeBlock,
+  realizeCert,
+  realizeChain,
+  realizeVote,
+
+  -- * Node model
+  NodeModel (..),
+
+  -- * Executable specification
+  chainLength,
+  evaluateChain,
+  includeCert,
+  includeVote,
+  issueBlock,
+  issueCert,
+  issueVote,
+  nextSlot,
+
+  -- * Real interface for Peras nodes
+  PerasNode (..),
+
+  -- * Run monad
+  RunMonad (..),
+  ExampleNode (..),
+  initialize,
+) where
 
 import Control.Arrow ((&&&))
+import Control.Monad ((<=<))
 import Control.Monad.State (
   MonadState (get, put),
   MonadTrans (..),
   StateT (StateT),
   evalState,
   execState,
+  gets,
   modify,
  )
 import Data.Default (Default (..))
@@ -28,6 +71,7 @@ import Data.List (groupBy, maximumBy, sort)
 import Data.Maybe (mapMaybe)
 import qualified Data.Serialize as Serialize (encode)
 import Numeric.Natural (Natural)
+import Peras.Arbitraries ()
 import Peras.Block (Block (Block), Certificate (Certificate), PartyId, Slot)
 import qualified Peras.Block as Block (Block (..))
 import qualified Peras.Block as Certificate (Certificate (..))
@@ -40,17 +84,15 @@ import Peras.Message (Message (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Gen, arbitrary, elements, frequency, getNonNegative, suchThat)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.StateModel (
-  Any (Some),
-  HasVariables (..),
-  Realized,
-  RunModel (perform, postcondition),
-  StateModel (Action, arbitraryAction, initialState, nextState, precondition), -- (Any (..), HasVariables, PostconditionM, Realized, RunModel (..), StateModel (..), Var, counterexamplePost, monitorPost, Env(..))
- )
+import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))
 
 --------------------------------------------------------------------------------
 
 -- Idealized types for node model
+
+-- TODO: It might be possible to do without these idealizations, but
+-- trying this out is an informative exercise. These idealizations could
+-- be eliminated if all of the cryptography etc. is fully specified.
 
 -- | Simplified Peras parameters. FIXME: Move to Agda.
 data Protocol = Peras
@@ -207,7 +249,7 @@ nextSlot protocol@Peras{roundLength} isSlotLeader isCommitteeMember = do
   pure $ voteMessages <> blockMessages
 
 stepSlot :: Monad m => StateT NodeModel m ()
-stepSlot = modify $ \s -> s{now = 1 + now s}
+stepSlot = modify $ \state -> state{now = 1 + now state}
 
 issueBlock :: Monad m => Protocol -> StateT NodeModel m [MessageIdeal]
 issueBlock _ = do
@@ -245,8 +287,10 @@ issueCert :: Monad m => Protocol -> StateT NodeModel m [MessageIdeal]
 issueCert Peras{quorum} = do
   state <- get
   -- Find the most votes for the same block in the most recent round that has a quorum.
-  let candidates =
-        maximumBy (on compare $ \vs -> (voteRound $ head vs, length vs))
+  let maximumBy' _ [] = []
+      maximumBy' f xs = maximumBy f xs
+      candidates =
+        maximumBy' (on compare $ \vs -> (voteRound $ head vs, length vs))
           . filter ((>= quorum) . length)
           . groupBy (on (==) $ voteRound &&& voted)
           $ preferredVotes state
@@ -277,14 +321,22 @@ chainLength boost' = sum . fmap (maybe 1 (const $ 1 + boost') . cert)
 
 includeCert :: Monad m => CertIdeal -> StateT NodeModel m [MessageIdeal]
 includeCert cert = do
-  modify $ \s -> s{preferredCerts = preferredCerts s <> pure cert}
-  pure mempty
+  alreadySeen <- gets $ elem cert . preferredCerts
+  modify $ \state -> state{preferredCerts = preferredCerts state <> pure cert}
+  pure $
+    if alreadySeen
+      then mempty
+      else [SomeCertIdeal cert]
 
 includeVote :: Monad m => Protocol -> VoteIdeal -> StateT NodeModel m [MessageIdeal]
 includeVote protocol vote = do
-  modify $ \s -> s{preferredVotes = preferredVotes s <> pure vote}
+  alreadySeen <- gets $ elem vote . preferredVotes
+  modify $ \state -> state{preferredVotes = preferredVotes state <> pure vote}
   certMessages <- issueCert protocol
-  pure $ SomeVoteIdeal vote : certMessages
+  pure $
+    if alreadySeen
+      then certMessages
+      else SomeVoteIdeal vote : certMessages
 
 --------------------------------------------------------------------------------
 
@@ -319,6 +371,7 @@ instance StateModel NodeModel where
       -- FIXME: Generalize to add more than just one block to the prefix.
       extend <- nextBlock latest (finalSlot prefix) (hashTip prefix) ancestors
       pure $ extend prefix
+    -- Generate an extension to a chain.
     nextBlock latest slot' hash' ancestors
       | latest >= slot' =
           fmap (:) $
@@ -328,7 +381,9 @@ instance StateModel NodeModel where
               <*> genHasCert slot' ancestors
               <*> pure hash'
       | otherwise = pure id
+    -- Generate a certificate for a previous block.
     genCert latest ancestors = Certificate <$> genRound latest <*> (snd <$> genBlockRef ancestors)
+    -- Geneate a vote for a previous block.
     genVote latest ancestors =
       do
         (s, h) <- genBlockRef ancestors
@@ -396,14 +451,14 @@ instance HasVariables (Action NodeModel a) where
 -- Real interface for Peras nodes
 
 -- FIXME: This is a placeholder for the richer version of `PerasNode`.
--- Refine this instead of using the obsolete version in `peras-iosim`.
-class PerasNode a where
-  setOwner :: PartyId -> a -> a
-  setProtocol :: Protocol -> a -> a
-  newSlot :: Monad m => IsSlotLeader -> IsCommitteeMember -> a -> m ([Message], a)
-  newChain :: Monad m => Chain -> a -> m ([Message], a)
-  someCertificate :: Monad m => Certificate -> a -> m ([Message], a)
-  someVote :: Monad m => Vote -> a -> m ([Message], a)
+-- TODO: Refine this instead of using the obsolete version in `peras-iosim`.
+class Monad m => PerasNode a m where
+  setOwner :: PartyId -> a -> m a
+  setProtocol :: Protocol -> a -> m a
+  newSlot :: IsSlotLeader -> IsCommitteeMember -> a -> m ([Message], a)
+  newChain :: Chain -> a -> m ([Message], a)
+  someCertificate :: Certificate -> a -> m ([Message], a)
+  someVote :: Vote -> a -> m ([Message], a)
 
 --------------------------------------------------------------------------------
 
@@ -415,13 +470,14 @@ newtype RunMonad n m a = RunMonad {runMonad :: StateT n m a}
 instance MonadTrans (RunMonad n) where
   lift = RunMonad . lift
 
+-- instance Monad m => PerasNode n (RunMonad n m)
+
 type instance Realized (RunMonad n m) () = ()
 type instance Realized (RunMonad n m) [MessageIdeal] = [Message]
 
-instance (Monad m, PerasNode n) => RunModel NodeModel (RunMonad n m) where
-  perform _state (Initialize protocol self) _context = do
-    modify $ setProtocol protocol
-    modify $ setOwner self
+instance (Monad m, PerasNode n m) => RunModel NodeModel (RunMonad n m) where
+  perform _state (Initialize protocol self) _context =
+    put =<< lift . (setProtocol protocol <=< setOwner self) =<< get
   perform _state (ATick isSlotLeader isCommitteeMember) _context =
     apply $ newSlot isSlotLeader isCommitteeMember
   perform _state (ANewChain chain) _context =
@@ -448,9 +504,9 @@ instance (Monad m, PerasNode n) => RunModel NodeModel (RunMonad n m) where
 identicalMessages :: [Message] -> [MessageIdeal] -> Bool
 identicalMessages real ideal = on (==) sort ideal $ idealizeMessage `mapMaybe` real
 
-apply :: MonadState s m => (s -> m (a, s)) -> m a
+apply :: (Monad m, MonadTrans t, MonadState s (t m)) => (s -> m (a, s)) -> t m a
 apply f = do
-  (x, s') <- f =<< get
+  (x, s') <- lift . f =<< get
   put s'
   pure x
 
@@ -465,42 +521,61 @@ initialize = Initialize Peras{roundLength = 10, quorum = 3, boost = 0.25} 0
 data ExampleNode = ExampleNode
   { exOwner :: PartyId
   , exProtocol :: Protocol
+  , exSlot :: Slot
   , exChain :: Chain
   , exCerts :: [Certificate]
   , exVotes :: [Vote]
   }
   deriving (Eq, Show)
 
--- TODO: Fix the omissions so this buggy node becomes an honest one.
-instance PerasNode ExampleNode where
-  setOwner party node = node{exOwner = party}
-  setProtocol protocol node = node{exProtocol = protocol}
-  newSlot _isSlotLeader _isCommitteeMember node =
-    -- TODO: Fails to create blocks.
-    -- TODO: Fails to vote.
-    pure (mempty, node)
-  newChain _chain node =
-    -- TODO: Fails to evaluate the chain.
-    pure (mempty, node)
+instance Default ExampleNode where
+  def = ExampleNode 0 def 0 mempty mempty mempty
+
+-- TODO: Consider fixing the omissions so this buggy node becomes an honest one.
+instance PerasNode ExampleNode Gen where
+  setOwner party node = pure node{exOwner = party}
+  setProtocol protocol node = pure node{exProtocol = protocol}
+  newSlot isSlotLeader isCommitteeMember node =
+    -- Known bug: Intentionally fails to forge and vote if both requested in the same slot.
+    -- Known bug: Intentionally fails to issue a certificate if a quorum is reached.
+    let previous = exChain node
+        previousHash =
+          if null previous
+            then Hash mempty
+            else Hash . Signature.bytes . Block.signature $ head previous
+     in case (isSlotLeader, isCommitteeMember) of
+          (True, _) -> do
+            block <-
+              Block
+                (exSlot node)
+                (exOwner node)
+                previousHash
+                Nothing -- Known bug: never includes a certificate.
+                <$> arbitrary
+                <*> arbitrary
+                <*> arbitrary
+            let chain = block : previous
+            pure ([NewChain chain], node{exChain = chain})
+          (_, True) -> do
+            vote <-
+              MkVote
+                (MkRoundNumber $ exSlot node `div` roundLength (exProtocol node))
+                (exOwner node)
+                <$> arbitrary
+                <*> pure previousHash
+                <*> arbitrary
+            pure ([SomeVote vote], node)
+          _ -> pure ([], node)
+  newChain chain node =
+    -- Known bug: Intentionally fails to account for voting boost.
+    pure $
+      if length chain > length (exChain node)
+        then ([NewChain chain], node{exChain = chain})
+        else ([], node)
   someCertificate cert node =
-    -- TODO: Fails to only forward the certificate if it wasn't already seen.
+    -- Known bug: Intentionally fails to only forward the certificate if it wasn't already seen.
     pure ([SomeCertificate cert], node{exCerts = exCerts node <> [cert]})
   someVote vote node =
-    -- TODO: Fails to only forward the vote if it wasn't already seen.
-    -- TODO: Fails to create a certificate if the vote creates a quorum.
+    -- Known bug: Intentionally fails to only forward the vote if it wasn't already seen.
+    -- Known bug: Intentionally fails to create a certificate if the vote creates a quorum.
     pure ([SomeVote vote], node{exVotes = exVotes node <> [vote]})
-
---------------------------------------------------------------------------------
-
--- Notes
-
-{-
-
-optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
-  → let b = bestChain sl t
-    in
-    ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
-  → c ⊆ allBlocksUpTo sl t
-  → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
-
--}
