@@ -61,7 +61,7 @@ data Message : Set where
 Messages can be delayed by an adversary. Delay is either 0, 1, 2
 
 ```agda
-Delay = Fin 3
+Delay = Fin 2
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
@@ -329,6 +329,9 @@ The global state consists of the following fields:
 ```
 
 ```agda
+    Ready : Stateᵍ → Set
+    Ready = All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ∘ messages where open Stateᵍ
+
     Delivered : Stateᵍ → Set
     Delivered = All (λ { ⦅ _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
 ```
@@ -431,7 +434,7 @@ A party can cast a vote for a block, if
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) (suc zero) p ⟪ addVote blockTree t v ⟫ M
+          updateᵍ (VoteMsg v) (zero) p ⟪ addVote blockTree t v ⟫ M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -470,7 +473,7 @@ state.
 
         → IsSlotLeader p clock prf
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (suc zero) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (zero) p
              ⟪ extendTree blockTree t b ⟫ M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
@@ -483,12 +486,12 @@ The small-step semantics describe the evolution of the global state.
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {M N p} {h : Honesty p} {m}
+        → Ready M
         → M [ h , m ]⇀ N
           ---------------
         → M ↝ N
 
       CastVote : ∀ {M N p} {h : Honesty p}
-        → Delivered M
         → M [ h ]⇉ N
           -----------
         → M ↝ N
@@ -496,7 +499,6 @@ The small-step semantics describe the evolution of the global state.
       -- TODO: Create Cert
 
       CreateBlock : ∀ {M N p} {h : Honesty p}
-        → Delivered M
         → M [ h ]↷ N
           -----------
         → M ↝ N
@@ -549,6 +551,7 @@ In the paper mentioned above this is big-step semantics.
 When transitioning from non-delivered there has to be a message
 that has been either honestly or dishonestly delivered
 ```agda
+{-
     consume : ∀ {M N : Stateᵍ}
       → ¬ (Delivered M)
       → M ↝ N
@@ -556,11 +559,12 @@ that has been either honestly or dishonestly delivered
             open Envelope
         in Σ[ m ∈ Envelope ] (Σ[ m∈ms ∈ (m ∈ messages M) ]
            ((messages N ≡ (messages M ─ m∈ms)) ⊎ (messages N ≡ (m∈ms ∷= ⦅ partyId m , message m , suc zero ⦆))))
-    consume _ (Deliver {M} {N} {p} {h} {m} (honest _ m∈ms _)) = ⦅ p , m , zero ⦆ , m∈ms , inj₁ refl
-    consume _ (Deliver {M} {N} {p} {h} {m} (corrupt m∈ms)) = ⦅ p , m , zero ⦆ , m∈ms , inj₂ refl
+    consume _ (Deliver {M} {N} {p} {h} {m} _ (honest _ m∈ms _)) = ⦅ p , m , zero ⦆ , m∈ms , inj₁ refl
+    consume _ (Deliver {M} {N} {p} {h} {m} _ (corrupt m∈ms)) = ⦅ p , m , zero ⦆ , m∈ms , inj₂ refl
     consume ¬d (CastVote d x₃) = contradiction d ¬d
     consume ¬d (CreateBlock d x₃) = contradiction d ¬d
     consume ¬d (NextSlot d) = contradiction d ¬d
+-}
 ```
 # Collision free predicate
 
@@ -684,9 +688,9 @@ When the current state is collision free, the pervious state was so too
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
-    ↝-collision-free (CastVote _ x) cf-N₂ = []⇉-collision-free cf-N₂ x
-    ↝-collision-free (CreateBlock _ x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free (Deliver _ x) cf-N₂ = []⇀-collision-free cf-N₂ x
+    ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
+    ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
     ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
 ```
 -->
