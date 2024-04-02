@@ -333,7 +333,7 @@ The global state consists of the following fields:
 ```agda
         adversarialState : AdversarialState
 ```
-
+Progress
 ```agda
     Ready : Stateᵍ → Set
     Ready = All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ∘ messages where open Stateᵍ
@@ -341,8 +341,6 @@ The global state consists of the following fields:
     Delivered : Stateᵍ → Set
     Delivered = All (λ { ⦅ _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
 ```
-
-
 Updating global state
 ```agda
     updateᵍ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
@@ -555,24 +553,6 @@ In the paper mentioned above this is big-step semantics.
       → M ↝⋆ O
     ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
     ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
-```
-When transitioning from non-delivered there has to be a message
-that has been either honestly or dishonestly delivered
-```agda
-{-
-    consume : ∀ {M N : Stateᵍ}
-      → ¬ (Delivered M)
-      → M ↝ N
-      → let open Stateᵍ
-            open Envelope
-        in Σ[ m ∈ Envelope ] (Σ[ m∈ms ∈ (m ∈ messages M) ]
-           ((messages N ≡ (messages M ─ m∈ms)) ⊎ (messages N ≡ (m∈ms ∷= ⦅ partyId m , message m , suc zero ⦆))))
-    consume _ (Deliver {M} {N} {p} {h} {m} _ (honest _ m∈ms _)) = ⦅ p , m , zero ⦆ , m∈ms , inj₁ refl
-    consume _ (Deliver {M} {N} {p} {h} {m} _ (corrupt m∈ms)) = ⦅ p , m , zero ⦆ , m∈ms , inj₂ refl
-    consume ¬d (CastVote d x₃) = contradiction d ¬d
-    consume ¬d (CreateBlock d x₃) = contradiction d ¬d
-    consume ¬d (NextSlot d) = contradiction d ¬d
--}
 ```
 # Collision free predicate
 

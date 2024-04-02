@@ -4,8 +4,8 @@ module Peras.SmallStep.Properties where
 
 <!--
 ```agda
-open import Data.Bool using (Bool)
-open import Data.List as List using (List; []; _∷_)
+open import Data.Bool as Bool using (Bool; true; false)
+open import Data.List as List using (List; []; _∷_; null)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺)
 
@@ -132,7 +132,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
 The lemma describes how knowledge is propagated between honest parties in the system.
 
-<!--
 ```agda
     open IsTreeType
 
@@ -152,18 +151,33 @@ The lemma describes how knowledge is propagated between honest parties in the sy
         xx : ∀ {m} {ps} → All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) (List.map ⦅_, m , zero ⦆ ps)
         xx {m} {[]} = All.[]
         xx {m} {x ∷ ps} = refl All.∷ xx {m} {ps}
-
-    -- TODO: wrong for []
-    postulate
-      Ready→¬Delivered : ∀ {N : GlobalState}
-        → Ready N
-        → ¬ (Delivered N)
-    -- Ready→¬Delivered All.[] All.[] = {!!}
-    -- Ready→¬Delivered (px All.∷ x) (px₁ All.∷ x₁) = contradiction px px₁
-
-    open import Data.List.Relation.Unary.All.Properties using (─⁺)
 ```
--->
+```agda
+    Ready→¬Delivered : ∀ {N : GlobalState}
+      → null (Stateᵍ.messages N) ≢ true
+      → Ready N
+      → ¬ (Delivered N)
+    Ready→¬Delivered {⟦ _ , _ , [] , _ , _ ⟧} x _ _ = x refl
+    Ready→¬Delivered _ (px All.∷ _) (py All.∷ _) = contradiction px py
+```
+TODO: proof
+```agda
+    postulate
+      knowledge-propagation₀ : ∀ {N : GlobalState}
+        → {p₁ p₂ : PartyId}
+        → {t₁ t₂ : A}
+        → {honesty₁ : Honesty p₁}
+        → {honesty₂ : Honesty p₂}
+        → honesty₁ ≡ Honest {p₁}
+        → honesty₂ ≡ Honest {p₂}
+        → p₁ ∈ parties
+        → p₂ ∈ parties
+        → N₀ ↝⋆ N
+        → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
+        → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
+        → null (messages N) ≡ true
+        → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+```
 ```agda
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
       → {p₁ p₂ : PartyId}
@@ -185,8 +199,9 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```
 #### base case
 ```agda
-    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps _ (_ ∎) _ _ Ready-N₁ Delivered-N₂ =
-      contradiction Delivered-N₂ (Ready→¬Delivered {N₁} Ready-N₁)
+    knowledge-propagation {N₁} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ∎) N₁×p₁≡t₁ N₂×p₂≡t₂ Ready-N₁ Delivered-N₂ _ with null (messages N₁) Bool.≟ true
+    ... | no p = contradiction Delivered-N₂ (Ready→¬Delivered {N₁} p Ready-N₁)
+    ... | yes p = knowledge-propagation₀ h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ p
 ```
 #### Deliver
 ```agda
@@ -340,8 +355,6 @@ those messages adds the blocks into the local trees.
       in contradiction 1+c≤c 1+c≰c
 ```
 ## Chain growth
-
-
 ```agda
     postulate
       honest-chain-growth : ∀ {N₁ N₂ : GlobalState}
