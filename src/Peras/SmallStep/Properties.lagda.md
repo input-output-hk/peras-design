@@ -159,7 +159,22 @@ TODO: proof
         → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
              Σ[ (s₀ , s₁ , s₂) ∈ (N₀ ↝⋆ M) × (M ↝ M′) × (M′ ↝⋆ N) ] (
                s ≡ ↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂) × ⦅ p , BlockMsg b , zero ⦆ ∈ messages M′))
+```
+<!--
+```agda
+    -- knowledge-propagation₁ p₁∈ps s N×p₁≡t₁ b∈t₁ = ({!!} , {!!}) , ({!!} , ({!!} , {!!}))
 
+    {-
+    drop-other : ∀ {m m′ : Envelope} {ms}
+      → (m∈ms : m ∈ ms)
+      → m′ ∈ ms
+      → m′ ∈ (ms ─ m∈ms)
+    drop-other {m} {m′} {ms} m∈ms m′∈ms = {!!}
+    -}
+```
+-->
+```agda
+    postulate
       knowledge-propagation₂ : ∀ {M N : GlobalState}
         → {p : PartyId}
         → {t : A}
@@ -171,7 +186,29 @@ TODO: proof
         → null (messages N) ≡ true
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
         → b ∈ allBlocks blockTree t
+```
+<!--
+```agda
+    {-
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ∎) x₃ x₄ x₅ = {!!} -- contradiction
+    knowledge-propagation₂ {.(⟦ _ , _ , _ , _ , _ ⟧)} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver x₂ (honest x m∈ms VoteReceived)) ⟩ M′↝⋆N) x₃ x₄ x₅ =
+       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (drop-other m∈ms x₃) x₄ x₅
 
+    knowledge-propagation₂ {.(⟦ _ , _ , _ , _ , _ ⟧)} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver x₂ (honest x m∈ms CertReceived)) ⟩ M′↝⋆N) x₃ x₄ x₅ =
+       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (drop-other m∈ms x₃) x₄ x₅
+
+    knowledge-propagation₂ {.(⟦ _ , _ , _ , _ , _ ⟧)} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver x₂ (honest {p′} x m∈ms BlockReceived)) ⟩ M′↝⋆N) x₃ x₄ x₅
+      with p ℕ.≟ p′
+    ... | yes p≡p′ = {!!}
+    ... | no p≢p′ = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (drop-other m∈ms x₃) x₄ x₅
+
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) x₃ x₄ x₅ = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N {!!} x₄ x₅
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) x₃ x₄ x₅ = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N {!!} x₄ x₅
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(NextSlot x₂) ⟩ M′↝⋆N) x₃ x₄ x₅ = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N {!!} x₄ x₅
+    -}
+```
+-->
+```agda
     knowledge-propagation₀ : ∀ {N : GlobalState}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : A}
