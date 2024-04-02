@@ -23,7 +23,7 @@ open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred
 open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Data.Unit using (⊤)
+open import Data.Unit using (⊤; tt)
 
 open import Function.Base using (_∘_; id; _$_; flip)
 
@@ -132,20 +132,19 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
     postulate
       Ready-update-corrupt : ∀ {ms} {p} {m : Message} {m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms}
-                   → Ready0 ms
-                   → Ready0 (m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆ )
+        → Ready0 ms
+        → Ready0 (m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆)
+    -- Ready-update-corrupt {ms} {p} {m} {m∈ms} x = {!!}
 
-      Ready-append : ∀ {ms} {m}
-                   → Ready0 ms
-                   → Ready0 ((List.map (λ { (p , h) → ⦅ p , h , m , zero ⦆}) parties) List.++ ms)
-
-    {-
-    Ready-append x = All.++⁺ xx x
+    Ready-append : ∀ {ms : List Envelope} {m : Message}
+      → Ready0 ms
+      → Ready0 ((List.map (λ { (p , h) → ⦅ p , h , m , zero ⦆}) parties) List.++ ms)
+    Ready-append = All.++⁺ Ready0-map
       where
-        xx : ∀ {m : Message} {ps} → All (λ { ⦅ _ , _ , _ , d ⦆ → d ≡ zero }) (List.map (λ { (p , h) → ⦅ p , h , m , zero ⦆}) ps)
-        xx {m} {[]} = All.[]
-        xx {m} {x ∷ ps} = refl All.∷ xx {m} {ps}
-    -}
+        Ready0-map : ∀ {m : Message} {ps : List (Σ[ p ∈ PartyId ] (Honesty p))} → Ready0 (List.map (λ {(p , h) → ⦅ p , h , m , zero ⦆}) ps)
+        Ready0-map {m} {[]} = All.[]
+        Ready0-map {m} {(fst , Honest) ∷ ps} = refl All.∷ Ready0-map {m} {ps}
+        Ready0-map {m} {(fst , Corrupt) ∷ ps} = tt All.∷ Ready0-map {m} {ps}
 ```
 ```agda
     postulate
