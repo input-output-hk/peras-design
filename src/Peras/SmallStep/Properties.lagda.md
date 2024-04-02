@@ -22,6 +22,7 @@ open import Data.Fin.Properties using (0≢1+n)
 open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred)
 open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 
 open import Function.Base using (_∘_; id; _$_; flip)
 
@@ -75,7 +76,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ### Initial state
 ```agda
     LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
-
     GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
     state₀ : LocalState′
@@ -91,27 +91,16 @@ module _ {block₀ : Block} {cert₀ : Certificate}
          , []
          , adversarialState₀
          ⟧
-
+```
+<!--
+```agda
     open TreeType
     open Stateᵍ
-
-    postulate
-      init-state₀ : ∀ {p}
-        → p ∈ parties
-        → (p , state₀) ∈ₖᵥ states₀
-      -- init-state₀ p∈ps = {!!}
-
-    init-tree₀ : ∀ {p}
-      → p ∈ parties
-      → lookup (stateMap N₀) p ≡ just ⟪ tree₀ blockTree ⟫
-    init-tree₀ = ∈ₖᵥ-lookup⁺ ∘ init-state₀
-```
-```agda
     open Honesty
-    open import Data.Sum using (_⊎_; inj₁; inj₂)
     open import Peras.Chain
     open _↝_
 ```
+-->
 ```agda
     clock-incr : ∀ {M N : GlobalState}
       → M ↝ N
