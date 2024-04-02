@@ -23,22 +23,22 @@ The model is implemented by the following Haskell modules.
 - [`Peras.OptimalModel`](peras-quickcheck/src/Peras/OptimalModel.hs)
 - [`Peras.OptimalModelSpec`](peras-quickcheck/test/Peras/OptimalModelSpec.hs)
 
-The example property simply runs a simulation using `ExampleNode` and checks the trace's conformance to the executable specification. Because the example node contains a couple of intentional bugs, we expect the test to fail. Shrinkage reveals a parsimonious serious of actions that exhibit one of the bugs.
+The example property simply runs a simulation using `ExampleNode` and checks the trace's conformance to the executable specification. Because the example node contains a couple of intentional bugs, we expect the test to fail. Shrinkage reveals a parcimonious series of actions that exhibit one of the bugs.
 
 ```console
 $ cabal run test:peras-quickcheck-test -- --match "/Peras.OptimalModel/Example node/Simulation respects model/"
-                                                                                                                                     
-Peras.OptimalModel                                                                                                                   
-  Example node                                                                                                                       
-    Simulation respects model [✔]                                                                                                    
-      +++ OK, failed as expected. Assertion failed (after 4 tests and 1 shrink):                                                     
-      do action $ Initialize (Peras {roundLength = 10, quorum = 3, boost = 0.25}) 0                                                  
-         action $ ANewChain [BlockIdeal {hash = "92dc9c1906312bb4", creator = 1, slot = 0, cert = Nothing, parent = ""}]             
-         action $ ATick False True                                                                                                   
-         pure ()                                                                                                                     
-                                                                                                                                     
-Finished in 0.0027 seconds                                                                                                           
-1 example, 0 failures                                                                                                                
+
+Peras.OptimalModel
+  Example node
+    Simulation respects model [✔]
+      +++ OK, failed as expected. Assertion failed (after 4 tests and 1 shrink):
+      do action $ Initialize (Peras {roundLength = 10, quorum = 3, boost = 0.25}) 0
+         action $ ANewChain [BlockIdeal {hash = "92dc9c1906312bb4", creator = 1, slot = 0, cert = Nothing, parent = ""}]
+         action $ ATick False True
+         pure ()
+
+Finished in 0.0027 seconds
+1 example, 0 failures
 ```
 
 Instead of migrating `peras-iosim` and `peras-netsim`, we might start with a clean slate and use a more TDD-focused approach that builds out from the Agda and Dynamic QuickCheck specifications. Those legacy, prototype codebased can be mined for lessons learned and code fragments in the new, cleaner framework.
@@ -101,6 +101,310 @@ The following diagram shows the cumulative bytes received by nodes as a function
 
 ![Cumulative bytes received by nodes as a function of network latency and bandwidth](peras-iosim/analyses/congestion/congestion.png)
 
+## 2024-03-27
+
+### AB on quickcheck-dynamic
+
+Trying to unpack the script shrinking process, calling internal functions directly.
+
+```
+test = do
+  let dynformula = runDL initialAnnotatedState dl
+      dynlogic = unDynFormula dynformula 10
+  dlTest <- QC.generate $ generate chooseNextStep dynlogic 1 initialAnnotatedState 10
+  let shrunk = shrinkScript dynlogic (getScript dlTest)
+      tested = makeTestFromPruned dynlogic <$> pruned
+
+  print $ dlTest
+  print $ take 5 tested
+```
+
+yeilds something like:
+
+```
+do action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Assert 10
+   pure ()
+
+[
+   pure ()
+,do action $ Incr
+   action $ Incr
+   pure ()
+,do action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   pure ()
+,do action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   pure ()
+,do action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   action $ Incr
+   pure ()
+]
+```
+
+eg. the testes is correctly shrunk
+
+When `verboseCheck`ing the test I realise that shrunk actions do not contain any `Assert` statement which means there's no way they can fail. This is to be expected because `Assert` is marked as restricted and therefore is pruned from the generated test cases
+* Is it not the case the problem lies in the fact we don't shrink the restricted actions?
+
+Looking a bit more closely into [Issue31](https://github.com/input-output-hk/quickcheck-dynamic/blob/dab1f41f5637e10da5e13b2e09059a8724f7cc55/quickcheck-dynamic/test/Issue31.hs#L3) makes me wonder if it's not a case where the whole idea of integrated shrinking wouldn't make sense and simplify a lot of things. The technical manifestation of the problem here is that we cannot shrink a trace because the `Assert` action is `restricted` and never gets generated independently, so once we try to shrink a failing test, it produces only valid traces.
+
+The action needs to be restricted because it depends on the state _at runtime_: When we generate an initial trace, the value is fixed and then never changed when we shrink. If we kept the sequence of generated values and then shrank on the whole sequence and not individually, we would find the case we are interested in.
+
+We could explicitly model dependency on state at the level of the expression, and therefore be able to detect more easily those dependencies and act accordingly, eg. recompute the rest of the expression?
+
+### Team Meeting
+
+Discussing haeder/body split:
+
+* how does header forwarding work?
+* you can't fully adopt a chain before seeing the block body => the certificate could be just part of the body
+* What if the certificate was part of a transaction? Could even be verified as another smart contract?
+* Would imply that the node depends on the state of the ledger or a single tx but that's already the case?
+
+What are the true requirements for Midnight?
+Fast settlement does not mean anything: In what context? Under which conditions?
+
+Concordium also has deterministic finality, but then they switched to BFT??
+
+Workshop agenda:
+
+Monday afternoon:
+
+* Refactoring together -> adjust interfaces and actual code
+
+Tuesday/Wednesday:
+
+* Overview of finality across blockchains. How do other chains handle that?
+* What does finality really means?
+  * => we need a technical definition to be specified/tested
+  * => something we can observe?
+* Under what circumstances does Peras provide benefits over Praos?
+  * => turn those into proper QC tests
+  * => we need to build a compelling case for _implementing_ Peras
+  * => Check w/ Trym? we need a product perspective
+* Quviq => remote meeting to discuss their model
+* Walkthrough of formal specification
+  * Proof principles?
+  * Discuss future work/next steps/properties
+* Aligning crypto proofs/agda proofs/QC properties
+  * downstream contributions -> make engineers able to tweak the spec and understand it to be able to change it
+* Rust node?
+* Value demonstration for PI planning?
+  * need to raise awereness => fairly strong statements about the project
+  * we have spent $X, we have some results, we need to spend $Y to get more info => go/no-go
+  * Frame things in terms of options => use the risk section (development time, SPO investment)
+
+## 2024-03-26
+
+### AB on ΔQ
+
+Read _Cardano | Timeliness Constraints_ report from Neil and Peter
+which analyses the problem of timeliness of transaction inclusion in
+blocks in order to provide (probabilistic) guarantees to DApps on
+"time-to-chain" bounds. This is highly relevant to various
+applications that are sensitive to the time their transaction is
+included in the chain, eg. oracles or DEXes.
+
+The paper explicitly mentions "finality" as being a different goal (but it's unclear how this is much different?) and explicitly mentions Peras and the impact it would have on the proposed solution:
+
+> Affects settlement times in a probabilistic way, but doesn’t impact
+> inclusion times. Settlement times are lower under low system load,
+> but reduced settlement times will depend on a collection of criteria
+> that can be influenced by both load and mischievous/adversarial
+> activity. This may impact the market by changing when it is
+> desirable to pay for priority treatment (in a dynamic way).
+
+The proposed solution is to create a _futures market_ to front-load
+SPOs mempools: Some party interested in having time-to-chain
+guarantees can buy a future slot to a market maker who is responsible
+for making prices in relationship with SPOs consortia that provide the
+front-loading capability. Inclusion guarantee is tied to a certain
+time window and the probability depends on a consortium's share of
+stakes: The larger the share, the smaller the time window can be.
+
+### Meeting on ΔQ w/ PNSol
+
+* Number of active SPOs is ~3000 but the number of more important nodes is 1000
+* => increase the degree
+* => measure the numbers for the number of block size
+
+Notes about the diagrams:
+* Label the axis!!
+* Ensure consistency of colors
+
+* Karl -> fractions of blocks diffused w/in 3s
+
+* linear condition on the // operator
+* need to combine them later
+
+* header/body split => header/body fastpath
+  * typical -> pipelining
+  * normal operation worst case
+  * worst case w/ adversarial
+
+* analyse by case -> number of forks => throughput will be reduced
+* ND -> forking model
+  * cert will increase height battles
+
+* important interval = beginning of slot where block is minted to start of minting of next block
+
+* Peras is not about txs -> about blocks
+  * tx finality under load vs. block finality under forking
+
+* forking occurs a bit more frequently => blocks are bigger, longer to diffuse, critical time longer => more chances of forking
+* votes stabilise the system -> block size diffusion dominates under load => impact of certificates is smaller
+
+## 2024-03-25
+
+### AB on ΔQ
+
+Thinking of modelling the whole journey of a tx through ΔQ:
+1. tx gets (or not) into a local mempool at a node (could be rejected because mempool is full but this should not happen in leaf nodes)
+2. tx propagates across the network to other mempools -> a tx has max size of 16kB so we can apply network hops diffusion model for this size => need diffusion time for various size increments
+   a. need to include the effect of network congestion here: If mempools are full, they won't pull new tx which will sit idle for a longer period
+3. tx gets included in a block by a BP => includes block forging time
+4. forged block gets propagated across the network
+   a. reuse previous analysis for block diffusion
+   b. need to take into account a different topology -> more nodes but less well connected?
+
+installing scipy as it seems python is the defacto standard for various scientific tools and graphs algorithms
+* https://networkx.org/documentation/stable/install.html -> want to produce new and different graphs
+* also this one: https://networkit.github.io/dev-docs/notebooks/Generators.html
+
+Using iperf3 to measure throughput between my machine and cardano.hydra.bzh
+
+```
+% iperf3 -c cardano.hydra.bzh -p 5002
+Connecting to host cardano.hydra.bzh, port 5002
+[  7] local 10.1.18.185 port 58792 connected to 95.217.84.233 port 5002
+[ ID] Interval           Transfer     Bitrate
+[  7]   0.00-1.00   sec  23.1 MBytes   194 Mbits/sec
+[  7]   1.00-2.01   sec  4.62 MBytes  38.7 Mbits/sec
+[  7]   2.01-3.01   sec  3.88 MBytes  32.5 Mbits/sec
+[  7]   3.01-4.00   sec  12.8 MBytes   107 Mbits/sec
+[  7]   4.00-5.00   sec  19.1 MBytes   160 Mbits/sec
+[  7]   5.00-6.00   sec  19.9 MBytes   167 Mbits/sec
+[  7]   6.00-7.00   sec  18.2 MBytes   153 Mbits/sec
+[  7]   7.00-8.00   sec  17.0 MBytes   143 Mbits/sec
+[  7]   8.00-9.01   sec  16.6 MBytes   139 Mbits/sec
+[  7]   9.01-10.00  sec  18.8 MBytes   158 Mbits/sec
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate
+[  7]   0.00-10.00  sec   154 MBytes   129 Mbits/sec                  sender
+[  7]   0.00-10.06  sec   153 MBytes   128 Mbits/sec                  receiver
+```
+
+Going through networkit user guide: https://networkit.github.io/dev-docs/notebooks/User-Guide.html
+looking for a function to compute distribution of distances between nodes ->
+
+```
+>>> dist = nk.distance.APSP(ergG)
+>>> dist.run()
+>>> x= dist.getDistances()
+>>> plt.hist(x)
+```
+
+Latter's resulting graph is ugly as it plots x-axis with all the (float) values which does not make sense here
+
+## 2024-03-23
+
+### ΔQ Modelling
+
+IETF RFC for Quality of Outcome measure: https://www.ietf.org/archive/id/draft-ietf-ippm-qoo-00.html#name-motivation
+
+## 2024-03-22
+
+### ΔQ modelling
+
+This website provides measured latency between various AWS regions: https://www.cloudping.co/grid/p_90/timeframe/1D
+Here is the 90th percentile table measured over 1 day
+
+Africa (Cape Town) : af-south-1
+Asia Pacific (Hong Kong) : ap-east-1
+Asia Pacific (Tokyo) : ap-northeast-1
+Asia Pacific (Seoul) : ap-northeast-2
+Asia Pacific (Osaka) : ap-northeast-3
+Asia Pacific (Mumbai) : ap-south-1
+Asia Pacific (Singapore) : ap-southeast-1
+Asia Pacific (Sydney) : ap-southeast-2
+Canada (Central) : ca-central-1
+EU (Frankfurt) : eu-central-1
+EU (Stockholm) : eu-north-1
+EU (Milan) : eu-south-1
+EU (Ireland) : eu-west-1
+EU (London) : eu-west-2
+EU (Paris) : eu-west-3
+Middle East (Bahrain) : me-south-1
+SA (São Paulo) : sa-east-1
+US East (N. Virginia) : us-east-1
+US East (Ohio) : us-east-2
+US West (N. California) : us-west-1
+US West (Oregon) : us-west-2
+
+
+| Destination/Source  Region | af-south-1 | ap-east-1 | ap-northeast-1 | ap-northeast-2 | ap-northeast-3 | ap-south-1 | ap-southeast-1 | ap-southeast-2 | ca-central-1 | eu-central-1 | eu-north-1 | eu-south-1 | eu-west-1 | eu-west-2 | eu-west-3 | me-south-1 | sa-east-1 | us-east-1 | us-east-2 | us-west-1 | us-west-2 |
+|----------------------------|------------|-----------|----------------|----------------|----------------|------------|----------------|----------------|--------------|--------------|------------|------------|-----------|-----------|-----------|------------|-----------|-----------|-----------|-----------|-----------|
+| af-south-1                 | 6.91       | 320.79    | 355.13         | 349.39         | 362.82         | 240.69     | 280.08         | 388.8          | 238.12       | 154.32       | 181.63     | 161.58     | 161.98    | 152.85    | 147.82    | 196.18     | 339.34    | 224.95    | 234.08    | 282.67    | 286.48    |
+| ap-east-1                  | 353.5      | 6.53      | 57.86          | 39.89          | 51.19          | 101.3      | 48.54          | 135.74         | 206.96       | 201.8        | 233.83     | 191.88     | 226.92    | 216.34    | 209.57    | 133.79     | 318.68    | 222.54    | 193.63    | 157.52    | 148.71    |
+| ap-northeast-1             | 357.04     | 57.0      | 4.71           | 35.35          | 11.73          | 141.16     | 78.76          | 110.47         | 160.16       | 234.39       | 258.72     | 219.67     | 221.13    | 229.31    | 237.72    | 171.11     | 272.37    | 169.69    | 150.19    | 108.93    | 98.67     |
+| ap-northeast-2             | 342.64     | 40.49     | 38.28          | 5.22           | 27.85          | 128.82     | 78.77          | 142.83         | 183.28       | 236.07       | 265.7      | 222.74     | 239.39    | 250.87    | 244.29    | 166.76     | 295.54    | 199.51    | 171.02    | 135.3     | 121.67    |
+| ap-northeast-3             | 398.91     | 51.17     | 11.86          | 25.53          | 3.62           | 140.46     | 81.46          | 120.97         | 159.35       | 237.84       | 264.16     | 225.78     | 216.82    | 228.49    | 253.2     | 166.88     | 270.03    | 175.86    | 148.67    | 112.21    | 102.67    |
+| ap-south-1                 | 268.63     | 97.02     | 142.17         | 128.78         | 140.23         | 4.68       | 61.88          | 155.04         | 219.75       | 125.12       | 152.89     | 110.42     | 141.55    | 133.98    | 125.89    | 39.05      | 319.87    | 205.78    | 213.54    | 233.2     | 220.49    |
+| ap-southeast-1             | 282.58     | 48.35     | 82.29          | 86.11          | 78.36          | 62.72      | 6.94           | 94.74          | 219.48       | 159.42       | 190.41     | 148.99     | 184.7     | 176.48    | 168.9     | 96.19      | 331.65    | 248.93    | 219.59    | 172.8     | 166.73    |
+| ap-southeast-2             | 392.73     | 137.1     | 112.98         | 144.36         | 121.0          | 156.23     | 96.11          | 6.89           | 201.35       | 252.08       | 284.6      | 246.8      | 258.17    | 267.91    | 285.22    | 189.59     | 314.17    | 200.23    | 191.46    | 142.6     | 144.18    |
+| ca-central-1               | 242.97     | 207.51    | 158.07         | 183.04         | 161.26         | 223.67     | 219.54         | 204.45         | 5.82         | 111.34       | 111.69     | 115.67     | 74.73     | 86.1      | 99.29     | 177.77     | 127.08    | 17.38     | 28.3      | 81.89     | 62.99     |
+| eu-central-1               | 158.05     | 200.13    | 229.96         | 234.17         | 235.68         | 122.82     | 161.43         | 251.53         | 106.91       | 8.34         | 36.87      | 13.96      | 28.71     | 17.43     | 14.87     | 94.74      | 206.26    | 95.8      | 101.64    | 152.45    | 155.12    |
+| eu-north-1                 | 187.44     | 229.11    | 261.62         | 263.05         | 264.26         | 155.96     | 192.34         | 285.89         | 111.09       | 36.63        | 4.33       | 43.98      | 44.81     | 32.98     | 41.33     | 125.79     | 230.51    | 121.28    | 129.72    | 179.36    | 159.09    |
+| eu-south-1                 | 167.73     | 190.82    | 222.26         | 221.93         | 225.87         | 111.5      | 149.82         | 242.25         | 117.29       | 15.73        | 45.78      | 4.36       | 37.15     | 27.89     | 21.85     | 113.29     | 213.83    | 102.82    | 110.54    | 161.34    | 162.03    |
+| eu-west-1                  | 167.71     | 227.12    | 215.85         | 236.98         | 214.11         | 141.46     | 182.17         | 255.87         | 68.85        | 28.81        | 42.96      | 35.81      | 2.88      | 14.32     | 21.02     | 98.81      | 177.99    | 69.75     | 81.52     | 128.82    | 118.34    |
+| eu-west-2                  | 158.81     | 219.75    | 227.55         | 249.59         | 224.92         | 135.17     | 175.83         | 266.33         | 80.41        | 18.66        | 33.61      | 26.71      | 14.78     | 2.43      | 11.93     | 89.61      | 204.08    | 94.1      | 100.42    | 150.42    | 131.47    |
+| eu-west-3                  | 150.88     | 209.63    | 238.55         | 242.59         | 250.9          | 129.82     | 168.13         | 279.51         | 99.42        | 13.52        | 40.68      | 21.41      | 19.63     | 11.74     | 3.78      | 86.85      | 195.77    | 84.78     | 92.87     | 142.96    | 144.63    |
+| me-south-1                 | 202.09     | 134.32    | 171.71         | 163.1          | 166.78         | 41.95      | 95.69          | 189.9          | 175.19       | 91.86        | 123.33     | 114.27     | 103.52    | 89.85     | 91.1      | 6.49       | 275.74    | 166.02    | 171.5     | 221.72    | 221.71    |
+| sa-east-1                  | 342.64     | 317.45    | 272.49         | 291.29         | 270.53         | 320.97     | 332.45         | 313.25         | 125.59       | 207.67       | 230.07     | 214.59     | 178.57    | 206.02    | 195.6     | 277.95     | 4.51      | 118.14    | 126.25    | 175.74    | 176.07    |
+| us-east-1                  | 229.81     | 218.75    | 171.08         | 193.94         | 178.66         | 205.98     | 252.04         | 203.12         | 18.65        | 94.55        | 120.76     | 101.77     | 73.54     | 97.77     | 90.4      | 166.61     | 119.75    | 6.37      | 14.79     | 67.03     | 65.94     |
+| us-east-2                  | 237.95     | 192.85    | 151.43         | 173.89         | 154.12         | 218.68     | 219.75         | 190.71         | 31.46        | 101.6        | 135.62     | 114.36     | 83.48     | 106.93    | 92.94     | 169.45     | 130.57    | 12.37     | 8.97      | 52.83     | 58.4      |
+| us-west-1                  | 287.61     | 158.41    | 109.41         | 133.19         | 109.51         | 229.13     | 171.3          | 140.01         | 81.31        | 153.2        | 179.39     | 159.43     | 128.08    | 150.25    | 143.83    | 219.65     | 173.88    | 63.3      | 55.26     | 4.17      | 22.01     |
+| us-west-2                  | 289.92     | 147.82    | 98.54          | 123.17         | 100.34         | 221.72     | 162.92         | 142.49         | 63.42        | 154.99       | 160.0      | 161.99     | 118.65    | 132.59    | 144.09    | 223.0      | 175.19    | 67.6      | 51.93     | 23.32     | 5.75      |
+
+
+Formula relating TCP throughput, window size and latency:
+
+```
+TCP throughput (bits/s) = TCP window size (bits) / Roundtrip latency (s)
+```
+
+owamp is a standard tool for measuring roundtrip latency: https://software.internet2.edu/owamp/owping.man.html
+* Feeling a bit like a hen in front of a knife, not sure what to do next with ΔQ
+* Will try to write some simple program to be able to quickly generate various models in Haskell, at least to be able to iterate over future models
+
 ## 2024-03-20
 
 ### Improvements to Haskell and Rust testing and simulation
@@ -108,8 +412,6 @@ The following diagram shows the cumulative bytes received by nodes as a function
 - Improved fidelity of the node's network interface, so the `bwbush/diffusion` branch is ready for a congestion experiment, but still uses the February version of the pseudo-code.
 - Fixed Haskell and Run on `main` so CI build, tests, and simulations pass.
 - Merged `main` into `bwbush/diffusion` branch to create `bwbush/diffusion-ci` branch.
-
-## 2024-03-20
 
 ### Block diffusion and resource tracking in `peras-iosim`
 
