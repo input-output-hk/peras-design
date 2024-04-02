@@ -233,6 +233,12 @@ The block tree type
 
   open LocalState
 ```
+```agda
+  ⟪⟫-injective : ∀  {A : Set} {blockTree : TreeType A} {a b : LocalState blockTree}
+    → a ≡ b
+    → tree a ≡ tree b
+  ⟪⟫-injective refl = refl
+```
 # Parameterized module
 
   * blockTree
@@ -389,6 +395,7 @@ the local state
 ```
 An adversarial party might delay a message
 ```agda
+{-
       corrupt : ∀ {p c s ms hs as as′} {m}
         → (m∈ms : ⦅ p , m , zero ⦆ ∈ ms)
           --------------------------------
@@ -404,6 +411,7 @@ An adversarial party might delay a message
           , hs
           , as′
           ⟧
+-}
 ```
 ## Vote
 
@@ -615,14 +623,14 @@ that there are no hash collisions during the execution of the protocol.
       → M [ h , m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
-    []-hist-common-prefix (corrupt _) x = x
+    -- []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
       → M [ h , m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    -- []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
 
     -- Create
 
