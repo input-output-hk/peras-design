@@ -4,17 +4,18 @@ module Peras.Block where
 
 <!--
 ```agda
-open import Data.Bool using (Bool)
+open import Data.Bool using (Bool; true; false)
 open import Data.Maybe using (Maybe)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
+open import Relation.Nullary using (yes; no; ¬_)
 open import Data.List using (List)
 open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_)
+open Eq using (_≡_; _≢_)
 
 open import Peras.Crypto
 
@@ -68,6 +69,17 @@ data Honesty : PartyId → Set where
 
   Corrupt : ∀ {p : PartyId}
     → Honesty p
+```
+```agda
+postulate
+  Honest≢Corrupt : ∀ {p₁ p₂} {h₁ : Honesty p₁} {h₂ : Honesty p₂}
+    → h₁ ≡ Honest
+    → h₂ ≡ Corrupt
+    → p₁ ≢ p₂
+
+isHonest : ∀ {p : PartyId} → Honesty p → Bool
+isHonest {p} Honest = true
+isHonest {p} Corrupt = false
 ```
 
 ## Transactions

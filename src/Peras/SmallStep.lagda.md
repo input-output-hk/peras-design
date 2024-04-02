@@ -15,6 +15,7 @@ open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Data.Unit using (⊤)
 
 open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
@@ -68,9 +69,10 @@ a delay.
 
 ```agda
 record Envelope : Set where
-  constructor ⦅_,_,_⦆
+  constructor ⦅_,_,_,_⦆
   field
     partyId : PartyId
+    honesty : Honesty partyId
     message : Message
     delay : Delay
 ```
@@ -255,7 +257,8 @@ The block tree type
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
            {txSelection : Slot → PartyId → List Tx}
-           {parties : List PartyId}
+           {parties : List (Σ[ p ∈ PartyId ] (Honesty p))}
+
            where
 ```
 The local state initialized with the block tree
@@ -335,11 +338,14 @@ The global state consists of the following fields:
 ```
 Progress
 ```agda
+    Ready′ : List Envelope → Set
+    Ready′ = All (λ { ⦅ _ , Honest , _ , d ⦆ → d ≡ zero ; ⦅ _ , Corrupt , _ , _ ⦆ → ⊤})
+
     Ready : Stateᵍ → Set
-    Ready = All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ∘ messages where open Stateᵍ
+    Ready = Ready′ ∘ messages where open Stateᵍ
 
     Delivered : Stateᵍ → Set
-    Delivered = All (λ { ⦅ _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
+    Delivered = All (λ { ⦅ _ , _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
 ```
 Updating global state
 ```agda
@@ -347,7 +353,7 @@ Updating global state
     updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
           ⟦ c
           , insert p l s
-          , map ⦅_, m , d ⦆ parties ++ ms
+          , map (λ { (p , h)  → ⦅ p , h , m , d ⦆}) parties ++ ms
           , m ∷ hs
           , as
           ⟧
@@ -358,7 +364,7 @@ Ticking the global clock
     tick M =
       record M {
         clock = suc (clock M) ;
-        messages = map (λ { ⦅ p , m , d ⦆ → ⦅ p , m , decr d ⦆}) (messages M)
+        messages = map (λ { ⦅ p , h , m , d ⦆ → ⦅ p , h , m , decr d ⦆}) (messages M)
       }
       where open Stateᵍ
 ```
@@ -375,7 +381,7 @@ the local state
 ```agda
       honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
-        → (m∈ms : ⦅ p , m , zero ⦆ ∈ ms)
+        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
           ------------------------
         → ⟦ c
@@ -393,9 +399,8 @@ the local state
 ```
 An adversarial party might delay a message
 ```agda
-{-
       corrupt : ∀ {p c s ms hs as as′} {m}
-        → (m∈ms : ⦅ p , m , zero ⦆ ∈ ms)
+        → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
           --------------------------------
         → ⟦ c
           , s
@@ -405,11 +410,10 @@ An adversarial party might delay a message
           ⟧ [ Corrupt {p} , m ]⇀
           ⟦ c
           , s -- TODO: insert p lₚ s
-          , m∈ms ∷= ⦅ p , m , suc zero ⦆
+          , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
           , hs
           , as′
           ⟧
--}
 ```
 ## Vote
 
@@ -603,14 +607,14 @@ that there are no hash collisions during the execution of the protocol.
       → M [ h , m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
-    -- []-hist-common-prefix (corrupt _) x = x
+    []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
       → M [ h , m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    -- []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
 
     -- Create
 

@@ -23,13 +23,14 @@ open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred
 open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Data.Unit using (⊤)
 
 open import Function.Base using (_∘_; id; _$_; flip)
 
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Negation using (contradiction)
 
-open import Peras.Block as Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate; _≟-Block_)
+open import Peras.Block as Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate; _≟-Block_; Honest≢Corrupt)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Params using (Params)
@@ -68,19 +69,20 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
            (txSelection : Slot → PartyId → List Tx)
-           (parties : List PartyId)
+           (parties : List (Σ[ p ∈ PartyId ] (Honesty p)))
            where
 ```
 ### Initial state
 ```agda
     LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
     GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+    Ready0 = Ready′ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
     state₀ : LocalState′
     state₀ = ⟪ tree₀ blockTree ⟫
 
     states₀ : Map LocalState′
-    states₀ = List.foldr (λ { p m → insert p state₀ m }) empty parties
+    states₀ = List.foldr (λ { (p , _) m → insert p state₀ m }) empty parties
 
     N₀ : GlobalState
     N₀ = ⟦ 0
@@ -102,7 +104,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       → M ↝ N
       → clock M ≤ clock N
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver _ (honest _ _ _)) = ≤-refl
---    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver _ (corrupt _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver _ (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _) = n≤1+n (clock M)
@@ -128,22 +130,31 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       allBlocks-addVote : ∀ {t v}
         → allBlocks blockTree t ⊆ allBlocks blockTree (addVote blockTree t v)
 
-    Ready-append : ∀ {ms} {m}
-        → All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ms
-        → All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) ((List.map ⦅_, m , zero ⦆ parties) List.++ ms)
+    postulate
+      Ready-update-corrupt : ∀ {ms} {p} {m : Message} {m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms}
+                   → Ready0 ms
+                   → Ready0 (m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆ )
+
+      Ready-append : ∀ {ms} {m}
+                   → Ready0 ms
+                   → Ready0 ((List.map (λ { (p , h) → ⦅ p , h , m , zero ⦆}) parties) List.++ ms)
+
+    {-
     Ready-append x = All.++⁺ xx x
       where
-        xx : ∀ {m} {ps} → All (λ { ⦅ _ , _ , d ⦆ → d ≡ zero }) (List.map ⦅_, m , zero ⦆ ps)
+        xx : ∀ {m : Message} {ps} → All (λ { ⦅ _ , _ , _ , d ⦆ → d ≡ zero }) (List.map (λ { (p , h) → ⦅ p , h , m , zero ⦆}) ps)
         xx {m} {[]} = All.[]
         xx {m} {x ∷ ps} = refl All.∷ xx {m} {ps}
+    -}
 ```
 ```agda
-    Ready→¬Delivered : ∀ {N : GlobalState}
-      → null (Stateᵍ.messages N) ≢ true
-      → Ready N
-      → ¬ (Delivered N)
-    Ready→¬Delivered {⟦ _ , _ , [] , _ , _ ⟧} x _ _ = x refl
-    Ready→¬Delivered _ (px All.∷ _) (py All.∷ _) = contradiction px py
+    postulate
+      Ready→¬Delivered : ∀ {N : GlobalState}
+        → null (Stateᵍ.messages N) ≢ true
+        → Ready N
+        → ¬ (Delivered N)
+    -- Ready→¬Delivered {⟦ _ , _ , [] , _ , _ ⟧} x _ _ = x refl
+    -- Ready→¬Delivered _ (px All.∷ _) (py All.∷ _) = contradiction px py
 ```
 TODO: proof
 ```agda
@@ -151,14 +162,15 @@ TODO: proof
       knowledge-propagation₁ : ∀ {N : GlobalState}
         → {p₁ p : PartyId}
         → {t₁ t : A}
+        → {h₁ : Honesty p₁}
         → {b : Block}
-        → p₁ ∈ parties
+        → (p₁ , h₁) ∈ parties
         → (s : N₀ ↝⋆ N)
         → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
         → b ∈ allBlocks blockTree t₁
         → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
              Σ[ (s₀ , s₁ , s₂) ∈ (N₀ ↝⋆ M) × (M ↝ M′) × (M′ ↝⋆ N) ] (
-               s ≡ ↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂) × ⦅ p , BlockMsg b , zero ⦆ ∈ messages M′))
+               s ≡ ↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂) × ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M′))
 ```
 <!--
 ```agda
@@ -178,11 +190,12 @@ TODO: proof
       knowledge-propagation₂ : ∀ {M N : GlobalState}
         → {p : PartyId}
         → {t : A}
+        → {h : Honesty p}
         → {b : Block}
-        → p ∈ parties
+        → (p , h) ∈ parties
         → N₀ ↝⋆ M
         → M ↝⋆ N
-        → ⦅ p , BlockMsg b , zero ⦆ ∈ messages M
+        → ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M
         → null (messages N) ≡ true
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
         → b ∈ allBlocks blockTree t
@@ -212,8 +225,10 @@ TODO: proof
     knowledge-propagation₀ : ∀ {N : GlobalState}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : A}
-        → p₁ ∈ parties
-        → p₂ ∈ parties
+        → {honest₁ : Honesty p₁}
+        → {honest₂ : Honesty p₂}
+        → (p₁ , honest₁) ∈ parties
+        → (p₂ , honest₂) ∈ parties
         → N₀ ↝⋆ N
         → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
         → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
@@ -232,8 +247,8 @@ TODO: proof
       → {honesty₂ : Honesty p₂}
       → honesty₁ ≡ Honest {p₁}
       → honesty₂ ≡ Honest {p₂}
-      → p₁ ∈ parties
-      → p₂ ∈ parties
+      → (p₁ , honesty₁) ∈ parties
+      → (p₂ , honesty₂) ∈ parties
       → N₀ ↝⋆ N₁
       → N₁ ↝⋆ N₂
       → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
@@ -315,7 +330,13 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
 
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
---    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} _ (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂) N₁×p₁≡t₁ N₂×p₂≡t₂ Ready-N₁ n₂ clock-N₁≡clock-N₂ = {!!}
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} {p} {h} _ (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Ready-N₁ Delivered-N₂ clock-N₁≡clock-N₂
+      with p₁ ℕ.≟ p
+    ... | no p₁≢p =
+      let H₀ = knowledge-propagation {N′} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ (Ready-update-corrupt Ready-N₁) Delivered-N₂ clock-N₁≡clock-N₂
+      in H₀
+    ... | yes p₁≡p = contradiction p₁≡p (Honest≢Corrupt {p₁} {p} {honesty₁} {h} h₁ refl)
 ```
 #### CastVote
 CastVote is not relevant for allBlocks
