@@ -10,7 +10,7 @@ open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
-open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; here; there)
 open import Data.List.Relation.Unary.Any.Properties using (¬Any[])
 open import Data.List.Relation.Unary.All as All using (All; map)
 open import Data.List.Relation.Unary.All.Properties as All using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
@@ -62,7 +62,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
   open Hashable ⦃...⦄
   open Params ⦃...⦄
-  open import Peras.SmallStep using (TreeType)
 
   module _ {A : Set}
            (blockTree : TreeType A)
@@ -149,13 +148,33 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 TODO: proof
 ```agda
     postulate
-      knowledge-propagation₀ : ∀ {N : GlobalState}
+      knowledge-propagation₁ : ∀ {N : GlobalState}
+        → {p₁ p : PartyId}
+        → {t₁ t : A}
+        → {b : Block}
+        → p₁ ∈ parties
+        → (s : N₀ ↝⋆ N)
+        → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
+        → b ∈ allBlocks blockTree t₁
+        → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
+             Σ[ (s₀ , s₁ , s₂) ∈ (N₀ ↝⋆ M) × (M ↝ M′) × (M′ ↝⋆ N) ] (
+               s ≡ ↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂) × ⦅ p , BlockMsg b , zero ⦆ ∈ messages M′))
+
+      knowledge-propagation₂ : ∀ {M N : GlobalState}
+        → {p : PartyId}
+        → {t : A}
+        → {b : Block}
+        → p ∈ parties
+        → N₀ ↝⋆ M
+        → M ↝⋆ N
+        → ⦅ p , BlockMsg b , zero ⦆ ∈ messages M
+        → null (messages N) ≡ true
+        → lookup (stateMap N) p ≡ just ⟪ t ⟫
+        → b ∈ allBlocks blockTree t
+
+    knowledge-propagation₀ : ∀ {N : GlobalState}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : A}
-        → {honesty₁ : Honesty p₁}
-        → {honesty₂ : Honesty p₂}
-        → honesty₁ ≡ Honest {p₁}
-        → honesty₂ ≡ Honest {p₂}
         → p₁ ∈ parties
         → p₂ ∈ parties
         → N₀ ↝⋆ N
@@ -163,6 +182,10 @@ TODO: proof
         → lookup (stateMap N) p₂ ≡ just ⟪ t₂ ⟫
         → null (messages N) ≡ true
         → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+    knowledge-propagation₀ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps x₂ x₃ x₄ x₅ x₆
+      with knowledge-propagation₁ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps x₂ x₃ x₆
+    ... | (M , M′) , (fst , fst₁ , snd) , refl , here refl = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (here refl) x₅ x₄
+    ... | (M , M′) , (fst , fst₁ , snd) , refl , there s = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (there s) x₅ x₄
 ```
 ```agda
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
@@ -185,9 +208,9 @@ TODO: proof
 ```
 #### base case
 ```agda
-    knowledge-propagation {N₁} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ∎) N₁×p₁≡t₁ N₂×p₂≡t₂ Ready-N₁ Delivered-N₂ _ with null (messages N₁) Bool.≟ true
+    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ∎) N₁×p₁≡t₁ N₂×p₂≡t₂ Ready-N₁ Delivered-N₂ _ with null (messages N₁) Bool.≟ true
     ... | no p = contradiction Delivered-N₂ (Ready→¬Delivered {N₁} p Ready-N₁)
-    ... | yes p = knowledge-propagation₀ h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ p
+    ... | yes p = knowledge-propagation₀ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ p
 ```
 #### Deliver
 ```agda
