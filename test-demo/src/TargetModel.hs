@@ -13,6 +13,8 @@ import Test.QuickCheck.Extras
 --  - The hosts take turns round robin to produce blocks.
 --  - `blockIndex` is incremented with each block on the chain.
 --  - Nodes have three "ticks" to produce a block
+--  - If a node misses its window the other node should produce the missed block in its slot
+--    instead.
 -- Network model:
 --  - messages diffuse over the network instantly to all other
 --    hosts.
@@ -23,6 +25,15 @@ import Test.QuickCheck.Extras
 -- detect that safety property here because we aren't observing the fact that when the
 -- sut sends a message it always sends the message that contains the slot number, not the
 -- increment of the last message we received. Something to think about here.
+
+-- The assumption is that honest nodes behave deterministically based on their view of the world.
+-- This means that we can predictibly reject dishonest nodes, and the environment does not need any
+-- runtime information from the node to know what are valid behaviours. Furthermore, dishonest
+-- behaviour *can* be nondeterministic, but is only introduced by the environment and thus is known
+-- at generation time. For example, there can be voting in the protocol, but there is always a
+-- *correct* vote for each node given their local information. This means that we can predict the
+-- result of a vote at generation time provided the sut node votes honestly, and fail the test if it
+-- does not.
 
 newtype Block = Block { blockIndex :: Integer }
   deriving (Ord, Eq, Show, Generic)
@@ -73,11 +84,13 @@ isNextEnvBlock EnvState{..} b = blockIndex b == blockIndex lastEnvBlock + 2
 isNextSutBlock :: EnvState -> Block -> Bool
 isNextSutBlock EnvState{..} b = blockIndex b == blockIndex lastEnvBlock + 1
 
+whoseSlot :: Integer -> Host
+whoseSlot time
+  | even (time `div` 3) = Alice
+  | otherwise           = Bob
+
 expectedMessage :: Integer -> Message
-expectedMessage time
-  | even slot = Message (Block slot) Alice
-  | otherwise = Message (Block slot) Bob
-  where slot = time `div` 3
+expectedMessage time = Message (Block $ time `div` 3) $ whoseSlot time
 
 instance StateModel EnvState where
   data Action EnvState a where
@@ -86,7 +99,7 @@ instance StateModel EnvState where
     Tick :: Action EnvState [Message]
     -- ^ Time progresses by one unit
 
-  initialState = EnvState { lastEnvBlock = Block 0
+  initialState = EnvState { lastEnvBlock = Block (-1)
                           , sutHost      = Alice
                           , time         = 0
                           }
@@ -116,10 +129,11 @@ instance StateModel EnvState where
   validFailingAction _ _ = True
 
   arbitraryAction ctx s =
-    oneof [ pure $ Some Tick
-          , Some . ProduceBlock <$> nextEnvBlock s
-          , Some . ProduceBlock . Block <$> arbitrary
-          ]
+    frequency
+      [ (10, pure $ Some Tick)
+      , (10, Some . ProduceBlock <$> nextEnvBlock s)
+      , (1, Some . ProduceBlock . Block <$> arbitrary)
+      ]
 
 -- Run Model --------------------------------------------------------------
 
@@ -177,32 +191,46 @@ prop_nodeCorrect :: (Monad m, RunModel EnvState (ModelMonad m))
                   -> Actions EnvState
                   -> Property
 prop_nodeCorrect node runProp as = runProp $ do
-  () <$ runPropertyStateT (runPropertyReaderT (runActions as) node) (Block 0)
+  () <$ runPropertyStateT (runPropertyReaderT (runActions as) node) (Block (-1))
 
 -- Honest implementation --------------------------------------------------
 
 prop_honest :: Actions EnvState -> Property
 prop_honest = prop_nodeCorrect (honestNode Alice) runHonestMonad
 
-type HonestNodeMonad = ReaderT (IORef Integer) IO
+data HonestNodeState = HonestNodeState
+  { honestNodeClock     :: IORef Integer
+  , honestNodeLastBlock :: IORef Integer
+  }
+
+type HonestNodeMonad = ReaderT HonestNodeState IO
 
 runHonestMonad :: PropertyM HonestNodeMonad () -> Property
 runHonestMonad m = monadicIO $ do
-  ref <- lift $ newIORef 0
-  runPropertyReaderT m ref
+  clock <- lift $ newIORef 0
+  block <- lift $ newIORef (-1)
+  runPropertyReaderT m $ HonestNodeState clock block
 
 honestNode :: Host -> Node HonestNodeMonad
 honestNode h = Node{..}
-  where nodeSendTo _ = pure ()
+  where nodeSendTo (Message (Block n) sender) = do
+          block <- asks honestNodeLastBlock
+          clock <- asks honestNodeClock
+          time     <- lift $ readIORef clock
+          lastSeen <- lift $ readIORef block
+          let validBlock = n == lastSeen + 1 && sender == whoseSlot time
+          when validBlock $
+            lift $ writeIORef block n
         nodeReceiveFrom = do
-          ref <- ask
-          time <- lift $ readIORef ref
-          let em = expectedMessage time
-          pure [ em
-               | time `mod` 3 == 1
-               , messageOriginator em == h
-               , time `div` 3 > 0
-               ]
+          clock <- asks honestNodeClock
+          block <- asks honestNodeLastBlock
+          time <- lift $ readIORef clock
+          n    <- lift $ readIORef block
+          let shouldSend = time `mod` 3 == 1 && h == whoseSlot time
+          when shouldSend $
+            lift $ writeIORef block (n + 1)
+          pure [ Message (Block $ n + 1) h | shouldSend ]
         nodeProgressTime = do
-          ref <- ask
-          lift $ modifyIORef ref (+1)
+          clock <- asks honestNodeClock
+          lift $ modifyIORef clock (+1)
+
