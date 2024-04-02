@@ -30,11 +30,14 @@ open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Negation using (contradiction)
 
 open import Peras.Block as Block using (PartyId; Honesty; Block; Slot; Tx; PartyIdO; Certificate; _≟-Block_)
-open import Peras.Chain using (RoundNumber; Vote)
+open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Params using (Params)
+open import Peras.SmallStep
+open TreeType
 
 open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
+open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
 
@@ -68,10 +71,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (txSelection : Slot → PartyId → List Tx)
            (parties : List PartyId)
            where
-
-    open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-    open import Peras.SmallStep
-    open TreeType
 ```
 ### Initial state
 ```agda
@@ -94,10 +93,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 <!--
 ```agda
-    open TreeType
     open Stateᵍ
     open Honesty
-    open import Peras.Chain
     open _↝_
 ```
 -->
