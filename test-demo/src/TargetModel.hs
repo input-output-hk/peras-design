@@ -35,6 +35,14 @@ import Test.QuickCheck.Extras
 -- result of a vote at generation time provided the sut node votes honestly, and fail the test if it
 -- does not.
 
+-- How do we connect this to the Agda specification? Idea: this model doesn't specify exactly what
+-- the node under test does, so what we might do is prove that given a trace from this model
+-- completed with specific valid actions of the node we can reconstruct a valid trace in the
+-- specification.
+
+-- Talking to Arnaud: honest nodes are determinstic in the sense that we know exactly what they will
+-- do at any point.
+
 newtype Block = Block { blockIndex :: Integer }
   deriving (Ord, Eq, Show, Generic)
 
@@ -89,8 +97,11 @@ whoseSlot time
   | even (time `div` 3) = Alice
   | otherwise           = Bob
 
-expectedMessage :: Integer -> Message
-expectedMessage time = Message (Block $ time `div` 3) $ whoseSlot time
+expectedMessage :: EnvState -> Message
+expectedMessage EnvState{..} = Message (Block b) $ whoseSlot time
+  where
+    b | whoseSlot time == sutHost = blockIndex lastEnvBlock + 1
+      | otherwise                 = blockIndex lastEnvBlock + 2
 
 instance StateModel EnvState where
   data Action EnvState a where
@@ -122,7 +133,7 @@ instance StateModel EnvState where
     -- We can only produce a block if its the environments turn and
     -- the block it is producing is the next block.
     ProduceBlock b
-      | expectedMessage time == Message b (envHost s)
+      | expectedMessage s == Message b (envHost s)
       , b /= lastEnvBlock -> True
     _ -> False
 
@@ -153,17 +164,17 @@ instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunM
       onNode nodeProgressTime
       onNode nodeReceiveFrom
     ProduceBlock b -> do
-      when (expectedMessage time == Message b (envHost s)) $ do
+      when (expectedMessage s == Message b (envHost s)) $ do
         put b
       onNode $ flip nodeSendTo $ Message b (envHost s)
 
-  postcondition (_, EnvState{..}) Tick _ msgs = do
+  postcondition (_, s@EnvState{..}) Tick _ msgs = do
     lastHonestBlock <- lift get
     case msgs of
       []
         | time `mod` 3 == 2
-        , messageOriginator (expectedMessage time) == sutHost
-        , messageBlock (expectedMessage time) /= lastHonestBlock -> do
+        , messageOriginator (expectedMessage s) == sutHost
+        , messageBlock (expectedMessage s) /= lastHonestBlock -> do
             counterexamplePost $ "Node failed to produce a block in time"
             pure False
         | otherwise -> pure True
@@ -171,7 +182,7 @@ instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunM
         | messageOriginator m /= sutHost -> do
             counterexamplePost $ "Node produced message with incorrect host " ++ show m
             pure False
-        | m /= expectedMessage time -> do
+        | m /= expectedMessage s -> do
             counterexamplePost $ "Node produced an unexpected message " ++ show m
             pure False
         | messageBlock m == lastHonestBlock -> do
