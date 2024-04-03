@@ -46,6 +46,7 @@ pub struct BlockBody {
 
 #[derive(Eq, Clone, PartialEq, Debug, Deserialize, Serialize, Hash)]
 #[serde(tag = "tag", rename_all = "camelCase")]
+#[allow(non_snake_case)]
 pub struct Certificate {
     pub voting_round_number: u64,
     pub blockRef: Hash,

@@ -1,11 +1,11 @@
-{ repoRoot, inputs, pkgs, lib, system }:
+{ repoRoot, pkgs, lib, ... }:
 
 cabalProject:
 
 {
   name = "peras-design";
 
-  packages = [
+  packages = with pkgs; [
 
     # Haskell dependencies.
     pkgs.cairo
@@ -18,21 +18,21 @@ cabalProject:
     repoRoot.nix.emacs-with-packages
 
     # Rust packages.
-    pkgs.clang
-    pkgs.llvmPackages.bintools
-    pkgs.rustup
+    clang
+    llvmPackages.bintools
+    rust-bin.stable.latest.default
 
     # Additional Haskell tools.
-    pkgs.haskellPackages.pointfree
-    # pkgs.haskellPackages.pointful
+    haskellPackages.pointfree
+    # haskellPackages.pointful
 
     # Additional tools
-    pkgs.gnumake # For make-based Agda builds.
-    pkgs.gnused # For Rust shell hook.
-    pkgs.graphviz # For plotting network topology and chain forking.
-    pkgs.haskellPackages.threadscope # For visualizing profiles.
-    pkgs.ghostscript_headless # For visualizing profiles.
-    pkgs.plantuml # For UML diagrams.
+    gnumake # For make-based Agda builds.
+    gnused # For Rust shell hook.
+    graphviz # For plotting network topology and chain forking.
+    haskellPackages.threadscope # For visualizing profiles.
+    ghostscript_headless # For visualizing profiles.
+    plantuml # For UML diagrams.
 
   ];
 
@@ -41,10 +41,12 @@ cabalProject:
   env.AGDA2HS_LIB = "${repoRoot.nix.agda2hs.lib}/agda2hs.agda-lib";
 
   # Rust environment variables: https://github.com/rust-lang/rust-bindgen#environment-variables
-  env.LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
-  env.RUSTFLAGS = builtins.concatStringsSep " " (builtins.map (a: ''-L ${a}/lib'') [
-    # add libraries here (e.g. pkgs.libvmi)
-  ]);
+  env.LIBCLANG_PATH =
+    pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
+  env.RUSTFLAGS = builtins.concatStringsSep " " (builtins.map (a: "-L ${a}/lib")
+    [
+      # add libraries here (e.g. pkgs.libvmi)
+    ]);
   env.BINDGEN_EXTRA_CLANG_ARGS = builtins.concatStringsSep " " (
     # Includes with normal include path
     (builtins.map (a: ''-I"${a}/include"'') [
@@ -53,11 +55,11 @@ cabalProject:
     ])
     # Includes with special directory paths
     ++ [
-      ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
+      ''
+        -I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
       ''-I"${pkgs.glib.dev}/include/glib-2.0"''
-      ''-I${pkgs.glib.out}/lib/glib-2.0/include/''
-    ]
-  );
+      "-I${pkgs.glib.out}/lib/glib-2.0/include/"
+    ]);
 
   shellHook = ''
     # Agda hook.
@@ -96,19 +98,19 @@ cabalProject:
 
   preCommit = {
     cabal-fmt.enable = false;
-    #   cabal-fmt.extraOptions = "";
+    # cabal-fmt.extraOptions = "";
     fourmolu.enable = true;
-    #   fourmolu.extraOptions = "";
+    # fourmolu.extraOptions = "";
     hlint.enable = false;
-    #   hlint.extraOptions = "";
-    #   shellcheck.enable = false;
-    #   shellcheck.extraOptions = "";
-    #   editorconfig-checker.enable = false;
-    #   editorconfig-checker.extraOptions = "";
+    # hlint.extraOptions = "";
+    # shellcheck.enable = false;
+    # shellcheck.extraOptions = "";
+    # editorconfig-checker.enable = false;
+    # editorconfig-checker.extraOptions = "";
     nixpkgs-fmt.enable = true;
-    #   nixpkgs-fmt.extraOptions = "";
-    #   optipng.enable = false;
-    #   optipng.extraOptions = "";
+    # nixpkgs-fmt.extraOptions = "";
+    # optipng.enable = false;
+    # optipng.extraOptions = "";
   };
 }
- 
+

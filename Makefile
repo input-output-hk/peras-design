@@ -14,6 +14,10 @@ $(info $(LHSFILES))
 
 .PHONY: typecheck
 
+all: typecheck
+	cabal update
+	cabal build all
+
 typecheck: $(HSFILES) $(LHSFILES)
 
 # From https://stackoverflow.com/questions/34621364/makefile-compile-o-from-c-files

@@ -1,19 +1,11 @@
-{ repoRoot, inputs, pkgs, lib, system }:
+{ repoRoot, ... }:
 
-let
-  agdaPackages = repoRoot.nix.agda-packages;
-in
 repoRoot.nix.agda-packages.mkDerivation {
   version = "1.0";
   pname = "peras";
   src = ./..;
-  meta = {
-    description = "Agda library for Peras.";
-  };
-  buildInputs = [
-    repoRoot.nix.agda-stdlib
-    repoRoot.nix.agda2hs.lib
-  ];
+  meta = { description = "Agda library for Peras."; };
+  buildInputs = [ repoRoot.nix.agda-stdlib repoRoot.nix.agda2hs.lib ];
   everythingFile = "./src/Everything.agda";
   preBuild = ''
     # Create the missing everything file.
