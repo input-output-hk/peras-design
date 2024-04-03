@@ -130,11 +130,16 @@ The lemma describes how knowledge is propagated between honest parties in the sy
       allBlocks-addVote : ∀ {t v}
         → allBlocks blockTree t ⊆ allBlocks blockTree (addVote blockTree t v)
 
-    postulate
-      Ready-update-corrupt : ∀ {ms} {p} {m : Message} {m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms}
-        → Ready0 ms
-        → Ready0 (m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆)
-    -- Ready-update-corrupt {ms} {p} {m} {m∈ms} x = {!!}
+    open import Relation.Unary using (Pred)
+    open import Level using (Level)
+
+    All-∷= : {a p : Level} {A : Set a} {P : Pred A p} {x y : A} {xs : List A}
+      → All P xs
+      → (x∈xs : x ∈ xs)
+      → P y
+      → All P (x∈xs ∷= y)
+    All-∷= (_ All.∷ x₁) (here refl) x₂ = x₂ All.∷ x₁
+    All-∷= (px All.∷ x₁) (there x∈xs) x₂ = px All.∷ (All-∷= x₁ x∈xs x₂)
 
     Ready-append : ∀ {ms : List Envelope} {m : Message}
       → Ready0 ms
@@ -335,6 +340,11 @@ Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next 
     ... | no p₁≢p =
       let H₀ = knowledge-propagation {N′} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ (Ready-update-corrupt Ready-N₁) Delivered-N₂ clock-N₁≡clock-N₂
       in H₀
+      where
+      Ready-update-corrupt : ∀ {ms} {p} {m : Message} {m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms}
+        → Ready0 ms
+        → Ready0 (m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆)
+      Ready-update-corrupt {ms} {p} {m} {m∈ms} x = All-∷= x m∈ms tt
     ... | yes p₁≡p = contradiction p₁≡p (Honest≢Corrupt {p₁} {p} {honesty₁} {h} h₁ refl)
 ```
 #### CastVote
