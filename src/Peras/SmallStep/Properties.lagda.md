@@ -122,14 +122,6 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```agda
     open IsTreeType
 
-    -- TODO: to blockTree
-    postulate
-      allBlocks-addCert : ∀ {t c}
-        → allBlocks blockTree t ⊆ allBlocks blockTree (addCert blockTree t c)
-
-      allBlocks-addVote : ∀ {t v}
-        → allBlocks blockTree t ⊆ allBlocks blockTree (addVote blockTree t v)
-
     open import Relation.Unary using (Pred)
     open import Level using (Level)
 
@@ -310,7 +302,7 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
           pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
           H₀ = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addVote blockTree t₁ v} {t₂} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ (─⁺ m∈ms Ready-N₁) Delivered-N₂ clock-N₁≡clock-N₂
-          e = allBlocks-addVote {t₁} {v}
+          e = proj₂ $ extendable-votes (is-TreeType blockTree) {t₁} {v}
       in ⊆-trans e H₀
 ```
 ```agda
@@ -328,7 +320,7 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
           pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addCert blockTree) c) t≡t₁)
           H₀ = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addCert blockTree t₁ c} {t₂} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ (─⁺ m∈ms Ready-N₁) Delivered-N₂ clock-N₁≡clock-N₂
-          e = allBlocks-addCert {t₁} {c}
+          e = proj₂ $ extendable-certs (is-TreeType blockTree) {t₁} {c}
       in ⊆-trans e H₀
 ```
 
@@ -373,7 +365,7 @@ CastVote is not relevant for allBlocks
           pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id)
                (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
           H₀ = knowledge-propagation {N′} {N₂} {p₁} {p₂} {addVote blockTree t₁ v} {t₂} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ (Ready-append Ready-N₁) Delivered-N₂ clock-N₁≡clock-N₂
-          e = allBlocks-addVote {t₁} {v}
+          e = proj₂ $ extendable-votes (is-TreeType blockTree) {t₁} {v}
       in ⊆-trans e H₀
 ```
 #### CreateBlock

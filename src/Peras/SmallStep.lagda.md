@@ -146,6 +146,12 @@ Properties that must hold with respect to blocks and votes
       extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
+      extendable-certs : ∀ {t c}
+        → allBlocks (addCert t c) ≐ allBlocks t
+
+      extendable-votes : ∀ {t v}
+        → allBlocks (addVote t v) ≐ allBlocks t
+
       valid : ∀ (t : tT) (sl : Slot)
         → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
