@@ -431,7 +431,7 @@ A party can cast a vote for a block, if
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M} {prf} {sig}
+      honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
               r = v-round clock
               c = bestChain blockTree clock t
@@ -443,7 +443,8 @@ A party can cast a vote for a block, if
                     blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
                     signature = sig                  }
           in
-          lookup stateMap p ≡ just ⟪ t ⟫
+          vote ≡ v
+        → lookup stateMap p ≡ just ⟪ t ⟫
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
@@ -463,7 +464,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M} {prf} {sig}
+      honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -483,7 +484,8 @@ state.
                     signature = sig
                   }
           in
-          lookup stateMap p ≡ just ⟪ t ⟫
+          block ≡ b
+        → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
 
@@ -627,37 +629,12 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {M} {prf} {sig} _ _ _ _) =
-      let r = roundNumber (v-round (clock M))
-          txs = txSelection (clock M) p
-          body = record {
-              blockHash = hash txs ;
-              payload = txs
-              }
-          b = record {
-                slotNumber = clock M ;
-                creatorId = p ;
-                parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
-                certificate = just (latestCertSeen blockTree (pred (clock M)) t) ;
-                leadershipProof = prf ;
-                bodyHash = blockHash body ;
-                signature = sig
-              }
-       in xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
       → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {p} {t} {M} {prf} {sig} _ _ _ _ _) =
-      let r = v-round (clock M)
-          v = record {
-                votingRound = r ;
-                creatorId = p ;
-                committeeMembershipProof = prf ;
-                blockHash = hash (tipBest blockTree ((clock M) ∸ L) t) ;
-                signature = sig
-              }
-      in xs⊆x∷xs (history M) (VoteMsg v)
+    []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
