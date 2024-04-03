@@ -332,6 +332,8 @@ mod tests {
                 unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
             },
             in_message: Message::NextSlot(1),
+            in_time: Utc::now(),
+            in_bytes: 0,
         });
 
         let received = handle.receive();
@@ -436,6 +438,8 @@ mod tests {
                     unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
                 },
                 in_message: Message::NextSlot(i),
+                in_time: Utc::now(),
+                in_bytes: 0,
             })
         }
 
@@ -445,12 +449,11 @@ mod tests {
 
         match received {
             OutEnvelope::SendMessage {
-                timestamp: _,
                 source: _,
                 destination: _,
                 out_id: _,
                 out_message: Message::NewChain(chain),
-                bytes: _,
+                ..
             } => {
                 println!("got chain {:?}", serde_json::to_string(&chain));
                 assert_ne!(chain, empty_chain());
@@ -477,11 +480,13 @@ mod tests {
                     unique_id: [0, 0, 0, 0, 0, 0, 0, 0],
                 },
                 in_message: Message::NextSlot(i),
+                in_time: Utc::now(),
+                in_bytes: 0,
             })
         }
 
         // we expect some Idle + NewChain messages
-        for i in 1..8 {
+        for _i in 1..8 {
             let _ = handle.receive();
         }
 
