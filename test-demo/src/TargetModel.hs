@@ -1,5 +1,6 @@
 module TargetModel where
 
+import Data.Maybe
 import Data.IORef
 import Control.Monad
 import Control.Monad.Reader
@@ -65,14 +66,43 @@ data EnvState = EnvState { lastBlock :: Block
                          -- ^ the current time
                          } deriving (Ord, Eq, Show, Generic)
 
-deriving instance Show (Action EnvState a)
-deriving instance Eq (Action EnvState a)
+data Signal = ProduceBlock Block
+            | Tick
+            | DishonestProduceBlock Block
+            | DishonestTick
+            deriving (Ord, Eq, Show, Generic)
 
-instance HasVariables (Action EnvState a) where
-  getAllVariables (ProduceBlock b) = getAllVariables b
-  getAllVariables (ProduceInvalidBlock b) = getAllVariables b
-  getAllVariables Tick = mempty
-  getAllVariables TickInvalid = mempty
+preProduceBlock :: EnvState -> Block -> Bool
+preProduceBlock s@EnvState{..} b =
+  and [ nextBlock s == b
+      , whoseSlot s == envHost s
+      , lastBlockTime /= time
+      ]
+
+step :: EnvState -> Signal -> Maybe (EnvState, [Message])
+step s@EnvState{..} = \case
+  ProduceBlock b
+    | preProduceBlock s b -> Just (s { lastBlock = b, lastBlockTime = time }, [])
+
+  Tick
+    -- We've already sent our message
+    | whoseSlot s == envHost s
+    , lastBlockTime == time -> Just (s{time = time + 1}, [])
+    -- The other party will send their message
+    | whoseSlot s == sutHost -> Just (s { time = time + 1
+                                        , lastBlock = nextBlock s
+                                        , lastBlockTime = time
+                                        }
+                                     , [Message (nextBlock s) sutHost])
+
+  DishonestProduceBlock b
+    | not $ preProduceBlock s b -> Just (s, [])
+
+  DishonestTick
+    | whoseSlot s == envHost s
+    , lastBlockTime < time -> Just (s{time = time + 1}, [])
+
+  _ -> Nothing
 
 envHost :: EnvState -> Host
 envHost EnvState{..} = case sutHost of
@@ -90,19 +120,16 @@ whoseSlotTime time
   | even time = Alice
   | otherwise = Bob
 
+instance Show (Action EnvState a) where
+  show (Step sig) = show sig
+deriving instance Eq (Action EnvState a)
+
+instance HasVariables (Action EnvState a) where
+  getAllVariables (Step sig) = getAllVariables sig
+
 instance StateModel EnvState where
   data Action EnvState a where
-    -- *** Honest actions ***
-    ProduceBlock :: Block -> Action EnvState ()
-    -- ^ The environment produces a block
-    Tick :: Action EnvState [Message]
-    -- ^ Time progresses by one unit
-
-    -- *** Dishonest actions ***
-    ProduceInvalidBlock :: Block -> Action EnvState ()
-    -- ^ The environment produces an invalid block
-    TickInvalid :: Action EnvState [Message]
-    -- ^ Tick when you should be sending a block
+    Step :: Signal -> Action EnvState [Message]
 
   initialState = EnvState { lastBlock = Block (-1)
                           , lastBlockTime = (-1)
@@ -110,49 +137,19 @@ instance StateModel EnvState where
                           , time    = 0
                           }
 
-  nextState s (ProduceBlock b) _ = s { lastBlock = b
-                                     , lastBlockTime = time s }
-  nextState s Tick             _
-    | sutHost s == whoseSlot s = s { time = time s + 1
-                                   , lastBlock = nextBlock s
-                                   , lastBlockTime = time s
-                                   }
-    | otherwise = s { time = time s + 1 }
-  nextState s TickInvalid v = nextState s Tick v
-  nextState s ProduceInvalidBlock{} _ = s
+  nextState s (Step sig) _ = maybe s fst $ step s sig
 
-  precondition s@EnvState{..} = \case
-    -- An honest environment can only tick when it has fulfilled
-    -- its obligation to produce a block
-    Tick
-      -- We've already sent our message
-      | whoseSlot s == envHost s
-      , lastBlockTime == time -> True
-      -- The other party will send their message
-      | whoseSlot s == sutHost -> True
-    -- An honest environment can produce a block once on its own turn
-    ProduceBlock b
-      | nextBlock s == b
-      , whoseSlot s == envHost s
-      , lastBlockTime /= time -> True
-    -- A dishonest block is simply a block that is not allowed
-    ProduceInvalidBlock b -> not $ precondition s $ ProduceBlock b
-    -- Dishonestly ignoring time
-    TickInvalid
-      | whoseSlot s == envHost s
-      , lastBlockTime < time -> True
-    -- Nothing else is allowed
-    _ -> False
+  precondition s (Step sig) = step s sig /= Nothing
 
   arbitraryAction ctx s =
     frequency
-      [ (10, pure $ Some Tick)
-      , (10, pure $ Some $ ProduceBlock $ nextBlock s)
-      , (5, Some . ProduceInvalidBlock . Block <$> arbitrary)
-      , (5, pure $ Some TickInvalid)
+      [ (10, pure $ Some $ Step Tick)
+      , (10, pure $ Some $ Step $ ProduceBlock $ nextBlock s)
+      , (5, Some . Step . DishonestProduceBlock . Block <$> arbitrary)
+      , (5, pure $ Some $ Step DishonestTick)
       ]
 
--- Run Model --------------------------------------------------------------
+-- Run Model -----------------------------------------------------------
 
 data Node m = Node { nodeSendTo :: Message -> m ()
                    , nodeReceiveFrom :: m [Message]
@@ -164,38 +161,29 @@ type ModelMonad m = ReaderT (Node m) m
 onNode :: Monad m => (Node m -> m a) -> ModelMonad m a
 onNode f = ask >>= lift . f
 
-expectedMessagesOnTick :: EnvState -> [Message]
-expectedMessagesOnTick s
-  | whoseSlot s == sutHost s = [Message (nextBlock s) (whoseSlot s)]
-  | otherwise = []
-
 instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunModel EnvState (ModelMonad m) where
-  perform s@EnvState{..} a _ = case a of
+  perform s@EnvState{..} (Step a) _ = case a of
     Tick -> do
       msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
       pure msgs
-    TickInvalid -> do
+    DishonestTick -> do
       msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
       pure msgs
     ProduceBlock b -> do
       onNode $ flip nodeSendTo $ Message b (envHost s)
-    ProduceInvalidBlock b -> do
+      pure []
+    DishonestProduceBlock b -> do
       onNode $ flip nodeSendTo $ Message b (envHost s)
+      pure []
 
-  postcondition (sBefore@EnvState{..}, _) Tick _ msgs = do
-    monitorPost $ counterexample $ "Received " ++ show msgs ++ " at time " ++ show time
-    let expected = expectedMessagesOnTick sBefore
-    counterexamplePost $ unlines ["Expected messages:", "  " ++ show expected, "got:", "  " ++ show msgs]
-    pure $ expected == msgs
-  postcondition tr TickInvalid lookup msgs = postcondition tr Tick lookup msgs
-  postcondition (_, s@EnvState{..}) (ProduceBlock b) _ _ = do
-    monitorPost $ counterexample $ "Environment sent " ++ show (Message b (envHost s)) ++ " at time " ++ show time
-    pure True
-  postcondition (_, s@EnvState{..}) (ProduceInvalidBlock b) _ _ = do
-    monitorPost $ counterexample $ "Environment dishonestly sent " ++ show (Message b (envHost s)) ++ " at time " ++ show time
-    pure True
+  postcondition (sBefore, _) (Step sig) _ msgs =
+    case step sBefore sig of
+      Just (_, expected) -> do
+        counterexamplePost $ unlines ["Expected messages:", "  " ++ show expected, "got:", "  " ++ show msgs]
+        pure $ expected == msgs
+      Nothing -> pure True
 
 prop_nodeCorrect :: (Monad m, RunModel EnvState (ModelMonad m))
                   => Node m
