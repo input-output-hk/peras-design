@@ -82,13 +82,13 @@ envHost EnvState{..} = case sutHost of
 nextBlock :: EnvState -> Block
 nextBlock EnvState{..} = Block $ blockIndex lastBlock + 1
 
-whoseSlot :: Integer -> Host
-whoseSlot time
+whoseSlot :: EnvState -> Host
+whoseSlot EnvState{..} = whoseSlotTime time
+
+whoseSlotTime :: Integer -> Host
+whoseSlotTime time
   | even time = Alice
   | otherwise = Bob
-
-expectedMessage :: EnvState -> Message
-expectedMessage s = Message (nextBlock s) $ whoseSlot (time s)
 
 instance StateModel EnvState where
   data Action EnvState a where
@@ -107,18 +107,17 @@ instance StateModel EnvState where
   initialState = EnvState { lastBlock = Block (-1)
                           , lastBlockTime = (-1)
                           , sutHost = Alice
-                          , time    = (-1)
+                          , time    = 0
                           }
 
   nextState s (ProduceBlock b) _ = s { lastBlock = b
                                      , lastBlockTime = time s }
-  nextState s Tick             _ = modifyBlock $ s { time = time s + 1 }
-    where modifyBlock s'
-            -- Assume the SUT behaves honestly
-            | sutHost s' == whoseSlot (time s') = s' { lastBlock = nextBlock s
-                                                     , lastBlockTime = time s'
-                                                     }
-            | otherwise = s'
+  nextState s Tick             _
+    | sutHost s == whoseSlot s = s { time = time s + 1
+                                   , lastBlock = nextBlock s
+                                   , lastBlockTime = time s
+                                   }
+    | otherwise = s { time = time s + 1 }
   nextState s TickInvalid v = nextState s Tick v
   nextState s ProduceInvalidBlock{} _ = s
 
@@ -127,19 +126,20 @@ instance StateModel EnvState where
     -- its obligation to produce a block
     Tick
       -- We've already sent our message
-      | whoseSlot time == envHost s
+      | whoseSlot s == envHost s
       , lastBlockTime == time -> True
       -- The other party will send their message
-      | whoseSlot (time + 1) == envHost s -> True
+      | whoseSlot s == sutHost -> True
     -- An honest environment can produce a block once on its own turn
     ProduceBlock b
-      | expectedMessage s == Message b (envHost s)
+      | nextBlock s == b
+      , whoseSlot s == envHost s
       , lastBlockTime /= time -> True
     -- A dishonest block is simply a block that is not allowed
     ProduceInvalidBlock b -> not $ precondition s $ ProduceBlock b
     -- Dishonestly ignoring time
     TickInvalid
-      | whoseSlot time == envHost s
+      | whoseSlot s == envHost s
       , lastBlockTime < time -> True
     -- Nothing else is allowed
     _ -> False
@@ -159,66 +159,36 @@ data Node m = Node { nodeSendTo :: Message -> m ()
                    , nodeProgressTime :: m ()
                    }
 
-type ModelMonad m = ReaderT (Node m) (StateT Block m)
+type ModelMonad m = ReaderT (Node m) m
 
 onNode :: Monad m => (Node m -> m a) -> ModelMonad m a
-onNode f = ask >>= lift . lift . f
+onNode f = ask >>= lift . f
+
+expectedMessagesOnTick :: EnvState -> [Message]
+expectedMessagesOnTick s
+  | whoseSlot s == sutHost s = [Message (nextBlock s) (whoseSlot s)]
+  | otherwise = []
 
 instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunModel EnvState (ModelMonad m) where
   perform s@EnvState{..} a _ = case a of
     Tick -> do
+      msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
-      onNode nodeReceiveFrom
+      pure msgs
     TickInvalid -> do
+      msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
-      onNode nodeReceiveFrom
+      pure msgs
     ProduceBlock b -> do
-      when (expectedMessage s == Message b (envHost s)) $ do
-        put b
       onNode $ flip nodeSendTo $ Message b (envHost s)
     ProduceInvalidBlock b -> do
       onNode $ flip nodeSendTo $ Message b (envHost s)
 
-  postcondition (sBefore, sAfter) Tick _ msgs = do
-    monitorPost $ counterexample $ "Received " ++ show msgs ++ " at time " ++ show (time sAfter)
-    lastHonestBlock <- lift get
-    case msgs of
-      []
-        | whoseSlot (time sAfter) == sutHost sAfter -> do
-            counterexamplePost $ "Node failed to produce a block in time"
-            pure False
-        | otherwise -> pure True
-      [m]
-        | messageOriginator m /= sutHost sAfter -> do
-            counterexamplePost $ "Node produced message with incorrect host " ++ show m
-            pure False
-        | messageBlock m /= nextBlock sBefore -> do
-            counterexamplePost $
-              unlines [ "Node produced a a message with incorrect block"
-                      , "  " ++ show m
-                      , "expected"
-                      , "  " ++ show (nextBlock sBefore)
-                      , "in before state"
-                      , "  " ++ show sBefore
-                      , "and after state"
-                      , "  " ++ show sAfter
-                      ]
-            pure False
-        | whoseSlot (time sAfter) /= sutHost sAfter -> do
-            counterexamplePost $
-              unlines [ "Node produced a message in the wrong slot"
-                      , "  " ++ show m
-                      ]
-            pure False
-        | messageBlock m == lastHonestBlock -> do
-            counterexamplePost $ "Node produced the same block twice " ++ show m
-            pure False
-        | otherwise -> do
-            lift $ put (messageBlock m)
-            pure True
-      _ -> do
-        counterexamplePost $ "Node produced too many messages " ++ show msgs
-        pure False
+  postcondition (sBefore@EnvState{..}, _) Tick _ msgs = do
+    monitorPost $ counterexample $ "Received " ++ show msgs ++ " at time " ++ show time
+    let expected = expectedMessagesOnTick sBefore
+    counterexamplePost $ unlines ["Expected messages:", "  " ++ show expected, "got:", "  " ++ show msgs]
+    pure $ expected == msgs
   postcondition tr TickInvalid lookup msgs = postcondition tr Tick lookup msgs
   postcondition (_, s@EnvState{..}) (ProduceBlock b) _ _ = do
     monitorPost $ counterexample $ "Environment sent " ++ show (Message b (envHost s)) ++ " at time " ++ show time
@@ -233,7 +203,7 @@ prop_nodeCorrect :: (Monad m, RunModel EnvState (ModelMonad m))
                   -> Actions EnvState
                   -> Property
 prop_nodeCorrect node runProp as = runProp $ do
-  () <$ runPropertyStateT (runPropertyReaderT (runActions as) node) (Block (-1))
+  () <$ runPropertyReaderT (runActions as) node
 
 -- Honest implementation --------------------------------------------------
 
@@ -251,7 +221,7 @@ type HonestNodeMonad = ReaderT HonestNodeState IO
 
 runHonestMonad :: PropertyM HonestNodeMonad () -> Property
 runHonestMonad m = monadicIO $ do
-  clock <- lift $ newIORef (-1)
+  clock <- lift $ newIORef 0
   block <- lift $ newIORef (-1)
   rstamp <- lift $ newIORef (-1)
   sstamp <- lift $ newIORef (-1)
@@ -266,7 +236,7 @@ honestNode h = Node{..}
           time     <- lift $ readIORef clock
           lastSeen <- lift $ readIORef block
           lastRecv <- lift $ readIORef rstamp
-          let validBlock = n == lastSeen + 1 && sender == whoseSlot time && lastRecv < time
+          let validBlock = n == lastSeen + 1 && sender == whoseSlotTime time && lastRecv < time
           when validBlock $ do
             lift $ writeIORef rstamp time
             lift $ writeIORef block n
@@ -277,7 +247,7 @@ honestNode h = Node{..}
           time <- lift $ readIORef clock
           n    <- lift $ readIORef block
           ts   <- lift $ readIORef tstamp
-          let shouldSend = h == whoseSlot time && time > ts
+          let shouldSend = h == whoseSlotTime time && time > ts
           when shouldSend $ do
             lift $ writeIORef block (n + 1)
             lift $ writeIORef tstamp time
