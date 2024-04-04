@@ -23,7 +23,7 @@ import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
-open import Relation.Nullary.Negation using (contradiction)
+open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
@@ -62,7 +62,7 @@ data Message : Set where
 Messages can be delayed by an adversary. Delay is either 0, 1, 2
 
 ```agda
-Delay = Fin 2
+Delay = Fin 3
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
@@ -75,6 +75,18 @@ record Envelope : Set where
     honesty : Honesty partyId
     message : Message
     delay : Delay
+
+open Envelope
+
+⦅⦆-injective : ∀ {e₁ e₂}
+  → e₁ ≡ e₂
+  → partyId e₁ ≡ partyId e₂
+⦅⦆-injective refl = refl
+
+⦅⦆-injective′ : ∀ {e₁ e₂}
+  → partyId e₁ ≢ partyId e₂
+  → e₁ ≢ e₂
+⦅⦆-injective′ = contraposition ⦅⦆-injective
 ```
 <!--
 ```agda
@@ -263,7 +275,7 @@ The block tree type
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
            {txSelection : Slot → PartyId → List Tx}
-           {parties : List (Σ[ p ∈ PartyId ] (Honesty p))}
+           {parties : Parties}
 
            where
 ```
@@ -344,14 +356,18 @@ The global state consists of the following fields:
 ```
 Progress
 ```agda
+{-
     Ready′ : List Envelope → Set
     Ready′ = All (λ { ⦅ _ , Honest , _ , d ⦆ → d ≡ zero ; ⦅ _ , Corrupt , _ , _ ⦆ → ⊤})
 
     Ready : Stateᵍ → Set
     Ready = Ready′ ∘ messages where open Stateᵍ
-
+-}
     Delivered : Stateᵍ → Set
-    Delivered = All (λ { ⦅ _ , _ , _ , d ⦆ → d ≢ zero }) ∘ messages where open Stateᵍ
+    Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open Stateᵍ
+
+    Ready : Stateᵍ → Set
+    Ready N = ¬ (Delivered N)
 ```
 Updating global state
 ```agda
@@ -451,7 +467,7 @@ A party can cast a vote for a block, if
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) (zero) p ⟪ addVote blockTree t v ⟫ M
+          updateᵍ (VoteMsg v) (suc zero) p ⟪ addVote blockTree t v ⟫ M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -491,7 +507,7 @@ state.
 
         → IsSlotLeader p clock prf
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (zero) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (suc zero) p
              ⟪ extendTree blockTree t b ⟫ M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
@@ -504,7 +520,7 @@ The small-step semantics describe the evolution of the global state.
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {M N p} {h : Honesty p} {m}
-        → Ready M
+--        → Ready M
         → M [ h , m ]⇀ N
           ---------------
         → M ↝ N
@@ -663,7 +679,7 @@ When the current state is collision free, the pervious state was so too
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver _ x) cf-N₂ = []⇀-collision-free cf-N₂ x
+    ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
     ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
     ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
