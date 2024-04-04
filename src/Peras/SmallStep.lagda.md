@@ -160,10 +160,10 @@ Properties that must hold with respect to blocks and votes
       extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      extendable-certs : ∀ {t c}
+      extendable-certs : ∀ (t : tT) (c : Certificate)
         → allBlocks (addCert t c) ≐ allBlocks t
 
-      extendable-votes : ∀ {t v}
+      extendable-votes : ∀ (t : tT) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
       valid : ∀ (t : tT) (sl : Slot)
