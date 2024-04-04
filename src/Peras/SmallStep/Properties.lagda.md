@@ -276,12 +276,12 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
-          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
+          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree blockTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable (is-TreeType blockTree) t₁ b
       in ⊆-trans
            (xs⊆x∷xs (allBlocks blockTree t₁) b)
-           (⊆-trans e H₀)
+           (⊆-trans ⊆-ext H₀)
 ```
 adds a block/vote/cert to some p's blocktree
 ```agda
@@ -301,10 +301,10 @@ adds a block/vote/cert to some p's blocktree
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addVote blockTree t v ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addVote blockTree t v ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addVote blockTree t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          e = proj₂ $ extendable-votes (is-TreeType blockTree) t₁ v
-      in ⊆-trans e H₀
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
+          H₀ = knowledge-propagation {t₁ = addVote blockTree t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable-votes (is-TreeType blockTree) t₁ v
+      in ⊆-trans ⊆-ext H₀
 ```
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
@@ -318,10 +318,10 @@ adds a block/vote/cert to some p's blocktree
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addCert blockTree t c ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addCert blockTree t c ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addCert blockTree) c) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addCert blockTree t₁ c} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          e = proj₂ $ extendable-certs (is-TreeType blockTree) t₁ c
-      in ⊆-trans e H₀
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addCert blockTree) c) t≡t₁)
+          H₀ = knowledge-propagation {t₁ = addCert blockTree t₁ c} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable-certs (is-TreeType blockTree) t₁ c
+      in ⊆-trans ⊆-ext H₀
 ```
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
@@ -344,10 +344,10 @@ CastVote is not relevant for allBlocks
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addVote blockTree t v ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addVote blockTree t v ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addVote blockTree t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          e = proj₂ $ extendable-votes (is-TreeType blockTree) t₁ v
-      in ⊆-trans e H₀
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addVote blockTree) v) t≡t₁)
+          H₀ = knowledge-propagation {t₁ = addVote blockTree t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable-votes (is-TreeType blockTree) t₁ v
+      in ⊆-trans ⊆-ext H₀
 ```
 #### CreateBlock
 When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
@@ -365,10 +365,10 @@ those messages adds the blocks into the local trees.
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
           t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          pr = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = extendTree blockTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ pr N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          e = proj₂ $ extendable (is-TreeType blockTree) t₁ b
-      in x∷xs⊆ys→xs⊆ys $ ⊆-trans e H₀
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
+          H₀ = knowledge-propagation {t₁ = extendTree blockTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable (is-TreeType blockTree) t₁ b
+      in x∷xs⊆ys→xs⊆ys $ ⊆-trans ⊆-ext H₀
       where
          x∷xs⊆ys→xs⊆ys : ∀ {x xs ys}
            → x ∷ xs ⊆ ys
