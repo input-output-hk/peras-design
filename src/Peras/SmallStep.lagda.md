@@ -77,12 +77,14 @@ record Envelope : Set where
     delay : Delay
 
 open Envelope
-
+```
+```agda
 ⦅⦆-injective : ∀ {e₁ e₂}
   → e₁ ≡ e₂
   → partyId e₁ ≡ partyId e₂
 ⦅⦆-injective refl = refl
-
+```
+```agda
 ⦅⦆-injective′ : ∀ {e₁ e₂}
   → partyId e₁ ≢ partyId e₂
   → e₁ ≢ e₂
@@ -356,18 +358,8 @@ The global state consists of the following fields:
 ```
 Progress
 ```agda
-{-
-    Ready′ : List Envelope → Set
-    Ready′ = All (λ { ⦅ _ , Honest , _ , d ⦆ → d ≡ zero ; ⦅ _ , Corrupt , _ , _ ⦆ → ⊤})
-
-    Ready : Stateᵍ → Set
-    Ready = Ready′ ∘ messages where open Stateᵍ
--}
     Delivered : Stateᵍ → Set
     Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open Stateᵍ
-
-    Ready : Stateᵍ → Set
-    Ready N = ¬ (Delivered N)
 ```
 Updating global state
 ```agda
@@ -520,7 +512,6 @@ The small-step semantics describe the evolution of the global state.
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {M N p} {h : Honesty p} {m}
---        → Ready M
         → M [ h , m ]⇀ N
           ---------------
         → M ↝ N
