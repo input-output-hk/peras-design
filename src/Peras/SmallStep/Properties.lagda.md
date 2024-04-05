@@ -169,12 +169,12 @@ TODO: proof
     ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → M [ h ]⇉ N
       → messages M ⊆ᵐ messages N
-    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , VoteMsg v , suc zero ⦆}) parties
+    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , VoteMsg v , zero ⦆}) parties
 
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → M [ h ]↷ N
       → messages M ⊆ᵐ messages N
-    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , BlockMsg b , suc zero ⦆}) parties
+    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , BlockMsg b , zero ⦆}) parties
 ```
 -->
 ```agda

@@ -59,10 +59,10 @@ data Message : Set where
   VoteMsg : Vote → Message
   CertMsg : Certificate → Message
 ```
-Messages can be delayed by an adversary. Delay is either 0, 1, 2
+Messages can be delayed by an adversary. Delay is either 0, 1
 
 ```agda
-Delay = Fin 3
+Delay = Fin 2
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
@@ -459,7 +459,7 @@ A party can cast a vote for a block, if
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) (suc zero) p ⟪ addVote blockTree t v ⟫ M
+          updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -499,7 +499,7 @@ state.
 
         → IsSlotLeader p clock prf
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) (suc zero) p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
              ⟪ extendTree blockTree t b ⟫ M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
