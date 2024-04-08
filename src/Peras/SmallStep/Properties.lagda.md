@@ -7,16 +7,17 @@ module Peras.SmallStep.Properties where
 open import Data.Bool as Bool using (Bool; true; false)
 open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ)
+open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ; ∈-++⁺ˡ; ∈-resp-≋)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
 open import Data.List.Relation.Unary.Any as Any using (Any; _─_; _∷=_; here; there)
-open import Data.List.Relation.Unary.Any.Properties using (¬Any[])
+open import Data.List.Relation.Unary.Any.Properties as Any using (¬Any[])
 open import Data.List.Relation.Unary.All as All using (All)
 open import Data.List.Relation.Unary.All.Properties as All using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
 
 open import Data.Maybe using (just)
 open import Data.Maybe.Properties using (just-injective)
+open import Data.Empty using (⊥-elim)
 open import Data.Fin using (zero; suc; _≟_)
 open import Data.Fin.Properties using (0≢1+n)
 open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred)
@@ -40,6 +41,8 @@ open TreeType
 open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Envelope} renaming (_⊆_ to _⊆ᵐ_)
+
+open import Data.List.Relation.Binary.Equality.Propositional using (_≋_; ≡⇒≋; ≋⇒≡)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
 
@@ -150,14 +153,42 @@ TODO: proof
 ```
 <!--
 ```agda
+    x∈x∷xs : ∀ {x : Block} {xs : List Block}
+      → x ∈ x ∷ xs
+    x∈x∷xs {x} {xs} = here refl
+
+    postulate
+      blocksNotLost : ∀ {M N : GlobalState} {p} {tₘ tₙ} {b}
+        → M ↝⋆ N
+        → lookup (Stateᵍ.stateMap M) p ≡ just ⟪ tₘ ⟫
+        → lookup (Stateᵍ.stateMap N) p ≡ just ⟪ tₙ ⟫
+        → b ∈ allBlocks blockTree tₘ
+        → b ∈ allBlocks blockTree tₙ
 {-
-    m′∈ms─m∈ms : ∀ {m m′ : Envelope} {ms}
-      → (m∈ms : m ∈ ms)
-      → (m′∈ms  : m′ ∈ ms)
-      → m ≢ m′
-      → m′ ∈ (ms ─ m∈ms)
-    m′∈ms─m∈ms {m} {m′} {ms} m∈ms m′∈ms = {!!}
+    blocksNotLost (_ ∎) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ Deliver x ⟩ x₄) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ CastVote x ⟩ x₄) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ CreateBlock x ⟩ x₄) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ NextSlot x ⟩ x₄) x₁ x₂ x₃ = {!!}
 -}
+    postulate
+      e∈m′∈ms∷=m′ : ∀ {e : Envelope} {m : Message} {p} {ms}
+        → e ∈ ms
+        → (m′∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms )
+        → e ∈ (m′∈ms ∷= (⦅ p , Corrupt , m , suc zero ⦆))
+
+      m′∈ms─m∈ms : ∀ {m m′ : Envelope} {ms}
+        → (m∈ms : m ∈ ms)
+        → m′ ∈ ms
+        → m ≢ m′
+        → m′ ∈ (ms ─ m∈ms)
+
+{-
+    m′∈ms─m∈ms {m} {m′} {.(_ ∷ _)} m∈ms (here refl) x = {!!}
+    m′∈ms─m∈ms {m} {m′} {.(x ∷ xs)} (here px) (there {x} {xs} y) a = {!!}
+    m′∈ms─m∈ms {m} {m′} {.(x ∷ xs)} (there z) (there {x} {xs} y) a = m′∈ms─m∈ms z y a
+-}
+
     CertMsg≢BlockMsg : ∀ {p q c b} → ⦅ p , Honest , CertMsg c , zero ⦆ ≢ ⦅ q , Honest , BlockMsg b , zero ⦆
     CertMsg≢BlockMsg x with cong message x
     ... | ()
@@ -178,8 +209,8 @@ TODO: proof
 ```
 -->
 ```agda
-    postulate
-      knowledge-propagation₂ : ∀ {M N : GlobalState}
+--    postulate
+    knowledge-propagation₂ : ∀ {M N : GlobalState}
         → {p : PartyId}
         → {t : A}
         → {h : Honesty p}
@@ -194,29 +225,39 @@ TODO: proof
 ```
 <!--
 ```agda
-{-
-    knowledge-propagation₂ {M} p∈ps N₀↝⋆M (_ ∎) m∈ms x₄ Delivered-M =
-      let xx = All¬⇒¬Any Delivered-M
-          yy = m∈ms
-      in contradiction {!!} xx
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N =
-       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) x₄ Delivered-N       
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms CertReceived)) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N =
-       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms CertMsg≢BlockMsg) x₄ Delivered-N
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest {p′} x m′∈ms (BlockReceived {b}))) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N
+    knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M (_ ∎) m∈ms N×p≡t Delivered-M =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
+    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms CertReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms CertMsg≢BlockMsg) N×p≡t Delivered-N
+    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver {M} {M′} (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
+      m∈ms N×p≡t Delivered-N
       with p ℕ.≟ p′
-    ... | yes p≡p′ = {!!}  -- into the tree in this step
     ... | no p≢p′ =
       let m≢m′ = ⦅⦆-injective′ (p≢p′ ∘ sym)
-      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) x₄ Delivered-N
+      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
+    ... | yes p≡p′ with b′ ≟-Block b
+    ... | yes b′≡b =
+      let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p′} {m = stateMap M})
+          lookup-p≡lookup-p′ = cong (lookup (insert p′ lₚ′ (stateMap M))) p≡p′
+          bt≡bt′ = cong (allBlocks blockTree) (cong (extendTree blockTree t₁) (sym b′≡b))
+          b∈bt = ∈-resp-≋ (≡⇒≋ bt≡bt′) (
+            (proj₂ $ extendable (is-TreeType blockTree) t₁ b)
+            (x∈x∷xs {b} {allBlocks blockTree t₁}))
+      in blocksNotLost {tₘ = LocalState.tree lₚ′} M′↝⋆N (trans lookup-p≡lookup-p′ lookup-insert≡id) N×p≡t b∈bt
+    ... | no b′≢b =
+      let m≢m′ = ⦅⦆-injective₃′ (Message-injective′ b′≢b)
+      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
 
-    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (corrupt _)) ⟩ M′↝⋆N) m∈ms m′∈ms Delivered-N =
-       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N {- (m′∈ms─m∈ms m′∈ms m∈ms m≢m′)-} {!!} m′∈ms Delivered-N
-
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) x₄ Delivered-N
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) x₄ Delivered-N
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(NextSlot x₂) ⟩ M′↝⋆N) m∈ms x₄ Delivered-N = knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N {!!} x₄ Delivered-N
--}
+    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms ) N×p≡t Delivered-N
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Delivered-N
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Delivered-N
+    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(NextSlot Delivered-M) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
 ```
 -->
 ```agda

@@ -58,6 +58,16 @@ data Message : Set where
   BlockMsg : Block → Message
   VoteMsg : Vote → Message
   CertMsg : Certificate → Message
+
+Message-injective : ∀ {b₁ b₂}
+  → BlockMsg b₁ ≡ BlockMsg b₂
+  → b₁ ≡ b₂
+Message-injective refl = refl
+
+Message-injective′ : ∀ {b₁ b₂}
+  → b₁ ≢ b₂
+  → BlockMsg b₁ ≢ BlockMsg b₂
+Message-injective′ = contraposition Message-injective
 ```
 Messages can be delayed by an adversary. Delay is either 0, 1
 
@@ -83,12 +93,22 @@ open Envelope
   → e₁ ≡ e₂
   → partyId e₁ ≡ partyId e₂
 ⦅⦆-injective refl = refl
+
+⦅⦆-injective₃ : ∀ {e₁ e₂}
+  → e₁ ≡ e₂
+  → message e₁ ≡ message e₂
+⦅⦆-injective₃ refl = refl
 ```
 ```agda
 ⦅⦆-injective′ : ∀ {e₁ e₂}
   → partyId e₁ ≢ partyId e₂
   → e₁ ≢ e₂
 ⦅⦆-injective′ = contraposition ⦅⦆-injective
+
+⦅⦆-injective₃′ : ∀ {e₁ e₂}
+  → message e₁ ≢ message e₂
+  → e₁ ≢ e₂
+⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
 ```
 <!--
 ```agda
