@@ -9,6 +9,9 @@ open import Data.List.Base
 open import Data.Product.Base
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
+open import Function
+
+open import CommonTypes
 
 -- Super simple protocol:
 --  - The hosts take turns round robin to produce blocks.
@@ -16,22 +19,13 @@ open import Relation.Nullary
 --  - If a node misses its window the other node should produce the missed block in its slot
 --    instead.
 
-data Party : Set where
-  alice bob : Party
-
-BlockIndex = ℕ
-Slot = ℕ
-
-data Block : Set where
-  block : BlockIndex → Block
-
 record LocalState : Set where
-  constructor ⟨_,_⟩
+  constructor _,_
   field
     lastBlock : BlockIndex
     lastBlockSlot : Slot
 
-open LocalState
+open LocalState public
 
 record State : Set where
   constructor ⟦_,_,_⟧
@@ -40,21 +34,21 @@ record State : Set where
     aliceState   : LocalState
     bobState     : LocalState
 
-open State
+open State public
 
 initLocalState : LocalState
-initLocalState = ⟨ 0 , 0 ⟩
+initLocalState = 0 , 0
 
 initState : State
 initState = ⟦ 0 , initLocalState , initLocalState ⟧
 
 getLocalState : Party → State → LocalState
-getLocalState alice = aliceState
-getLocalState bob   = bobState
+getLocalState Alice = aliceState
+getLocalState Bob   = bobState
 
 modifyLocalState : Party → (LocalState → LocalState) → State → State
-modifyLocalState alice f s = record s { aliceState = f (aliceState s) }
-modifyLocalState bob   f s = record s { bobState   = f (bobState   s) }
+modifyLocalState Alice f s = record s { aliceState = f (aliceState s) }
+modifyLocalState Bob   f s = record s { bobState   = f (bobState   s) }
 
 setLocalState : Party → LocalState → State → State
 setLocalState p ls = modifyLocalState p λ _ → ls
@@ -74,19 +68,19 @@ variable
   h : Honesty
 
 data Dishonest : Honesty → Party → Set where
-  badAlice : Dishonest badAlice alice
-  badBob   : Dishonest badBob   bob
+  badAlice : Dishonest badAlice Alice
+  badBob   : Dishonest badBob   Bob
 
 data SlotOf (t : Slot) : Party → Set where
-  aliceSlot : t % 2 ≡ 0 → SlotOf t alice
-  bobSlot   : t % 2 ≡ 1 → SlotOf t bob
+  AliceSlot : t % 2 ≡ 0 → SlotOf t Alice
+  BobSlot   : t % 2 ≡ 1 → SlotOf t Bob
 
 data ValidMessage : Slot → LocalState → Party → Block → Set where
-  valid : t < t₁ → SlotOf t₁ p → ValidMessage t₁ ⟨ i , t ⟩ p (block (suc i))
+  valid : t < t₁ → SlotOf t₁ p → ValidMessage t₁ (i , t) p (Blk (suc i))
 
 -- Local state update on receive
 data _⊢_[_,_]?_ : Slot → LocalState → Party → Block → LocalState → Set where
-  correctMessage : ValidMessage t₁ ⟨ i , t ⟩ p b → t₁ ⊢ ⟨ i , t ⟩ [ p , b ]? ⟨ suc i , t₁ ⟩
+  correctMessage : ValidMessage t₁ (i , t) p b → t₁ ⊢ (i , t) [ p , b ]? (suc i , t₁)
   wrongMessage   : ¬ ValidMessage t ls p b → t ⊢ ls [ p , b ]? ls
 
 -- Message receive
@@ -96,8 +90,8 @@ data _[_,_↦_]?_ : State → Party → Block → Party → State → Set where
 
 -- Local state update on send
 data _,_,_⊢_[_↦_]!_ : Honesty → Slot → Party → LocalState → Block → Party → LocalState → Set where
-  correctMessage   : ValidMessage t₁ ⟨ i , t ⟩ p b
-                   → h , t₁ , p ⊢ ⟨ i , t ⟩ [ b ↦ q ]! ⟨ suc i , t₁ ⟩
+  correctMessage   : ValidMessage t₁ (i , t) p b
+                   → h , t₁ , p ⊢ (i , t) [ b ↦ q ]! (suc i , t₁)
   dishonestMessage : Dishonest h p
                    → h , t , p ⊢ ls [ b ↦ q ]! ls
 
@@ -126,21 +120,28 @@ messages {s₀ = s₀} (deliver {p = p} {b} _ _ ∷ tr) = (clock s₀ , p , b) �
 messages (trickery _ _ ∷ tr) = messages tr
 messages (tick _ _ ∷ tr) = messages tr
 
+aliceMessages : h ⊢ s₀ ↝* s₁ → List (Slot × Block)
+aliceMessages [] = []
+aliceMessages {s₀ = s₀} (deliver {p = Alice} {b} _ _ ∷ tr) = (clock s₀ , b) ∷ aliceMessages tr
+aliceMessages (deliver _ _ ∷ tr) = aliceMessages tr
+aliceMessages (trickery _ _ ∷ tr) = aliceMessages tr
+aliceMessages (tick _ _ ∷ tr) = aliceMessages tr
+
 -- Examples
 
-_ : happyPath ⊢ initState ↝* ⟦ 2 , ⟨ 2 , 2 ⟩ , ⟨ 2 , 2 ⟩ ⟧
-_ = tick (aliceSlot refl) refl
-  ∷ deliver (send alice (block 1) (correctMessage (valid ≤-refl (bobSlot refl))) λ())
-            (receive (correctMessage (valid ≤-refl (bobSlot refl))))
-  ∷ tick (bobSlot refl) refl
-  ∷ deliver (send bob (block 2) (correctMessage (valid ≤-refl (aliceSlot refl))) λ())
-            (receive (correctMessage (valid ≤-refl (aliceSlot refl))))
+_ : happyPath ⊢ initState ↝* ⟦ 2 , (2 , 2) , (2 , 2) ⟧
+_ = tick (AliceSlot refl) refl
+  ∷ deliver (send Alice (Blk 1) (correctMessage (valid ≤-refl (BobSlot refl))) λ())
+            (receive (correctMessage (valid ≤-refl (BobSlot refl))))
+  ∷ tick (BobSlot refl) refl
+  ∷ deliver (send Bob (Blk 2) (correctMessage (valid ≤-refl (AliceSlot refl))) λ())
+            (receive (correctMessage (valid ≤-refl (AliceSlot refl))))
   ∷ []
 
-_ : badBob ⊢ initState ↝* ⟦ 2 , ⟨ 1 , 2 ⟩ , ⟨ 1 , 2 ⟩ ⟧
-_ = tick (aliceSlot refl) refl
-  ∷ trickery badBob ⟨ 0 , 1 ⟩   -- Bob pretends to have sent a message (bumping lastBlockSlot)
-  ∷ tick (bobSlot refl) refl
-  ∷ deliver (send bob (block 1) (correctMessage (valid (s≤s z≤n) (aliceSlot refl))) λ())
-            (receive (correctMessage (valid ≤-refl (aliceSlot refl))))
+_ : badBob ⊢ initState ↝* ⟦ 2 , (1 , 2) , (1 , 2) ⟧
+_ = tick (AliceSlot refl) refl
+  ∷ trickery badBob (0 , 1)   -- Bob pretends to have sent a message (bumping lastBlkSlot)
+  ∷ tick (BobSlot refl) refl
+  ∷ deliver (send Bob (Blk 1) (correctMessage (valid (s≤s z≤n) (AliceSlot refl))) λ())
+            (receive (correctMessage (valid ≤-refl (AliceSlot refl))))
   ∷ []

@@ -10,6 +10,9 @@ import Test.QuickCheck.StateModel
 import Test.QuickCheck.Monadic
 import Test.QuickCheck.Extras
 
+import CommonTypes
+import Model
+
 -- Super simple protocol:
 --  - The hosts take turns round robin to produce blocks.
 --  - `blockIndex` is incremented with each block on the chain.
@@ -43,84 +46,75 @@ import Test.QuickCheck.Extras
 -- Talking to Arnaud: honest nodes are determinstic in the sense that we know exactly what they will
 -- do at any point.
 
-newtype Block = Block { blockIndex :: Integer }
-  deriving (Ord, Eq, Show, Generic)
+-- newtype Block = Block { blockIndex :: Integer }
+--   deriving (Ord, Eq, Show, Generic)
 
-data Host = Alice
-          | Bob
-          deriving (Ord, Eq, Show, Generic)
-
-data Message = Message { messageBlock      :: Block
-                       , messageOriginator :: Host
-                       } deriving (Ord, Eq, Show)
+-- data Party = Alice
+--           | Bob
+--           deriving (Ord, Eq, Show, Generic)
 
 -- StateModel -------------------------------------------------------------
 
-data EnvState = EnvState { lastBlock :: Block
-                         -- ^ the last block anyone sent
-                         , lastBlockTime :: Integer
-                         -- ^ the time at which the last block was sent
-                         , sutHost :: Host
-                         -- ^ the host of the system under test
-                         , time :: Integer
-                         -- ^ the current time
-                         } deriving (Ord, Eq, Show, Generic)
+-- data EnvState = EnvState { lastBlock :: Block
+--                          -- ^ the last block anyone sent
+--                          , lastBlockTime :: Integer
+--                          -- ^ the time at which the last block was sent
+--                          , sutParty :: Party
+--                          -- ^ the host of the system under test
+--                          , time :: Integer
+--                          -- ^ the current time
+--                          } deriving (Ord, Eq, Show, Generic)
 
-data Signal = ProduceBlock Block
-            | Tick
-            | DishonestProduceBlock Block
-            | DishonestTick
-            deriving (Ord, Eq, Show, Generic)
+-- data Signal = ProduceBlock Block
+--             | Tick
+--             | DishonestProduceBlock Block
+--             | DishonestTick
+--             deriving (Ord, Eq, Show, Generic)
 
-preProduceBlock :: EnvState -> Block -> Bool
-preProduceBlock s@EnvState{..} b =
-  and [ nextBlock s == b
-      , whoseSlot s == envHost s
-      , lastBlockTime /= time
-      ]
+-- preProduceBlock :: EnvState -> Block -> Bool
+-- preProduceBlock s@EnvState{..} b =
+--   and [ nextBlock s == b
+--       , whoseSlot s == envParty s
+--       , lastBlockTime /= time
+--       ]
 
-step :: EnvState -> Signal -> Maybe (EnvState, [Message])
-step s@EnvState{..} = \case
-  ProduceBlock b
-    | preProduceBlock s b -> Just (s { lastBlock = b, lastBlockTime = time }, [])
+-- step :: EnvState -> Signal -> Maybe (EnvState, [Block])
+-- step s@EnvState{..} = \case
+--   ProduceBlock b
+--     | preProduceBlock s b -> Just (s { lastBlock = b, lastBlockTime = time }, [])
 
-  Tick
-    -- We've already sent our message
-    | whoseSlot s == envHost s
-    , lastBlockTime == time -> Just (s{time = time + 1}, [])
-    -- Genesis
-    | time == 0 -> Just (s { time = time + 1 }, [])
-    -- The other party will send their message
-    | whoseSlot s == sutHost -> Just (s { time = time + 1
-                                        , lastBlock = nextBlock s
-                                        , lastBlockTime = time
-                                        }
-                                     , [Message (nextBlock s) sutHost])
+--   Tick
+--     -- We've already sent our message
+--     | whoseSlot s == envParty s
+--     , lastBlockTime == time -> Just (s{time = time + 1}, [])
+--     -- Genesis
+--     | time == 0 -> Just (s { time = time + 1 }, [])
+--     -- The other party will send their message
+--     | whoseSlot s == sutParty -> Just (s { time = time + 1
+--                                         , lastBlock = nextBlock s
+--                                         , lastBlockTime = time
+--                                         }
+--                                      , [nextBlock s])
 
-  DishonestProduceBlock b
-    | not $ preProduceBlock s b -> Just (s, [])
+--   DishonestProduceBlock b
+--     | not $ preProduceBlock s b -> Just (s, [])
 
-  DishonestTick
-    | whoseSlot s == envHost s
-    , lastBlockTime < time -> Just (s{time = time + 1}, [])
+--   DishonestTick
+--     | whoseSlot s == envParty s
+--     , lastBlockTime < time -> Just (s{time = time + 1}, [])
 
-  _ -> Nothing
+--   _ -> Nothing
 
-envHost :: EnvState -> Host
-envHost EnvState{..} = case sutHost of
-  Alice -> Bob
-  Bob -> Alice
+-- envParty :: EnvState -> Party
+-- envParty EnvState{..} = case sutParty of
+--   Alice -> Bob
+--   Bob -> Alice
 
-nextBlock :: EnvState -> Block
-nextBlock EnvState{..} = Block $ blockIndex lastBlock + 1
+-- nextBlock :: EnvState -> Block
+-- nextBlock EnvState{..} = Block $ blockIndex lastBlock + 1
 
-whoseSlot :: EnvState -> Host
-whoseSlot EnvState{..} = whoseSlotTime time
-
-whoseSlotTime :: Integer -> Host
-whoseSlotTime time
-  | even time = Alice
-  | otherwise = Bob
+-- whoseSlot :: EnvState -> Party
+-- whoseSlot EnvState{..} = whoseSlotTime time
 
 instance Show (Action EnvState a) where
   show (Step sig) = show sig
@@ -131,13 +125,9 @@ instance HasVariables (Action EnvState a) where
 
 instance StateModel EnvState where
   data Action EnvState a where
-    Step :: Signal -> Action EnvState [Message]
+    Step :: Signal -> Action EnvState [Block]
 
-  initialState = EnvState { lastBlock = Block 0 -- Genesis
-                          , lastBlockTime = 0
-                          , sutHost = Alice
-                          , time    = 0
-                          }
+  initialState = startingState
 
   nextState s (Step sig) _ = maybe s fst $ step s sig
 
@@ -147,14 +137,14 @@ instance StateModel EnvState where
     frequency
       [ (10, pure $ Some $ Step Tick)
       , (10, pure $ Some $ Step $ ProduceBlock $ nextBlock s)
-      , (5, Some . Step . DishonestProduceBlock . Block <$> arbitrary)
-      , (5, pure $ Some $ Step DishonestTick)
+      -- , (5, Some . Step . DishonestProduceBlock . Block <$> arbitrary)
+      -- , (5, pure $ Some $ Step DishonestTick)
       ]
 
 -- Run Model -----------------------------------------------------------
 
-data Node m = Node { nodeSendTo :: Message -> m ()
-                   , nodeReceiveFrom :: m [Message]
+data Node m = Node { nodeSendTo :: Party -> Block -> m ()
+                   , nodeReceiveFrom :: m [Block]
                    , nodeProgressTime :: m ()
                    }
 
@@ -163,22 +153,22 @@ type ModelMonad m = ReaderT (Node m) m
 onNode :: Monad m => (Node m -> m a) -> ModelMonad m a
 onNode f = ask >>= lift . f
 
-instance (Monad m, Realized m () ~ (), Realized m [Message] ~ [Message]) => RunModel EnvState (ModelMonad m) where
+instance (Monad m, Realized m () ~ (), Realized m [Block] ~ [Block]) => RunModel EnvState (ModelMonad m) where
   perform s@EnvState{..} (Step a) _ = case a of
     Tick -> do
       msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
       pure msgs
-    DishonestTick -> do
-      msgs <- onNode nodeReceiveFrom
-      onNode nodeProgressTime
-      pure msgs
+    -- DishonestTick -> do
+    --   msgs <- onNode nodeReceiveFrom
+    --   onNode nodeProgressTime
+    --   pure msgs
     ProduceBlock b -> do
-      onNode $ flip nodeSendTo $ Message b (envHost s)
+      onNode $ \ sut -> nodeSendTo sut (envParty s) b
       pure []
-    DishonestProduceBlock b -> do
-      onNode $ flip nodeSendTo $ Message b (envHost s)
-      pure []
+    -- DishonestProduceBlock b -> do
+    --   onNode $ \ sut -> nodeSendTo sut (envParty s) b
+    --   pure []
 
   postcondition (sBefore, _) (Step sig) _ msgs =
     case step sBefore sig of
@@ -196,6 +186,11 @@ prop_nodeCorrect node runProp as = runProp $ do
   () <$ runPropertyReaderT (runActions as) node
 
 -- Honest implementation --------------------------------------------------
+
+whoseSlotTime :: Integer -> Party
+whoseSlotTime time
+  | even time = Alice
+  | otherwise = Bob
 
 prop_honest :: Actions EnvState -> Property
 prop_honest = prop_nodeCorrect (honestNode Alice) runHonestMonad
@@ -217,9 +212,9 @@ runHonestMonad m = monadicIO $ do
   sstamp <- lift $ newIORef 0
   runPropertyReaderT m $ HonestNodeState clock block rstamp sstamp
 
-honestNode :: Host -> Node HonestNodeMonad
+honestNode :: Party -> Node HonestNodeMonad
 honestNode h = Node{..}
-  where nodeSendTo (Message (Block n) sender) = do
+  where nodeSendTo sender (Blk n) = do
           block <- asks honestNodeLastBlock
           clock <- asks honestNodeClock
           rstamp <- asks honestNodeLastRecvTime
@@ -241,7 +236,7 @@ honestNode h = Node{..}
           when shouldSend $ do
             lift $ writeIORef block (n + 1)
             lift $ writeIORef tstamp time
-          pure [ Message (Block $ n + 1) h | shouldSend ]
+          pure [ Blk $ n + 1 | shouldSend ]
         nodeProgressTime = do
           clock <- asks honestNodeClock
           lift $ modifyIORef clock (+1)

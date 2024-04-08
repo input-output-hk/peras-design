@@ -54,6 +54,8 @@ library
   import: language
   exposed-modules:
     TargetModel
+    CommonTypes
+    Model
   build-depends:
     base ^>=4.18.1.0,
     quickcheck-dynamic ^>= 3.4,
