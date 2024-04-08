@@ -62,7 +62,6 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
 
-
 ## Pseudo-code
 
 * Researchers' pseudo-code is detailed in [this document](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit)
@@ -77,17 +76,27 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ### Certificates
 
-> Detail requirements for Peras voting certificates and possible impacts on the model
+The exact construction of Peras certificates is still unknown but we already know the feature set it should provide:
+
+* A Peras certificate must be reasonably "small" in order to fit within the limits of a single block without leading to increased transmission delay.
+  * The current block size on `mainnet` is 90kB, with each transaction limited to 16kB
+  * In order to not clutter the chain and take up too much block estate, a certificate should fit in a _single transaction_
+* Certificate need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum
+  * Certificate forging should be reasonably fast but is not on the critical of block diffusion: A round spans multiple possible blocks so there's more time to produce and broadcast it
+* Certificate must be reasonably fast to verify as it's on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight
+* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralised certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes
 
 # Network Performance Analysis
 
-This section provides high-level analysis of the impact of Peras protocol on the existing Cardano network, using [ΔQSD methodology](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/). In order to provide a baseline to compare with, we first applied ΔQ to the existing Praos protocol reconstructing the results that lead to the current set of paremeters defining the performance characteristics of Cardano, following section 4 of the aforementioned paper. We then used the same modelling technique taking into account the specificities of Peras protocol insofar as they impact the core _outcome_ of the Cardano network, namely _block diffusion time_.
+## Certificates in Block Header
+
+This section provides high-level analysis of the impact of Peras protocol on the existing Cardano network, using [ΔQSD methodology](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/). In order to provide a baseline to compare with, we first applied ΔQ to the existing Praos protocol reconstructing the results that lead to the current set of paremeters defining the performance characteristics of Cardano, following section 4 of the aforementioned paper. We then used the same modelling technique taking into account the Peras protocol **assuming inclusion of certificates in headers** insofar as they impact the core _outcome_ of the Cardano network, namely _block diffusion time_.
 
 Note that one of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
 
-## Baseline - Praos ΔQ Modelling
+### Baseline - Praos ΔQ Modelling
 
-### Model overview
+#### Model overview
 
 Here is a graphical representation of the _outcome diagram_ for the ΔQ model of Cardano network under Praos protocol:
 
@@ -139,7 +148,7 @@ The current target valency for cardano-node's connection is 20, and while there'
 :::
 
 
-### Modeling process
+#### Modeling process
 
 We have experimented with three different libraries for encoding this baseline model:
 1. Original [ΔQ library](https://github.com/DeltaQ-SD/pnsol-deltaq-clone) built by Neil Davies, which uses randomized sampling to graph the _Cumulative Distribution Function_ resulting from the ΔQ model,
@@ -211,7 +220,7 @@ The following graph compares this observed CDF to various CDFs for different dis
 
 While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
-## Peras ΔQ Model - Blocks
+### Peras ΔQ Model - Blocks
 
 Things to take into account for modelling peras:
 
@@ -236,16 +245,25 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 
 ![Diffusion with and without certificate](../diagrams/network-with-cert.svg)
 
-The obvious conclusion from this analysis is that it's critical for Peras feasibility the certificate be small enough to be included in the block header.
-
 ::: [!NOTE]
 
 Depending on the value of $T$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, eg. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that's misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
-We need to refine our analysis and model to better expose this impact.
 
 :::
 
-## Peras ΔQ Model - Transactions
+::: [!NOTE]
+
+In practice, cardano-node use _pipelining_ to avoid having to confirm individually every block/header, eg. when sending multiple blocks to a peer a node won't wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
+
+:::
+
+### Conclusion
+
+This analysis demonstrates that Peras certificates cannot be on the critical path of block headers diffusion lest we run the risk of increased delays in block diffusion and number of forks. Certificates either have to be small enough to not require an additional round-trip to transmit on top of the block header, or be part of the block body. Note that in the latter case the certificates should also be relatively small as there's limited space available in blocks.
+
+## Impact on User Experience
+
+### Model
 
 We would like to model the outcomes of Peras in terms of _user experience_, eg. how does Peras impacts the user experience?
 From the point of view of the users, the thing that matters is the _settlement time_ of their transactions: How long does it take for a transaction submitted to be _settled_, eg. to have enough (how much?) guarantee that the transaction is definitely part of the chain?
@@ -293,8 +311,8 @@ N1 -->> Alice: Tx in block
 
 ## Networking
 
-* adding new protocol similar to ChainSync or TxSubmission
-  * votes are propagated as hashes at the header level and pulled by the consumer downstream
+* adding new protocol similar to ChainSync or TxSubmission for Votes
+* Certificates are diffused as transactions within blocks
 
 ## Consensus
 
