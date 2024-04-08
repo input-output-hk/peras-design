@@ -88,6 +88,8 @@ step s@EnvState{..} = \case
     -- We've already sent our message
     | whoseSlot s == envHost s
     , lastBlockTime == time -> Just (s{time = time + 1}, [])
+    -- Genesis
+    | time == 0 -> Just (s { time = time + 1 }, [])
     -- The other party will send their message
     | whoseSlot s == sutHost -> Just (s { time = time + 1
                                         , lastBlock = nextBlock s
@@ -131,8 +133,8 @@ instance StateModel EnvState where
   data Action EnvState a where
     Step :: Signal -> Action EnvState [Message]
 
-  initialState = EnvState { lastBlock = Block (-1)
-                          , lastBlockTime = (-1)
+  initialState = EnvState { lastBlock = Block 0 -- Genesis
+                          , lastBlockTime = 0
                           , sutHost = Alice
                           , time    = 0
                           }
@@ -210,9 +212,9 @@ type HonestNodeMonad = ReaderT HonestNodeState IO
 runHonestMonad :: PropertyM HonestNodeMonad () -> Property
 runHonestMonad m = monadicIO $ do
   clock <- lift $ newIORef 0
-  block <- lift $ newIORef (-1)
-  rstamp <- lift $ newIORef (-1)
-  sstamp <- lift $ newIORef (-1)
+  block <- lift $ newIORef 0
+  rstamp <- lift $ newIORef 0
+  sstamp <- lift $ newIORef 0
   runPropertyReaderT m $ HonestNodeState clock block rstamp sstamp
 
 honestNode :: Host -> Node HonestNodeMonad
