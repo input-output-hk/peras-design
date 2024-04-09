@@ -16,8 +16,10 @@ open import Model
 
 variable
   A : Set
-  env : EnvState
+  env env₁ env₂ : EnvState
   bs : List Block
+  sig : Signal h
+  sigs : List (Signal h)
 
 envState : State → EnvState
 envState s = MkEnvState (Blk (lastBlock (aliceState s)))
@@ -160,11 +162,11 @@ honest-soundness s Tick (inv refl _ slotInv) refl | SutSendAndTick isAliceSlot =
   }
 
 @0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal h)
-          → Invariant s
-          → step (envState s) sig ≡ Just (env₁ ,, bs)
-          → Soundness h s env₁ bs
-soundness s (ProduceBlock b) i prf          = liftSoundness (honest-soundness s (ProduceBlock b) i prf)
-soundness s Tick i prf                      = liftSoundness (honest-soundness s Tick i prf)
+             → Invariant s
+             → step (envState s) sig ≡ Just (env₁ ,, bs)
+             → Soundness h s env₁ bs
+soundness s (ProduceBlock b) i prf = liftSoundness (honest-soundness s (ProduceBlock b) i prf)
+soundness s Tick i prf             = liftSoundness (honest-soundness s Tick i prf)
 soundness s (DishonestProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
 soundness s (DishonestProduceBlock b) i@(inv refl _ _) refl | False = record
   { endState  = s
@@ -186,3 +188,39 @@ soundness s DishonestTick (inv refl lt _) refl | True = record
   ; envOk     = refl
   ; blocksOk  = refl
   }
+
+-- data ValidActions h (env : EnvState) : List (Signal h) → Set where
+--   []  : ValidActions h env []
+--   _∷_ : step env sig ≡ Just (env₁ ,, bs) → ValidActions h env₁ sigs → ValidActions h env (sig ∷ sigs)
+
+-- record ValidTrace s (as : ValidActions h (envState s) sigs) : Set where
+--   field
+--     {endState} : State
+--     trace      : h ⊢ s ↝* endState
+
+-- open ValidTrace
+
+-- soundness* : Invariant s → (as : ValidActions h (envState s) sigs) → ValidTrace s as
+-- soundness* = {!!}
+
+-- Some thoughts about completeness.
+
+-- Informally we would like to prove that for any trace s ↝* s₁ we can
+-- construct a sequence of signals that produces an equivalent trace from
+-- the point of view of Alice.
+-- Aside from being very hard to state formally nevermind prove, this
+-- property is also not true. Why not? Because in an arbitrary trace
+-- Bob can send a dishonest message after Alice sends her message.
+
+-- record AliceStateEquivalence (s₁ s₂ : State) : Set where
+
+-- data AliceTraceEquivalence (r : h ⊢ s₁ ↝* s₂) (r₁ : h ⊢ s₃ ↝* s₄) : Set where
+
+-- record Completeness (i : Invariant s) (r : h ⊢ s ↝* s₁) : Set where
+--   field
+--     {actions}    : List (Signal h)
+--     validActions : ValidActions h (envState s) actions
+--     prf          : AliceTraceEquivalence r (trace (soundness* i validActions))
+
+-- completeness : (i : Invariant s) (r : h ⊢ s ↝* s₁) → Completeness i r
+-- completeness tr = {!!}

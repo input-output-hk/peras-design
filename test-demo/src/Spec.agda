@@ -59,7 +59,7 @@ data Honesty : Set where
   badBob    : Honesty
 
 variable
-  s s₀ s₁ s₂ : State
+  s s₀ s₁ s₂ s₃ s₄ : State
   ls ls₀ ls₁ : LocalState
   p q : Party
   b b₁ : Block
