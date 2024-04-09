@@ -39,7 +39,8 @@ opaque
   decomp-preProduce₁ h = eqBlock-sound (&&ˡ h)
 
   decomp-preProduce₂ : preProduceBlock env b ≡ True → SlotOf (time env) (envParty env)
-  decomp-preProduce₂ {env = env} {b = b} h = lem-whoseSlot env (eqParty-sound (&&ˡ (&&ʳ {nextBlock env == b} h)))
+  decomp-preProduce₂ {env = env} {b = b} h =
+    lem-whoseSlot env (eqParty-sound (&&ˡ (&&ʳ {nextBlock env == b} h)))
 
   decomp-preProduce₃ : preProduceBlock env b ≡ True → lastBlockTime env <ℕ time env
   decomp-preProduce₃ {env = env} {b = b} h = ltℕ-sound (&&ʳ (&&ʳ {nextBlock env == b} h))
@@ -59,10 +60,20 @@ opaque
   ...   | inj₁ p₂ = wrongProducer λ bobSlot → eqParty-complete p₂ (whoseSlot-complete env bobSlot)
   ...   | inj₂ p₃ = alreadySent (ltℕ-complete p₃)
 
+opaque
+  unfolding preDishonestTick
+
+  decomp-preDishonestTick₁ : preDishonestTick env ≡ True → SlotOf (time env) (envParty env)
+  decomp-preDishonestTick₁ {env = env} h = lem-whoseSlot env (eqParty-sound (&&ˡ h))
+
+  decomp-preDishonestTick₂ : preDishonestTick env ≡ True → lastBlockTime env <ℕ time env
+  decomp-preDishonestTick₂ h = ltℕ-sound (&&ʳ h)
+
 lem-produce : ∀ s → preProduceBlock (envState s) b ≡ True → ValidMessage (clock s) (aliceState s) Bob b
 lem-produce s h with refl ← decomp-preProduce₁ h = valid (decomp-preProduce₃ h) (decomp-preProduce₂ h)
 
-lem-dishonest-produce : ∀ s → preProduceBlock (envState s) b ≡ False → ¬ ValidMessage (clock s) (aliceState s) Bob b
+lem-dishonest-produce : ∀ s → preProduceBlock (envState s) b ≡ False
+                            → ¬ ValidMessage (clock s) (aliceState s) Bob b
 lem-dishonest-produce s h (valid p q) with decomp-!preProduce h
 ... | wrongBlock p₁    = p₁ refl
 ... | wrongProducer p₂ = p₂ q
@@ -164,4 +175,14 @@ soundness s (DishonestProduceBlock b) i@(inv refl _ _) refl | False = record
   ; envOk     = refl
   ; blocksOk  = refl
   }
-soundness s DishonestTick i prf = {!!}  -- Left as an exercise to the reader
+soundness s DishonestTick (inv refl _ _) prf with preDishonestTick (envState s) in eq
+soundness s DishonestTick (inv refl lt _) refl | True = record
+  { endState  = ⟦ suc (clock s) , aliceState s , _ ⟧
+  ; invariant = inv refl (m≤n⇒m≤1+n lt) (inj₁ (s≤s lt))
+  ; trace     = trickery badBob (record (aliceState s) { lastBlockSlot = clock s })
+              ∷ tick (decomp-preDishonestTick₁ eq) refl
+              ∷ trickery badBob (aliceState s)
+              ∷ []
+  ; envOk     = refl
+  ; blocksOk  = refl
+  }
