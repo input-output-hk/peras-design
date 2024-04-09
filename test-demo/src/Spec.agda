@@ -127,6 +127,23 @@ aliceMessages (deliver _ _ ∷ tr) = aliceMessages tr
 aliceMessages (trickery _ _ ∷ tr) = aliceMessages tr
 aliceMessages (tick _ _ ∷ tr) = aliceMessages tr
 
+-- Some proofs
+
+liftHonesty : happyPath ⊢ s ↝ s₁ → h ⊢ s ↝ s₁
+liftHonesty (deliver (send q b (correctMessage v) !q) r) = deliver (send q b (correctMessage v) !q) r
+liftHonesty (tick sl sent) = tick sl sent
+
+liftHonesty* : happyPath ⊢ s ↝* s₁ → h ⊢ s ↝* s₁
+liftHonesty* []       = []
+liftHonesty* (r ∷ tr) = liftHonesty r ∷ liftHonesty* tr
+
+sameAliceMessages : (tr : happyPath ⊢ s ↝* s₁) → aliceMessages tr ≡ aliceMessages (liftHonesty* {h = h} tr)
+sameAliceMessages [] = refl
+sameAliceMessages {h = h} (deliver {p = Alice} {b} (send _ _ (correctMessage _) _) _ ∷ tr)
+  rewrite sameAliceMessages {h = h} tr = refl
+sameAliceMessages (deliver {p = Bob} (send _ _ (correctMessage _) _) _ ∷ tr) = sameAliceMessages tr
+sameAliceMessages (tick _ _ ∷ tr) = sameAliceMessages tr
+
 -- Examples
 
 _ : happyPath ⊢ initState ↝* ⟦ 2 , (2 , 2) , (2 , 2) ⟧

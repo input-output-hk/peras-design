@@ -5,6 +5,7 @@
 module Model where
 
 open import Data.Nat.Base using (ℕ; _%_)
+open import Data.Sum
 open import Haskell.Prelude
 open import Relation.Binary.PropositionalEquality
 
@@ -25,6 +26,10 @@ it ⦃ x ⦄ = x
 
 &&ʳ : ∀ {a b : Bool} → (a && b) ≡ True → b ≡ True
 &&ʳ {True} {True} _ = refl
+
+!&& : ∀ {a b : Bool} → (a && b) ≡ False → a ≡ False ⊎ b ≡ False
+!&& {False}        _ = inj₁ refl
+!&& {True} {False} _ = inj₂ refl
 
 not-elim : ∀ {a} → not a ≡ True → a ≡ False
 not-elim {False} _ = refl
@@ -50,8 +55,15 @@ eqParty-sound : (p == q) ≡ True → p ≡ q
 eqParty-sound {Alice} {Alice} _ = refl
 eqParty-sound {Bob}   {Bob}   _ = refl
 
+eqParty-complete : (p == q) ≡ False → p ≢ q
+eqParty-complete {Alice} {Bob} h ()
+eqParty-complete {Bob} {Alice} h ()
+
 eqBlock-sound : ∀ {b b₁ : Block} → (b == b₁) ≡ True → b ≡ b₁
 eqBlock-sound {Blk i} {Blk j} h = cong Blk (eqℕ-sound h)
+
+eqBlock-complete : ∀ {b b₁ : Block} → (b == b₁) ≡ False → b ≢ b₁
+eqBlock-complete {Blk i} isF refl = eqℕ-complete {i} isF refl
 
 data Signal : (@0 h : Honesty) → Set where
   ProduceBlock : Block → Signal h
@@ -128,6 +140,10 @@ lem-whoseSlot s refl with time s % 2 in eq
 ... | 1   = BobSlot eq
 ... | hm? = yeah-no
   where postulate yeah-no : SlotOf _ _
+
+whoseSlot-complete : ∀ s {p} → SlotOf (time s) p → whoseSlot s ≡ p
+whoseSlot-complete s (AliceSlot eq) rewrite eq = refl
+whoseSlot-complete s (BobSlot   eq) rewrite eq = refl
 
 opaque
   whenTick : (s : EnvState) → WhenTick s

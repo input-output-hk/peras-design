@@ -7,6 +7,7 @@ open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
 open import Haskell.Prelude hiding (_×_; _×_×_; _,_,_; b; s; t; ⊥) renaming (_,_ to _,,_)
 open import Relation.Binary.PropositionalEquality
+open import Relation.Nullary
 open import Data.Empty
 
 open import CommonTypes
@@ -16,6 +17,7 @@ open import Model
 variable
   A : Set
   env : EnvState
+  bs : List Block
 
 envState : State → EnvState
 envState s = MkEnvState (Blk (lastBlock (aliceState s)))
@@ -26,6 +28,9 @@ envState s = MkEnvState (Blk (lastBlock (aliceState s)))
 ltℕ-sound : ∀ {n m} → (n < m) ≡ True → n <ℕ m
 ltℕ-sound {zero}  {suc m} h = s≤s z≤n
 ltℕ-sound {suc n} {suc m} h = s≤s (ltℕ-sound h)
+
+ltℕ-complete : ∀ {n m} → (n < m) ≡ False → ¬ (n <ℕ m)
+ltℕ-complete {suc n} {suc m} h (s≤s lt) = ltℕ-complete {n} {m} h lt
 
 opaque
   unfolding preProduceBlock
@@ -39,8 +44,29 @@ opaque
   decomp-preProduce₃ : preProduceBlock env b ≡ True → lastBlockTime env <ℕ time env
   decomp-preProduce₃ {env = env} {b = b} h = ltℕ-sound (&&ʳ (&&ʳ {nextBlock env == b} h))
 
+data NotPreProduceBlock (env : EnvState) (b : Block) : Set where
+  wrongBlock    : nextBlock env ≢ b → NotPreProduceBlock env b
+  wrongProducer : ¬ SlotOf (time env) (envParty env) → NotPreProduceBlock env b
+  alreadySent   : ¬ (lastBlockTime env <ℕ time env) → NotPreProduceBlock env b
+
+opaque
+  unfolding preProduceBlock
+
+  decomp-!preProduce : preProduceBlock env b ≡ False → NotPreProduceBlock env b
+  decomp-!preProduce {env = env} {b} h with !&& {nextBlock env == b} h
+  ... | inj₁ p₁ = wrongBlock (eqBlock-complete p₁)
+  ... | inj₂ q with !&& {whoseSlot env == envParty env} q
+  ...   | inj₁ p₂ = wrongProducer λ bobSlot → eqParty-complete p₂ (whoseSlot-complete env bobSlot)
+  ...   | inj₂ p₃ = alreadySent (ltℕ-complete p₃)
+
 lem-produce : ∀ s → preProduceBlock (envState s) b ≡ True → ValidMessage (clock s) (aliceState s) Bob b
 lem-produce s h with refl ← decomp-preProduce₁ h = valid (decomp-preProduce₃ h) (decomp-preProduce₂ h)
+
+lem-dishonest-produce : ∀ s → preProduceBlock (envState s) b ≡ False → ¬ ValidMessage (clock s) (aliceState s) Bob b
+lem-dishonest-produce s h (valid p q) with decomp-!preProduce h
+... | wrongBlock p₁    = p₁ refl
+... | wrongProducer p₂ = p₂ q
+... | alreadySent p₃   = p₃ p
 
 lem-nextblock : ∀ s → preProduceBlock (envState s) b ≡ True → suc (lastBlock (aliceState s)) ≡ blockIndex b
 lem-nextblock s h with refl ← decomp-preProduce₁ h = refl
@@ -69,12 +95,21 @@ record Soundness (h : Honesty) (s : State) (endEnv : EnvState) (bs : List Block)
 
 open Soundness
 
-@0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal happyPath)
+liftSoundness : Soundness happyPath s env bs → Soundness h s env bs
+liftSoundness s = record
+  { endState  = endState s
+  ; invariant = invariant s
+  ; trace     = liftHonesty* (trace s)
+  ; envOk     = envOk s
+  ; blocksOk  = trans (sym $ sameAliceMessages (trace s)) (blocksOk s)
+  }
+
+@0 honest-soundness : ∀ {env₁ bs} (s : State) (sig : Signal happyPath)
           → Invariant s
           → step (envState s) sig ≡ Just (env₁ ,, bs)
-          → Soundness h s env₁ bs
-soundness s (ProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
-soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
+          → Soundness happyPath s env₁ bs
+honest-soundness s (ProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
+honest-soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
   { endState  = ⟦ clock s , _ , _ ⟧
   ; invariant = inv refl ≤-refl (inj₂ (decomp-preProduce₂ eq))
   ; trace     = deliver (send {p = Bob} Alice b (correctMessage (lem-produce s eq)) λ())
@@ -82,23 +117,15 @@ soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
   ; envOk     = cong (λ i → MkEnvState (Blk i) _ _ _) (lem-nextblock s eq)
   ; blocksOk  = refl
   }
--- soundness s (DishonestProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
--- soundness s (DishonestProduceBlock b) (inv refl _ _) refl | False = record
---   { endState  = ⟦ clock s , _ , _ ⟧
---   ; invariant = inv refl {!!} {!!}
---   ; trace     = {!!}
---   ; envOk     = {!!}
---   ; blocksOk  = {!!}
---   }
-soundness s Tick (inv refl _ _) prf with whenTick (envState s)
-soundness s Tick (inv refl z≤n _) refl | GenesisTick refl = record
+honest-soundness s Tick (inv refl _ _) prf with whenTick (envState s)
+honest-soundness s Tick (inv refl z≤n _) refl | GenesisTick refl = record
   { endState  = ⟦ 1 , _ , _ ⟧
   ; invariant = inv refl z≤n (inj₂ (BobSlot refl))
   ; trace     = tick (AliceSlot refl) refl ∷ []
   ; envOk     = refl
   ; blocksOk  = refl
   }
-soundness s Tick (inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
+honest-soundness s Tick (inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
   { endState  = ⟦ suc (clock s) , _ , _ ⟧
   ; invariant = inv refl (n≤1+n _) (inj₁ ≤-refl)
   ; trace     = tick isEnvSlot refl
@@ -106,7 +133,7 @@ soundness s Tick (inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
   ; envOk     = refl
   ; blocksOk  = refl
   }
-soundness s Tick (inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
+honest-soundness s Tick (inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
   { endState  = ⟦ suc (clock s) , _ , _ ⟧
   ; invariant = inv refl (n≤1+n _) (inj₁ ≤-refl)
   ; trace     = let b = nextBlock (envState s)
@@ -120,3 +147,21 @@ soundness s Tick (inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
   ; envOk     = refl
   ; blocksOk  = refl
   }
+
+@0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal h)
+          → Invariant s
+          → step (envState s) sig ≡ Just (env₁ ,, bs)
+          → Soundness h s env₁ bs
+soundness s (ProduceBlock b) i prf          = liftSoundness (honest-soundness s (ProduceBlock b) i prf)
+soundness s Tick i prf                      = liftSoundness (honest-soundness s Tick i prf)
+soundness s (DishonestProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
+soundness s (DishonestProduceBlock b) i@(inv refl _ _) refl | False = record
+  { endState  = s
+  ; invariant = i
+  ; trace     = deliver (send Alice b (dishonestMessage badBob) λ())
+                        (receive (wrongMessage (lem-dishonest-produce s eq)))
+              ∷ []
+  ; envOk     = refl
+  ; blocksOk  = refl
+  }
+soundness s DishonestTick i prf = {!!}  -- Left as an exercise to the reader
