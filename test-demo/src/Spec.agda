@@ -47,8 +47,8 @@ getLocalState Alice = aliceState
 getLocalState Bob   = bobState
 
 modifyLocalState : Party → (LocalState → LocalState) → State → State
-modifyLocalState Alice f s = record s { aliceState = f (aliceState s) }
-modifyLocalState Bob   f s = record s { bobState   = f (bobState   s) }
+modifyLocalState Alice f ⟦ t , as , bs ⟧ = ⟦ t , f as , bs ⟧
+modifyLocalState Bob   f ⟦ t , as , bs ⟧ = ⟦ t , as , f bs ⟧
 
 setLocalState : Party → LocalState → State → State
 setLocalState p ls = modifyLocalState p λ _ → ls

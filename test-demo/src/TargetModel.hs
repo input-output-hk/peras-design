@@ -154,7 +154,7 @@ onNode :: Monad m => (Node m -> m a) -> ModelMonad m a
 onNode f = ask >>= lift . f
 
 instance (Monad m, Realized m () ~ (), Realized m [Block] ~ [Block]) => RunModel EnvState (ModelMonad m) where
-  perform s@EnvState{..} (Step a) _ = case a of
+  perform s@MkEnvState{..} (Step a) _ = case a of
     Tick -> do
       msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
