@@ -46,76 +46,6 @@ import Model
 -- Talking to Arnaud: honest nodes are determinstic in the sense that we know exactly what they will
 -- do at any point.
 
--- newtype Block = Block { blockIndex :: Integer }
---   deriving (Ord, Eq, Show, Generic)
-
--- data Party = Alice
---           | Bob
---           deriving (Ord, Eq, Show, Generic)
-
--- StateModel -------------------------------------------------------------
-
--- data EnvState = EnvState { lastBlock :: Block
---                          -- ^ the last block anyone sent
---                          , lastBlockTime :: Integer
---                          -- ^ the time at which the last block was sent
---                          , sutParty :: Party
---                          -- ^ the host of the system under test
---                          , time :: Integer
---                          -- ^ the current time
---                          } deriving (Ord, Eq, Show, Generic)
-
--- data Signal = ProduceBlock Block
---             | Tick
---             | DishonestProduceBlock Block
---             | DishonestTick
---             deriving (Ord, Eq, Show, Generic)
-
--- preProduceBlock :: EnvState -> Block -> Bool
--- preProduceBlock s@EnvState{..} b =
---   and [ nextBlock s == b
---       , whoseSlot s == envParty s
---       , lastBlockTime /= time
---       ]
-
--- step :: EnvState -> Signal -> Maybe (EnvState, [Block])
--- step s@EnvState{..} = \case
---   ProduceBlock b
---     | preProduceBlock s b -> Just (s { lastBlock = b, lastBlockTime = time }, [])
-
---   Tick
---     -- We've already sent our message
---     | whoseSlot s == envParty s
---     , lastBlockTime == time -> Just (s{time = time + 1}, [])
---     -- Genesis
---     | time == 0 -> Just (s { time = time + 1 }, [])
---     -- The other party will send their message
---     | whoseSlot s == sutParty -> Just (s { time = time + 1
---                                         , lastBlock = nextBlock s
---                                         , lastBlockTime = time
---                                         }
---                                      , [nextBlock s])
-
---   DishonestProduceBlock b
---     | not $ preProduceBlock s b -> Just (s, [])
-
---   DishonestTick
---     | whoseSlot s == envParty s
---     , lastBlockTime < time -> Just (s{time = time + 1}, [])
-
---   _ -> Nothing
-
--- envParty :: EnvState -> Party
--- envParty EnvState{..} = case sutParty of
---   Alice -> Bob
---   Bob -> Alice
-
--- nextBlock :: EnvState -> Block
--- nextBlock EnvState{..} = Block $ blockIndex lastBlock + 1
-
--- whoseSlot :: EnvState -> Party
--- whoseSlot EnvState{..} = whoseSlotTime time
-
 instance Show (Action EnvState a) where
   show (Step sig) = show sig
 deriving instance Eq (Action EnvState a)
@@ -137,8 +67,8 @@ instance StateModel EnvState where
     frequency
       [ (10, pure $ Some $ Step Tick)
       , (10, pure $ Some $ Step $ ProduceBlock $ nextBlock s)
-      -- , (5, Some . Step . DishonestProduceBlock . Block <$> arbitrary)
-      -- , (5, pure $ Some $ Step DishonestTick)
+      , (5, Some . Step . DishonestProduceBlock . Blk <$> arbitrary)
+      , (5, pure $ Some $ Step DishonestTick)
       ]
 
 -- Run Model -----------------------------------------------------------
@@ -159,16 +89,16 @@ instance (Monad m, Realized m () ~ (), Realized m [Block] ~ [Block]) => RunModel
       msgs <- onNode nodeReceiveFrom
       onNode nodeProgressTime
       pure msgs
-    -- DishonestTick -> do
-    --   msgs <- onNode nodeReceiveFrom
-    --   onNode nodeProgressTime
-    --   pure msgs
+    DishonestTick -> do
+      msgs <- onNode nodeReceiveFrom
+      onNode nodeProgressTime
+      pure msgs
     ProduceBlock b -> do
       onNode $ \ sut -> nodeSendTo sut (envParty s) b
       pure []
-    -- DishonestProduceBlock b -> do
-    --   onNode $ \ sut -> nodeSendTo sut (envParty s) b
-    --   pure []
+    DishonestProduceBlock b -> do
+      onNode $ \ sut -> nodeSendTo sut (envParty s) b
+      pure []
 
   postcondition (sBefore, _) (Step sig) _ msgs =
     case step sBefore sig of

@@ -69,10 +69,10 @@ record Soundness (h : Honesty) (s : State) (endEnv : EnvState) (bs : List Block)
 
 open Soundness
 
-@0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal)
+@0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal happyPath)
           → Invariant s
           → step (envState s) sig ≡ Just (env₁ ,, bs)
-          → Soundness happyPath s env₁ bs
+          → Soundness h s env₁ bs
 soundness s (ProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
 soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
   { endState  = ⟦ clock s , _ , _ ⟧
@@ -82,6 +82,14 @@ soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
   ; envOk     = cong (λ i → MkEnvState (Blk i) _ _ _) (lem-nextblock s eq)
   ; blocksOk  = refl
   }
+-- soundness s (DishonestProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
+-- soundness s (DishonestProduceBlock b) (inv refl _ _) refl | False = record
+--   { endState  = ⟦ clock s , _ , _ ⟧
+--   ; invariant = inv refl {!!} {!!}
+--   ; trace     = {!!}
+--   ; envOk     = {!!}
+--   ; blocksOk  = {!!}
+--   }
 soundness s Tick (inv refl _ _) prf with whenTick (envState s)
 soundness s Tick (inv refl z≤n _) refl | GenesisTick refl = record
   { endState  = ⟦ 1 , _ , _ ⟧

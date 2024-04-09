@@ -53,9 +53,11 @@ eqParty-sound {Bob}   {Bob}   _ = refl
 eqBlock-sound : ∀ {b b₁ : Block} → (b == b₁) ≡ True → b ≡ b₁
 eqBlock-sound {Blk i} {Blk j} h = cong Blk (eqℕ-sound h)
 
-data Signal : Set where
-  ProduceBlock : Block → Signal
-  Tick : Signal
+data Signal : (@0 h : Honesty) → Set where
+  ProduceBlock : Block → Signal h
+  DishonestProduceBlock : Block → Signal badBob
+  Tick : Signal h
+  DishonestTick : Signal badBob
 {-# COMPILE AGDA2HS Signal deriving (Eq, Ord, Show, Generic) #-}
 
 record EnvState : Set where
@@ -147,10 +149,23 @@ stepTick s (SutSendAndTick _)     = Just ( tickSlot record s
 stepTick _ NoTick                 = Nothing
 {-# COMPILE AGDA2HS stepTick #-}
 
-step : EnvState → Signal → Maybe (EnvState × List Block)
+opaque
+  preDishonestTick : EnvState → Bool
+  preDishonestTick s = whoseSlot s == envParty s && lastBlockTime s < time s
+  {-# COMPILE AGDA2HS preDishonestTick #-}
+
+step : EnvState → Signal h → Maybe (EnvState × List Block)
 step s (ProduceBlock b) =
   if preProduceBlock s b
   then Just (record s { lastBlock = b; lastBlockTime = time s } , [])
   else Nothing
+step s (DishonestProduceBlock b) =
+  if preProduceBlock s b
+  then Nothing
+  else Just (s , [])
 step s Tick = stepTick s (whenTick s)
+step s DishonestTick =
+  if preDishonestTick s
+  then Just (tickSlot s , [])
+  else Nothing
 {-# COMPILE AGDA2HS step #-}

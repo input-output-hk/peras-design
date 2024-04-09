@@ -5,7 +5,9 @@ import CommonTypes (Block(Blk, blockIndex), Party(Alice, Bob), Slot)
 import GHC.Generics
 
 data Signal = ProduceBlock Block
+            | DishonestProduceBlock Block
             | Tick
+            | DishonestTick
                 deriving (Eq, Ord, Show, Generic)
 
 data EnvState = MkEnvState{lastBlock :: Block,
@@ -60,9 +62,17 @@ stepTick s SutSendAndTick
        [nextBlock s])
 stepTick _ NoTick = Nothing
 
+preDishonestTick :: EnvState -> Bool
+preDishonestTick s
+  = whoseSlot s == envParty s && lastBlockTime s < time s
+
 step :: EnvState -> Signal -> Maybe (EnvState, [Block])
 step s (ProduceBlock b)
   = if preProduceBlock s b then
       Just (MkEnvState b (time s) (sutParty s) (time s), []) else Nothing
+step s (DishonestProduceBlock b)
+  = if preProduceBlock s b then Nothing else Just (s, [])
 step s Tick = stepTick s (whenTick s)
+step s DishonestTick
+  = if preDishonestTick s then Just (tickSlot s, []) else Nothing
 
