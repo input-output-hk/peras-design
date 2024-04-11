@@ -130,3 +130,35 @@ onNewSlot p s =
          cpref ← cpref extendWith b
          output (cpref trimmedBy W))
 ```
+
+## Day 2
+
+### Quviq presentation
+
+Max and Ulf walked us through their prototype integration of Agda and quickcheck-dynamic, available in a [branch](https://github.com/input-output-hk/peras-design/tree/55ab966196f23adf5b684df815ca0e447f8598b7/test-demo). The basic principles are sketched in the following diagram:
+
+![Agda-QuickCheck Integration](../diagrams/agda-quickcheck.png)
+
+* There's a distinct _Test Model_ which describes what the QC tests are interested in testing on the implementation, eg. it does not need to reflect the full _Formal model_ but can focus on specific aspects and use different data structures
+* The _soundness_ of the Test model is guaranteed by Agda proofs that ensure tests only produce sequence of state transitions that are valid w.r.t to the formal model
+* The grunt of the quickcheck-dynamic structure, apart from the `perform` code which is needed to connect with the SUT, is generated from this _Test model_
+
+### Agda Model & Proofs
+
+We went through the existing Agda model and discussed how this model relates to the researcher's formalism on one side, and to the original PoS paper on the other side
+
+### Next steps
+
+1. Move pseudo-code from Google doc to Agda code
+   * Contemplate publishing it as a future paper?
+   * Ensure both engineering and research use this as a reference point
+2. Express settlement bounds improvement from Peras as a QCD property in Agda
+   * Reuse "example" from Quviq
+   * How to relate this model to the  "real" one
+3. More work on Agda Peras model
+   * Finish current proof
+   * Align/reflect on the researchers' proof and model from the paper
+4. ΔQ -> modeling vote diffusion
+   * include vote verification/certificate creation time
+5. Simulation(s)
+6. Visual toy model of protocol
