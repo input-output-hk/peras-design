@@ -421,6 +421,84 @@ Findings from the simulation runs highlight the impracticality of blindly runnin
 
 #### "Split brain"
 
+This first "split-brain" experiment with `peras-iosim` involved running a network of 100 nodes with fivefold connectivity for 15 minutes, but where nodes are partitioned into two non-communicating sets between the 5th and 10th minute. The nodes quickly establish consensus after genesis, but split into two long-lived forks after the 5th minute; shortly after the 10th minute, one of the forks is abandoned as consensus is reestablished.
+
+Nodes were divided into two "parities" determined by whether the hash of their name is an even or odd number. When the network is partitioned, only nodes of the same parity are allowed to communicate with each other: the Haskell module `Peras.IOSIM.Experiment.splitBrain` implements the experiment and is readily extensible for defining additional experiments.
+
+Both the Praos and Peras protocols were simulated, with the following Peras parameters for creating a scenario that exhibits occasional cool-down periods and a strong influence of the voting boost. 
+
+```yaml
+
+activeSlotCoefficient: 0.10
+roundDuration: 50
+pCommitteeLottery: 0.00021
+votingBoost: 0.25
+votingWindow: [150, 1]
+votingQuorum: 7
+voteMaximumAge: 100
+cooldownDuration: 4
+prefixCutoffWeight:  10000000
+```
+
+The control ("normal") case is a network that does not experience partitioning:
+
+```yaml
+randomSeed: 13234
+peerCount: 100
+downstreamCount: 5
+maximumStake: 1000
+messageDelay: 350000
+endSlot: 1500
+experiment:
+  tag: NoExperiment
+```
+
+The treatment ("split") case experiences partitioning between the 5th and 10th minutes:
+
+```yaml
+randomSeed: 13234
+peerCount: 100
+downstreamCount: 5
+maximumStake: 1000
+messageDelay: 350000
+endSlot: 1500
+experiment:
+  tag: SplitBrain
+  experimentStart: 500
+  experimentFinish: 1000
+```
+
+In the Peras simulation, the chain that eventually became dominant forged fewer blocks during the partition period, but it was lucky to include sufficient votes for a quorum at slot 503 and that kept the chain out of the cool-down period long enough to put more votes on the chain, which increased the chain weight. It appears that that was sufficient for the chain to eventually dominate. Note that multiple small forks occurred between the time that network connectivity was restored and consensus was reestablished.
+
+![Forking and reestablishment of quorum in Peras split-brain experiment](../diagrams/sim-expts/split-brain.png)
+
+The primary measurements related to the loss and reestablishment of consensus relate to the length of the forks, measured in blocks or slots. In the table shows the statistics of these forks, of which the Peras case had several.
+
+| Protocol | Metric                                              | Blocks | Slots |
+|----------|-----------------------------------------------------|-------:|------:|
+| Praos    | Length of discarded chain at slot 1000              |     68 |  1000 |
+|          | Length of dominant chain at slot 1000               |     73 |  1000 |
+|          | Number of blocks in discarded chain after slot 1000 |      2 |       |
+| Peras    | Length of discarded chain at slot 1000              |     75 |  1000 |
+|          | Length of dominant chain at slot 1000               |     66 |  1000 |
+|          | Number of blocks in discarded chain after slot 1000 |      3 |   137 |
+|          |                                                     |      1 |   118 |
+|          |                                                     |      1 |   137 |
+|          |                                                     |      1 |   141 |
+|          |                                                     |      1 |    55 |
+|          |                                                     |      1 |    24 |
+|          |                                                     |      1 |    18 |
+|          | Number of blocks afters slot 1000 to reach quorum   |     18 |   304 |
+
+The primary findings from this experiment follow.
+
+- The complexity of the forking, voting, and cool-down in the Peras results highlights the need for capable visualization and analysis tools.
+- The voting boost can impede the reestablishment of consensus after a network partition is restored.
+- It would be convenient to be able to start a simulation from an existing chain, instead of from genesis.
+- VRF-based randomization make it easier to compare simulations with different parameters. 
+- Even though `peras-iosim` runs are not particularly fast, one probably does not need to parallelize them because typical experiments involve many executions of simulations, which means we can take advantage of CPU resources simply by running those different scenarios in parallel.
+- The memory footprint of `peras-iosim` is small (less than 100 MB) if tracing is turned off; with tracing, it is about twenty times that, but still modest.
+
 #### Congestion
 
 ## Rust-based simulation
