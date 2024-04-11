@@ -307,7 +307,62 @@ N1 -->> Alice: Tx in block
 
 # Simulations
 
-# Integration in cardano-node
+## Haskell-based simulation
+
+### Design
+
+### Experiments
+
+#### Block production
+
+The "block production" experiment laid the groundwork for testing simulated block-production rates using QuickCheck properties. Because the VRF determines which slots a node leads and forges a block, the production is sporadic and pseudo-random. Heretofore, the Peras simulation has used a simple probabilistic approximation to this process: a uniformly distributed random variable is selected and the node produces a block in the slot if that variable is less than the probability $p = 1 - (1 - \alpha) ^ (s_\text{node} / s_\text{total})$, where $\alpha$ is the active slot coefficient and $s_\text{node}$ and $s_\text{total}$ are the stake held by the node and the whole network, respectively.
+
+The experiment involved running 1000 simulations of two hours of block production for a node with $\alpha = 0.05$. The stake held by the node was randomly chosen in each of the simulations. The plot below shows the number of blocks produced as a function of the node's stake. The probability contours in the plot indicate the theoretical relationship. For example, the 99.9% quantile (indicated by 0.999 in the legend) is expected to have only 1/1000 of the observations below it; similarly, 90% of the observations should lie between the 5% and 95% contours. The distribution of number of blocks produced in the experiment appears to obey the theoretical expectations.
+
+![Relationship between a node's stake and the number of blocks it produces](../diagrams/sim-expts/blockproduction-scatter.png)
+
+Although the above plot indicates qualitative agreement, it is somewhat difficult to quantify the level of agreement because stake was varied in the different simulations. The following histogram shows another view of the same data, where the effect of different stake is removed by applying the binomial cumulative probability distribution function (CDF) for $\alpha = 0.05$ to the data. Theoretically, this transformed distribution should be uniform between zero and one. Once again, the data appears to match expectation.
+
+![Empirically observed quantiles of binomial distribution in block-production experiment](../diagrams/sim-expts/blockproduction-quantiles.png)
+
+A Kolmogorov-Smirnov (KS) test quantifies the conformance of the results to such a uniform distribution:
+```R
+ks.test(results$`Quantile`, "punif", min=0, max=1)
+```
+
+```console
+D = 0.023265, p-value = 0.6587
+alternative hypothesis: two-sided
+```
+
+The p-value of 66% solidly indicates that the block production count matches our expectation and the theoretical model.
+
+Because it is slightly inconvenient to embed a KS computation within a QuickCheck property, one can instead use an approximation based on the law of large numbers. The mean number of blocks produced in this binomial process should be the number of slots times the probability of producing a block in a slot, $n p$,  and the variance should be $n p (1-p)$. The `peras-quickcheck` module contains the following function in `Data.Statistics.Util`:
+
+```haskell
+-- | Check whether a value falls within the central portion of a binomial distribution.
+equalsBinomialWithinTails ::
+  -- | The sample size.
+  Int ->
+  -- | The binomial propability.
+  Double ->
+  -- | The number of sigmas that define the central acceptance portion.
+  Double ->
+  -- | The actual observation.
+  Int ->
+  -- | Whether the observation falls within the central region.
+  Bool
+```
+
+The Peras continuous-integration tests are configured to require that the observed number of blocks matches the theoretical value to within three standard deviations. Practically, this means that a random failure will occur about once in every ten or so invocations of the CI, since each invocation executes 100 tests.
+
+#### Simplified Peras
+
+#### "Split brain"
+
+#### Congestion
+
+# Integration into `cardano-node`
 
 ## Networking
 
