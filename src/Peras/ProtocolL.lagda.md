@@ -28,6 +28,22 @@ Ouroboros Peras has the following parameters:
 <!--
 ```agda
 postulate
+  -- Various utility functions
+  _[_] : forall {a} -> List a -> ℕ -> a
+
+  _==_ : forall {a : Set} -> a -> a -> Bool
+
+  _and_ : Bool -> Bool -> Bool
+  _≤_ : ℕ -> ℕ -> Bool
+  _≥_ : ℕ -> ℕ -> Bool
+  _>_ : ℕ -> ℕ -> Bool
+  _-_ : ℕ -> ℕ -> ℕ
+  _/_ : ℕ -> ℕ -> ℕ
+
+  set : Set -> Set
+  singleton : forall {a} -> a -> set a
+  toList : forall {a} -> set a -> List a
+
 ```
 -->
 
@@ -64,22 +80,98 @@ postulate
   K : ℕ
   ```
 
+Slot and round numbering
+
+* The first slot (in which there can be a block) is 0; subsequent slots are numbered 1, 2 ,...
+* Voting rounds are numbered 0, 1, 2, ..., and voting round $r$ corresponds to slots $r*T$, $r*T + 1$, $r*T + 2$, ..., $(r+1)*T - 1$. No votes are cast in round 0, which is successful by definition.
+
 ```agda
 Slot = ℕ
 
 Round = ℕ
+```
 
+The function `slot(.)` returns the slot number corresponding to the beginning of round a round, i.e., $slot(r) = r*T$.
+
+```agda
+slot : Round -> Slot
+slot r = r / U
+```
+
+### Model
+
+Chain/vote sync: each party is connected to a small number (e.g., 20) of upstream peers and downstream peers
+
+### Blocks and Votes
+
+<!--
+```agda
 postulate
   Party : Set
-  Chain : Set
-  Block : Set
+  Hash : Set
+  Proof : Set
+  Payload : Set
+  Signature : Set
   Certificate : Set
-  Certify : Block -> Certificate -> Block
+```
+-->
 
-  set : Set -> Set
-  singleton : forall {a} -> a -> set a
+A Peras block consists of the following:
+
+```agda
+record Block : Set where
+  constructor MkBlock
+  field
+   slot_number : Slot
+   creator_ID : Party
+   hash_of_parent_block : Hash
+   certificate : Certificate
+   slot-leadership_proof : Proof
+   payload : Payload
+   signature : Signature
+```
+
+For simplicity, the last three are ignored in the description of the protocol below.
+
+
+A Peras vote consists of the following:
+
+```agda
+record Vote : Set where
+ constructor MkVote
+ field
+  round_number : Round
+  creator_ID : Party
+  block_voted_for :  Block
+```
+
+A vote is valid if the committee-membership proof and the signature
+are valid. For simplicity, however, those two are not made explicit in
+the protocol description below.
+
+A Peras certificate represents an aggregated quorum of votes for a
+specific block at a specific round. Such a certificate is supposed to
+be self-contained and verifiable by any node.
+
+<!--
+```agda
+postulate
+```
+-->
+
+```agda
+  Certify : Block -> Certificate -> Block
+```
+
+### Chains
+
+A Peras chain consists of a set of blocks. A chain is valid if the blocks (ignoring the certificates) form a valid Praos chain.
+
+<!--
+```agda
+postulate
+  Chain : Set
   null : Certificate
-  toList : forall {a} -> set a -> List a
 
   _isLeaderInSlot_ : Party -> Slot -> Bool
   _trimmedBy_ : Chain -> ℕ -> Chain
@@ -89,36 +181,57 @@ postulate
   length : Chain -> ℕ
 
   round : Certificate -> ℕ
+```
+-->
 
-  _[_] : forall {a} -> List a -> ℕ -> a
+The following algorithm is used to compute the weight, given a set of certificates:
 
+```agda
+chainWeight : Chain -> List Certificate -> ℕ
+chainWeight chain certs =
+   foldr (λ cert weight ->
+           if (cert pointsInto chain)
+           then weight + B
+           else weight)
+         (length chain) certs
+```
+
+In the following, $C[s]$ is a chain with all blocks newer than slot s removed.
+
+```agda
+postulate
   _⟦_⟧ : Chain -> Slot -> Block
+```
 
-  _==_ : forall {a : Set} -> a -> a -> Bool
+## The Protocol
 
-  _and_ : Bool -> Bool -> Bool
-  _≤_ : ℕ -> ℕ -> Bool
-  _≥_ : ℕ -> ℕ -> Bool
-  _>_ : ℕ -> ℕ -> Bool
-  _-_ : ℕ -> ℕ -> ℕ
-  _/_ : ℕ -> ℕ -> ℕ
+All code is described from the perspective of a single party $P$.
 
-data Vote : Set where
- MkVote : Round -> Party -> Block -> Vote
+### Variables
 
-slot : Round -> Slot
-slot r = r / U
+<!--
+```agda
+postulate
+```
+-->
 
-infixl 4 _-_
-infixl 10 _[_]
+```agda
+  Cpref : Chain                          -- Preferred Peras chain
+  certseen : Certificate           -- Latest certificate in Certs
+  certchain : Certificate         --  Latest certificate on Cpref
+  Vpref : List (set Vote)     -- Pref. vote sets (idx’d by rd no)
+  Certs : List Certificate -- Pref. certificates (idx’d by rd no)
 
+```
+
+Below, it is assumed that `certseen` and `certchain` are updated automatically when `Certs` or `Cpref` change.
+
+<!--
+```agda
 data Node : Set -> Set₁ where
   bind : forall {a} {b} -> Node a -> (a -> Node b) -> Node b
   ret : forall {a} -> a -> Node a
   forgeBlock : Chain -> Node Block
-  preferredChain : Node Chain
-  preferredVotes : Node (List (set Vote))
-  certificates : Node (List Certificate)
   latestCertificateOnChain : Chain -> Node Certificate
   latestCertificateSeen : Node Certificate
   mkCertificate : Round -> Block -> Node Certificate
@@ -147,25 +260,14 @@ instance
   NodeMonad = record { _>>=_ = bind ; return = ret }
 
 open Monad {{...}} public
+```
+-->
 
-postulate
-  Cpref : Chain
-  certseen : Certificate
-  certchain : Certificate
-  Vpref : List (set Vote)
-  Certs : List Certificate
+### Voting and Block Creation
 
--- Original specification from Google doc
---
--- upon entering new slot s
---    if P is leader in slot s
---      B := new block extending Cpref
---      if Certs[rcurrent-2] = null
---         and rcurrent - round(certseen) <= A
---         and round(certseen) > round(certchain)
---           B := (B, certseen)
---           Cpref := Cpref || B
---           output (chain, Cpref<-W>) to Z
+Parties P vote and create blocks as follows:
+
+```agda
 onNewSlot : Party -> Slot -> Node ⊤
 onNewSlot p s =
  when (p isLeaderInSlot s) (do
@@ -179,43 +281,36 @@ onNewSlot p s =
          let b' = Certify b certseen
          Cpref ← Cpref extendWith b
          output (Cpref trimmedBy W))
+```
 
--- if (round(certseen) = r-1 and certseen is for a block on Cpref)
---    or
---    r - round(certseen) >= R and r - round(certchain) = cK for some c > 0
---   return true
--- return false
-
-cooldownHasPassed : ℕ -> Bool
-cooldownHasPassed rounds with K
-... | 0 = false
-... | suc n = (q > 0) ∧ (r == 0)
-    where
-     q = rounds div (suc n)
-     r = rounds % suc n
-
+```agda
 voteInRound : Chain -> List Certificate -> Round -> Bool
 voteInRound chain certs r =
   (round certseen == (r - 1) ∧ certseen pointsInto Cpref)
    ∨ ((r - round certseen) ≥ R ∧ cooldownHasPassed (r - round certchain))
+ where
+    cooldownHasPassed : ℕ -> Bool
+    cooldownHasPassed rounds with K
+    ... | 0 = false
+    ... | suc n = (q > 0) ∧ (r' == 0)
+        where
+         q = rounds div (suc n)
+         r' = rounds % suc n
 
-
--- upon entering new round r > 0
---   if P is committee member in round r and voteInRound(Cpref, Certs, r)
---     Vpref[r] += (“vote”, r, P, C[slot(r)-L])
 onNewRound : Party -> Round -> Node ⊤
 onNewRound P r =
   when ( (P isCommitteeMemberInRound r) ∧
          voteInRound Cpref Certs r )
       ((Vpref [ r ]) += singleton (MkVote r P (Cpref ⟦ (slot r - L) ⟧)))
+```
 
--- upon change in a peer’s V’pref[rcurrent]
---   if Certspref[rcurrent] = null
---      Vpref[rcurrent] += V’pref[rcurrent] 	preferring the versions in Vpref in case of equivocations
---      if exists C s.t. |{ (.,.,.,C) in Vpref[rcurrent] }| >= τ
---           create certificate cert on C from corresponding votes in Vpref[rcurrent]
---           Certspref[rcurrent] := cert
+### Chain/Vote/Cert Sync
 
+In Chain/Vote Sync, a party follows the preferred sets `(C’pref,
+V’pref, Certs’pref)` of each of their upstream peers and makes their
+own `(Cpref, Vpref, Certs)` available to all their downstream peers.
+
+```agda
 onPeerVotesChange : set Vote -> Round -> Node ⊤
 onPeerVotesChange v'pref rcurrent = do
   when ((Certs [ rcurrent ]) == null) (do
@@ -226,26 +321,10 @@ onPeerVotesChange v'pref rcurrent = do
           (Certs [ rcurrent ]) := mkCertificate rcurrent C
      )
 
-
--- upon change in peer’s Certs’pref[r] for some r
---   if Certspref[r] = null
---     Certspref[r] := Certs’pref[r]
-
 onPeerCertsChange : Certificate -> Round -> Node ⊤
 onPeerCertsChange certs'pref r =
   when ((Certs [ r ]) == null) $
      (Certs [ r ]) := return certs'pref
-
--- A Peras chain consists of a set of blocks. A chain is valid if the blocks (ignoring the certificates) form a valid Praos chain.
--- The following algorithm is used to compute the weight, given a set of certificates:
-
-chainWeight : Chain -> List Certificate -> ℕ
-chainWeight chain certs =
-   foldr (λ cert weight ->
-           if (cert pointsInto chain)
-           then  weight + B
-           else weight)
-         (length chain) certs
 
 onPeerChainChange : Chain -> Certificate -> Node ⊤
 onPeerChainChange C'pref Certs'pref = do
