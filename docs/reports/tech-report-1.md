@@ -326,7 +326,180 @@ The simulation implements the February version of the Peras protocol, illustrate
 
 ### Design
 
+The architecture, design, and implementation of the Haskell-based `peras-iosim` package evolve significantly during Peras's first PI, so here we just summarize the software approach that the series of prototypes has converged upon.
 
+#### IOSim
+
+The simulator now only lightly uses IOSim's `io-sim` and `io-classes`, although it originally used them heavily. First of all, IOSim's implementation is currently single-threaded with a centralized schedulers that handles the simulated threads. Thus, IOSim does not provide the speed advantages of a parallel simulator. However, it conveniently provides many of the commonly used MTL instances typically used with `IO` or `MonadIO` but in a manner compatible with a simulation environment. For example, `threadDelay` in `IOSim` simulates the passage of time whereas in `IO` it blocks while time passes. Furthermore, the STM usage in earlier Peras prototypes was first refactored to higher-level constructs (such as STM in the network simulation layer instead of in the nodes themselves) but then finally eliminated altogether. The elimination of STM reduces the boilerplate and thread orchestration in QuickCheck tests and provides a cleaner testing interface to the node, so that interface is far less language dependent. Overall, the added complexity of STM simply wasn't justified by requirements for the node, since the reference node purposefuly should not be highly optimized. Additionally, IOSim's event logging is primarily used to handle logging via the `contra-tracer` package. IOSim's `MonadTime` and `MonadTimer` classes are used for managing the simulation of the passage of time.
+
+#### Node interface
+
+The node interface has evolved towards a request-response pattern, with several auxiliary getters and setters. This will further evolve as alignment with the Agda-generated code and QuickCheck Dynamic become tighter. At this point, however, the node interface and implementation is fully sufficient for a fully faithful simulation of the protocol, along with the detailed observability required for quantifying and debugging its performance.
+
+```haskell
+class PerasNode a where
+  getNodeId :: a -> NodeId
+  getOwner :: a -> PartyId
+  getStake :: a -> Coin
+  setStake :: a -> Coin -> a
+  getDownstreams :: a -> [NodeId]
+  getPreferredChain :: a -> Chain
+  getPreferredVotes :: a -> [Vote]
+  getPreferredCerts :: a -> [Certificate]
+  getPreferredBodies :: a -> [BlockBody]
+  handleMessage :: Monad m => a -> NodeContext m -> InEnvelope -> m (NodeResult, a)
+  stop :: Monad m => a -> NodeContext m -> m a
+```
+
+Honest versus adversarial nodes can be wrapped in the existential type `SomeNode`. The `NodeResult` captures the messages emitted by the node in response to the message (`InEnvelope`) that it receives, specifies the lower bound on the time of the node's next activity (`wakeup`), and collects metrics regarding the node's activity:
+
+```haskell
+data NodeResult = NodeResult
+  { wakeup :: UTCTime
+  , outputs :: [OutEnvelope]
+  , stats :: NodeStats
+  }
+
+data NodeStats = NodeStats
+  { preferredTip :: [(Slot, BlockHash)]
+  , rollbacks :: [Rollback]
+  , slotLeader :: [Slot]
+  , committeeMember :: [Slot]
+  , votingAllowed :: [(RoundNumber, BlockHash)]
+  , cpuTime :: CpuTime
+  , rxBytes :: ByteSize
+  , txBytes :: ByteSize
+  }
+```
+
+The `NodeContext` includes critical environmental information such as the current time and the total stake in the system:
+
+```haskell
+data NodeContext m = NodeContext
+  { protocol :: Protocol
+  , totalStake :: Coin
+  , slot :: Slot
+  , clock :: UTCTime
+  , traceSelf :: TraceSelf m
+  }
+```
+
+#### Observability
+
+Tracing occurs via a `TraceReport` which records ad-hoc information or the structured statistics.
+
+```haskell
+data TraceReport
+  = TraceValue
+      { self :: NodeId
+      , slot :: Slot
+      , clock :: UTCTime
+      , value :: Value
+      }
+  | TraceStats
+      { self :: NodeId
+      , slot :: Slot
+      , clock :: UTCTime
+      , statistics :: NodeStats
+      }
+```
+
+The `value` in the interface above can hold the result of a single "big step", recorded in a `StepResult` of outputs and events.
+
+```haskell
+data StepResult = StepResult
+  { stepTime :: UTCTime
+  , stepOutputs :: [OutEnvelope]
+  , stepEvents :: [Event]
+  }
+
+data Event
+  = Send
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , txBytes :: ByteSize
+      }
+  | Drop
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , txBytes :: ByteSize
+      }
+  | Receive
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , rxBytes :: ByteSize
+      }
+  | SlotLeader
+      { self :: NodeId
+      , slot :: Slot
+      }
+  | CommitteeMember
+      { self :: NodeId
+      , slot :: Slot
+      }
+  | Rolledback
+      { self :: NodeId
+      , rollback :: Rollback
+      }
+  | Compute
+      { self :: NodeId
+      , cpuTime :: CpuTime
+      }
+  | Trace Value
+```
+
+The `peras-iosim` executable support optional capture of the trace as a stream of JSON objects. In experiments, `jq` is used for ad-hoc data extraction and `mongo` is used for complex queries. The result is analyzed using R scripts.
+
+#### Message routing
+
+The messaging and state-transition behavior of the network of nodes can be modeled via a discrete event simulation (DES). Such simulations are often parallelized (PDES) in order to take advantage of the speed gains possible from multiple threads of execution. Otherwise, a single thread must manage routing of messages and nodes' computations: for large networks and long simulated times, the simulation's execution may become prohibitively slow. Peras simulations are well suited to *conservative PDES* where strong guarantees ensure that messages are always delivered at monotonically non-decreasing times to each node; the alternative is an *optimistic PDES* where the node and/or message queue states have to be rolled back if an message with an out-of-order timestamp is delivered. A PDES for Peras can be readily constructed if each time a node emits a message it also node declares a guarantee that it will not emit another message until a specified later time. Such declarations provide sufficient information for its downstream peers to advance their clocks to the minimum timestamp guaranteed by their upstream peers: i.e., when a node sees empty incoming message queues from all of its upstream peers, it can compute a safe time to advance forward, thus avoiding race conditions or deadlock. Hence, each node can run it its own thread and have upstream and downstream message queues directly connected to its peers, all without the centrally managed message routing that would form a potential bottleneck for scaling performance.
+
+That said, it likely is the case that Peras simulations will not need to simulate contiguous weeks or months of network operation, so at this point `peras-iosim` uses a centrally managed time-ordered priority queue for message routing. Also, instead of each node running autonomously in its own thread, nodes are driven by the receipt of a message and respond with timestamped output messages and a "wakeup" timestamp bounding the node's next activity. If long-running simulations are later required, the node design is consistent with later the message-routing implementation to a conservative PDES and operating each node it its own thread in a fully parallelized or distributed simulation. The basic rationales against long-running simulations are (1) that ΔQ analyses are better suited for network traffic and resource studies and (2) simulation is best focused on the rare scenarios involving forking and cool-down, which occur below Cardano's Ouroboros security parameter $k$ of 2160 blocks (approximately twelve hours).
+
+#### Sync protocol
+
+Five designs for node sync protocol were considered.
+
+1. Simple handoffs between client and server
+    - Closely corresponds to Agda Message
+    - Client could use blocking calls to tidily process messages
+    - `FetchChain` does not stream, so another `FetchChain` request must be made for each subsequent block header in the new chain
+    - Cannot handle `FetchVotes` or `FetchBlocks` when multiple hashes are provided, so all queries must be singletons
+2. Messy multiplexing
+    - Similar to how early prototypes used incoming and outgoing STM channels
+    - Incoming messages won't be in any particular order
+    - Client needs to correlate what they received to what they are waiting for, and why - maybe use futures or promises with closures
+3. Sequential mini-protocols
+    - Reminiscent of the Ouroboros design currently in production
+    - Client needs to `Cancel` and re-query when they want a different type of information
+4. Parallel mini-protocols
+    - Separate threads for each type of sync (header, vote, block)
+    - Client needs to orchestrate intra-thread communication
+5. Constrained fetching
+    - Supports the most common use case of fetching votes and bodies right after a new header is received
+    - Reduces to a request/replies protocol if the protcol's state machine is erased or implicit
+
+| Design 1                                                 | Design 2                                              | Design 3                                                | Design 5                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Simple handoffs](../diagrams/sim-expts/protocol-1.png) | ![Multiplexing](../diagrams/sim-expts/protocol-2.png) | ![Mini-protocols](../diagrams/sim-expts/protocol-3.png) | ![Constrained fetching](../diagrams/sim-expts/protocol-5.png) |
+
+These highlight some key design issues:
+
+- `FetchVotes` and `FetchBlocks` trigger multiple responses, as `FetchChain` may also do.
+- Three types of information are being queried (headers, votes, blocks) in only a semi-predictable sequence.
+- The DoS attack surface somewhat depends upon when the node yields agency to its peers.
+- Pull-based protocols involve more communication than push-based ones.
+
+The current implementation uses a simple request/replies protocol that avoids complexity, but is not explicitly defined as a state machine. This is actually quite similar to the fifth design, but with no `Next` request. It abandons the notion of when the client or server has agency. If the client sends a new request before the stream of responses to the previous request is complete, then responses will be multiplexed.
 
 ### Experiments
 
@@ -385,7 +558,7 @@ The simulation experiments generate a reasonable but random topology of peers, w
 
 #### February version of Peras
 
-A reasonable set of [protocol parameters](peras-iosim/analyses/parameters-v1/protocol.yaml) and [network configuration](peras-iosim/analyses/parameters-v1/network.yaml) was set for a 100-node network with a mean committee size of 10.
+A semi-realistic set of protocol parameters and network configuration was set for a 100-node network with a mean committee size of 10.
 
 Committee selection in the following simulation was set by limiting each node to a maximum of one vote. (However, the March version of the protocol clarifies that a node may have more the one vote.) The probability of becoming a member of the voting committee in a given round is
 
@@ -517,8 +690,252 @@ The following diagram shows the cumulative bytes received by nodes as a function
 
 ## Rust-based simulation
 
+
+
 ## Overall findings from simulation studies
 
+- Single-threaded simulations of 1000s of nodes for one or more simulated days area feasible.
+- There is little point in expending the extra effort to develop multi-threaded, parallel network simulations because CPU resources could instead be devoted to the large ensembles of simulations that will be needed for some studies.
+- A centralized priority queue
+- non stm node
+- The parameter space is large enough (approximately ten dimensions) that statistically designed experiments (latin hypercubes, orthogonal arrays, or hybrids) and importance sampling will be needed to focus computational resources on the performance regimes of most interest.
+- Finely crafted test scenarios are needed for highlighting the value added by Peras.
+- Congestion modeling may require representing all message traffic between nodes (not just blocks, votes, and certificates).
+- However, the March version of the Peras protocol imposes a far lighter network load than the February version, so analytic estimates or ΔQ analyses may be sufficient for assessing the message-traffic overhead resulting from Peras.
+More data for calibration is needed.
+
+
+Cleaner node and network interfaces for use with QuickCheck and Netsim
+Detailed event logging as JSON arrays suitable for analysis with jq or mongodb
+Message sending/receiving
+CPU and bandwidth usage
+Slot leadership
+Committee membership
+Cool-down periods
+Validation failures
+Upgrade to March version of protocol
+Deeper integration with QuickCheck and Netsim
+Coordinated adversarial behavior
+Analysis tools
+
+The IOSim-based Haskell simulator for Peras provisionally implements the details of the Peras protocol.
+Committee selection
+Voting rounds
+Cool-down periods
+Moderate fidelity for Peras currently
+Low fidelity for network layer currently
+Much refactoring/refinement needed
+
+
+StatefulGen and IOSim don't easily coexist.
+Visualization the block production, voting, and forking is practical for many nodes and slots.
+The Peras procotol can equally well be simulated via a centrally managed or a distributed simulation, but a distributed simulation seems cleanest and closest to the protocol.
+
+Study other network simulators (6+ candidates already)
+Eventually, publish a web-based version of the simulator.
+Tools to simulate and emulate protocols
+
+Reads YAML-formatted Parameters describing the network.
+Outputs a JSON file with the Topology.
+The serialization formats are compatible with peras-iosim.
+Added build of peras_topology to the CI.
+This raises several issues related to Rust:
+
+How do we want to organize our Rust crate structure?
+Should we try to generate the Rust types directly from Agda?
+How mature is IOG's work on agda2rust?
+Which tools do we want to code in Rust vs Haskell?
+Is the default rustfmt sufficient as a code-style standard, for the time being?
+
+Serialisation from Agda
+
+serde can mimick Aeson serialisation -> configuration on the rust side
+serialisation should be CBOR
+should we start from the CDDL or the code? Probably want to be both, as long as we respect the specification
+
+Finished migrating the pseudo-Peras protocol from random-forks to peras-iosim.
+
+Updated peras-iosim to track voting.
+Implemented voting logic.
+Flagged potential ambiguities in Peras specification.
+Clarification needed before implementing quorums.
+Revised visualization to display each vote.
+Added simulation execution to CI.
+
+The simulation results are strongly dependent upon the speed of diffusion of messages throught the network, so I high fidelity model for that is required.
+Both Peras and Praos are so stable that one would need very long simulations to observe forks of more than one or two blocks.
+Only in cases of very sparse connectivity or slow message diffusion are longer forks seen.
+Peras quickly stabilizes the chain at the first block or two in each round, so even longer forks typically never last beyond then.
+Hence, even for honest nodes, we need a mechanism to inject rare events such as multi-block forks, so that the effect of Peras can be studied efficiently.
+
+A major refactoring and rewrite of peras-iosim:
+
+Sub-algorithms for Peras protocol are now cleanly separated into pure or monadic functions.
+The implementation is now putatively faithful to the Peras pseudo-code.
+The pseudo-code seems incorrect for two aspects of voteInRound.
+A quorum will never be reached unless we define quorumOnChain(_, _, 0) = True.
+The ellipses in the pseudo-code document should not be present, since otherwise a quorum can fail permanently.
+The "weight to cut off for common prefix" is not yet implemented, but it is mostly inconsequential.
+The new ChainState type efficiently indexes blocks, votes, dangling blocks/votes, and rounds, which also tracking the preferred chain.
+Implementation runs faster.
+Much smaller memory footprint.
+Fixed handling of the simulation-termination condition.
+The peras-quickcheck-tests run much faster and never deadlock.
+A proxy for the VRF has been added.
+Added support for SVG graphics.
+Next steps:
+
+Update UML diagrams.
+Properly model block and vote diffusion via a "pull" process instead of the current "push" one. This is critical for any realistic performance study.
+Add unit tests, especially for ChainState functions.
+Implement the population of BlockTree and revise observability.
+Define language-independent schemas for scenario definition, observability, and visualization.
+Evaluate adding exception types specific to each kind of validation failure that can occur in the pseudo-code.
+Revise time management in simulation and parallelize its execution.
+
+Implemented validation of incoming chains, blocks, and votes in peras-iosim.
+Discarding of invalid votes when computing chain weight.
+Detection and discarding of equivocated votes.
+Construction of type BlockTree = Data.Tree Block from [ChainState].
+The additional rigorous checking of validity throughout the node's
+process adds a significant computational burden. We'll need aggressive
+memoization for some validation-related computations in order to have
+efficient Haskell and Rust nodes. Naive implementations will call
+chainWeight, voteInRound, quorumOnChain, and validVote
+repeatedly with the same input; new messages require recomputing small
+portions of these, but many of the previous computations can be
+retained. The new indexing in ChainState made things quite a bit
+more efficiently already, but we'll probably have to add memoization
+to it, too. We need to evaluate appropriate techniques for this
+because we won't want the memoization table to grow too large over the
+course of a simulation.
+
+Here is a rough analysis of the effect of staking centralization and multi-pool operation upon the Peras committee size.
+
+Let's say that we set the lottery probability under the assumptions of 22.8e15 lovelace being staked equally by 3029 stake pools so that the committee size is 200. The formula for the probability that a stake pool will be on the committee is , where  is the probability that the holder of a single lovelace will be elected to the committee and  is the number of lovelace the pool has staked.
+
+The actual staking distribution is not uniform over stakepools. If we use historical data from epoch 469, the mean committee size would be 173.3. So, the uneven staking levels reduce the committee size by 13%.
+
+However, some multi-pool operators run many stake pools. Binance, for instance, runs several dozen pools. Using the data at https://www.statista.com/statistics/1279280/cardano-ada-biggest-staking-pool-groups/, we compute that number of unique operators in the committee would reduce its mean size to just 76.6, where the multi-pool operators control 13.9 votes and the single-pool operators control 62.9 votes.
+
+Adga types for messages and events are now essentially faithful to the chain-sync protocol.
+Implemented event logging in peras-iosim using the contra-trace approach.
+All sending and receiving messsages are logged.
+Arbitrary JSON can also be logged.
+The CLI can either collect or discard events.
+
+The complexity of the forking, voting, and cool-down in the Peras results highlights the need for capable visualization and analysis tools.
+The voting boost can impede the reestablishment of consensus after a network partition is restored.
+It would be convenient to be able to start a simulation from an existing chain, instead of from genesis.
+VRF-based randomization make it easier to compare simulations with different parameters.
+Even though peras-iosim runs aren't particularly fast, we probably don't need to parallelize them because typical experiments involve many executions of simulations, which means we can take advantage of CPU resources simply by running those different scenarios in parallel.
+The memory footprint of peras-iosim is small (less than 100 MB) if tracing is turned off; with tracing, it is about twenty times that, but still modest.
+
+We discuss the expected property of Peras and how to formulate it:
+Under good circumstances, a tx will be adopted much faster, eg. Txs
+are buried under enough weight that even a large adversarial party
+won't overthrow the chain.  It could be the case that "the adversary"
+is dormant, eg. it behaves as honest node(s) until there's an
+opportunity that arises.
+
+We need to write scenarios under different _regimes_ and emphasize the
+behaviour of the system while transitioning as the _core difference_
+is when _going from good to bad_: Peras won't rollback/fork as deep as
+Praos.
+
+The [bwbush/diffusion](https://github.com/input-output-hk/peras-design/tree/bwbush/diffusion) branch contains a major upgrade of `peras-iosim`:
+
+1. The `PerasNode` typeclass and the `SomeNode` type separates interface from interface.
+2. `Peras.IOSim.Nodes.Honest` implements the honest node.
+3. `NodeState` has been split into `Node`, `NodeContext`, `NodeResult`, and `PerasNode`, so that static, dynamic, and result fields are separated.
+4. Detailed event logging is provided by `Event` and `NodeStats`.
+    - CPU resource consumption is now computed and log.
+    - Bytes transmitted and received are tracked.
+    - Slot leadership and committee membership are logged.
+    - Rollbacks are recorded.
+    - The sending, receiving, and dropping of messages are stored.
+5. Since `IOSim` is single-threaded anyway, the use of `STM` has been eliminated, through it can be cleanly reintroduced if needed.
+6. Time progresses in sub-increments of a slot.
+
+Next steps:
+- Rework `peras-quickcheck` and `peras-rust` so they are compatible.
+- Finish implementing proper diffusion of blocks.
+
+The [diffusion](https://github.com/input-output-hk/peras-design/tree/bwbush/diffusion) branch now contains a generally faithful representation of pull-oriented block diffusion that mimic real-life block diffusion. Additionally, it now handles the latency and bandwidth of links along with the compute time at nodes. A provisional set of network, message, and CPU parameters provides coarsely representative modeling of delays in processing and tranmission.
+
+- Improved fidelity of the node's network interface, so the `bwbush/diffusion` branch is ready for a congestion experiment, but still uses the February version of the pseudo-code.
+- Fixed Haskell and Run on `main` so CI build, tests, and simulations pass.
+- Merged `main` into `bwbush/diffusion` branch to create `bwbush/diffusion-ci` branch.
+
+- A threshold is readily detectable at a bandwidth of ~20 Mb/s.
+- Non-block and not-vote messages such as those related to the memory pool must be accounted for in congestion.
+- The event logging and statistics system easily supports analyses such as this.
+- Data on node processing times is needed.
+
+The branch [bwbush/march-sm](https://github.com/input-output-hk/peras-design/tree/bwbush/march-sm) contains work in progress for a major refactoring of `peras-iosim` that will use miniature state machines for each node's upstream/downstream channels and that will implement the full Peras protocol. The key features are:
+
+- Pure functions for each clause in the March pseudo-code specification for the Peras protocol.
+- Each node-to-node channel is implemented as a composition of state machines.
+    - Chains under evaluation or fully evaluated.
+    - Block bodies requested and successfully fetched.
+    - Certificates requested and successfully fetched.
+    - Votes seen.
+- A similar node-level state machine aggregates the activity of the individual channels so, for example, a block body is only requested from one peer instead of every peer that mentions it.
+- `InEnvelope` and `OutEnvelope` are redesigned for clean usage.
+- Time is managed via the network's centralized priority queue, which dispatched messages over the channels.
+- No use of threading or STM.
+    - The design is compatible with this, but the complexity outweighs the value that would be added.
+    - `IOSim` is single-threaded anyway, so implementing sophisticated parallel simulation would only have benefits outside of `IOSim`.
+-  Overall the node interface has been simplified.
+    - Each node receives a single message at a time.
+    - The node outputs a sequence of timestamped messages to specified recipients.
+    - The result of each message-handling call also includes statistics on CPU and bandwidth usage.
+    - Structured `Event`s (including ad-hoc debug tracing) are observable.
+    - Outgoing results are tagged with a guaranteed minimum time before which a node will not send any more messages.
+
+This branch is abandoned in favor a TDD approach using QuickCheck Dynamic, but lessons learned and design principles will be incorporated into a future faithful simulation of the March version of the Peras protocol.
+
+
+A new `quickcheck-dynamic` model was created for closer and cleaner linkage between code generated by `agda2hs` and Haskell and Rust simultations. The model has the following features:
+
+- Separation between "idealized" votes, certificates, blocks, and chains of the specification from "realized" ones generated by `agda2hs` and used in the simultions.
+    - The idealized version ignores some details like signatures and proofs.
+    - It would be possible to remove this separation between ideal and real behavior is fully deterministic (including the bytes of signatures and proofs).
+    - However, this exercise demonstrates the feasiblity of having a slightly more abstract model of a node for use in `Test.QuickCheck.StateModel`.
+- A `NodeModel` with sufficient detail to implement Peras.
+    - Ideally, this would be generated by `agda2hs`.
+- Executable specification for the node model.
+    - Ideally, this would be generated by `agda2hs`.
+- A `class PerasNode` representing the abstract interface of nodes.
+- An `instance StateModel NodeModel` that uses the executable specification for state transitions and includes generators for actions, constrained by preconditions.
+- An `instance (Monad m, PerasNode n m) => RunModel NodeModel (RunMonad n m)` that runs actions on a `PerasNode` and checks postconditions.
+- An `instance PerasNode ExampleNode` embodying a simple, intentionally buggy, node for exercising the dynamic logic tests.
+- A simple property for the example node.
+
+The model is implemented by the following Haskell modules.
+
+- [`Peras.OptimalModel`](peras-quickcheck/src/Peras/OptimalModel.hs)
+- [`Peras.OptimalModelSpec`](peras-quickcheck/test/Peras/OptimalModelSpec.hs)
+
+The example property simply runs a simulation using `ExampleNode` and checks the trace's conformance to the executable specification. Because the example node contains a couple of intentional bugs, we expect the test to fail. Shrinkage reveals a parcimonious series of actions that exhibit one of the bugs.
+
+```console
+$ cabal run test:peras-quickcheck-test -- --match "/Peras.OptimalModel/Example node/Simulation respects model/"
+
+Peras.OptimalModel
+  Example node
+    Simulation respects model [✔]
+      +++ OK, failed as expected. Assertion failed (after 4 tests and 1 shrink):
+      do action $ Initialize (Peras {roundLength = 10, quorum = 3, boost = 0.25}) 0
+         action $ ANewChain [BlockIdeal {hash = "92dc9c1906312bb4", creator = 1, slot = 0, cert = Nothing, parent = ""}]
+         action $ ATick False True
+         pure ()
+
+Finished in 0.0027 seconds
+1 example, 0 failures
+```
+
+Instead of migrating `peras-iosim` and `peras-netsim`, we might start with a clean slate and use a more TDD-focused approach that builds out from the Agda and Dynamic QuickCheck specifications. Those legacy, prototype codebased can be mined for lessons learned and code fragments in the new, cleaner framework.
 
 # Integration into `cardano-node`
 
