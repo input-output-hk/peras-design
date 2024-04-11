@@ -356,6 +356,14 @@ equalsBinomialWithinTails ::
 
 The Peras continuous-integration tests are configured to require that the observed number of blocks matches the theoretical value to within three standard deviations. Practically, this means that a random failure will occur about once in every ten or so invocations of the CI, since each invocation executes 100 tests.
 
+#### Network and Praos chain generation
+
+The simulation experiments generate a reasonable but random topology of peers, with a specified number of upstream and downstream nodes from each node. Slot leadership is determined according to the procedure outlined in the previous section above. Both the `peras-iosim` Haskell package and the `peras_topology` Rust package can generate these randomized topologies. The `peras-iosim` package generates valid Praos chains.
+
+| Example chain                                             | Example topology                                               |
+| --------------------------------------------------------- | -------------------------------------------------------------- |
+| ![Example chain](../diagrams/sim-expts/example-chain.png) | ![Example topology](../diagrams/sim-expts/example-network.png) |
+
 #### Simplified Peras
 
 #### "Split brain"
