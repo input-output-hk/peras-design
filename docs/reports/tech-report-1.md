@@ -520,7 +520,6 @@ The following diagram shows the cumulative bytes received by nodes as a function
 ## Overall findings from simulation studies
 
 
-
 # Integration into `cardano-node`
 
 ## Networking
