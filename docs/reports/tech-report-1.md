@@ -36,23 +36,23 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ### SRL
 
-| Questions to resolve                                                                                                 | Status                                          |
-|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
-| A concept formulated?                                                                                                | Done                                            |
-| Basic scientific principles underpinning the concept identified?                                                     | Done                                            |
-| Basic properties of algorithms, representations & concepts defined?                                                  | Done                                            |
-| Preliminary analytical studies confirm the basic concept?                                                            |                                                 |
-| Application identified?                                                                                              | Done                                            |
-| Preliminary design solution identified?                                                                              | Done, provided by research                      |
-| Preliminary system studies show the application to be feasible?                                                      |                                                 |
-| Preliminary performance predictions made?                                                                            | Done                                            |
-| Basic principles coded?                                                                                              |                                                 |
-| Modeling & Simulation used to refine performance predictions further and confirm benefits?                           |                                                 |
-| Benefits formulated?                                                                                                 |                                                 |
-| Research & development approach formulated?                                                                          | Done                                            |
-| Preliminary definition of Laboratory tests and test environments established?                                        | Preliminary definition of Laboratory tests only |
-| Experiments performed with synthetic data?                                                                           |                                                 |
-| Concept/application feasibility & benefits reported in scientific journals/conference proceedings/technical reports? |                                                 |
+| Questions to resolve                                                                       | Status                                          |
+|--------------------------------------------------------------------------------------------|-------------------------------------------------|
+| A concept formulated?                                                                      | Done                                            |
+| Basic scientific principles underpinning the concept identified?                           | Done                                            |
+| Basic properties of algorithms, representations & concepts defined?                        | Done                                            |
+| Preliminary analytical studies confirm the basic concept?                                  |                                                 |
+| Application identified?                                                                    | Done (? -> Partner chains)                      |
+| Preliminary design solution identified?                                                    | Done, provided by research                      |
+| Preliminary system studies show the application to be feasible?                            |                                                 |
+| Preliminary performance predictions made?                                                  | Done                                            |
+| Basic principles coded?                                                                    |                                                 |
+| Modeling & Simulation used to refine performance predictions further and confirm benefits? |                                                 |
+| Benefits formulated?                                                                       |                                                 |
+| Research & development approach formulated?                                                | Done                                            |
+| Preliminary definition of Laboratory tests and test environments established?              | Preliminary definition of Laboratory tests only |
+| Experiments performed with synthetic data?                                                 |                                                 |
+| Concept/application feasibility & benefits reported in paper                               |                                                 |
 
 # Protocol Specification
 
