@@ -107,6 +107,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     open Envelope
 ```
 -->
+<!--
 ```agda
     clock-incr : ∀ {M N : GlobalState}
       → M ↝ N
@@ -123,8 +124,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr⋆ (_ ∎) = ≤-refl
     clock-incr⋆ (_ ↝⟨ x ⟩ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
 ```
+-->
 ### Knowledge propagation
-
+<!--
 ```agda
     All-∷= : {a p : Level} {A : Set a} {P : Pred A p} {x y : A} {xs : List A}
       → All P xs
@@ -134,7 +136,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     All-∷= (_ All.∷ x₁) (here refl) x₂ = x₂ All.∷ x₁
     All-∷= (px All.∷ x₁) (there x∈xs) x₂ = px All.∷ (All-∷= x₁ x∈xs x₂)
 ```
-TODO: proof
+-->
 <!--
 ```agda
 {-
@@ -254,12 +256,15 @@ TODO: proof
         → Delivered N
         → b ∈ allBlocks blockTree t
 ```
-<!--
 ```agda
     knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M (_ ∎) m∈ms N×p≡t Delivered-M =
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+```
+```agda
     knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
+```
+```agda
     knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver {M} {M′} (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
       m∈ms N×p≡t Delivered-N
       with p ℕ.≟ p′
@@ -278,17 +283,23 @@ TODO: proof
     ... | no b′≢b =
       let m≢m′ = ⦅⦆-injective₃′ (Message-injective′ b′≢b)
       in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
-
+```
+```agda
     knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms) N×p≡t Delivered-N
+```
+```agda
     knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Delivered-N
+```
+```agda
     knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Delivered-N
+```
+```agda
     knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(NextSlot Delivered-M) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
 ```
--->
 ```agda
     knowledge-propagation₀ : ∀ {N : GlobalState}
         → {p₁ p₂ : PartyId}

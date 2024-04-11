@@ -57,17 +57,21 @@ Messages for sending and receiving blocks, certificates and votes
 data Message : Set where
   BlockMsg : Block → Message
   VoteMsg : Vote → Message
-
+```
+<!--
+```agda
 Message-injective : ∀ {b₁ b₂}
   → BlockMsg b₁ ≡ BlockMsg b₂
   → b₁ ≡ b₂
 Message-injective refl = refl
-
+```
+```agda
 Message-injective′ : ∀ {b₁ b₂}
   → b₁ ≢ b₂
   → BlockMsg b₁ ≢ BlockMsg b₂
 Message-injective′ = contraposition Message-injective
 ```
+-->
 Messages can be delayed by an adversary. Delay is either 0, 1
 
 ```agda
@@ -87,12 +91,14 @@ record Envelope : Set where
 
 open Envelope
 ```
+<!--
 ```agda
 ⦅⦆-injective : ∀ {e₁ e₂}
   → e₁ ≡ e₂
   → partyId e₁ ≡ partyId e₂
 ⦅⦆-injective refl = refl
-
+```
+```agda
 ⦅⦆-injective₃ : ∀ {e₁ e₂}
   → e₁ ≡ e₂
   → message e₁ ≡ message e₂
@@ -103,12 +109,14 @@ open Envelope
   → partyId e₁ ≢ partyId e₂
   → e₁ ≢ e₂
 ⦅⦆-injective′ = contraposition ⦅⦆-injective
-
+```
+```agda
 ⦅⦆-injective₃′ : ∀ {e₁ e₂}
   → message e₁ ≢ message e₂
   → e₁ ≢ e₂
 ⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
 ```
+-->
 <!--
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
@@ -269,12 +277,14 @@ The block tree type
 
   open LocalState
 ```
+<!--
 ```agda
   ⟪⟫-injective : ∀  {A : Set} {blockTree : TreeType A} {a b : LocalState blockTree}
     → a ≡ b
     → tree a ≡ tree b
   ⟪⟫-injective refl = refl
 ```
+-->
 # Parameterized module
 
   * blockTree
@@ -563,6 +573,7 @@ In the paper mentioned above this is big-step semantics.
           ------
         → L ↝⋆ N
 ```
+<!--
 ### Composition
 ```agda
     ↝⋆∘↝⋆ : ∀ {M N O}
@@ -581,6 +592,7 @@ In the paper mentioned above this is big-step semantics.
     ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
     ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
 ```
+-->
 # Collision free predicate
 
 <!--
