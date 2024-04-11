@@ -140,19 +140,20 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 -->
 <!--
 ```agda
-{-
-    data Any↝ (P : ∀ {A B : GlobalState} → (A ↝ B) → Set) : ∀ {M N : GlobalState} → (M ↝⋆ N) → Set where
+    data Any↝ {p : Level} (P : ∀ {A B : GlobalState} → (A ↝ B) → Set p) : ∀ {M N : GlobalState} → (M ↝⋆ N) → Set p where
       here  : ∀ {A B N : GlobalState} {x xs} (px : P {A} {B} x) → Any↝ P {A} {N} (_ ↝⟨ x ⟩ xs)
       there : ∀ {M N : GlobalState} {x xs} (pxs : Any↝ P {M} {N} xs) → Any↝ P {M} {N} (_ ↝⟨ x ⟩ xs)
 
-    HasStep : ∀ {A B M N : GlobalState} → (A ↝ B) → (M ↝⋆ N) → Set
-    HasStep {A} {B} {M} {N} x xs = Any↝ (λ { y → y ≡ x }) xs
+    open import Data.Empty using (⊥)
 
     HasCreateStep : ∀ {M N : GlobalState} → Block → (M ↝⋆ N) → Set
-    HasCreateStep b xs =
-      let h = honest {block = b} refl {!!} {!!} {!!} {!!}
-      in HasStep (CreateBlock {!h!}) xs
-
+    HasCreateStep b xs = Any↝ (λ where
+        (Deliver x) → ⊥
+        (CastVote x) → ⊥
+        (CreateBlock (honest {block = b′} refl _ _ _ _)) → b ≡ b′
+        (NextSlot x) → ⊥
+      ) xs
+{-
     knowledge-propagation1 : ∀ {N : GlobalState}
         → {p₁ p : PartyId}
         → {t₁ t : A}
