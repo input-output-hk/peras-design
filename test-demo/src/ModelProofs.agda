@@ -1,88 +1,84 @@
 
 module ModelProofs where
 
-open import Data.Nat.Base using (ℕ; _%_; _≤_; s≤s; z≤n) renaming (_<_ to _<ℕ_)
+open import Data.Nat.Base using (ℕ; _%_; _≤_; _<_; s≤s; z≤n)
 open import Data.Nat.Properties
 open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
-open import Haskell.Prelude hiding (_×_; _×_×_; _,_,_; b; s; t; ⊥) renaming (_,_ to _,,_)
+open import Data.List using (_++_)
+open import Haskell.Prelude hiding (_×_; _×_×_; _,_,_; b; s; t; ⊥; _<>_; _++_) renaming (_,_ to _,ʰ_; _<_ to _<ʰ_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 open import Data.Empty
 
 open import CommonTypes
+open import ProofPrelude
 open import Spec
 open import Model
 
 variable
-  A : Set
+  A             : Set
   env env₁ env₂ : EnvState
-  bs : List Block
-  sig : Signal h
-  sigs : List (Signal h)
+  bs bs₁        : List Block
+  ms ms₁        : List (Slot × Block)
+  sig           : Signal h
+  sigs          : List (Signal h)
 
 envState : State → EnvState
-envState s = MkEnvState (Blk (lastBlock (aliceState s)))
-                        (lastBlockSlot (aliceState s))
-                        Alice
-                        (clock s)
+envState s = record
+  { lastBlock     = lastBlock (aliceState s)
+  ; lastBlockTime = lastBlockSlot (aliceState s)
+  ; sutParty      = Alice
+  ; time          = clock s
+  }
 
-ltℕ-sound : ∀ {n m} → (n < m) ≡ True → n <ℕ m
-ltℕ-sound {zero}  {suc m} h = s≤s z≤n
-ltℕ-sound {suc n} {suc m} h = s≤s (ltℕ-sound h)
+module _ (h : produceBlockOk env b ≡ True) where
+  opaque
+    unfolding produceBlockOk
 
-ltℕ-complete : ∀ {n m} → (n < m) ≡ False → ¬ (n <ℕ m)
-ltℕ-complete {suc n} {suc m} h (s≤s lt) = ltℕ-complete {n} {m} h lt
+    produceOk⇒isNextBlock : nextBlock env ≡ b
+    produceOk⇒isNextBlock = eqBlock-sound (&&ˡ h)
 
-opaque
-  unfolding preProduceBlock
+    produceOk⇒envSlot : SlotOf (time env) (envParty env)
+    produceOk⇒envSlot =
+      lem-whoseSlot env (eqParty-sound (&&ˡ (&&ʳ {nextBlock env == b} h)))
 
-  decomp-preProduce₁ : preProduceBlock env b ≡ True → nextBlock env ≡ b
-  decomp-preProduce₁ h = eqBlock-sound (&&ˡ h)
+    produceOk⇒noBlockThisSlot : lastBlockTime env < time env
+    produceOk⇒noBlockThisSlot = ltℕ-sound (&&ʳ (&&ʳ {nextBlock env == b} h))
 
-  decomp-preProduce₂ : preProduceBlock env b ≡ True → SlotOf (time env) (envParty env)
-  decomp-preProduce₂ {env = env} {b = b} h =
-    lem-whoseSlot env (eqParty-sound (&&ˡ (&&ʳ {nextBlock env == b} h)))
-
-  decomp-preProduce₃ : preProduceBlock env b ≡ True → lastBlockTime env <ℕ time env
-  decomp-preProduce₃ {env = env} {b = b} h = ltℕ-sound (&&ʳ (&&ʳ {nextBlock env == b} h))
-
-data NotPreProduceBlock (env : EnvState) (b : Block) : Set where
-  wrongBlock    : nextBlock env ≢ b → NotPreProduceBlock env b
-  wrongProducer : ¬ SlotOf (time env) (envParty env) → NotPreProduceBlock env b
-  alreadySent   : ¬ (lastBlockTime env <ℕ time env) → NotPreProduceBlock env b
+data ProduceBlockNotOk (env : EnvState) (b : Block) : Set where
+  wrongBlock    : nextBlock env ≢ b → ProduceBlockNotOk env b
+  wrongProducer : ¬ SlotOf (time env) (envParty env) → ProduceBlockNotOk env b
+  alreadySent   : ¬ (lastBlockTime env < time env) → ProduceBlockNotOk env b
 
 opaque
-  unfolding preProduceBlock
+  unfolding produceBlockOk
 
-  decomp-!preProduce : preProduceBlock env b ≡ False → NotPreProduceBlock env b
-  decomp-!preProduce {env = env} {b} h with !&& {nextBlock env == b} h
+  whyProduceBlockNotOk : produceBlockOk env b ≡ False → ProduceBlockNotOk env b
+  whyProduceBlockNotOk {env = env} {b} h with !&& {nextBlock env == b} h
   ... | inj₁ p₁ = wrongBlock (eqBlock-complete p₁)
   ... | inj₂ q with !&& {whoseSlot env == envParty env} q
   ...   | inj₁ p₂ = wrongProducer λ bobSlot → eqParty-complete p₂ (whoseSlot-complete env bobSlot)
   ...   | inj₂ p₃ = alreadySent (ltℕ-complete p₃)
 
 opaque
-  unfolding preDishonestTick
+  unfolding dishonestTickOk
 
-  decomp-preDishonestTick₁ : preDishonestTick env ≡ True → SlotOf (time env) (envParty env)
-  decomp-preDishonestTick₁ {env = env} h = lem-whoseSlot env (eqParty-sound (&&ˡ h))
+  dishonestTickOk⇒envSlot : dishonestTickOk env ≡ True → SlotOf (time env) (envParty env)
+  dishonestTickOk⇒envSlot {env = env} h = lem-whoseSlot env (eqParty-sound (&&ˡ h))
 
-  decomp-preDishonestTick₂ : preDishonestTick env ≡ True → lastBlockTime env <ℕ time env
-  decomp-preDishonestTick₂ h = ltℕ-sound (&&ʳ h)
+  dishonestTickOk⇒noBlockThisSlot : dishonestTickOk env ≡ True → lastBlockTime env < time env
+  dishonestTickOk⇒noBlockThisSlot h = ltℕ-sound (&&ʳ h)
 
-lem-produce : ∀ s → preProduceBlock (envState s) b ≡ True → ValidMessage (clock s) (aliceState s) Bob b
-lem-produce s h with refl ← decomp-preProduce₁ h = valid (decomp-preProduce₃ h) (decomp-preProduce₂ h)
+produceOk⇒validBlock : ∀ s → produceBlockOk (envState s) b ≡ True → ValidBlock (clock s) (aliceState s) Bob b
+produceOk⇒validBlock s h with refl ← produceOk⇒isNextBlock h = valid (produceOk⇒noBlockThisSlot h) (produceOk⇒envSlot h)
 
-lem-dishonest-produce : ∀ s → preProduceBlock (envState s) b ≡ False
-                            → ¬ ValidMessage (clock s) (aliceState s) Bob b
-lem-dishonest-produce s h (valid p q) with decomp-!preProduce h
+produceNotOk⇒invalidBlock : ∀ s → produceBlockOk (envState s) b ≡ False
+                            → ¬ ValidBlock (clock s) (aliceState s) Bob b
+produceNotOk⇒invalidBlock s h (valid p q) with whyProduceBlockNotOk h
 ... | wrongBlock p₁    = p₁ refl
 ... | wrongProducer p₂ = p₂ q
 ... | alreadySent p₃   = p₃ p
-
-lem-nextblock : ∀ s → preProduceBlock (envState s) b ≡ True → suc (lastBlock (aliceState s)) ≡ blockIndex b
-lem-nextblock s h with refl ← decomp-preProduce₁ h = refl
 
 slotOf-deterministic : SlotOf t Alice → SlotOf t Bob → ⊥
 slotOf-deterministic (AliceSlot is0) (BobSlot is1) rewrite is0 = case is1 of λ ()
@@ -96,112 +92,144 @@ record Invariant (s : State) : Set where
   field
     localStatesAgree   : aliceState s ≡ bobState s
     causality          : lastBlockSlot (aliceState s) ≤ clock s
-    tickAfterAliceSend : lastBlockSlot (aliceState s) <ℕ clock s ⊎ SlotOf (clock s) Bob
+    tickAfterAliceSend : lastBlockSlot (aliceState s) < clock s ⊎ SlotOf (clock s) Bob
 
-record Soundness (h : Honesty) (s : State) (endEnv : EnvState) (bs : List Block) : Set where
+record Soundness (h : Honesty) (s : State) (endEnv : EnvState) (bs : List (Slot × Block)) : Set where
   field
-    endState  : State
-    invariant : Invariant endState
-    trace     : h ⊢ s ↝* endState
-    envOk     : envState endState ≡ endEnv
-    blocksOk  : aliceMessages trace ≡ map (clock s ,_) bs
+    endState   : State
+    invariant₀ : Invariant s
+    invariant₁ : Invariant endState
+    trace      : h ⊢ s ↝* endState
+    envOk      : envState endState ≡ endEnv
+    blocksOk   : aliceBlocks trace ≡ bs
 
 open Soundness
 
-liftSoundness : Soundness happyPath s env bs → Soundness h s env bs
+liftSoundness : Soundness happyPath s env ms → Soundness h s env ms
 liftSoundness s = record
-  { endState  = endState s
-  ; invariant = invariant s
-  ; trace     = liftHonesty* (trace s)
-  ; envOk     = envOk s
-  ; blocksOk  = trans (sym $ sameAliceMessages (trace s)) (blocksOk s)
+  { endState   = endState s
+  ; invariant₀ = invariant₀ s
+  ; invariant₁ = invariant₁ s
+  ; trace      = liftHonesty* (trace s)
+  ; envOk      = envOk s
+  ; blocksOk   = trans (sym $ sameAliceBlocks (trace s)) (blocksOk s)
   }
 
 @0 honest-soundness : ∀ {env₁ bs} (s : State) (sig : Signal happyPath)
           → Invariant s
-          → step (envState s) sig ≡ Just (env₁ ,, bs)
-          → Soundness happyPath s env₁ bs
-honest-soundness s (ProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
-honest-soundness s (ProduceBlock b) (inv refl _ _) refl | True = record
-  { endState  = ⟦ clock s , _ , _ ⟧
-  ; invariant = inv refl ≤-refl (inj₂ (decomp-preProduce₂ eq))
-  ; trace     = deliver (send {p = Bob} Alice b (correctMessage (lem-produce s eq)) λ())
-                        (receive (correctMessage (lem-produce s eq))) ∷ []
-  ; envOk     = cong (λ i → MkEnvState (Blk i) _ _ _) (lem-nextblock s eq)
-  ; blocksOk  = refl
-  }
+          → step (envState s) sig ≡ Just (env₁ ,ʰ bs)
+          → Soundness happyPath s env₁ (map (clock s ,_) bs)
+honest-soundness s (ProduceBlock b) (inv refl _ _) prf with produceBlockOk (envState s) b in eq
+honest-soundness s (ProduceBlock b) i@(inv refl _ _) refl | True = case produceOk⇒validBlock s eq of λ where
+  v@(valid _ _) → record
+    { endState  = ⟦ clock s , _ , _ ⟧
+    ; invariant₀ = i
+    ; invariant₁ = inv refl ≤-refl (inj₂ (produceOk⇒envSlot eq))
+    ; trace     = deliver (send {p = Bob} Alice b (correctBlock v) λ())
+                          (receive (correctBlock v)) ∷ []
+    ; envOk     = refl
+    ; blocksOk  = refl
+    }
 honest-soundness s Tick (inv refl _ _) prf with whenTick (envState s)
-honest-soundness s Tick (inv refl z≤n _) refl | GenesisTick refl = record
-  { endState  = ⟦ 1 , _ , _ ⟧
-  ; invariant = inv refl z≤n (inj₂ (BobSlot refl))
-  ; trace     = tick (AliceSlot refl) refl ∷ []
-  ; envOk     = refl
-  ; blocksOk  = refl
+honest-soundness s Tick i@(inv refl z≤n _) refl | GenesisTick refl = record
+  { endState   = ⟦ 1 , _ , _ ⟧
+  ; invariant₀ = i
+  ; invariant₁ = inv refl z≤n (inj₂ (BobSlot refl))
+  ; trace      = tick (AliceSlot refl) refl ∷ []
+  ; envOk      = refl
+  ; blocksOk   = refl
   }
-honest-soundness s Tick (inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
-  { endState  = ⟦ suc (clock s) , _ , _ ⟧
-  ; invariant = inv refl (n≤1+n _) (inj₁ ≤-refl)
-  ; trace     = tick isEnvSlot refl
-              ∷ []
-  ; envOk     = refl
-  ; blocksOk  = refl
+honest-soundness s Tick i@(inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
+  { endState   = ⟦ suc (clock s) , _ , _ ⟧
+  ; invariant₀ = i
+  ; invariant₁ = inv refl (n≤1+n _) (inj₁ ≤-refl)
+  ; trace      = tick isEnvSlot refl
+               ∷ []
+  ; envOk      = refl
+  ; blocksOk   = refl
   }
-honest-soundness s Tick (inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
-  { endState  = ⟦ suc (clock s) , _ , _ ⟧
-  ; invariant = inv refl (n≤1+n _) (inj₁ ≤-refl)
-  ; trace     = let b = nextBlock (envState s)
-                    validB : ValidMessage (clock s) (aliceState s) Alice b
-                    validB = valid (tickAfterSend slotInv isAliceSlot) isAliceSlot
-                in deliver (send {p = Alice} Bob b
-                                 (correctMessage validB) λ())
-                           (receive (correctMessage validB))
-                 ∷ tick isAliceSlot refl
-                 ∷ []
-  ; envOk     = refl
-  ; blocksOk  = refl
+honest-soundness s Tick i@(inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
+  { endState   = ⟦ suc (clock s) , _ , _ ⟧
+  ; invariant₀ = i
+  ; invariant₁ = inv refl (n≤1+n _) (inj₁ ≤-refl)
+  ; trace      = let b = nextBlock (envState s)
+                     validB : ValidBlock (clock s) (aliceState s) Alice b
+                     validB = valid (tickAfterSend slotInv isAliceSlot) isAliceSlot
+                 in deliver (send {p = Alice} Bob b
+                                  (correctBlock validB) λ())
+                            (receive (correctBlock validB))
+                  ∷ tick isAliceSlot refl
+                  ∷ []
+  ; envOk      = refl
+  ; blocksOk   = refl
   }
 
 @0 soundness : ∀ {env₁ bs} (s : State) (sig : Signal h)
              → Invariant s
-             → step (envState s) sig ≡ Just (env₁ ,, bs)
-             → Soundness h s env₁ bs
+             → step (envState s) sig ≡ Just (env₁ ,ʰ bs)
+             → Soundness h s env₁ (map (clock s ,_) bs)
 soundness s (ProduceBlock b) i prf = liftSoundness (honest-soundness s (ProduceBlock b) i prf)
 soundness s Tick i prf             = liftSoundness (honest-soundness s Tick i prf)
-soundness s (DishonestProduceBlock b) (inv refl _ _) prf with preProduceBlock (envState s) b in eq
+soundness s (DishonestProduceBlock b) (inv refl _ _) prf with produceBlockOk (envState s) b in eq
 soundness s (DishonestProduceBlock b) i@(inv refl _ _) refl | False = record
-  { endState  = s
-  ; invariant = i
-  ; trace     = deliver (send Alice b (dishonestMessage badBob) λ())
-                        (receive (wrongMessage (lem-dishonest-produce s eq)))
-              ∷ []
-  ; envOk     = refl
-  ; blocksOk  = refl
+  { endState   = s
+  ; invariant₀ = i
+  ; invariant₁ = i
+  ; trace      = deliver (send Alice b (dishonestBlock badBob) λ())
+                         (receive (wrongBlock (produceNotOk⇒invalidBlock s eq)))
+               ∷ []
+  ; envOk      = refl
+  ; blocksOk   = refl
   }
-soundness s DishonestTick (inv refl _ _) prf with preDishonestTick (envState s) in eq
-soundness s DishonestTick (inv refl lt _) refl | True = record
-  { endState  = ⟦ suc (clock s) , aliceState s , _ ⟧
-  ; invariant = inv refl (m≤n⇒m≤1+n lt) (inj₁ (s≤s lt))
-  ; trace     = trickery badBob (record (aliceState s) { lastBlockSlot = clock s })
-              ∷ tick (decomp-preDishonestTick₁ eq) refl
-              ∷ trickery badBob (aliceState s)
-              ∷ []
-  ; envOk     = refl
-  ; blocksOk  = refl
+soundness s DishonestTick (inv refl _ _) prf with dishonestTickOk (envState s) in eq
+soundness s DishonestTick i@(inv refl lt _) refl | True = record
+  { endState   = ⟦ suc (clock s) , aliceState s , _ ⟧
+  ; invariant₀ = i
+  ; invariant₁ = inv refl (m≤n⇒m≤1+n lt) (inj₁ (s≤s lt))
+  ; trace      = trickery badBob (record (aliceState s) { lastBlockSlot = clock s })
+               ∷ tick (dishonestTickOk⇒envSlot eq) refl
+               ∷ trickery badBob (aliceState s)
+               ∷ []
+  ; envOk      = refl
+  ; blocksOk   = refl
   }
 
--- data ValidActions h (env : EnvState) : List (Signal h) → Set where
---   []  : ValidActions h env []
---   _∷_ : step env sig ≡ Just (env₁ ,, bs) → ValidActions h env₁ sigs → ValidActions h env (sig ∷ sigs)
+data ValidActions h (env : EnvState) : EnvState → List (Signal h) → List (Slot × Block) → Set where
+  []  : ValidActions h env env [] []
+  ⟨_,_⟩∷_ : (sig : Signal h)
+          → step env sig ≡ Just (env₁ ,ʰ bs)
+          → ValidActions h env₁ env₂ sigs ms₁ → ValidActions h env env₂ (sig ∷ sigs) (map (time env ,_) bs ++ ms₁)
 
--- record ValidTrace s (as : ValidActions h (envState s) sigs) : Set where
---   field
---     {endState} : State
---     trace      : h ⊢ s ↝* endState
+open ≡-Reasoning
 
--- open ValidTrace
+appendSoundness : Soundness h s (envState s₁) ms
+                → Soundness h s₁ env₁ ms₁
+                → Soundness h s env₁ (ms ++ ms₁)
+appendSoundness {s = s} {s₁ = s₁} {ms = ms} {ms₁ = ms₁}
+                sound₁@record{trace = tr₁; invariant₁ = inv refl _ _; envOk = refl}
+                sound₂@record{trace = tr₂; invariant₀ = inv refl _ _} = record
+  { trace      = sound₁ .trace <> sound₂ .trace
+  ; invariant₀ = sound₁ .invariant₀
+  ; invariant₁ = sound₂ .invariant₁
+  ; envOk      = sound₂ .envOk
+  ; blocksOk   = begin
+      aliceBlocks (tr₁ <> tr₂)           ≡⟨ appendAliceBlocks tr₁ tr₂ ⟩
+      aliceBlocks tr₁ ++ aliceBlocks tr₂ ≡⟨ cong₂ _++_ (sound₁ .blocksOk) (sound₂ .blocksOk) ⟩
+      ms ++ ms₁
+    ∎
+  }
 
--- soundness* : Invariant s → (as : ValidActions h (envState s) sigs) → ValidTrace s as
--- soundness* = {!!}
+@0 soundness* : Invariant s → (as : ValidActions h (envState s) env₁ sigs ms) → Soundness h s env₁ ms
+soundness* i [] = record
+  { invariant₀ = i
+  ; invariant₁ = i
+  ; trace      = []
+  ; envOk      = refl
+  ; blocksOk   = refl
+  }
+soundness* i (⟨ sig , ok ⟩∷ as) = case soundness _ sig i ok of λ where
+  sound₁@record { invariant₁ = i₁; envOk = refl } →
+    appendSoundness sound₁ (soundness* i₁ as)
 
 -- Some thoughts about completeness.
 

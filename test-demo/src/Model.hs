@@ -27,8 +27,8 @@ nextBlock s = Blk (1 + blockIndex (lastBlock s))
 whoseSlot :: EnvState -> Party
 whoseSlot s = if even (time s) then Alice else Bob
 
-preProduceBlock :: EnvState -> Block -> Bool
-preProduceBlock s b
+produceBlockOk :: EnvState -> Block -> Bool
+produceBlockOk s b
   = nextBlock s == b &&
       whoseSlot s == envParty s && lastBlockTime s < time s
 
@@ -62,17 +62,17 @@ stepTick s SutSendAndTick
        [nextBlock s])
 stepTick _ NoTick = Nothing
 
-preDishonestTick :: EnvState -> Bool
-preDishonestTick s
+dishonestTickOk :: EnvState -> Bool
+dishonestTickOk s
   = whoseSlot s == envParty s && lastBlockTime s < time s
 
 step :: EnvState -> Signal -> Maybe (EnvState, [Block])
 step s (ProduceBlock b)
-  = if preProduceBlock s b then
+  = if produceBlockOk s b then
       Just (MkEnvState b (time s) (sutParty s) (time s), []) else Nothing
 step s (DishonestProduceBlock b)
-  = if preProduceBlock s b then Nothing else Just (s, [])
+  = if produceBlockOk s b then Nothing else Just (s, [])
 step s Tick = stepTick s (whenTick s)
 step s DishonestTick
-  = if preDishonestTick s then Just (tickSlot s, []) else Nothing
+  = if dishonestTickOk s then Just (tickSlot s, []) else Nothing
 

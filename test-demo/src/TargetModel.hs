@@ -13,39 +13,6 @@ import Test.QuickCheck.Extras
 import CommonTypes
 import Model
 
--- Super simple protocol:
---  - The hosts take turns round robin to produce blocks.
---  - `blockIndex` is incremented with each block on the chain.
---  - If a node misses its window the other node should produce the missed block in its slot
---    instead.
--- Network model:
---  - messages diffuse over the network instantly to all other
---    hosts.
-
--- TODO: the current model doesn't increment the blocks because negative actions
--- (specifically negative `Tick`s!) mean that sometimes the environment (dishonestly)
--- fails to trasmit a message! That means the chain isn't unbroken. However, we don't
--- detect that safety property here because we aren't observing the fact that when the
--- sut sends a message it always sends the message that contains the slot number, not the
--- increment of the last message we received. Something to think about here.
-
--- The assumption is that honest nodes behave deterministically based on their view of the world.
--- This means that we can predictibly reject dishonest nodes, and the environment does not need any
--- runtime information from the node to know what are valid behaviours. Furthermore, dishonest
--- behaviour *can* be nondeterministic, but is only introduced by the environment and thus is known
--- at generation time. For example, there can be voting in the protocol, but there is always a
--- *correct* vote for each node given their local information. This means that we can predict the
--- result of a vote at generation time provided the sut node votes honestly, and fail the test if it
--- does not.
-
--- How do we connect this to the Agda specification? Idea: this model doesn't specify exactly what
--- the node under test does, so what we might do is prove that given a trace from this model
--- completed with specific valid actions of the node we can reconstruct a valid trace in the
--- specification.
-
--- Talking to Arnaud: honest nodes are determinstic in the sense that we know exactly what they will
--- do at any point.
-
 instance Show (Action EnvState a) where
   show (Step sig) = show sig
 deriving instance Eq (Action EnvState a)
