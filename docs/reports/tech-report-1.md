@@ -407,6 +407,10 @@ The difference is fork adoption results from more Peras votes being received by 
 ![Detail of Peras and Praos chain comparison](../diagrams/sim-expts/peras-voting.png)
 
 
+Statistics for rollbacks, such as the ones shown below, are measured in these simulations to quantify the number of slots or blocks that are reverted: such can be used to compute the likelihood of a transaction appearing in a block that is later rolled back. The diagram below show shows a proof-of-principle measurement of rollback lengths in an ensemble of simulations. The horizontal axis shows the number of slots rolled back during the course of the whole simulation, and the vertical axis shows the corresponding number of blocks rolled back: the marginal histograms show the empirically observed frequency of each. Although the voting boost weight is varied among these simulations, it has almost no effect on the rollback statistics.
+
+![Example of rollback statistics](../diagrams/sim-expts/rollbacks.png)
+
 Findings from the simulation runs highlight the impracticality of blindly running simulations with realistic parameters and then mining the data:
 
 - The simulation results are strongly dependent upon the speed of diffusion of messages through the network, so a moderately high fidelity model for that is required.
