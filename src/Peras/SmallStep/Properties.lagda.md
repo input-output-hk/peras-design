@@ -138,7 +138,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     All-∷= (px All.∷ x₁) (there x∈xs) x₂ = px All.∷ (All-∷= x₁ x∈xs x₂)
 ```
 -->
-<!--
 ```agda
     data Any↝ {p : Level} (P : ∀ {A B : GlobalState} → (A ↝ B) → Set p) : ∀ {M N : GlobalState} → (M ↝⋆ N) → Set p where
       here  : ∀ {A B N : GlobalState} {x xs} (px : P {A} {B} x) → Any↝ P {A} {N} (_ ↝⟨ x ⟩ xs)
@@ -168,7 +167,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → HasCreateStep b s
     -- knowledge-propagation1 x s d x₂ b∈bt = {!!}
 ```
--->
 ```agda
     postulate
       knowledge-propagation₁ : ∀ {N : GlobalState}
