@@ -147,14 +147,15 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     open import Data.Empty using (⊥)
 
     HasCreateStep : ∀ {M N : GlobalState} → Block → (M ↝⋆ N) → Set
-    HasCreateStep b xs = Any↝ (λ where
+    HasCreateStep b = Any↝ (λ where
         (Deliver x) → ⊥
         (CastVote x) → ⊥
         (CreateBlock (honest {block = b′} refl _ _ _ _)) → b ≡ b′
         (NextSlot x) → ⊥
-      ) xs
-{-
-    knowledge-propagation1 : ∀ {N : GlobalState}
+      )
+
+    postulate
+      knowledge-propagation1 : ∀ {N : GlobalState}
         → {p₁ p : PartyId}
         → {t₁ t : A}
         → {h₁ : Honesty p₁}
@@ -165,8 +166,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
         → b ∈ allBlocks blockTree t₁
         → HasCreateStep b s
-    knowledge-propagation1 x s d x₂ b∈bt = {!!}
--}
+    -- knowledge-propagation1 x s d x₂ b∈bt = {!!}
 ```
 -->
 ```agda
@@ -318,6 +318,11 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
     knowledge-propagation₀ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps x₂ x₃ x₄ Delivered-N x₆
       with knowledge-propagation₁ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps x₂ Delivered-N x₃ x₆
+{-
+      with knowledge-propagation1 {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps x₂ Delivered-N x₃ x₆
+    ... | here px = knowledge-propagation₂ p₂∈ps {!!} {!!} (here refl) x₄ Delivered-N
+    ... | there xx = {!!}
+-}
     ... | (M , M′) , (fst , fst₁ , snd) , refl , here refl = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (here refl) x₄ Delivered-N
     ... | (M , M′) , (fst , fst₁ , snd) , refl , there s = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (there s) x₄ Delivered-N
 ```
