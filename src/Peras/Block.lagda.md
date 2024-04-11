@@ -4,17 +4,20 @@ module Peras.Block where
 
 <!--
 ```agda
-open import Data.Bool using (Bool)
+open import Data.Bool using (Bool; true; false)
+open import Data.List using (List; null)
+open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.Maybe using (Maybe)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
-open import Data.List using (List)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Unit using (⊤)
 open import Level using (0ℓ)
-open import Relation.Binary using (StrictTotalOrder)
+open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
+open import Relation.Nullary using (yes; no; ¬_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_)
+open Eq using (_≡_; _≢_)
 
 open import Peras.Crypto
 
@@ -68,6 +71,21 @@ data Honesty : PartyId → Set where
 
   Corrupt : ∀ {p : PartyId}
     → Honesty p
+```
+```agda
+PartyTup = ∃[ p ] (Honesty p)
+Parties = List PartyTup
+```
+```agda
+postulate
+  Honest≢Corrupt : ∀ {p₁ p₂} {h₁ : Honesty p₁} {h₂ : Honesty p₂}
+    → h₁ ≡ Honest
+    → h₂ ≡ Corrupt
+    → p₁ ≢ p₂
+
+isHonest : ∀ {p : PartyId} → Honesty p → Bool
+isHonest {p} Honest = true
+isHonest {p} Corrupt = false
 ```
 
 ## Transactions
@@ -123,6 +141,9 @@ record Block where
         bodyHash : Hash (List Tx)
 
 open Block public
+
+postulate
+  _≟-Block_ : DecidableEquality Block
 
 record BlockBody where
   field blockHash : Hash (List Tx)

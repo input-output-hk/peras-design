@@ -8,17 +8,22 @@ open import Data.Bool using (Bool; true; false; _∧_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (Any; _─_)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Nat.Properties using (≤-totalOrder)
+open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Data.Unit using (⊤)
+
 open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; cong; sym; subst; trans)
+open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋)
+open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
@@ -47,24 +52,71 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-Messages for sending and receiving blocks, certificates, votes and chains
+Messages for sending and receiving blocks, certificates and votes
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
   VoteMsg : Vote → Message
-  CertMsg : Certificate → Message
-  ChainMsg : Chain → Message
+```
+<!--
+```agda
+Message-injective : ∀ {b₁ b₂}
+  → BlockMsg b₁ ≡ BlockMsg b₂
+  → b₁ ≡ b₂
+Message-injective refl = refl
+```
+```agda
+Message-injective′ : ∀ {b₁ b₂}
+  → b₁ ≢ b₂
+  → BlockMsg b₁ ≢ BlockMsg b₂
+Message-injective′ = contraposition Message-injective
+```
+-->
+Messages can be delayed by an adversary. Delay is either 0, 1
+
+```agda
+Delay = Fin 2
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
+
 ```agda
 record Envelope : Set where
-  constructor ⦅_,_,_⦆
+  constructor ⦅_,_,_,_⦆
   field
     partyId : PartyId
+    honesty : Honesty partyId
     message : Message
-    delay : ℕ
+    delay : Delay
+
+open Envelope
 ```
+<!--
+```agda
+⦅⦆-injective : ∀ {e₁ e₂}
+  → e₁ ≡ e₂
+  → partyId e₁ ≡ partyId e₂
+⦅⦆-injective refl = refl
+```
+```agda
+⦅⦆-injective₃ : ∀ {e₁ e₂}
+  → e₁ ≡ e₂
+  → message e₁ ≡ message e₂
+⦅⦆-injective₃ refl = refl
+```
+```agda
+⦅⦆-injective′ : ∀ {e₁ e₂}
+  → partyId e₁ ≢ partyId e₂
+  → e₁ ≢ e₂
+⦅⦆-injective′ = contraposition ⦅⦆-injective
+```
+```agda
+⦅⦆-injective₃′ : ∀ {e₁ e₂}
+  → message e₁ ≢ message e₂
+  → e₁ ≢ e₂
+⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
+```
+-->
 <!--
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
@@ -113,11 +165,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
   record IsTreeType {tT : Set}
                     (tree₀ : tT)
                     (extendTree : tT → Block → tT)
-                    (newChain : tT → Chain → tT)
                     (allBlocks : tT → List Block)
                     (bestChain : Slot → tT → Chain)
                     (addVote : tT → Vote → tT)
-                    (addCert : tT → Certificate → tT)
                     (votes : tT → Chain → List Vote)
                     (certs : tT → Chain → List Certificate)
          : Set₁ where
@@ -136,6 +186,9 @@ Properties that must hold with respect to blocks and votes
       extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
+      extendable-votes : ∀ (t : tT) (v : Vote)
+        → allBlocks (addVote t v) ≐ allBlocks t
+
       valid : ∀ (t : tT) (sl : Slot)
         → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
@@ -144,7 +197,7 @@ Properties that must hold with respect to blocks and votes
           in
           ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
         → c ⊆ allBlocksUpTo sl t
-        → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
+        → ∥ c ∥ certs t c ≤ ∥ b ∥ certs t b
 
       self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
@@ -187,19 +240,17 @@ The block tree type
     field
       tree₀ : T
       extendTree : T → Block → T
-      newChain : T → Chain → T
       allBlocks : T → List Block
       bestChain : Slot → T → Chain
 
       addVote : T → Vote → T
-      addCert : T → Certificate → T
 
       votes : T → Chain → List Vote
       certs : T → Chain → List Certificate
 
       is-TreeType : IsTreeType
-                      tree₀ extendTree newChain allBlocks bestChain
-                      addVote addCert votes certs
+                      tree₀ extendTree allBlocks bestChain
+                      addVote votes certs
 
     tipBest : Slot → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
@@ -226,6 +277,14 @@ The block tree type
 
   open LocalState
 ```
+<!--
+```agda
+  ⟪⟫-injective : ∀  {A : Set} {blockTree : TreeType A} {a b : LocalState blockTree}
+    → a ≡ b
+    → tree a ≡ tree b
+  ⟪⟫-injective refl = refl
+```
+-->
 # Parameterized module
 
   * blockTree
@@ -242,7 +301,8 @@ The block tree type
            {AdversarialState : Set}
            {adversarialsState₀ : AdversarialState}
            {txSelection : Slot → PartyId → List Tx}
-           {parties : List PartyId}
+           {parties : Parties}
+
            where
 ```
 The local state initialized with the block tree
@@ -261,13 +321,9 @@ Updating the local state upon receiving a message
         → ⟪ t ⟫ [ VoteMsg v ]→
           ⟪ addVote blockTree t v ⟫
 
-      CertReceived : ∀ {c t}
-        → ⟪ t ⟫ [ CertMsg c ]→
-          ⟪ addCert blockTree t c ⟫
-
-      ChainReceived : ∀ {c t}
-        → ⟪ t ⟫ [ ChainMsg c ]→
-          ⟪ newChain blockTree t c ⟫
+      BlockReceived : ∀ {b t}
+        → ⟪ t ⟫ [ BlockMsg b ]→
+          ⟪ extendTree blockTree t b ⟫
 ```
 In a cooldown period there is no voting.
 
@@ -320,13 +376,18 @@ The global state consists of the following fields:
 ```agda
         adversarialState : AdversarialState
 ```
+Progress
+```agda
+    Delivered : Stateᵍ → Set
+    Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open Stateᵍ
+```
 Updating global state
 ```agda
-    updateᵍ : Message → ℕ → PartyId → Stateˡ → Stateᵍ → Stateᵍ
+    updateᵍ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
     updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
           ⟦ c
           , insert p l s
-          , map ⦅_, m , d ⦆ parties ++ ms
+          , map (λ { (p , h)  → ⦅ p , h , m , d ⦆}) parties ++ ms
           , m ∷ hs
           , as
           ⟧
@@ -336,30 +397,11 @@ Ticking the global clock
     tick : Stateᵍ → Stateᵍ
     tick M =
       record M {
-        clock = suc (clock M)
+        clock = suc (clock M) ;
+        messages = map (λ { ⦅ p , h , m , d ⦆ → ⦅ p , h , m , decr d ⦆}) (messages M)
       }
       where open Stateᵍ
 ```
-Delaying messages
-```agda
-    data Delay : Envelope → Envelope → Set where
-
-      Id : ∀ {e : Envelope} →
-        Delay e e
-
-      Delayed : ∀ {d m p} →
-        Delay ⦅ d , m , p ⦆ ⦅ suc d , m , p ⦆
-
-    data δ : List Envelope → List Envelope → Set where
-
-      Empty : δ [] []
-
-      Cons : ∀ {e e′} {es es′}
-        → Delay e e′
-        → δ es es′
-        → δ (e ∷ es) (e′ ∷ es′)
-```
-
 ## Receive
 
 A party receives messages from the global state by fetching messages assigned to the party,
@@ -367,10 +409,13 @@ updating the local block tree and putting the local state back into the global s
 
 ```agda
     data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
-
+```
+An honest party consumes a message from the global message buffer and updates the
+the local state
+```agda
       honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
-        → (m∈ms : ⦅ 0 , m , p ⦆ ∈ ms)
+        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
           ------------------------
         → ⟦ c
@@ -385,10 +430,12 @@ updating the local block tree and putting the local state back into the global s
           , hs
           , as
           ⟧
-
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ} {m}
-        → δ ms ms′
-          ------------------------------------
+```
+An adversarial party might delay a message
+```agda
+      corrupt : ∀ {p c s ms hs as as′} {m}
+        → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
+          --------------------------------
         → ⟦ c
           , s
           , ms
@@ -396,8 +443,8 @@ updating the local block tree and putting the local state back into the global s
           , as
           ⟧ [ Corrupt {p} , m ]⇀
           ⟦ c
-          , insert p lₚ s
-          , ms′
+          , s -- TODO: insert p lₚ s
+          , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
           , hs
           , as′
           ⟧
@@ -412,7 +459,7 @@ A party can cast a vote for a block, if
 ```agda
     data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M} {prf} {sig}
+      honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
               r = v-round clock
               c = bestChain blockTree clock t
@@ -424,31 +471,18 @@ A party can cast a vote for a block, if
                     blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
                     signature = sig                  }
           in
-          lookup stateMap p ≡ just ⟪ t ⟫
+          vote ≡ v
+        → lookup stateMap p ≡ just ⟪ t ⟫
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) 0 p ⟪ addVote blockTree t v ⟫ M
-
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
-        → δ ms ms′
-          --------------------------------
-        → ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ Corrupt {p} ]⇉
-          ⟦ c
-          , insert p lₚ s
-          , ms′
-          , hs
-          , as′
-          ⟧
+          updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
 ```
+Rather than creating a delayed vote, an adversary can honestly create it and delay the message
+
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
@@ -458,7 +492,7 @@ state.
 ```agda
     data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
 
-      honest : ∀ {p} {t} {M}{prf} {sig}
+      honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
               r = roundNumber (v-round clock)
               txs = txSelection clock p
@@ -478,31 +512,17 @@ state.
                     signature = sig
                   }
           in
-          lookup stateMap p ≡ just ⟪ t ⟫
+          block ≡ b
+        → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
 
         → IsSlotLeader p clock prf
           -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) 0 p
+        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
              ⟪ extendTree blockTree t b ⟫ M
-
-      corrupt : ∀ {p c s ms ms′ hs as as′} {lₚ}
-        → δ ms ms′
-          --------------------------------
-        → ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ Corrupt {p} ]↷
-          ⟦ c
-          , insert p lₚ s
-          , ms′
-          , hs
-          , as′
-          ⟧
 ```
+Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
 # Small-step semantics
 
@@ -527,6 +547,7 @@ The small-step semantics describe the evolution of the global state.
         → M ↝ N
 
       NextSlot : ∀ {M}
+        → Delivered M
           ------------
         → M ↝ tick M
 ```
@@ -552,7 +573,26 @@ In the paper mentioned above this is big-step semantics.
           ------
         → L ↝⋆ N
 ```
-
+<!--
+### Composition
+```agda
+    ↝⋆∘↝⋆ : ∀ {M N O}
+      → M ↝⋆ N
+      → N ↝⋆ O
+      → M ↝⋆ O
+    ↝⋆∘↝⋆ (_ ∎) M↝⋆O = M↝⋆O
+    ↝⋆∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝⋆O = (_ ↝⟨ M↝M₁ ⟩ (↝⋆∘↝⋆ M₁↝⋆N N↝⋆O))
+```
+### Post-composition
+```agda
+    ↝∘↝⋆ : ∀ {M N O}
+      → M ↝⋆ N
+      → N ↝ O
+      → M ↝⋆ O
+    ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
+    ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
+```
+-->
 # Collision free predicate
 
 <!--
@@ -616,39 +656,12 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix (honest {p} {t} {M} {prf} {sig} _ _ _ _) =
-      let r = roundNumber (v-round (clock M))
-          txs = txSelection (clock M) p
-          body = record {
-              blockHash = hash txs ;
-              payload = txs
-              }
-          b = record {
-                slotNumber = clock M ;
-                creatorId = p ;
-                parentBlock = hash (tipBest blockTree (pred (clock M)) t) ;
-                certificate = just (latestCertSeen blockTree (pred (clock M)) t) ;
-                leadershipProof = prf ;
-                bodyHash = blockHash body ;
-                signature = sig
-              }
-       in xs⊆x∷xs (history M) (BlockMsg b)
-    []↷-hist-common-prefix (corrupt _) x₁ = x₁
+    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → M [ h ]⇉ N
       → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {p} {t} {M} {prf} {sig} _ _ _ _ _) =
-      let r = v-round (clock M)
-          v = record {
-                votingRound = r ;
-                creatorId = p ;
-                committeeMembershipProof = prf ;
-                blockHash = hash (tipBest blockTree ((clock M) ∸ L) t) ;
-                signature = sig
-              }
-      in xs⊆x∷xs (history M) (VoteMsg v)
-    []⇉-hist-common-prefix (corrupt _) x₁ = x₁
+    []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
@@ -680,7 +693,7 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
     ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
     ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
-    ↝-collision-free NextSlot (collision-free x) = collision-free x
+    ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
 ```
 -->
 
