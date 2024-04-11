@@ -501,7 +501,25 @@ The primary findings from this experiment follow.
 
 #### Congestion
 
+A coarse study exercised several aspects of `peras-iosim` in a simulation experiment involving network congestion: simulation/analysis workflow, scalability and performance, and observability. A full factorial experiment varied bandwidth and latency on a small network with semi-realistic Peras parameters. Each block has its maximum size: i.e., each block is completely full of transactions. There were  250 nodes with fivefold connectivity and a mean of 25 committee members; latency varied from 0.25 s to 1.00 s and bandwidth varied from 8 Mb/s to 400 Mb/s, but other parameters remained constant.
+
+The main caveat is that the memory pool and other non-block/non-vote messages were not modeled. Several findings were garnered from this experiment:
+
+- A threshold is readily detectable at a bandwidth of ~20 Mb/s.
+	- It is important to realize that this simulation was neither calibrated to realistic conditions nor validated.
+	- Much better empirical data inputs for on node processing times (e.g., signature verification, block assembly, etc.) are needed.
+- Non-block and not-vote messages such as those related to the memory pool must be accounted for in congestion.
+- The existing `peras-iosim` event logging and statistics system easily supports analyses such as this.
+
+The following diagram shows the cumulative bytes received by nodes as a function of network latency and bandwidth, illustrating the threshold below which bandwidth is saturated by the protocol and block/vote diffusion.
+
+![Cumulative bytes received by nodes as a function of network latency and bandwidth](../diagrams/sim-expts/congestion.png)
+
 ## Rust-based simulation
+
+## Overall findings from simulation studies
+
+
 
 # Integration into `cardano-node`
 
