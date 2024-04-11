@@ -57,7 +57,6 @@ Messages for sending and receiving blocks, certificates and votes
 data Message : Set where
   BlockMsg : Block → Message
   VoteMsg : Vote → Message
-  CertMsg : Certificate → Message
 
 Message-injective : ∀ {b₁ b₂}
   → BlockMsg b₁ ≡ BlockMsg b₂
@@ -161,7 +160,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
                     (allBlocks : tT → List Block)
                     (bestChain : Slot → tT → Chain)
                     (addVote : tT → Vote → tT)
-                    (addCert : tT → Certificate → tT)
                     (votes : tT → Chain → List Vote)
                     (certs : tT → Chain → List Certificate)
          : Set₁ where
@@ -180,9 +178,6 @@ Properties that must hold with respect to blocks and votes
       extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      extendable-certs : ∀ (t : tT) (c : Certificate)
-        → allBlocks (addCert t c) ≐ allBlocks t
-
       extendable-votes : ∀ (t : tT) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
@@ -194,7 +189,7 @@ Properties that must hold with respect to blocks and votes
           in
           ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
         → c ⊆ allBlocksUpTo sl t
-        → ∥ c , certs t c ∥ ≤ ∥ b , certs t b ∥
+        → ∥ c ∥ certs t c ≤ ∥ b ∥ certs t b
 
       self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
@@ -241,14 +236,13 @@ The block tree type
       bestChain : Slot → T → Chain
 
       addVote : T → Vote → T
-      addCert : T → Certificate → T
 
       votes : T → Chain → List Vote
       certs : T → Chain → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
-                      addVote addCert votes certs
+                      addVote votes certs
 
     tipBest : Slot → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
@@ -316,10 +310,6 @@ Updating the local state upon receiving a message
       VoteReceived : ∀ {v t}
         → ⟪ t ⟫ [ VoteMsg v ]→
           ⟪ addVote blockTree t v ⟫
-
-      CertReceived : ∀ {c t}
-        → ⟪ t ⟫ [ CertMsg c ]→
-          ⟪ addCert blockTree t c ⟫
 
       BlockReceived : ∀ {b t}
         → ⟪ t ⟫ [ BlockMsg b ]→
@@ -540,8 +530,6 @@ The small-step semantics describe the evolution of the global state.
         → M [ h ]⇉ N
           -----------
         → M ↝ N
-
-      -- TODO: Create Cert
 
       CreateBlock : ∀ {M N p} {h : Honesty p}
         → M [ h ]↷ N

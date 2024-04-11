@@ -88,7 +88,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     state₀ = ⟪ tree₀ blockTree ⟫
 
     states₀ : Map LocalState′
-    states₀ = foldr (λ { (p , _) m → insert p state₀ m }) empty parties
+    states₀ = foldr (λ where (p , _) m → insert p state₀ m ) empty parties
 
     N₀ : GlobalState
     N₀ = ⟦ 0
@@ -135,6 +135,36 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     All-∷= (px All.∷ x₁) (there x∈xs) x₂ = px All.∷ (All-∷= x₁ x∈xs x₂)
 ```
 TODO: proof
+<!--
+```agda
+{-
+    data Any↝ (P : ∀ {A B : GlobalState} → (A ↝ B) → Set) : ∀ {M N : GlobalState} → (M ↝⋆ N) → Set where
+      here  : ∀ {A B N : GlobalState} {x xs} (px : P {A} {B} x) → Any↝ P {A} {N} (_ ↝⟨ x ⟩ xs)
+      there : ∀ {M N : GlobalState} {x xs} (pxs : Any↝ P {M} {N} xs) → Any↝ P {M} {N} (_ ↝⟨ x ⟩ xs)
+
+    HasStep : ∀ {A B M N : GlobalState} → (A ↝ B) → (M ↝⋆ N) → Set
+    HasStep {A} {B} {M} {N} x xs = Any↝ (λ { y → y ≡ x }) xs
+
+    HasCreateStep : ∀ {M N : GlobalState} → Block → (M ↝⋆ N) → Set
+    HasCreateStep b xs =
+      let h = honest {block = b} refl {!!} {!!} {!!} {!!}
+      in HasStep (CreateBlock {!h!}) xs
+
+    knowledge-propagation1 : ∀ {N : GlobalState}
+        → {p₁ p : PartyId}
+        → {t₁ t : A}
+        → {h₁ : Honesty p₁}
+        → {b : Block}
+        → (p₁ , h₁) ∈ parties
+        → (s : N₀ ↝⋆ N)
+        → Delivered N
+        → lookup (stateMap N) p₁ ≡ just ⟪ t₁ ⟫
+        → b ∈ allBlocks blockTree t₁
+        → HasCreateStep b s
+    knowledge-propagation1 x s d x₂ b∈bt = {!!}
+-}
+```
+-->
 ```agda
     postulate
       knowledge-propagation₁ : ∀ {N : GlobalState}
@@ -189,9 +219,11 @@ TODO: proof
     m′∈ms─m∈ms {m} {m′} {.(x ∷ xs)} (there z) (there {x} {xs} y) a = m′∈ms─m∈ms z y a
 -}
 
+{-
     CertMsg≢BlockMsg : ∀ {p q c b} → ⦅ p , Honest , CertMsg c , zero ⦆ ≢ ⦅ q , Honest , BlockMsg b , zero ⦆
     CertMsg≢BlockMsg x with cong message x
     ... | ()
+-}
 
     VoteMsg≢BlockMsg : ∀ {p q v b} → ⦅ p , Honest , VoteMsg v , zero ⦆ ≢ ⦅ q , Honest , BlockMsg b , zero ⦆
     VoteMsg≢BlockMsg x with cong message x
@@ -200,16 +232,15 @@ TODO: proof
     ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → M [ h ]⇉ N
       → messages M ⊆ᵐ messages N
-    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , VoteMsg v , zero ⦆}) parties
+    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , VoteMsg v , zero ⦆) parties
 
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → M [ h ]↷ N
       → messages M ⊆ᵐ messages N
-    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ { (p₁ , h) → ⦅ p₁ , h , BlockMsg b , zero ⦆}) parties
+    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , BlockMsg b , zero ⦆) parties
 ```
 -->
 ```agda
---    postulate
     knowledge-propagation₂ : ∀ {M N : GlobalState}
         → {p : PartyId}
         → {t : A}
@@ -229,8 +260,6 @@ TODO: proof
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
     knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms CertReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms CertMsg≢BlockMsg) N×p≡t Delivered-N
     knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver {M} {M′} (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
       m∈ms N×p≡t Delivered-N
       with p ℕ.≟ p′
@@ -251,7 +280,7 @@ TODO: proof
       in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
 
     knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms ) N×p≡t Delivered-N
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms) N×p≡t Delivered-N
     knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Delivered-N
     knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
@@ -347,23 +376,6 @@ adds a block/vote/cert to some p's blocktree
           ⊆-ext = proj₂ $ extendable-votes (is-TreeType blockTree) t₁ v
       in ⊆-trans ⊆-ext H₀
 ```
-```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (honest {p} {⟪ t ⟫} {.(⟪ addCert blockTree _ _ ⟫)} {.(CertMsg _)} lookup≡just-lₚ m∈ms (CertReceived {c}) )) ⟩ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-      with p₁ ℕ.≟ p
-    ... | no p₁≢p =
-      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
-      in knowledge-propagation {p₁ = p₁} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-    ... | yes p₁≡p =
-      let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ addCert blockTree t c ⟫} {m = stateMap N₁})
-          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ addCert blockTree t c ⟫ (stateMap N₁))) p₁≡p
-          t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
-          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (addCert blockTree) c) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addCert blockTree t₁ c} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
-          ⊆-ext = proj₂ $ extendable-certs (is-TreeType blockTree) t₁ c
-      in ⊆-trans ⊆-ext H₀
-```
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} {p} {h} (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂)
@@ -423,25 +435,6 @@ those messages adds the blocks into the local trees.
           1+c≰c = 1+n≰n {clock N₂}
       in contradiction 1+c≤c 1+c≰c
 ```
-## Chain growth
-```agda
-    postulate
-      honest-chain-growth : ∀ {N₁ N₂ : GlobalState}
-        → {p₁ p₂ : PartyId}
-        → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-        → {t₁ t₂ : A}
-        → h₁ ≡ Honest {p₁}
-        → h₂ ≡ Honest {p₂}
-        → N₀ ↝⋆ N₁
-        → N₁ ↝⋆ N₂
-        → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
-        → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
-        → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
-              c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
-              cs₁ = certs blockTree t₁ c₁
-              cs₂ = certs blockTree t₂ c₂
-          in ∥ c₁ , cs₁ ∥ ≤ ∥ c₂ , cs₂ ∥
-```
 ```agda
     postulate
       luckySlots : Slot × Slot → ℕ
@@ -471,7 +464,7 @@ that period.
               c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
               cs₁ = certs blockTree t₁ c₁
               cs₂ = certs blockTree t₂ c₂
-          in ∥ c₁ , cs₁ ∥ + w ≤ ∥ c₂ , cs₂ ∥
+          in ∥ c₁ ∥ cs₁ + w ≤ ∥ c₂ ∥ cs₂
 ```
 
 ## Chain quality

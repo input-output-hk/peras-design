@@ -209,8 +209,8 @@ module _ ⦃ _ : Hashable Block ⦄
 ### Chain weight
 
 ```agda
-  ∥_,_∥ : Chain → List Certificate → ℕ
-  ∥ c , cs ∥ = ∣ c ∣ + ∣ filter (Reference? c) cs ∣ * B
+  ∥_∥_ : Chain → List Certificate → ℕ
+  ∥ ch ∥ cxs = ∣ ch ∣ + ∣ filter (Reference? ch) cxs ∣ * B
 ```
 
 ### Chain validity
