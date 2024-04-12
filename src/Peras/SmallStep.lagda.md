@@ -330,22 +330,22 @@ In a cooldown period there is no voting.
 ```agda
     data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
 
-      Regular : ∀ {c cs r t}
+      Regular : ∀ {c cts r t}
         → let certₛ = latestCertSeen blockTree (r * T) t
               rₛ = votingRoundNumber certₛ
         in
           rₛ + 1 ≥ r
-        → Reference certₛ c
-        → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
+        → certₛ PointsInto c
+        → VoteInRound ⟪ t ⟫ c cts (MkRoundNumber r)
 
-      AfterCooldown : ∀ {chain cs r c t}
+      AfterCooldown : ∀ {chain cts r c t}
         → let certₛ = latestCertSeen blockTree (r * T) t
               rₛ = votingRoundNumber certₛ
         in
           c > 0
         → r ≥ R + rₛ
         → r ≡ (c * K) + rₛ
-        → VoteInRound ⟪ t ⟫ chain cs (MkRoundNumber r)
+        → VoteInRound ⟪ t ⟫ chain cts (MkRoundNumber r)
 ```
 ## Global state
 
@@ -450,21 +450,23 @@ An adversarial party might delay a message
           , as′
           ⟧
 ```
-## Vote
+## Vote creation
 
 A party can cast a vote for a block, if
   * the current slot is the first slot in a voting round
   * the party is a member of the voting committee
   * the chain is not in a cooldown phase
 
+Voting updates the party's local state and for all other parties a message
+is added to be consumed immediately.
 ```agda
     data _⊢_⇉_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
               r = v-round clock
-              c = bestChain blockTree clock t
-              cs = certs blockTree t c
+              ch = bestChain blockTree clock t
+              cts = certs blockTree t ch
               v = record {
                     votingRound = r ;
                     creatorId = p ;
@@ -479,7 +481,7 @@ A party can cast a vote for a block, if
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound ⟪ t ⟫ c cs r
+        → VoteInRound ⟪ t ⟫ ch cts r
           ---------------------------------
         → Honest {p} ⊢
             M ⇉ (VoteMsg v , zero , p , lₚ ↑ M)
@@ -489,18 +491,56 @@ Rather than creating a delayed vote, an adversary can honestly create it and del
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
-block creation messages to the other parties. The local state gets updated in the global
-state.
+block creation messages to the other parties. Block creation is possilble, if
+  * the block signature is correct
+  * the party is the slot leader
 
+Block creation updates the party's local state and for all other parties a message
+is added to be consumed immediately.
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
-
+```
+During regular execution of the protocol, i.e. not in cooldown phase, no certificate
+reference is included in the block.
+```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
-              r = roundNumber (v-round clock)
+              r = v-round clock
               txs = txSelection clock p
-              c = bestChain blockTree (pred clock) t
-              cs = certs blockTree t c
+              ch = bestChain blockTree (pred clock) t
+              cts = certs blockTree t ch
+              body = record {
+                  blockHash = hash txs ;
+                  payload = txs
+                  }
+              b = record {
+                    slotNumber = clock ;
+                    creatorId = p ;
+                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
+                    certificate = nothing ;
+                    leadershipProof = prf ;
+                    bodyHash = blockHash body ;
+                    signature = sig
+                  }
+              lₚ = ⟪ extendTree blockTree t b ⟫
+          in
+          block ≡ b
+        → lookup stateMap p ≡ just ⟪ t ⟫
+        → IsBlockSignature b sig
+        → IsSlotLeader p clock prf
+        → VoteInRound ⟪ t ⟫ ch cts r
+          ----------------------------------
+        → Honest {p} ⊢
+            M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
+```
+During a cooldown phase, the block includes a certificate reference.
+```agda
+      honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
+        → let open Stateᵍ M
+              r = v-round clock
+              txs = txSelection clock p
+              ch = bestChain blockTree (pred clock) t
+              cts = certs blockTree t ch
               body = record {
                   blockHash = hash txs ;
                   payload = txs
@@ -519,8 +559,8 @@ state.
           block ≡ b
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
-        → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
         → IsSlotLeader p clock prf
+        → ¬ (VoteInRound ⟪ t ⟫ ch cts r)
           ----------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
@@ -660,6 +700,7 @@ that there are no hash collisions during the execution of the protocol.
       → h ⊢ M ↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → h ⊢ M ⇉ N
