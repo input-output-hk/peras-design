@@ -10,7 +10,7 @@ open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.Maybe as M using (nothing; just)
-open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; NonZero; pred; _∸_; z≤n; s≤s)
+open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; _≤?_; NonZero; pred; _∸_; z≤n; s≤s)
 open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -168,7 +168,7 @@ data _⪯_ : Chain → Chain → Set where
 
 ```agda
 prune : Slot → Chain → Chain
-prune sl c = c -- TODO: {b ← c | slot b ≤ sl}.
+prune sl = filter ((_≤? sl) ∘ slotNumber)
 ```
 ### Chain weight
 
@@ -181,20 +181,24 @@ The weight of a chain is computed wrt to a set of dangling votes
 module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Params ⦄
          where
-
+```
+<!--
+```agda
   instance
     nonZero : NonZero T -- TODO: why is this needed..?
     nonZero = T-nonZero
-
+```
+-->
+```agda
   open Hashable ⦃...⦄
 ```
 ```agda
   _PointsInto_ : Certificate → Chain → Set
-  _PointsInto_ c = Any (λ { b → blockRef c ≡ hash b })
+  _PointsInto_ c = Any ((blockRef c ≡_) ∘ hash)
 ```
 ```agda
   _PointsInto?_ : ∀ (c : Certificate) → (ch : Chain) → Dec (c PointsInto ch)
-  _PointsInto?_ c = any? (λ { b → blockRef c ≟-BlockHash hash b })
+  _PointsInto?_ c = any? ((blockRef c ≟-BlockHash_) ∘ hash)
 ```
 ```agda
   StartOfRound : Slot → RoundNumber → Set
