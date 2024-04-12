@@ -346,8 +346,8 @@ Party P votes in round r if
         → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
 ```
   * After cooldown
-    ** r >= round(Certseen) + R
-    ** r = round(Certchain) + cK for some c > 0
+    * r >= round(Certseen) + R
+    * r = round(Certchain) + cK for some c > 0
 ```agda
       AfterCooldown : ∀ {cts r c t}
         → let cert-chain = latestCertOnChain blockTree (r * T) t
