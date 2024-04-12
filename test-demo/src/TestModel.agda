@@ -11,11 +11,14 @@ open import Relation.Binary.PropositionalEquality
 
 open import CommonTypes
 open import ProofPrelude
-open import FormalSpec
+open import FormalSpec hiding (h)
 
 {-# FOREIGN AGDA2HS
 import GHC.Generics
 #-}
+
+variable
+  @0 h : Honesty  -- We want to erase Honesty parameters in the Haskell code
 
 data Signal : (@0 h : Honesty) → Set where
   ProduceBlock          : Block → Signal h

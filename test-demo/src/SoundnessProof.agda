@@ -1,5 +1,5 @@
 
-module ModelProofs where
+module SoundnessProof where
 
 open import Data.Nat.Base using (ℕ; _%_; _≤_; _<_; s≤s; z≤n)
 open import Data.Nat.Properties
@@ -14,7 +14,7 @@ open import Data.Empty
 open import CommonTypes
 open import ProofPrelude
 open import FormalSpec
-open import TestModel
+open import TestModel hiding (h)
 
 variable
   A             : Set

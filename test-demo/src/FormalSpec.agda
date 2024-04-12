@@ -66,7 +66,7 @@ variable
   b b₁             : Block
   i j              : BlockIndex
   t t₁ now         : Slot
-  @0 h             : Honesty
+  h                : Honesty
 
 data Dishonest : Honesty → Party → Set where
   badAlice : Dishonest badAlice Alice
