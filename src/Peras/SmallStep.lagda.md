@@ -13,11 +13,11 @@ open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Unit using (⊤)
 
-open import Function.Base using (_∘_; id; _$_; flip)
+open import Function using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -383,14 +383,12 @@ Progress
 ```
 Updating global state
 ```agda
-    updateᵍ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
-          ⟦ c
-          , insert p l s
-          , map (λ { (p , h)  → ⦅ p , h , m , d ⦆}) parties ++ ms
-          , m ∷ hs
-          , as
-          ⟧
+    _,_,_,_↑_ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
+    m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
+      ⟦ c , insert p l s , insertₘ m d ms , m ∷ hs , as ⟧
+      where
+        insertₘ : Message → Delay → List Envelope → List Envelope
+        insertₘ m d ms = map (uncurry ⦅_,_, m , d ⦆) parties ++ ms
 ```
 Ticking the global clock
 ```agda
@@ -398,7 +396,8 @@ Ticking the global clock
     tick M =
       record M {
         clock = suc (clock M) ;
-        messages = map (λ { ⦅ p , h , m , d ⦆ → ⦅ p , h , m , decr d ⦆}) (messages M)
+        messages = map (λ where
+          e → record e { delay = decr (delay e) }) (messages M)
       }
       where open Stateᵍ
 ```
@@ -469,7 +468,9 @@ A party can cast a vote for a block, if
                     creatorId = p ;
                     committeeMembershipProof = prf ;
                     blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
-                    signature = sig                  }
+                    signature = sig
+                  }
+              lₚ = ⟪ addVote blockTree t v ⟫
           in
           vote ≡ v
         → lookup stateMap p ≡ just ⟪ t ⟫
@@ -477,9 +478,9 @@ A party can cast a vote for a block, if
         → StartOfRound clock r
         → IsCommitteeMember p r prf
         → VoteInRound ⟪ t ⟫ c cs r
-          ---------------------------------------------------
+          ---------------------------------
         → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
+            (VoteMsg v , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -511,16 +512,16 @@ state.
                     bodyHash = blockHash body ;
                     signature = sig
                   }
+              lₚ = ⟪ extendTree blockTree t b ⟫
           in
           block ≡ b
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
-
         → IsSlotLeader p clock prf
-          -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
-             ⟪ extendTree blockTree t b ⟫ M
+          ----------------------------------
+        → M [ Honest {p} ]↷
+            (BlockMsg b , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
