@@ -326,27 +326,39 @@ are delegated to the block tree.
         → ⟪ t ⟫ [ BlockMsg b ]→
           ⟪ extendTree blockTree t b ⟫
 ```
-In a cooldown period there is no voting.
 
+#### When vote?
+Party P votes in round r if
+  * Regular
+    * r = round(Certseen) + 1
+    * the round-(r-1) certificate points to Cpref
 ```agda
-    data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
+    data VoteInRound : Stateˡ → List Certificate → RoundNumber → Set where
 
-      Regular : ∀ {c cts r t}
-        → let certₛ = latestCertSeen blockTree (r * T) t
-              rₛ = votingRoundNumber certₛ
+      Regular : ∀ {cts r t}
+        → let c-pref = bestChain blockTree (r * T) t
+              cert-seen = latestCertSeen blockTree (r * T) t
+              r-seen = votingRoundNumber cert-seen
+
         in
-          rₛ + 1 ≥ r
-        → certₛ PointsInto c
-        → VoteInRound ⟪ t ⟫ c cts (MkRoundNumber r)
-
-      AfterCooldown : ∀ {chain cts r c t}
-        → let certₛ = latestCertSeen blockTree (r * T) t
-              rₛ = votingRoundNumber certₛ
+          r ≡ r-seen + 1
+        → cert-seen PointsInto c-pref
+        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
+```
+  * After cooldown
+    ** r >= round(Certseen) + R
+    ** r = round(Certchain) + cK for some c > 0
+```agda
+      AfterCooldown : ∀ {cts r c t}
+        → let cert-chain = latestCertOnChain blockTree (r * T) t
+              cert-seen = latestCertSeen blockTree (r * T) t
+              r-chain = votingRoundNumber cert-chain
+              r-seen = votingRoundNumber cert-seen
         in
           c > 0
-        → r ≥ R + rₛ
-        → r ≡ (c * K) + rₛ
-        → VoteInRound ⟪ t ⟫ chain cts (MkRoundNumber r)
+        → r ≥ r-seen + R
+        → r ≡ r-seen + (c * K)
+        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
 ```
 ## Global state
 
@@ -417,7 +429,7 @@ the local state
         → lookup s p ≡ just lₚ
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
-          ------------------------
+          ----------------------------------------
         → Honest {p} ⊢
           ⟦ c
           , s
@@ -436,7 +448,7 @@ An adversarial party might delay a message
 ```agda
       corrupt : ∀ {p c s ms hs as as′} {m}
         → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
-          --------------------------------
+          -----------------------------------------
         → Corrupt {p} ⊢
           ⟦ c
           , s
@@ -482,8 +494,8 @@ is added to be consumed immediately.
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound ⟪ t ⟫ ch cts r
-          ---------------------------------
+        → VoteInRound ⟪ t ⟫ cts r
+          -------------------------------------
         → Honest {p} ⊢
             M ⇉ (VoteMsg v , zero , p , lₚ ↑ M)
 ```
@@ -528,7 +540,7 @@ reference is included in the block.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → VoteInRound ⟪ t ⟫ ch cts r
+        → VoteInRound ⟪ t ⟫ cts r
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
@@ -559,7 +571,7 @@ During a cooldown phase, the block includes a certificate reference.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ (VoteInRound ⟪ t ⟫ ch cts r)
+        → ¬ (VoteInRound ⟪ t ⟫ cts r)
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
