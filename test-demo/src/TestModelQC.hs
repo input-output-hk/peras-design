@@ -1,4 +1,4 @@
-module TargetModel where
+module TestModelQC where
 
 import Data.Maybe
 import Data.IORef
@@ -11,7 +11,7 @@ import Test.QuickCheck.Monadic
 import Test.QuickCheck.Extras
 
 import CommonTypes
-import Model
+import TestModel
 
 instance Show (Action EnvState a) where
   show (Step sig) = show sig

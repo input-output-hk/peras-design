@@ -1,7 +1,7 @@
 
 -- The formal Agda specification with all the fancy types.
 
-module Spec where
+module FormalSpec where
 
 open import Data.Nat
 open import Data.Nat.Properties

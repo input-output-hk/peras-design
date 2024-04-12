@@ -2,7 +2,7 @@
 -- Computational model that we can compile to Haskell and hook up with
 -- a QuickCheck Dynamic state model. Proofs that it matches the Spec.
 
-module Model where
+module TestModel where
 
 open import Data.Nat.Base using (ℕ; _%_)
 open import Data.Sum
@@ -11,7 +11,7 @@ open import Relation.Binary.PropositionalEquality
 
 open import CommonTypes
 open import ProofPrelude
-open import Spec
+open import FormalSpec
 
 {-# FOREIGN AGDA2HS
 import GHC.Generics

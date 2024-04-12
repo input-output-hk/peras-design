@@ -13,8 +13,8 @@ open import Data.Empty
 
 open import CommonTypes
 open import ProofPrelude
-open import Spec
-open import Model
+open import FormalSpec
+open import TestModel
 
 variable
   A             : Set

@@ -53,9 +53,9 @@ common language
 library
   import: language
   exposed-modules:
-    TargetModel
+    TestModelQC
     CommonTypes
-    Model
+    TestModel
   build-depends:
     base ^>=4.18.1.0,
     quickcheck-dynamic ^>= 3.4,
