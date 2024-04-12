@@ -326,7 +326,180 @@ The simulation implements the February version of the Peras protocol, illustrate
 
 ### Design
 
+The architecture, design, and implementation of the Haskell-based `peras-iosim` package evolve significantly during Peras's first PI, so here we just summarize the software approach that the series of prototypes has converged upon.
 
+#### IOSim
+
+The simulator now only lightly uses IOSim's `io-sim` and `io-classes`, although it originally used them heavily. First of all, IOSim's implementation is currently single-threaded with a centralized schedulers that handles the simulated threads. Thus, IOSim does not provide the speed advantages of a parallel simulator. However, it conveniently provides many of the commonly used MTL instances typically used with `IO` or `MonadIO` but in a manner compatible with a simulation environment. For example, `threadDelay` in `IOSim` simulates the passage of time whereas in `IO` it blocks while time passes. Furthermore, the STM usage in earlier Peras prototypes was first refactored to higher-level constructs (such as STM in the network simulation layer instead of in the nodes themselves) but then finally eliminated altogether. The elimination of STM reduces the boilerplate and thread orchestration in QuickCheck tests and provides a cleaner testing interface to the node, so that interface is far less language dependent. Overall, the added complexity of STM simply wasn't justified by requirements for the node, since the reference node purposefuly should not be highly optimized. Additionally, IOSim's event logging is primarily used to handle logging via the `contra-tracer` package. IOSim's `MonadTime` and `MonadTimer` classes are used for managing the simulation of the passage of time.
+
+#### Node interface
+
+The node interface has evolved towards a request-response pattern, with several auxiliary getters and setters. This will further evolve as alignment with the Agda-generated code and QuickCheck Dynamic become tighter. At this point, however, the node interface and implementation is fully sufficient for a fully faithful simulation of the protocol, along with the detailed observability required for quantifying and debugging its performance.
+
+```haskell
+class PerasNode a where
+  getNodeId :: a -> NodeId
+  getOwner :: a -> PartyId
+  getStake :: a -> Coin
+  setStake :: a -> Coin -> a
+  getDownstreams :: a -> [NodeId]
+  getPreferredChain :: a -> Chain
+  getPreferredVotes :: a -> [Vote]
+  getPreferredCerts :: a -> [Certificate]
+  getPreferredBodies :: a -> [BlockBody]
+  handleMessage :: Monad m => a -> NodeContext m -> InEnvelope -> m (NodeResult, a)
+  stop :: Monad m => a -> NodeContext m -> m a
+```
+
+Honest versus adversarial nodes can be wrapped in the existential type `SomeNode`. The `NodeResult` captures the messages emitted by the node in response to the message (`InEnvelope`) that it receives, specifies the lower bound on the time of the node's next activity (`wakeup`), and collects metrics regarding the node's activity:
+
+```haskell
+data NodeResult = NodeResult
+  { wakeup :: UTCTime
+  , outputs :: [OutEnvelope]
+  , stats :: NodeStats
+  }
+
+data NodeStats = NodeStats
+  { preferredTip :: [(Slot, BlockHash)]
+  , rollbacks :: [Rollback]
+  , slotLeader :: [Slot]
+  , committeeMember :: [Slot]
+  , votingAllowed :: [(RoundNumber, BlockHash)]
+  , cpuTime :: CpuTime
+  , rxBytes :: ByteSize
+  , txBytes :: ByteSize
+  }
+```
+
+The `NodeContext` includes critical environmental information such as the current time and the total stake in the system:
+
+```haskell
+data NodeContext m = NodeContext
+  { protocol :: Protocol
+  , totalStake :: Coin
+  , slot :: Slot
+  , clock :: UTCTime
+  , traceSelf :: TraceSelf m
+  }
+```
+
+#### Observability
+
+Tracing occurs via a `TraceReport` which records ad-hoc information or the structured statistics.
+
+```haskell
+data TraceReport
+  = TraceValue
+      { self :: NodeId
+      , slot :: Slot
+      , clock :: UTCTime
+      , value :: Value
+      }
+  | TraceStats
+      { self :: NodeId
+      , slot :: Slot
+      , clock :: UTCTime
+      , statistics :: NodeStats
+      }
+```
+
+The `value` in the interface above can hold the result of a single "big step", recorded in a `StepResult` of outputs and events.
+
+```haskell
+data StepResult = StepResult
+  { stepTime :: UTCTime
+  , stepOutputs :: [OutEnvelope]
+  , stepEvents :: [Event]
+  }
+
+data Event
+  = Send
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , txBytes :: ByteSize
+      }
+  | Drop
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , txBytes :: ByteSize
+      }
+  | Receive
+      { uuid :: UniqueId
+      , timestamp :: UTCTime
+      , from :: NodeId
+      , to :: NodeId
+      , payload :: Message
+      , rxBytes :: ByteSize
+      }
+  | SlotLeader
+      { self :: NodeId
+      , slot :: Slot
+      }
+  | CommitteeMember
+      { self :: NodeId
+      , slot :: Slot
+      }
+  | Rolledback
+      { self :: NodeId
+      , rollback :: Rollback
+      }
+  | Compute
+      { self :: NodeId
+      , cpuTime :: CpuTime
+      }
+  | Trace Value
+```
+
+The `peras-iosim` executable support optional capture of the trace as a stream of JSON objects. In experiments, `jq` is used for ad-hoc data extraction and `mongo` is used for complex queries. The result is analyzed using R scripts.
+
+#### Message routing
+
+The messaging and state-transition behavior of the network of nodes can be modeled via a discrete event simulation (DES). Such simulations are often parallelized (PDES) in order to take advantage of the speed gains possible from multiple threads of execution. Otherwise, a single thread must manage routing of messages and nodes' computations: for large networks and long simulated times, the simulation's execution may become prohibitively slow. Peras simulations are well suited to *conservative PDES* where strong guarantees ensure that messages are always delivered at monotonically non-decreasing times to each node; the alternative is an *optimistic PDES* where the node and/or message queue states have to be rolled back if an message with an out-of-order timestamp is delivered. A PDES for Peras can be readily constructed if each time a node emits a message it also node declares a guarantee that it will not emit another message until a specified later time. Such declarations provide sufficient information for its downstream peers to advance their clocks to the minimum timestamp guaranteed by their upstream peers: i.e., when a node sees empty incoming message queues from all of its upstream peers, it can compute a safe time to advance forward, thus avoiding race conditions or deadlock. Hence, each node can run it its own thread and have upstream and downstream message queues directly connected to its peers, all without the centrally managed message routing that would form a potential bottleneck for scaling performance.
+
+That said, it likely is the case that Peras simulations will not need to simulate contiguous weeks or months of network operation, so at this point `peras-iosim` uses a centrally managed time-ordered priority queue for message routing. Also, instead of each node running autonomously in its own thread, nodes are driven by the receipt of a message and respond with timestamped output messages and a "wakeup" timestamp bounding the node's next activity. If long-running simulations are later required, the node design is consistent with later the message-routing implementation to a conservative PDES and operating each node it its own thread in a fully parallelized or distributed simulation. The basic rationales against long-running simulations are (1) that ΔQ analyses are better suited for network traffic and resource studies and (2) simulation is best focused on the rare scenarios involving forking and cool-down, which occur below Cardano's Ouroboros security parameter $k$ of 2160 blocks (approximately twelve hours).
+
+#### Sync protocol
+
+Five designs for node sync protocol were considered.
+
+1. Simple handoffs between client and server
+    - Closely corresponds to Agda Message
+    - Client could use blocking calls to tidily process messages
+    - `FetchChain` does not stream, so another `FetchChain` request must be made for each subsequent block header in the new chain
+    - Cannot handle `FetchVotes` or `FetchBlocks` when multiple hashes are provided, so all queries must be singletons
+2. Messy multiplexing
+    - Similar to how early prototypes used incoming and outgoing STM channels
+    - Incoming messages won't be in any particular order
+    - Client needs to correlate what they received to what they are waiting for, and why - maybe use futures or promises with closures
+3. Sequential mini-protocols
+    - Reminiscent of the Ouroboros design currently in production
+    - Client needs to `Cancel` and re-query when they want a different type of information
+4. Parallel mini-protocols
+    - Separate threads for each type of sync (header, vote, block)
+    - Client needs to orchestrate intra-thread communication
+5. Constrained fetching
+    - Supports the most common use case of fetching votes and bodies right after a new header is received
+    - Reduces to a request/replies protocol if the protcol's state machine is erased or implicit
+
+| Design 1                                                 | Design 2                                              | Design 3                                                | Design 5                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Simple handoffs](../diagrams/sim-expts/protocol-1.png) | ![Multiplexing](../diagrams/sim-expts/protocol-2.png) | ![Mini-protocols](../diagrams/sim-expts/protocol-3.png) | ![Constrained fetching](../diagrams/sim-expts/protocol-5.png) |
+
+These highlight some key design issues:
+
+- `FetchVotes` and `FetchBlocks` trigger multiple responses, as `FetchChain` may also do.
+- Three types of information are being queried (headers, votes, blocks) in only a semi-predictable sequence.
+- The DoS attack surface somewhat depends upon when the node yields agency to its peers.
+- Pull-based protocols involve more communication than push-based ones.
+
+The current implementation uses a simple request/replies protocol that avoids complexity, but is not explicitly defined as a state machine. This is actually quite similar to the fifth design, but with no `Next` request. It abandons the notion of when the client or server has agency. If the client sends a new request before the stream of responses to the previous request is complete, then responses will be multiplexed.
 
 ### Experiments
 
@@ -385,7 +558,7 @@ The simulation experiments generate a reasonable but random topology of peers, w
 
 #### February version of Peras
 
-A reasonable set of [protocol parameters](peras-iosim/analyses/parameters-v1/protocol.yaml) and [network configuration](peras-iosim/analyses/parameters-v1/network.yaml) was set for a 100-node network with a mean committee size of 10.
+A semi-realistic set of protocol parameters and network configuration was set for a 100-node network with a mean committee size of 10.
 
 Committee selection in the following simulation was set by limiting each node to a maximum of one vote. (However, the March version of the protocol clarifies that a node may have more the one vote.) The probability of becoming a member of the voting committee in a given round is
 
@@ -518,8 +691,6 @@ The following diagram shows the cumulative bytes received by nodes as a function
 ## Rust-based simulation
 
 ## Overall findings from simulation studies
-
-
 
 # Integration into `cardano-node`
 
