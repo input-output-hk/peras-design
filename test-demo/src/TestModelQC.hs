@@ -1,14 +1,14 @@
 module TestModelQC where
 
-import Data.Maybe
-import Data.IORef
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.IORef
+import Data.Maybe
 import Test.QuickCheck
-import Test.QuickCheck.StateModel
-import Test.QuickCheck.Monadic
 import Test.QuickCheck.Extras
+import Test.QuickCheck.Monadic
+import Test.QuickCheck.StateModel
 
 import CommonTypes
 import TestModel
@@ -40,10 +40,11 @@ instance StateModel EnvState where
 
 -- Run Model -----------------------------------------------------------
 
-data Node m = Node { nodeSendTo :: Party -> Block -> m ()
-                   , nodeReceiveFrom :: m [Block]
-                   , nodeProgressTime :: m ()
-                   }
+data Node m = Node
+  { nodeSendTo :: Party -> Block -> m ()
+  , nodeReceiveFrom :: m [Block]
+  , nodeProgressTime :: m ()
+  }
 
 type ModelMonad m = ReaderT (Node m) m
 
@@ -61,10 +62,10 @@ instance (Monad m, Realized m () ~ (), Realized m [Block] ~ [Block]) => RunModel
       onNode nodeProgressTime
       pure msgs
     ProduceBlock b -> do
-      onNode $ \ sut -> nodeSendTo sut (envParty s) b
+      onNode $ \sut -> nodeSendTo sut (envParty s) b
       pure []
     DishonestProduceBlock b -> do
-      onNode $ \ sut -> nodeSendTo sut (envParty s) b
+      onNode $ \sut -> nodeSendTo sut (envParty s) b
       pure []
 
   postcondition (sBefore, _) (Step sig) _ msgs =
@@ -74,11 +75,12 @@ instance (Monad m, Realized m () ~ (), Realized m [Block] ~ [Block]) => RunModel
         pure $ expected == msgs
       Nothing -> pure True
 
-prop_nodeCorrect :: (Monad m, RunModel EnvState (ModelMonad m))
-                  => Node m
-                  -> (PropertyM m () -> Property)
-                  -> Actions EnvState
-                  -> Property
+prop_nodeCorrect ::
+  (Monad m, RunModel EnvState (ModelMonad m)) =>
+  Node m ->
+  (PropertyM m () -> Property) ->
+  Actions EnvState ->
+  Property
 prop_nodeCorrect node runProp as = runProp $ do
   () <$ runPropertyReaderT (runActions as) node
 
@@ -93,7 +95,7 @@ prop_honest :: Actions EnvState -> Property
 prop_honest = prop_nodeCorrect (honestNode Alice) runHonestMonad
 
 data HonestNodeState = HonestNodeState
-  { honestNodeClock     :: IORef Integer
+  { honestNodeClock :: IORef Integer
   , honestNodeLastBlock :: IORef Integer
   , honestNodeLastRecvTime :: IORef Integer
   , honestNodeLastSendTime :: IORef Integer
@@ -111,30 +113,30 @@ runHonestMonad m = monadicIO $ do
 
 honestNode :: Party -> Node HonestNodeMonad
 honestNode h = Node{..}
-  where nodeSendTo sender (Blk n) = do
-          block <- asks honestNodeLastBlock
-          clock <- asks honestNodeClock
-          rstamp <- asks honestNodeLastRecvTime
-          time     <- lift $ readIORef clock
-          lastSeen <- lift $ readIORef block
-          lastRecv <- lift $ readIORef rstamp
-          let validBlock = n == lastSeen + 1 && sender == whoseSlotTime time && lastRecv < time
-          when validBlock $ do
-            lift $ writeIORef rstamp time
-            lift $ writeIORef block n
-        nodeReceiveFrom = do
-          clock <- asks honestNodeClock
-          block <- asks honestNodeLastBlock
-          tstamp <- asks honestNodeLastSendTime
-          time <- lift $ readIORef clock
-          n    <- lift $ readIORef block
-          ts   <- lift $ readIORef tstamp
-          let shouldSend = h == whoseSlotTime time && time > ts
-          when shouldSend $ do
-            lift $ writeIORef block (n + 1)
-            lift $ writeIORef tstamp time
-          pure [ Blk $ n + 1 | shouldSend ]
-        nodeProgressTime = do
-          clock <- asks honestNodeClock
-          lift $ modifyIORef clock (+1)
-
+ where
+  nodeSendTo sender (Blk n) = do
+    block <- asks honestNodeLastBlock
+    clock <- asks honestNodeClock
+    rstamp <- asks honestNodeLastRecvTime
+    time <- lift $ readIORef clock
+    lastSeen <- lift $ readIORef block
+    lastRecv <- lift $ readIORef rstamp
+    let validBlock = n == lastSeen + 1 && sender == whoseSlotTime time && lastRecv < time
+    when validBlock $ do
+      lift $ writeIORef rstamp time
+      lift $ writeIORef block n
+  nodeReceiveFrom = do
+    clock <- asks honestNodeClock
+    block <- asks honestNodeLastBlock
+    tstamp <- asks honestNodeLastSendTime
+    time <- lift $ readIORef clock
+    n <- lift $ readIORef block
+    ts <- lift $ readIORef tstamp
+    let shouldSend = h == whoseSlotTime time && time > ts
+    when shouldSend $ do
+      lift $ writeIORef block (n + 1)
+      lift $ writeIORef tstamp time
+    pure [Blk $ n + 1 | shouldSend]
+  nodeProgressTime = do
+    clock <- asks honestNodeClock
+    lift $ modifyIORef clock (+ 1)
