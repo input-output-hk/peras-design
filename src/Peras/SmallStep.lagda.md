@@ -312,7 +312,8 @@ The local state initialized with the block tree
 ```
 ### State update
 
-Updating the local state upon receiving a message
+Updating the local state upon receiving a message: Votes and blocks received as messages
+are delegated to the block tree.
 
 ```agda
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
@@ -467,13 +468,13 @@ is added to be consumed immediately.
               r = v-round clock
               ch = bestChain blockTree clock t
               cts = certs blockTree t ch
-              v = record {
-                    votingRound = r ;
-                    creatorId = p ;
-                    committeeMembershipProof = prf ;
-                    blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
-                    signature = sig
-                  }
+              v = record
+                    { votingRound = r
+                    ; creatorId = p
+                    ; committeeMembershipProof = prf
+                    ; blockHash = hash $ tipBest blockTree (clock ∸ L) t
+                    ; signature = sig
+                    }
               lₚ = ⟪ addVote blockTree t v ⟫
           in
           vote ≡ v
@@ -509,19 +510,18 @@ reference is included in the block.
               txs = txSelection clock p
               ch = bestChain blockTree (pred clock) t
               cts = certs blockTree t ch
-              body = record {
-                  blockHash = hash txs ;
-                  payload = txs
-                  }
-              b = record {
-                    slotNumber = clock ;
-                    creatorId = p ;
-                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = nothing ;
-                    leadershipProof = prf ;
-                    bodyHash = blockHash body ;
-                    signature = sig
-                  }
+              b = record
+                    { slotNumber = clock
+                    ; creatorId = p
+                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; certificate = nothing
+                    ; leadershipProof = prf
+                    ; bodyHash = blockHash
+                        record { blockHash = hash txs
+                               ; payload = txs
+                               }
+                    ; signature = sig
+                    }
               lₚ = ⟪ extendTree blockTree t b ⟫
           in
           block ≡ b
@@ -529,7 +529,7 @@ reference is included in the block.
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
         → VoteInRound ⟪ t ⟫ ch cts r
-          ----------------------------------
+          --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
 ```
@@ -541,19 +541,18 @@ During a cooldown phase, the block includes a certificate reference.
               txs = txSelection clock p
               ch = bestChain blockTree (pred clock) t
               cts = certs blockTree t ch
-              body = record {
-                  blockHash = hash txs ;
-                  payload = txs
-                  }
-              b = record {
-                    slotNumber = clock ;
-                    creatorId = p ;
-                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = just (latestCertSeen blockTree (pred clock) t) ;
-                    leadershipProof = prf ;
-                    bodyHash = blockHash body ;
-                    signature = sig
-                  }
+              b = record
+                    { slotNumber = clock
+                    ; creatorId = p
+                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; certificate = nothing
+                    ; leadershipProof = prf
+                    ; bodyHash = blockHash
+                        record { blockHash = hash txs
+                               ; payload = txs
+                               }
+                    ; signature = sig
+                    }
               lₚ = ⟪ extendTree blockTree t b ⟫
           in
           block ≡ b
@@ -561,7 +560,7 @@ During a cooldown phase, the block includes a certificate reference.
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
         → ¬ (VoteInRound ⟪ t ⟫ ch cts r)
-          ----------------------------------
+          --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
 ```
