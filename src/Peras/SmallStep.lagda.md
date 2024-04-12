@@ -335,11 +335,11 @@ Party P votes in round r if
 ```agda
     data VoteInRound : Stateˡ → List Certificate → RoundNumber → Set where
 
-      Regular : ∀ {cts r t}
-        → let c-pref = bestChain blockTree (r * T) t
-              cert-seen = latestCertSeen blockTree (r * T) t
-              r-seen = votingRoundNumber cert-seen
-
+      Regular : ∀ {cts r t} →
+        let
+          c-pref = bestChain blockTree (r * T) t
+          cert-seen = latestCertSeen blockTree (r * T) t
+          r-seen = votingRoundNumber cert-seen
         in
           r ≡ r-seen + 1
         → cert-seen PointsInto c-pref
@@ -349,11 +349,12 @@ Party P votes in round r if
     * r >= round(Certseen) + R
     * r = round(Certchain) + cK for some c > 0
 ```agda
-      AfterCooldown : ∀ {cts r c t}
-        → let cert-chain = latestCertOnChain blockTree (r * T) t
-              cert-seen = latestCertSeen blockTree (r * T) t
-              r-chain = votingRoundNumber cert-chain
-              r-seen = votingRoundNumber cert-seen
+      AfterCooldown : ∀ {cts r c t} →
+        let
+          cert-chain = latestCertOnChain blockTree (r * T) t
+          cert-seen = latestCertSeen blockTree (r * T) t
+          r-chain = votingRoundNumber cert-chain
+          r-seen = votingRoundNumber cert-seen
         in
           c > 0
         → r ≥ r-seen + R
