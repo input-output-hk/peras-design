@@ -17,7 +17,9 @@ open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 open import Relation.Nullary using (yes; no; ¬_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_)
+open Eq using (_≡_; _≢_; cong)
+
+open import Function using (_∘_)
 
 open import Peras.Crypto
 
@@ -76,13 +78,15 @@ data Honesty : PartyId → Set where
 PartyTup = ∃[ p ] (Honesty p)
 Parties = List PartyTup
 ```
+FIXME: Definition of Honesty
 ```agda
 postulate
   Honest≢Corrupt : ∀ {p₁ p₂} {h₁ : Honesty p₁} {h₂ : Honesty p₂}
     → h₁ ≡ Honest
     → h₂ ≡ Corrupt
     → p₁ ≢ p₂
-
+```
+```agda
 isHonest : ∀ {p : PartyId} → Honesty p → Bool
 isHonest {p} Honest = true
 isHonest {p} Corrupt = false
@@ -142,9 +146,13 @@ record Block where
 
 open Block public
 
+_≟-BlockHash_ : DecidableEquality (Hash Block)
+(record { hashBytes = r₁ }) ≟-BlockHash (record { hashBytes = r₂ }) with r₁ ≟-ByteString r₂
+... | yes p = yes (cong (λ { b → record { hashBytes = b } }) p)
+... | no ¬p = no (¬p ∘ cong hashBytes)
+
 postulate
   _≟-Block_ : DecidableEquality Block
-  _≟-BlockHash_ : DecidableEquality (Hash Block)
 
 record BlockBody where
   field blockHash : Hash (List Tx)

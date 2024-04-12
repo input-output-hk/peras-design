@@ -10,11 +10,13 @@ open import Relation.Binary using (StrictTotalOrder)
 open import Data.Unit
 open import Data.Bool
 open import Relation.Binary using (DecidableEquality)
+open import Relation.Nullary using (yes; no; ¬_)
 
 postulate
   ByteString : Set
   emptyBS : ByteString
   _isInfixOf_ : ByteString → ByteString → Bool
+  _≟-ByteString_ : DecidableEquality ByteString
 
 {-# FOREIGN AGDA2HS import Data.ByteString #-}
 {-# FOREIGN GHC import qualified Data.ByteString as BS #-}
@@ -28,11 +30,6 @@ record Hash (a : Set) : Set where
 open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving Eq #-}
-
-{-
-postulate
-  _≟-Hash_ : DecidableEquality Hash
--}
 
 record Hashable (a : Set) : Set where
   field hash : a → Hash a
