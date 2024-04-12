@@ -144,6 +144,7 @@ open Block public
 
 postulate
   _≟-Block_ : DecidableEquality Block
+  _≟-BlockHash_ : DecidableEquality (Hash Block)
 
 record BlockBody where
   field blockHash : Hash (List Tx)
