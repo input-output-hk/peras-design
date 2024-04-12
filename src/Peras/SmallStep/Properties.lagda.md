@@ -22,7 +22,7 @@ open import Data.Fin using (zero; suc; _≟_)
 open import Data.Fin.Properties using (0≢1+n)
 open import Data.Nat as ℕ using (ℕ; _∸_; _<_; _≤_; _≥_; _*_; _+_; pred)
 open import Data.Nat.Properties using (n≤1+n; 1+n≰n; ≤-refl; ≤-reflexive; ≤-trans)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Unit using (⊤; tt)
 
@@ -116,6 +116,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _) = n≤1+n (clock M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
@@ -232,14 +233,15 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ... | ()
 
     ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → messages M ⊆ᵐ messages N
-    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , VoteMsg v , zero ⦆) parties
+    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, VoteMsg v , zero ⦆) parties
 
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
-    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , BlockMsg b , zero ⦆) parties
+    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
+    ⊆-block (honest-cooldown {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
 ```
 -->
 ```agda
@@ -418,6 +420,29 @@ When creating a block, there will be messages for all parties to be consumed in 
 those messages adds the blocks into the local trees.
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest {p} {t} {block = b} refl lookup≡just-lₚ _ _ _)) ⟩ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      with p₁ ℕ.≟ p
+```
+```agda
+    ... | no p₁≢p =
+      let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = stateMap N₁} N₁×p₁≡t₁))
+      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+    ... | yes p₁≡p =
+      let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = ⟪ extendTree blockTree t b ⟫} {m = stateMap N₁})
+          lookup-p₁≡lookup-p = cong (lookup (insert p ⟪ extendTree blockTree t b ⟫ (stateMap N₁))) p₁≡p
+          t≡t₁ = sym $ ⟪⟫-injective $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (stateMap N₁)) p₁≡p) lookup≡just-lₚ)
+          N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong ⟪_⟫ $ cong (flip (extendTree blockTree) b) t≡t₁)
+          H₀ = knowledge-propagation {t₁ = extendTree blockTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          ⊆-ext = proj₂ $ extendable (is-TreeType blockTree) t₁ b
+      in x∷xs⊆ys→xs⊆ys $ ⊆-trans ⊆-ext H₀
+      where
+         x∷xs⊆ys→xs⊆ys : ∀ {x xs ys}
+           → x ∷ xs ⊆ ys
+           → xs ⊆ ys
+         x∷xs⊆ys→xs⊆ys {x} {xs} = ⊆-trans (xs⊆x∷xs xs x)
+```
+```agda
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```

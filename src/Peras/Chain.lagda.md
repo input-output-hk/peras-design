@@ -189,14 +189,12 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 ```
 ```agda
-  data Reference : Certificate → Chain → Set where
-
-    PointToPrefix : ∀ {c} {bs}
-      → Any (λ { b → blockRef c ≡ hash b }) bs
-      → Reference c bs
-
-  postulate
-    Reference? : ∀ (c : Chain) → (cert : Certificate) → Dec (Reference cert c)
+  _PointsInto_ : Certificate → Chain → Set
+  _PointsInto_ c = Any (λ { b → blockRef c ≡ hash b })
+```
+```agda
+  _PointsInto?_ : ∀ (c : Certificate) → (ch : Chain) → Dec (c PointsInto ch)
+  _PointsInto?_ c = any? (λ { b → blockRef c ≟-BlockHash hash b })
 ```
 ```agda
   StartOfRound : Slot → RoundNumber → Set
@@ -210,7 +208,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ```agda
   ∥_∥_ : Chain → List Certificate → ℕ
-  ∥ ch ∥ cxs = ∣ ch ∣ + ∣ filter (Reference? ch) cxs ∣ * B
+  ∥ ch ∥ cts = ∣ ch ∣ + ∣ filter (_PointsInto? ch) cts ∣ * B
 ```
 
 ### Chain validity

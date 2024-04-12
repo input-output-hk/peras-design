@@ -13,11 +13,11 @@ open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Unit using (⊤)
 
-open import Function.Base using (_∘_; id; _$_; flip)
+open import Function using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -312,7 +312,8 @@ The local state initialized with the block tree
 ```
 ### State update
 
-Updating the local state upon receiving a message
+Updating the local state upon receiving a message: Votes and blocks received as messages
+are delegated to the block tree.
 
 ```agda
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
@@ -325,27 +326,40 @@ Updating the local state upon receiving a message
         → ⟪ t ⟫ [ BlockMsg b ]→
           ⟪ extendTree blockTree t b ⟫
 ```
-In a cooldown period there is no voting.
 
+#### When vote?
+Party P votes in round r if
+  * Regular
+    * r = round(Certseen) + 1
+    * the round-(r-1) certificate points to Cpref
 ```agda
-    data VoteInRound : Stateˡ → Chain → List Certificate → RoundNumber → Set where
+    data VoteInRound : Stateˡ → List Certificate → RoundNumber → Set where
 
-      Regular : ∀ {c cs r t}
-        → let certₛ = latestCertSeen blockTree (r * T) t
-              rₛ = votingRoundNumber certₛ
+      Regular : ∀ {cts r t} →
+        let
+          c-pref = bestChain blockTree (r * T) t
+          cert-seen = latestCertSeen blockTree (r * T) t
+          r-seen = votingRoundNumber cert-seen
         in
-          rₛ + 1 ≥ r
-        → Reference certₛ c
-        → VoteInRound ⟪ t ⟫ c cs (MkRoundNumber r)
-
-      AfterCooldown : ∀ {chain cs r c t}
-        → let certₛ = latestCertSeen blockTree (r * T) t
-              rₛ = votingRoundNumber certₛ
+          r ≡ r-seen + 1
+        → cert-seen PointsInto c-pref
+        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
+```
+  * After cooldown
+    * r >= round(Certseen) + R
+    * r = round(Certchain) + cK for some c > 0
+```agda
+      AfterCooldown : ∀ {cts r c t} →
+        let
+          cert-chain = latestCertOnChain blockTree (r * T) t
+          cert-seen = latestCertSeen blockTree (r * T) t
+          r-chain = votingRoundNumber cert-chain
+          r-seen = votingRoundNumber cert-seen
         in
           c > 0
-        → r ≥ R + rₛ
-        → r ≡ (c * K) + rₛ
-        → VoteInRound ⟪ t ⟫ chain cs (MkRoundNumber r)
+        → r ≥ r-seen + R
+        → r ≡ r-seen + (c * K)
+        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
 ```
 ## Global state
 
@@ -383,14 +397,12 @@ Progress
 ```
 Updating global state
 ```agda
-    updateᵍ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
-    updateᵍ m d p l ⟦ c , s , ms , hs , as ⟧ =
-          ⟦ c
-          , insert p l s
-          , map (λ { (p , h)  → ⦅ p , h , m , d ⦆}) parties ++ ms
-          , m ∷ hs
-          , as
-          ⟧
+    _,_,_,_↑_ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
+    m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
+      ⟦ c , insert p l s , insertₘ m d ms , m ∷ hs , as ⟧
+      where
+        insertₘ : Message → Delay → List Envelope → List Envelope
+        insertₘ m d ms = map (uncurry ⦅_,_, m , d ⦆) parties ++ ms
 ```
 Ticking the global clock
 ```agda
@@ -398,7 +410,8 @@ Ticking the global clock
     tick M =
       record M {
         clock = suc (clock M) ;
-        messages = map (λ { ⦅ p , h , m , d ⦆ → ⦅ p , h , m , decr d ⦆}) (messages M)
+        messages = map (λ where
+          e → record e { delay = decr (delay e) }) (messages M)
       }
       where open Stateᵍ
 ```
@@ -408,7 +421,7 @@ A party receives messages from the global state by fetching messages assigned to
 updating the local block tree and putting the local state back into the global state.
 
 ```agda
-    data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
+    data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → Stateᵍ → Message → Stateᵍ → Set where
 ```
 An honest party consumes a message from the global message buffer and updates the
 the local state
@@ -417,13 +430,14 @@ the local state
         → lookup s p ≡ just lₚ
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
-          ------------------------
-        → ⟦ c
+          ----------------------------------------
+        → Honest {p} ⊢
+          ⟦ c
           , s
           , ms
           , hs
           , as
-          ⟧ [ Honest {p} , m ]⇀
+          ⟧ [ m ]⇀
           ⟦ c
           , insert p lₚ′ s
           , ms ─ m∈ms
@@ -435,13 +449,14 @@ An adversarial party might delay a message
 ```agda
       corrupt : ∀ {p c s ms hs as as′} {m}
         → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
-          --------------------------------
-        → ⟦ c
+          -----------------------------------------
+        → Corrupt {p} ⊢
+          ⟦ c
           , s
           , ms
           , hs
           , as
-          ⟧ [ Corrupt {p} , m ]⇀
+          ⟧ [ m ]⇀
           ⟦ c
           , s -- TODO: insert p lₚ s
           , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
@@ -449,78 +464,118 @@ An adversarial party might delay a message
           , as′
           ⟧
 ```
-## Vote
+## Vote creation
 
 A party can cast a vote for a block, if
   * the current slot is the first slot in a voting round
   * the party is a member of the voting committee
   * the chain is not in a cooldown phase
 
+Voting updates the party's local state and for all other parties a message
+is added to be consumed immediately.
 ```agda
-    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _⊢_⇉_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
               r = v-round clock
-              c = bestChain blockTree clock t
-              cs = certs blockTree t c
-              v = record {
-                    votingRound = r ;
-                    creatorId = p ;
-                    committeeMembershipProof = prf ;
-                    blockHash = hash (tipBest blockTree (clock ∸ L) t) ;
-                    signature = sig                  }
+              ch = bestChain blockTree clock t
+              cts = certs blockTree t ch
+              v = record
+                    { votingRound = r
+                    ; creatorId = p
+                    ; committeeMembershipProof = prf
+                    ; blockHash = hash $ tipBest blockTree (clock ∸ L) t
+                    ; signature = sig
+                    }
+              lₚ = ⟪ addVote blockTree t v ⟫
           in
           vote ≡ v
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound ⟪ t ⟫ c cs r
-          ---------------------------------------------------
-        → M [ Honest {p} ]⇉
-          updateᵍ (VoteMsg v) zero p ⟪ addVote blockTree t v ⟫ M
+        → VoteInRound ⟪ t ⟫ cts r
+          -------------------------------------
+        → Honest {p} ⊢
+            M ⇉ (VoteMsg v , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
-block creation messages to the other parties. The local state gets updated in the global
-state.
+block creation messages to the other parties. Block creation is possilble, if
+  * the block signature is correct
+  * the party is the slot leader
 
+Block creation updates the party's local state and for all other parties a message
+is added to be consumed immediately.
 ```agda
-    data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
-
+    data _⊢_↷_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
+```
+During regular execution of the protocol, i.e. not in cooldown phase, no certificate
+reference is included in the block.
+```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
-              r = roundNumber (v-round clock)
+              r = v-round clock
               txs = txSelection clock p
-              c = bestChain blockTree (pred clock) t
-              cs = certs blockTree t c
-              body = record {
-                  blockHash = hash txs ;
-                  payload = txs
-                  }
-              b = record {
-                    slotNumber = clock ;
-                    creatorId = p ;
-                    parentBlock = hash (tipBest blockTree (pred clock) t) ;
-                    certificate = just (latestCertSeen blockTree (pred clock) t) ;
-                    leadershipProof = prf ;
-                    bodyHash = blockHash body ;
-                    signature = sig
-                  }
+              ch = bestChain blockTree (pred clock) t
+              cts = certs blockTree t ch
+              b = record
+                    { slotNumber = clock
+                    ; creatorId = p
+                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; certificate = nothing
+                    ; leadershipProof = prf
+                    ; bodyHash = blockHash
+                        record { blockHash = hash txs
+                               ; payload = txs
+                               }
+                    ; signature = sig
+                    }
+              lₚ = ⟪ extendTree blockTree t b ⟫
           in
           block ≡ b
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
-        → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
-
         → IsSlotLeader p clock prf
-          -------------------------------------------
-        → M [ Honest {p} ]↷ updateᵍ (BlockMsg b) zero p
-             ⟪ extendTree blockTree t b ⟫ M
+        → VoteInRound ⟪ t ⟫ cts r
+          --------------------------------------
+        → Honest {p} ⊢
+            M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
+```
+During a cooldown phase, the block includes a certificate reference.
+```agda
+      honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
+        → let open Stateᵍ M
+              r = v-round clock
+              txs = txSelection clock p
+              ch = bestChain blockTree (pred clock) t
+              cts = certs blockTree t ch
+              b = record
+                    { slotNumber = clock
+                    ; creatorId = p
+                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; certificate = nothing
+                    ; leadershipProof = prf
+                    ; bodyHash = blockHash
+                        record { blockHash = hash txs
+                               ; payload = txs
+                               }
+                    ; signature = sig
+                    }
+              lₚ = ⟪ extendTree blockTree t b ⟫
+          in
+          block ≡ b
+        → lookup stateMap p ≡ just ⟪ t ⟫
+        → IsBlockSignature b sig
+        → IsSlotLeader p clock prf
+        → ¬ (VoteInRound ⟪ t ⟫ cts r)
+          --------------------------------------
+        → Honest {p} ⊢
+            M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
@@ -532,23 +587,23 @@ The small-step semantics describe the evolution of the global state.
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {M N p} {h : Honesty p} {m}
-        → M [ h , m ]⇀ N
-          ---------------
+        → h ⊢ M [ m ]⇀ N
+          --------------
         → M ↝ N
 
       CastVote : ∀ {M N p} {h : Honesty p}
-        → M [ h ]⇉ N
-          -----------
+        → h ⊢ M ⇉ N
+          ---------
         → M ↝ N
 
       CreateBlock : ∀ {M N p} {h : Honesty p}
-        → M [ h ]↷ N
-          -----------
+        → h ⊢ M ↷ N
+          ---------
         → M ↝ N
 
       NextSlot : ∀ {M}
         → Delivered M
-          ------------
+          -----------
         → M ↝ tick M
 ```
 
@@ -639,14 +694,14 @@ that there are no hash collisions during the execution of the protocol.
     -- Receive
 
     []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
-      → M [ h , m ]⇀ N
+      → h ⊢ M [ m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
     []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
-      → M [ h , m ]⇀ N
+      → h ⊢ M [ m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
     []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
@@ -654,24 +709,25 @@ that there are no hash collisions during the execution of the protocol.
     -- Create
 
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → history M ⊆ₘ history N
     []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
     []⇉-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → CollisionFree M
     []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
 ```
@@ -723,7 +779,7 @@ block with the `creatorId` of an honest party that is not already in the block h
     data ForgingFree (N : Stateᵍ) : Set where
 
       forging-free : ∀ {M : Stateᵍ} {b} {p}
-        → M [ Corrupt {p} ]↷ N
+        → Corrupt {p} ⊢ M ↷ N
         → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
             → m ∈ history M }) (history N)
         → ForgingFree N
