@@ -65,7 +65,7 @@ variable
   p q              : Party
   b b₁             : Block
   i j              : BlockIndex
-  t t₁             : Slot
+  t t₁ now         : Slot
   @0 h             : Honesty
 
 data Dishonest : Honesty → Party → Set where
@@ -77,12 +77,14 @@ data SlotOf (t : Slot) : Party → Set where
   BobSlot   : t % 2 ≡ 1 → SlotOf t Bob
 
 data ValidBlock : Slot → LocalState → Party → Block → Set where
-  valid : t < t₁ → SlotOf t₁ p → ValidBlock t₁ (Blk i , t) p (Blk (suc i))
+  valid : t < now → SlotOf now p → ValidBlock now (Blk i , t) p (Blk (suc i))
 
 -- Local state update on receive
 data _⊢_[_,_]?_ : Slot → LocalState → Party → Block → LocalState → Set where
-  correctBlock : ValidBlock t₁ (Blk i , t) p b → t₁ ⊢ (Blk i , t) [ p , b ]? (Blk (suc i) , t₁)
-  wrongBlock   : ¬ ValidBlock t ls p b → t ⊢ ls [ p , b ]? ls
+  correctBlock : ValidBlock now ls p b
+               → now ⊢ ls [ p , b ]? (b , now)
+  wrongBlock   : ¬ ValidBlock now ls p b
+               → now ⊢ ls [ p , b ]? ls
 
 -- Block receive
 data _[_,_↦_]?_ : State → Party → Block → Party → State → Set where
@@ -91,10 +93,10 @@ data _[_,_↦_]?_ : State → Party → Block → Party → State → Set where
 
 -- Local state update on send
 data _,_,_⊢_[_↦_]!_ : Honesty → Slot → Party → LocalState → Block → Party → LocalState → Set where
-  correctBlock   : ValidBlock t₁ (Blk i , t) p b
-                   → h , t₁ , p ⊢ (Blk i , t) [ b ↦ q ]! (Blk (suc i) , t₁)
+  correctBlock   : ValidBlock now ls p b
+                 → h , now , p ⊢ ls [ b ↦ q ]! (b , now)
   dishonestBlock : Dishonest h p
-                   → h , t , p ⊢ ls [ b ↦ q ]! ls
+                 → h , now , p ⊢ ls [ b ↦ q ]! ls
 
 -- Block send
 data _⊢_[_,_↦_]!_ : Honesty → State → Party → Block → Party → State → Set where
@@ -117,21 +119,15 @@ data _⊢_↝*_ : Honesty → State → State → Set where
 
 infixr 5 _<>_
 _<>_ : h ⊢ s₀ ↝* s₁ → h ⊢ s₁ ↝* s₂ → h ⊢ s₀ ↝* s₂
-[]       <> tr = tr
+[]       <> tr  = tr
 (r ∷ tr) <> tr₁ = r ∷ tr <> tr₁
-
-messages : h ⊢ s₀ ↝* s₁ → List (Slot × Party × Block)
-messages [] = []
-messages {s₀ = s₀} (deliver {p = p} {b} _ _ ∷ tr) = (clock s₀ , p , b) ∷ messages tr
-messages (trickery _ _ ∷ tr) = messages tr
-messages (tick _ _ ∷ tr) = messages tr
 
 aliceBlocks : h ⊢ s₀ ↝* s₁ → List (Slot × Block)
 aliceBlocks [] = []
 aliceBlocks {s₀ = s₀} (deliver {p = Alice} {b} _ _ ∷ tr) = (clock s₀ , b) ∷ aliceBlocks tr
-aliceBlocks (deliver _ _ ∷ tr) = aliceBlocks tr
+aliceBlocks (deliver _ _  ∷ tr) = aliceBlocks tr
 aliceBlocks (trickery _ _ ∷ tr) = aliceBlocks tr
-aliceBlocks (tick _ _ ∷ tr) = aliceBlocks tr
+aliceBlocks (tick _ _     ∷ tr) = aliceBlocks tr
 
 -- Some proofs
 
