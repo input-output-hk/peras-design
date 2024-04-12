@@ -232,12 +232,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ... | ()
 
     ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → messages M ⊆ᵐ messages N
     ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , VoteMsg v , zero ⦆) parties
 
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
     ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (λ where (p₁ , h) → ⦅ p₁ , h , BlockMsg b , zero ⦆) parties
 ```

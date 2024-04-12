@@ -407,7 +407,7 @@ A party receives messages from the global state by fetching messages assigned to
 updating the local block tree and putting the local state back into the global state.
 
 ```agda
-    data _[_,_]⇀_ : {p : PartyId} → Stateᵍ → Honesty p → Message → Stateᵍ → Set where
+    data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → Stateᵍ → Message → Stateᵍ → Set where
 ```
 An honest party consumes a message from the global message buffer and updates the
 the local state
@@ -417,12 +417,13 @@ the local state
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
         → lₚ [ m ]→ lₚ′
           ------------------------
-        → ⟦ c
+        → Honest {p} ⊢
+          ⟦ c
           , s
           , ms
           , hs
           , as
-          ⟧ [ Honest {p} , m ]⇀
+          ⟧ [ m ]⇀
           ⟦ c
           , insert p lₚ′ s
           , ms ─ m∈ms
@@ -435,12 +436,13 @@ An adversarial party might delay a message
       corrupt : ∀ {p c s ms hs as as′} {m}
         → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
           --------------------------------
-        → ⟦ c
+        → Corrupt {p} ⊢
+          ⟦ c
           , s
           , ms
           , hs
           , as
-          ⟧ [ Corrupt {p} , m ]⇀
+          ⟧ [ m ]⇀
           ⟦ c
           , s -- TODO: insert p lₚ s
           , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
@@ -456,7 +458,7 @@ A party can cast a vote for a block, if
   * the chain is not in a cooldown phase
 
 ```agda
-    data _[_]⇉_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _⊢_⇉_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
@@ -479,8 +481,8 @@ A party can cast a vote for a block, if
         → IsCommitteeMember p r prf
         → VoteInRound ⟪ t ⟫ c cs r
           ---------------------------------
-        → M [ Honest {p} ]⇉
-            (VoteMsg v , zero , p , lₚ ↑ M)
+        → Honest {p} ⊢
+            M ⇉ (VoteMsg v , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
@@ -491,7 +493,7 @@ block creation messages to the other parties. The local state gets updated in th
 state.
 
 ```agda
-    data _[_]↷_ : {p : PartyId} → Stateᵍ → Honesty p → Stateᵍ → Set where
+    data _⊢_↷_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
@@ -520,8 +522,8 @@ state.
         → getCert (MkRoundNumber (r ∸ 2)) cs ≡ nothing
         → IsSlotLeader p clock prf
           ----------------------------------
-        → M [ Honest {p} ]↷
-            (BlockMsg b , zero , p , lₚ ↑ M)
+        → Honest {p} ⊢
+            M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
@@ -533,23 +535,23 @@ The small-step semantics describe the evolution of the global state.
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
       Deliver : ∀ {M N p} {h : Honesty p} {m}
-        → M [ h , m ]⇀ N
-          ---------------
+        → h ⊢ M [ m ]⇀ N
+          --------------
         → M ↝ N
 
       CastVote : ∀ {M N p} {h : Honesty p}
-        → M [ h ]⇉ N
-          -----------
+        → h ⊢ M ⇉ N
+          ---------
         → M ↝ N
 
       CreateBlock : ∀ {M N p} {h : Honesty p}
-        → M [ h ]↷ N
-          -----------
+        → h ⊢ M ↷ N
+          ---------
         → M ↝ N
 
       NextSlot : ∀ {M}
         → Delivered M
-          ------------
+          -----------
         → M ↝ tick M
 ```
 
@@ -640,14 +642,14 @@ that there are no hash collisions during the execution of the protocol.
     -- Receive
 
     []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
-      → M [ h , m ]⇀ N
+      → h ⊢ M [ m ]⇀ N
       → history M ⊆ₘ history N
     []-hist-common-prefix (honest _ _ _) x = x
     []-hist-common-prefix (corrupt _) x = x
 
     []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
       → CollisionFree N
-      → M [ h , m ]⇀ N
+      → h ⊢ M [ m ]⇀ N
       → CollisionFree M
     []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
     []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
@@ -655,24 +657,24 @@ that there are no hash collisions during the execution of the protocol.
     -- Create
 
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → history M ⊆ₘ history N
     []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
 
     []↷-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
-      → M [ h ]↷ N
+      → h ⊢ M ↷ N
       → CollisionFree M
     []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
 
     []⇉-collision-free : ∀ {M N p} {h : Honesty p}
       → CollisionFree N
-      → M [ h ]⇉ N
+      → h ⊢ M ⇉ N
       → CollisionFree M
     []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
 ```
@@ -724,7 +726,7 @@ block with the `creatorId` of an honest party that is not already in the block h
     data ForgingFree (N : Stateᵍ) : Set where
 
       forging-free : ∀ {M : Stateᵍ} {b} {p}
-        → M [ Corrupt {p} ]↷ N
+        → Corrupt {p} ⊢ M ↷ N
         → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
             → m ∈ history M }) (history N)
         → ForgingFree N
