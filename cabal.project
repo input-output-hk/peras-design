@@ -11,7 +11,7 @@ repository cardano-haskell-packages
 
 index-state: 2024-01-05T13:49:07Z
 index-state:
-  , hackage.haskell.org      2023-12-15T16:32:49Z
+  , hackage.haskell.org      2024-03-14T00:00:00Z
   , cardano-haskell-packages 2023-12-15T14:50:31Z
 
 packages:
@@ -19,6 +19,7 @@ packages:
   peras-iosim
   peras-quickcheck
   peras-delta-q
+  test-demo
 
 tests: True
 test-show-details: direct

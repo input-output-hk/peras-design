@@ -1,0 +1,4 @@
+name: test-demo
+depend: standard-library agda2hs
+include: src
+flags: --erasure
