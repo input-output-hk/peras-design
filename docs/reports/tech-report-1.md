@@ -71,7 +71,7 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ## Agda Specification
 
-The formal specification of the Peras protocol is implemented in Agda. The specification is not executable, as there are entities that are defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
+The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification and there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
 
 ### Domain model
 
@@ -94,34 +94,38 @@ propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 
 ### Small-step semantics
 
-In order to describe the execution of the protocol, we are proposing a small-step semantics for Ouroboros Peras in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
+In order to describe the execution of the protocol, we are proposing a ![small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
 
 #### Local state
 
-The local state is the state of a single party, respectively a single node. It consist of an abstract blocktree that is specified by a set of properties. In addition to blocks the blocktree can also includes votes and therefore there are also properties for votes and certificates introduced by the Ouroboros Peras protocol.
+The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree that is specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and therefore we also need properties with respect to those entities.
 
 #### Global state
 
-The global state of the system consists of the following entities
+In order to describe progress with respect of the Ouroboros Peras protocol, a global state is introduced. The global state consists of the following entities:
 
-* clock: Current slot of the system
-* stateMap: Map with local state per party, i.e. the blocktree of a node
+* clock: Keeps track of the current slot of the system
+* stateMap: Map storing local state per party, i.e. the blocktrees of all the nodes
 * messages: All the messages that have been sent but not yet been delivered
 * history: All the messages that have been sent
 * adversarialState: The adversarial state can be anything, the type is passed to the specification as a parameter
 
-The difference to the model proposed in the PoS-NSB paper is
+The differences compared to the model proposed in the PoS-NSB paper are
 
-* No global `execution-order` and therefore permutations of the messages are not needed
-* No global `Progess`
+* `execution-order` is not stored and therefore permutations of the messages are not needed
+* there is no global `Progess`
+
+Instead of keeping track of the execution order in the global state the global relation is defined with respect to parties.
 
 #### Global relation for reachable worlds
 
 The protocol defines messages to be sent between parties of the system. The specification currently implements the following message types
+
 * Create block: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
 * Vote: A parties creates a vote according to the protocol
 
 The global relation expresses the evolution of the global state and describes what states are reachable. It consist of the following constructors
+
 * Deliver messages
 * Cast vote
 * Create block
