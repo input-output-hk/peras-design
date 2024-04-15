@@ -1,3 +1,7 @@
+## 2024-04-10
+
+Published [detailed notes](docs/reports/2024-04-10-paris-workshop.md) about the Peras team workshop in Paris
+
 ## 2024-03-30
 
 ### New QuickCheck-Dynamic model
