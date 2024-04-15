@@ -58,7 +58,7 @@ library
     TestModel
   build-depends:
     base ^>=4.18.1.0,
-    quickcheck-dynamic ^>= 3.4,
+    quickcheck-dynamic,
     QuickCheck,
     mtl
   hs-source-dirs: src
