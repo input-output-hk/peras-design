@@ -75,8 +75,31 @@ The formal specification of the Peras protocol is implemented in Agda. It is a d
 
 ### Domain model
 
-The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extracted domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`.
-Cryptographic functions are kept abstract, for example for hashing there is the record type `Hashable` that is extracted to a corresponding type class in Haskell.
+The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extractable domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`.
+
+```agda
+record Block where
+  field slotNumber : Slot
+        creatorId : PartyId
+        parentBlock : Hash Block
+        certificate : Maybe Certificate
+        leadershipProof : LeadershipProof
+        signature : Signature
+        bodyHash : Hash (List Tx)
+```
+
+Cryptographic functions are kept abstract, for example for hashing there is the record type `Hashable`
+
+```agda
+record Hashable (a : Set) : Set where
+  field hash : a → Hash a
+```
+that is extracted to a corresponding type class in Haskell:
+
+```haskell
+class Hashable a where
+  hash :: a -> Hash a
+```
 
 #### Agda2hs
 
