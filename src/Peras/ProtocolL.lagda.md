@@ -83,7 +83,7 @@ postulate
 Slot and round numbering
 
 * The first slot (in which there can be a block) is 0; subsequent slots are numbered 1, 2 ,...
-* Voting rounds are numbered 0, 1, 2, ..., and voting round $r$ corresponds to slots $r*T$, $r*T + 1$, $r*T + 2$, ..., $(r+1)*T - 1$. No votes are cast in round 0, which is successful by definition.
+* Voting rounds are numbered 0, 1, 2, ..., and voting round $r$ corresponds to slots $rT$, $rT + 1$, $rT + 2$, ..., $(r+1)T - 1$. No votes are cast in round 0, which is successful by definition.
 
 ```agda
 Slot = ℕ
