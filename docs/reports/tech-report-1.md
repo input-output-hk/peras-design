@@ -71,7 +71,69 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ## Agda Specification
 
-* Present the detailed specificaiton of the protocol in Agda
+The formal specification of the Peras protocol is implemented in Agda. The specification is not executable, as there are entities that are defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
+
+### Domain model
+
+The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extracted domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`.
+Cryptographic functions are kept abstract, for example for hashing there is the record type `Hashable` that is extracted to a corresponding type class in Haskell.
+
+#### Agda2hs
+
+In order to generate "readable" Haskell code, we use `agda2hs` rather than relying on the `MAlonzo` code directly. `agda2hs` comes with a `Prelude` for Agda that is extractable to Haskell. As `agda2hs` works by putting pragmas into the Agda code, it only supports a subset of Agda.
+
+For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check.
+
+```agda
+prop-genesis-in-slot0 : ∀ {c : Chain} → (v : ValidChain c) → slot (last c) ≡ 0
+prop-genesis-in-slot0 = ...
+
+propGenesisInSlot0 : ∀ (c : Chain) → (@0 v : ValidChain c) → Equal ℕ
+propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
+```
+
+### Small-step semantics
+
+In order to describe the execution of the protocol, we are proposing a small-step semantics for Ouroboros Peras in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
+
+#### Local state
+
+The local state is the state of a single party, respectively a single node. It consist of an abstract blocktree that is specified by a set of properties. In addition to blocks the blocktree can also includes votes and therefore there are also properties for votes and certificates introduced by the Ouroboros Peras protocol.
+
+#### Global state
+
+The global state of the system consists of the following entities
+
+* clock: Current slot of the system
+* stateMap: Map with local state per party, i.e. the blocktree of a node
+* messages: All the messages that have been sent but not yet been delivered
+* history: All the messages that have been sent
+* adversarialState: The adversarial state can be anything, the type is passed to the specification as a parameter
+
+The difference to the model proposed in the PoS-NSB paper is
+
+* No global `execution-order` and therefore permutations of the messages are not needed
+* No global `Progess`
+
+#### Global relation for reachable worlds
+
+The protocol defines messages to be sent between parties of the system. The specification currently implements the following message types
+* Create block: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
+* Vote: A parties creates a vote according to the protocol
+
+The global relation expresses the evolution of the global state and describes what states are reachable. It consist of the following constructors
+* Deliver messages
+* Cast vote
+* Create block
+* Next round
+
+#### Predicates on global state
+
+Collision free, Forging free predicates
+
+### Proofs
+
+* Present the detailed specification of the protocol in Agda
 * Protocol properties
 * link with q-d properties
 
