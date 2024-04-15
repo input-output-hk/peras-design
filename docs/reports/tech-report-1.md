@@ -132,7 +132,7 @@ propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 
 ### Small-step semantics
 
-In order to describe the execution of the protocol, we are proposing a ![small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
+In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
 
 #### Local state
 
