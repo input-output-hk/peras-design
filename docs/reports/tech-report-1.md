@@ -71,7 +71,7 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ## Agda Specification
 
-The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification and there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
+The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification, there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
 
 ### Domain model
 
@@ -103,7 +103,7 @@ data Block = Block
   deriving (Eq)
 ```
 
-Cryptographic functions are kept abstract, for example for hashing there is the record type `Hashable`
+Cryptographic functions are not implemented in the specification. For example for hash functions there is the record type `Hashable`
 
 ```agda
 record Hashable (a : Set) : Set where
@@ -116,9 +116,11 @@ class Hashable a where
   hash :: a -> Hash a
 ```
 
+For executing the reference specification, an instance of the different kind of hashes (for example for hashing blocks) needs to be provided.
+
 #### Agda2hs
 
-In order to generate "readable" Haskell code, we use `agda2hs` rather than relying on the `MAlonzo` code directly. `agda2hs` comes with a `Prelude` for Agda that is extractable to Haskell. As `agda2hs` works by putting pragmas into the Agda code, it only supports a subset of Agda.
+In order to generate "readable" Haskell code, we use `agda2hs` rather than relying on the `MAlonzo` code directly. `agda2hs` is not compatible with the Agda standard library and therefore we are using the custom `Prelude` provided by `agda2hs` that is also extractable to Haskell.
 
 For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check.
 
@@ -132,11 +134,11 @@ propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 
 ### Small-step semantics
 
-In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas of the small-step semantics for Ouroboros Praos from the PoS-NSB paper. The differences are explained in the following sections.
+In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics for the Ouroboros Praos part of the protocol are explained in the following sections.
 
 #### Local state
 
-The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree that is specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and therefore we also need properties with respect to those entities.
+The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree that is specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and therefore there are additional properties with respect to those entities.
 
 #### Global state
 
@@ -162,12 +164,38 @@ The protocol defines messages to be sent between parties of the system. The spec
 * Create block: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
 * Vote: A parties creates a vote according to the protocol
 
-The global relation expresses the evolution of the global state and describes what states are reachable. It consist of the following constructors
+The global relation expresses the evolution of the global state and describes what states are reachable:
 
-* Deliver messages
-* Cast vote
-* Create block
-* Next round
+```agda
+    data _↝_ : Stateᵍ → Stateᵍ → Set where
+
+      Deliver : ∀ {M N p} {h : Honesty p} {m}
+        → h ⊢ M [ m ]⇀ N
+          --------------
+        → M ↝ N
+
+      CastVote : ∀ {M N p} {h : Honesty p}
+        → h ⊢ M ⇉ N
+          ---------
+        → M ↝ N
+
+      CreateBlock : ∀ {M N p} {h : Honesty p}
+        → h ⊢ M ↷ N
+          ---------
+        → M ↝ N
+
+      NextSlot : ∀ {M}
+        → Delivered M
+          -----------
+        → M ↝ tick M
+```
+
+The global relation consists of the following constructors:
+
+* Deliver messages: A state transition can be a party consuming a message from the global message buffer. The party might be honest or adversarial, in the latter case a message will be delayed rather than consumed.
+* Cast vote: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
+* Create block: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cooldown phase, the party adds a certificate to the block as well
+* Next slot: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate
 
 #### Predicates on global state
 
