@@ -14,7 +14,7 @@ open import Data.Empty
 open import CommonTypes
 open import ProofPrelude
 open import FormalSpec
-open import TestModel hiding (h)
+open import TestModel
 
 variable
   A             : Set
@@ -88,7 +88,13 @@ record Invariant (s : State) : Set where
   field
     localStatesAgree   : aliceState s ≡ bobState s
     causality          : lastBlockSlot (aliceState s) ≤ clock s
-    tickAfterAliceSend : SlotOf (clock s) Alice → lastBlockSlot (aliceState s) < clock s
+    tickAfterAliceSend : clock s ≢ 0 → SlotOf (clock s) Alice → lastBlockSlot (aliceState s) < clock s
+
+initInvariant : Invariant initState
+initInvariant = inv refl ≤-refl λ nz _ → ⊥-elim (nz refl)
+
+matchingInitState : envState initState ≡ startingState
+matchingInitState = refl
 
 record Soundness (h : Honesty) (s : State) (endEnv : EnvState) (bs : List (Slot × Block)) : Set where
   field
@@ -120,7 +126,7 @@ honest-soundness s (ProduceBlock b) i@(inv refl _ _) refl | True = case produceO
   v@(valid _ _) → record
     { endState  = ⟦ clock s , _ , _ ⟧
     ; invariant₀ = i
-    ; invariant₁ = inv refl ≤-refl (⊥-elim ∘ slotOf-deterministic (produceOk⇒envSlot eq))
+    ; invariant₁ = inv refl ≤-refl (λ _ → ⊥-elim ∘ slotOf-deterministic (produceOk⇒envSlot eq))
     ; trace     = deliver (send {p = Bob} Alice b (correctBlock v) λ())
                           (receive (correctBlock v)) ∷ []
     ; envOk     = refl
@@ -130,7 +136,7 @@ honest-soundness s Tick (inv refl _ _) prf with whenTick (envState s)
 honest-soundness s Tick i@(inv refl z≤n _) refl | GenesisTick refl = record
   { endState   = ⟦ 1 , _ , _ ⟧
   ; invariant₀ = i
-  ; invariant₁ = inv refl z≤n λ _ → s≤s z≤n
+  ; invariant₁ = inv refl z≤n λ _ _ → s≤s z≤n
   ; trace      = tick (AliceSlot refl) refl ∷ []
   ; envOk      = refl
   ; blocksOk   = refl
@@ -138,19 +144,19 @@ honest-soundness s Tick i@(inv refl z≤n _) refl | GenesisTick refl = record
 honest-soundness s Tick i@(inv refl _ _) refl | TickAfterEnvSend isEnvSlot refl = record
   { endState   = ⟦ suc (clock s) , _ , _ ⟧
   ; invariant₀ = i
-  ; invariant₁ = inv refl (n≤1+n _) λ _ → ≤-refl
+  ; invariant₁ = inv refl (n≤1+n _) λ _ _ → ≤-refl
   ; trace      = tick isEnvSlot refl
                ∷ []
   ; envOk      = refl
   ; blocksOk   = refl
   }
-honest-soundness s Tick i@(inv refl _ slotInv) refl | SutSendAndTick isAliceSlot = record
+honest-soundness s Tick i@(inv refl _ slotInv) refl | SutSendAndTick notGenesis isAliceSlot = record
   { endState   = ⟦ suc (clock s) , _ , _ ⟧
   ; invariant₀ = i
-  ; invariant₁ = inv refl (n≤1+n _) λ _ → ≤-refl
+  ; invariant₁ = inv refl (n≤1+n _) λ _ _ → ≤-refl
   ; trace      = let b = nextBlock (envState s)
                      validB : ValidBlock (clock s) (aliceState s) Alice b
-                     validB = valid (slotInv isAliceSlot) isAliceSlot
+                     validB = valid (slotInv notGenesis isAliceSlot) isAliceSlot
                  in deliver (send {p = Alice} Bob b
                                   (correctBlock validB) λ())
                             (receive (correctBlock validB))
@@ -181,7 +187,7 @@ soundness s DishonestTick (inv refl _ _) prf with dishonestTickOk (envState s) i
 soundness s DishonestTick i@(inv refl lt _) refl | True = record
   { endState   = ⟦ suc (clock s) , aliceState s , _ ⟧
   ; invariant₀ = i
-  ; invariant₁ = inv refl (m≤n⇒m≤1+n lt) (λ _ → s≤s lt)
+  ; invariant₁ = inv refl (m≤n⇒m≤1+n lt) (λ _ _ → s≤s lt)
   ; trace      = trickery badBob (record (aliceState s) { lastBlockSlot = clock s })
                ∷ tick (dishonestTickOk⇒envSlot eq) refl
                ∷ trickery badBob (aliceState s)

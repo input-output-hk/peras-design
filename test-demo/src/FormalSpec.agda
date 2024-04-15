@@ -43,6 +43,8 @@ initLocalState = Blk 0 , 0
 initState : State
 initState = ⟦ 0 , initLocalState , initLocalState ⟧
 
+-- State manipulation
+
 getLocalState : Party → State → LocalState
 getLocalState Alice = aliceState
 getLocalState Bob   = bobState
@@ -54,10 +56,17 @@ modifyLocalState Bob   f ⟦ t , as , bs ⟧ = ⟦ t , as , f bs ⟧
 setLocalState : Party → LocalState → State → State
 setLocalState p ls = modifyLocalState p λ _ → ls
 
+-- Honesty models. Encodes who is allowed to perform adversarial actions.
+
 data Honesty : Set where
   happyPath : Honesty
   badAlice  : Honesty
   badBob    : Honesty
+
+-- Certificate that the given party is allowed to do bad things.
+data Dishonest : Honesty → Party → Set where
+  badAlice : Dishonest badAlice Alice
+  badBob   : Dishonest badBob   Bob
 
 variable
   s s₀ s₁ s₂ s₃ s₄ : State
@@ -68,16 +77,18 @@ variable
   t t₁ now         : Slot
   h                : Honesty
 
-data Dishonest : Honesty → Party → Set where
-  badAlice : Dishonest badAlice Alice
-  badBob   : Dishonest badBob   Bob
-
+-- Alice has even slots, Bob has odd slots.
 data SlotOf (t : Slot) : Party → Set where
   AliceSlot : t % 2 ≡ 0 → SlotOf t Alice
   BobSlot   : t % 2 ≡ 1 → SlotOf t Bob
 
+-- `ValidBlock now ls p b`: At time `now` is it valid for a party `p`
+-- to send a block `b` from the point of view of a node with local
+-- state `ls`.
 data ValidBlock : Slot → LocalState → Party → Block → Set where
-  valid : t < now → SlotOf now p → ValidBlock now (Blk i , t) p (Blk (suc i))
+  valid : t < now
+        → SlotOf now p
+        → ValidBlock now (Blk i , t) p (Blk (suc i))
 
 -- Local state update on receive
 data _⊢_[_,_]?_ : Slot → LocalState → Party → Block → LocalState → Set where
@@ -86,7 +97,7 @@ data _⊢_[_,_]?_ : Slot → LocalState → Party → Block → LocalState → S
   wrongBlock   : ¬ ValidBlock now ls p b
                → now ⊢ ls [ p , b ]? ls
 
--- Block receive
+-- Global state update on receive
 data _[_,_↦_]?_ : State → Party → Block → Party → State → Set where
   receive : clock s ⊢ getLocalState q s [ p , b ]? ls →
             s [ p , b ↦ q ]? setLocalState q ls s
@@ -98,21 +109,30 @@ data _,_,_⊢_[_↦_]!_ : Honesty → Slot → Party → LocalState → Block �
   dishonestBlock : Dishonest h p
                  → h , now , p ⊢ ls [ b ↦ q ]! ls
 
--- Block send
+-- Global state update on send
 data _⊢_[_,_↦_]!_ : Honesty → State → Party → Block → Party → State → Set where
   send : ∀ q b → h , clock s , p ⊢ getLocalState p s [ b ↦ q ]! ls
                → p ≢ q
                → h ⊢ s [ p , b ↦ q ]! setLocalState p ls s
 
+-- The top-level small-step semantics
 data _⊢_↝_ : Honesty → State → State → Set where
+
+  -- π-calculus-style instant message delivery
   deliver : h ⊢ s₀ [ p , b ↦ q ]! s₁
           →     s₁ [ p , b ↦ q ]? s₂
           → h ⊢ s₀ ↝ s₂
-  trickery : Dishonest h p → ∀ ls → h ⊢ s ↝ setLocalState p ls s
-  tick     : SlotOf (clock s) p
-           → lastBlockSlot (getLocalState p s) ≡ clock s
-           → h ⊢ s ↝ record s { clock = suc (clock s) }
 
+  -- We can only tick if the party whose slot it is has produced (or
+  -- pretends to have produced) their block.
+  tick : SlotOf (clock s) p
+       → lastBlockSlot (getLocalState p s) ≡ clock s
+       → h ⊢ s ↝ record s { clock = suc (clock s) }
+
+  -- A dishonest party can update their local state to whatever they want.
+  trickery : Dishonest h p → ∀ ls → h ⊢ s ↝ setLocalState p ls s
+
+-- Standard reflexive-transitive closure.
 data _⊢_↝*_ : Honesty → State → State → Set where
   []  : h ⊢ s ↝* s
   _∷_ : h ⊢ s₀ ↝ s₁ → h ⊢ s₁ ↝* s₂ → h ⊢ s₀ ↝* s₂
@@ -122,6 +142,7 @@ _<>_ : h ⊢ s₀ ↝* s₁ → h ⊢ s₁ ↝* s₂ → h ⊢ s₀ ↝* s₂
 []       <> tr  = tr
 (r ∷ tr) <> tr₁ = r ∷ tr <> tr₁
 
+-- Which blocks does Alice produce in a given trace?
 aliceBlocks : h ⊢ s₀ ↝* s₁ → List (Slot × Block)
 aliceBlocks [] = []
 aliceBlocks {s₀ = s₀} (deliver {p = Alice} {b} _ _ ∷ tr) = (clock s₀ , b) ∷ aliceBlocks tr

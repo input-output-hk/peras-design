@@ -17,8 +17,9 @@ open import FormalSpec hiding (h)
 import GHC.Generics
 #-}
 
-variable
-  @0 h : Honesty  -- We want to erase Honesty parameters in the Haskell code
+private
+  variable
+    @0 h : Honesty  -- We want to erase Honesty parameters in the Haskell code
 
 data Signal : (@0 h : Honesty) → Set where
   ProduceBlock          : Block → Signal h
@@ -27,6 +28,9 @@ data Signal : (@0 h : Honesty) → Set where
   DishonestTick         : Signal badBob
 {-# COMPILE AGDA2HS Signal deriving (Eq, Ord, Show, Generic) #-}
 
+-- This keeps track of the state needed for test generation. Here we
+-- don't need separate local states for Alice and Bob--we only need to
+-- track what the party being tested knows about the world.
 record EnvState : Set where
   constructor MkEnvState
   field
@@ -85,7 +89,9 @@ data WhenTick (@0 s : EnvState) : Set where
   TickAfterEnvSend : @0 SlotOf (time s) (envParty s)
                    → @0 lastBlockTime s ≡ time s
                    → WhenTick s
-  SutSendAndTick   : @0 SlotOf (time s) (sutParty s) → WhenTick s
+  SutSendAndTick   : @0 time s ≢ 0
+                   → @0 SlotOf (time s) (sutParty s)
+                   → WhenTick s
   NoTick           : WhenTick s
 {-# COMPILE AGDA2HS WhenTick #-}
 
@@ -106,14 +112,14 @@ opaque
          if envSentBlock s            then TickAfterEnvSend (lem-whoseSlot s (eqParty-sound (&&ˡ it)))
                                                             (eqℕ-sound (&&ʳ it))
     else if time s == 0               then GenesisTick (eqℕ-sound it)
-    else if whoseSlot s == sutParty s then SutSendAndTick (lem-whoseSlot s (eqParty-sound it))
+    else if whoseSlot s == sutParty s then SutSendAndTick (eqℕ-complete it) (lem-whoseSlot s (eqParty-sound it))
     else NoTick
   {-# COMPILE AGDA2HS whenTick #-}
 
 stepTick : (s : EnvState) → WhenTick s → Maybe (EnvState × List Block)
 stepTick s (TickAfterEnvSend _ _) = Just (tickSlot s , [])
 stepTick s (GenesisTick _)        = Just (tickSlot s , [])
-stepTick s (SutSendAndTick _)     = Just ( tickSlot record s
+stepTick s (SutSendAndTick _ _)   = Just ( tickSlot record s
                                                     { lastBlock     = nextBlock s
                                                     ; lastBlockTime = time s
                                                     }
