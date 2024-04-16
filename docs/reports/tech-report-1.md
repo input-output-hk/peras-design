@@ -61,11 +61,14 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Overview
 
-This diagram is a high-level representation of how the Peras protocol works over a period of time.
+A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit), we summarizes the main points here but refer the interested reader to the slides and the research article for details.
 
-![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
-
-A more detailed presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit).
+* Peras essentially adds a _Voting layer_ on top of Cardano's Nakomoto consensus protocol layer, with a fixed committee size and a quorum,
+* Every voting round, stakeholders (SPOs) gets selected to be part of the committee through a stake-based sortition mechanism using their existing VRF keys, and vote for some block which is a small distance from the tip their preferred chain,
+* Votes are broadcast to other nodes through network diffusion,
+* When a node receives enough votes to reach quorum, it creates a certificate that now adds weight and counts towards the chain selection,
+* Certificates can also be broadcast to other nodes that are catching up or did not receive enough votes in a round,
+* From time to time, a quorum is not reached in a round and the network enters a _cooldown period_: The block producer includes latest known certificate in the chain, and no voting happens until cooldown ends.
 
 ## Pseudo-code
 
