@@ -120,7 +120,7 @@ For executing the reference specification, an instance of the different kind of 
 
 #### Agda2hs
 
-In order to generate "readable" Haskell code, we use `agda2hs` rather than relying on the `MAlonzo` code directly. `agda2hs` is not compatible with the Agda standard library and therefore we are using the custom `Prelude` provided by `agda2hs` that is also extractable to Haskell.
+In order to generate "readable" Haskell code, we use [agda2hs](https://agda.github.io/agda2hs) rather than relying on the `MAlonzo` code directly. `agda2hs` is not compatible with the Agda standard library and therefore we are using the custom `Prelude` provided by `agda2hs` that is also extractable to Haskell.
 
 For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check.
 
@@ -134,11 +134,30 @@ propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 
 ### Small-step semantics
 
-In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics for the Ouroboros Praos part of the protocol are explained in the following sections.
+In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics of the Ouroboros Praos part of the protocol are explained in the following sections.
 
 #### Local state
 
-The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree that is specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and therefore there are additional properties with respect to those entities.
+The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree, i.e. an abstract data structure representing possible chains specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and for this reason there are additional properties with respect to those entities.
+
+The fields of the blocktree allow to
+* extend the tree with blocks and votes
+* get all blocks, votes and certificates
+* get for the best chain
+
+where the condition which chain is considered the best chain is given by the following properties, which says that the best chain is valid and the heaviest chain out of all valid chains is the best:
+
+```agda
+valid : ∀ (t : tT) (sl : Slot)
+  → ValidChain (bestChain sl t)
+
+optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
+  → let b = bestChain sl t
+    in
+    ValidChain c
+  → c ⊆ allBlocksUpTo sl t
+  → weight c (certs t c) ≤ weight b (certs t b)
+```
 
 #### Global state
 
