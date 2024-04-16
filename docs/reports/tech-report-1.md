@@ -143,9 +143,9 @@ The local state is the state of a single party, respectively a single node. It c
 The fields of the blocktree allow to
 * extend the tree with blocks and votes
 * get all blocks, votes and certificates
-* get for the best chain
+* get the best chain
 
-where the condition which chain is considered the best chain is given by the following properties, which says that the best chain is valid and the heaviest chain out of all valid chains is the best:
+where the condition which chain is considered the best chain is given by the following properties, which say that the *best* chain is *valid* (`ValidChain` is a predicate asserting that a chain is valid with respect to Ouroboros Praos) and the *heaviest* chain out of all valid chains is the best:
 
 ```agda
 valid : ∀ (t : tT) (sl : Slot)
@@ -164,24 +164,24 @@ optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
 In order to describe progress with respect of the Ouroboros Peras protocol, a global state is introduced. The global state consists of the following entities:
 
 * clock: Keeps track of the current slot of the system
-* stateMap: Map storing local state per party, i.e. the blocktrees of all the nodes
-* messages: All the messages that have been sent but not yet been delivered
+* state map: Map storing local state per party, i.e. the blocktrees of all the nodes
+* messages: All the messages that have been sent but not yet delivered
 * history: All the messages that have been sent
-* adversarialState: The adversarial state can be anything, the type is passed to the specification as a parameter
+* adversarial state: The adversarial state can be anything, the type is passed to the specification as a parameter
 
 The differences compared to the model proposed in the PoS-NSB paper are
 
-* `execution-order` is not stored and therefore permutations of the messages are not needed
+* `execution-order` is not stored and therefore permutations of the messages as well as permutations of parties are not needed
 * there is no global `Progess`
 
-Instead of keeping track of the execution order in the global state the global relation is defined with respect to parties.
+Instead of keeping track of the execution order of the parties in the global state the global relation is defined with respect to parties.
 
 #### Global relation for reachable worlds
 
 The protocol defines messages to be sent between parties of the system. The specification currently implements the following message types
 
-* Create block: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
-* Vote: A parties creates a vote according to the protocol
+* Block message: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
+* Vote message: A parties creates a vote according to the protocol
 
 The global relation expresses the evolution of the global state and describes what states are reachable:
 
