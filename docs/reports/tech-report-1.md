@@ -371,11 +371,8 @@ We have chosen to define two models of ΔQ diffusion, one based on an average no
 
 These numbers are reflected (somewhat inaccurately) in the above graph, representing the probabilities for the number of hops a block will have to go through before reaching another node.
 
-::: [!NOTE]
-
-The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
-
-:::
+> [!NOTE]
+> The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
 
 
 #### Modeling process
