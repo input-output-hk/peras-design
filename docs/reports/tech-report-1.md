@@ -106,11 +106,10 @@ We also have anecdotal evidences from observations of the Cardano mainchain over
 
 ### Settlement bounds for Peras
 
-::: [!WARNING]
+> [!WARNING]
+>
+> Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
 
-Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
-
-:::
 
 While these numbers seem appealing and reasonably small to provide a very high degree of confidence after less than 10 minutes (a block is produced on average every 20s), it should be noted that they are based on non-existent to low adversarial power assumption (eg. lower than 10% total stake), in other words they represent the best case scenario and say nothing about the potential impact of an adversary with significant resources and high motivation to either disrupt the network, eg. as a form of denial of service to degrade the perceived value of Cardano, or more obviously to double spend. As the stakes increase and the network becomes more valuable, the probability of such an attack increases and our confidence in the settlement time should be adjusted accordingly.
 
