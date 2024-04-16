@@ -1108,11 +1108,16 @@ The following diagram shows the cumulative bytes received by nodes as a function
 
 ## Rust-based simulation
 
-> [!NOTE] To be written.
+The Rust types for Peras nodes and networks mimic the Haskell ones and the messages conform to the Agda-generated types. The Rust implementation demonstrates the feasibility of using language-independent serialization and a foreign-function interface (FFI) for Haskell-based QuickCheck testing of Peras implementations. In particular, the Rust package `serde` has sufficiently configurable serialization so that it interoperates with the default Haskell serializations provided by `Data.Aeson`. (The new `agda2rust` tool has not yet reached a stable release, but it may eventually open possibilities for generating Rust code from the Agda types and specification.) A Rust static library can be linked into Haskell code via Cabal configuration.
+
+The Rust node generates Praos blocks according to the slot-leadership recipe. The Rust network uses the Innovation Team's new network simulation [ce-netsim](https://github.com/input-output-hk/ce-netsim) for transportation block-production and preferred-chain messages among the nodes.
+
+The key findings from Rust experiments follow.
+* It is eminently practical to interface non-Haskell code to QuickCheck Dynamic via language-independent serialization and a foreign-function interface.
+* It is also possible to co-design Rust and Haskell code for Peras so that the implementations mirror each other, aside from language-specific constructs. This might result in not employing the advanced and idiosyncratic features of these two languages, however.
+* The `ce-netsim` architecture and threading model is compatible with Peras simulations, even ones linked to `quickcheck-dynamic` test via FFI.
 
 ## Overall findings from simulation studies
-
-> [!NOTE] Are bullets okay, or should we organize the sections below into paragraphs?
 
 ### Simulation results
 
@@ -1160,6 +1165,7 @@ The following diagram shows the cumulative bytes received by nodes as a function
 	- The `serde` Rust libraries successfully mimic Haskell's `aeson` serialization for JSON.
 	- The `serde` library also supports serialization as CBOR, though its compatibility with Cardano's CBOR serialization has not yet been assessed.
 	- The `agda2rust` tool is not sufficiently mature to generate Peras's Agda types for use in Rust.
+	- The `ce-netsim` library is useful for the message-passing portions of Peras simulations written in Rust.
 	- Using WASM as a Rust compilation target may enable running serverless simulations in a web browser.
 - IOSim
 	- IOSim's single-threaded implementation hinders its usefulness for high performance simulations.
