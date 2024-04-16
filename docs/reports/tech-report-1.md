@@ -71,9 +71,181 @@ This diagram attempts at depicting graphically how the Peras protocol works over
 
 ## Agda Specification
 
-* Present the detailed specificaiton of the protocol in Agda
-* Protocol properties
-* link with q-d properties
+The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification, there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate quick-check tests for checking an arbitrary implementation against the reference specification.
+
+### Domain model
+
+The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extractable domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`. For example the Agda record type for `Block`
+
+```agda
+record Block where
+  field slotNumber : Slot
+        creatorId : PartyId
+        parentBlock : Hash Block
+        certificate : Maybe Certificate
+        leadershipProof : LeadershipProof
+        signature : Signature
+        bodyHash : Hash (List Tx)
+```
+
+is extracted to the Haskell data type:
+
+```haskell
+data Block = Block
+  { slotNumber :: Slot
+  , creatorId :: PartyId
+  , parentBlock :: Hash Block
+  , certificate :: Maybe Certificate
+  , leadershipProof :: LeadershipProof
+  , signature :: Signature
+  , bodyHash :: Hash [Tx]
+  }
+  deriving (Eq)
+```
+
+Cryptographic functions are not implemented in the specification. For example for hash functions there is the record type `Hashable`
+
+```agda
+record Hashable (a : Set) : Set where
+  field hash : a → Hash a
+```
+that is extracted to a corresponding type class in Haskell:
+
+```haskell
+class Hashable a where
+  hash :: a -> Hash a
+```
+
+For executing the reference specification, an instance of the different kind of hashes (for example for hashing blocks) needs to be provided.
+
+#### Agda2hs
+
+In order to generate "readable" Haskell code, we use [agda2hs](https://agda.github.io/agda2hs) rather than relying on the `MAlonzo` code directly. `agda2hs` is not compatible with the Agda standard library and therefore we are using the custom `Prelude` provided by `agda2hs` that is also extractable to Haskell.
+
+For extracting properties from Agda to Haskell we can use as similar type as the `Equal` type from the agda2hs examples. The constructor for `Equal` takes a pair of items and a proof that those are equal. When extracting to Haskell the proof gets erased. We can use this idea for extracting properties to be used with quick-check.
+
+```agda
+prop-genesis-in-slot0 : ∀ {c : Chain} → (v : ValidChain c) → slot (last c) ≡ 0
+prop-genesis-in-slot0 = ...
+
+propGenesisInSlot0 : ∀ (c : Chain) → (@0 v : ValidChain c) → Equal ℕ
+propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
+```
+
+### Small-step semantics
+
+In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics of the Ouroboros Praos part of the protocol are explained in the following sections.
+
+#### Local state
+
+The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree, i.e. an abstract data structure representing possible chains specified by a set of properties. In addition to blocks the blocktree for Ouroboros Peras also includes votes and certificates and for this reason there are additional properties with respect to those entities.
+
+The fields of the blocktree allow to
+* extend the tree with blocks and votes
+* get all blocks, votes and certificates
+* get the best chain
+
+where the condition which chain is considered the best chain is given by the following properties, which say that the *best* chain is *valid* (`ValidChain` is a predicate asserting that a chain is valid with respect to Ouroboros Praos) and the *heaviest* chain out of all valid chains is the best:
+
+```agda
+valid : ∀ (t : tT) (sl : Slot)
+  → ValidChain (bestChain sl t)
+
+optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
+  → let b = bestChain sl t
+    in
+    ValidChain c
+  → c ⊆ allBlocksUpTo sl t
+  → weight c (certs t c) ≤ weight b (certs t b)
+```
+
+#### Global state
+
+In order to describe progress with respect of the Ouroboros Peras protocol, a global state is introduced. The global state consists of the following entities:
+
+* clock: Keeps track of the current slot of the system
+* state map: Map storing local state per party, i.e. the blocktrees of all the nodes
+* messages: All the messages that have been sent but not yet delivered
+* history: All the messages that have been sent
+* adversarial state: The adversarial state can be anything, the type is passed to the specification as a parameter
+
+The differences compared to the model proposed in the PoS-NSB paper are
+
+* the execution order is not stored in the global state and therefore permutations of the messages as well as permutations of parties are not needed
+* there is no global `Progess`
+
+Instead of keeping track of the execution order of the parties in the global state the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party we know the as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
+
+#### Global relation
+
+The protocol defines messages to be distributed between parties of the system. The specification currently implements the following message types
+
+* Block message: When a party is the slot leader a new block can be created and a message notifying the other parties about the block creation is broadcast. Note, in case a cooldown phase according to the Ouroboros Peras protocol is detected the block also includes a certificate that references a block of the party's preferred chain.
+* Vote message: When a party creates a vote according to the protocol, this is wrapped into a message and delivered to the other parties
+
+The global relation expresses the evolution of the global state:
+
+```agda
+    data _↝_ : Stateᵍ → Stateᵍ → Set where
+
+      Deliver : ∀ {M N p} {h : Honesty p} {m}
+        → h ⊢ M [ m ]⇀ N
+          --------------
+        → M ↝ N
+
+      CastVote : ∀ {M N p} {h : Honesty p}
+        → h ⊢ M ⇉ N
+          ---------
+        → M ↝ N
+
+      CreateBlock : ∀ {M N p} {h : Honesty p}
+        → h ⊢ M ↷ N
+          ---------
+        → M ↝ N
+
+      NextSlot : ∀ {M}
+        → Delivered M
+          -----------
+        → M ↝ tick M
+```
+
+The global relation consists of the following constructors:
+
+* *Deliver*: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed.
+* *Cast vote*: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
+* *Create block*: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cooldown phase, the party adds a certificate to the block as well
+* *Next slot*: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate
+
+The reflexive transitive closure of the global relation describes what global states are reachable.
+
+### Proofs
+
+The properties and proofs that we can state based upon the formal specification are in [Properties.lagda.md](../../src/Peras/SmallStep/Properties.lagda.md).
+
+A first property is `knowledge-propagation`, a lemma that state that knowledge about blocks is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
+
+```agda
+    knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
+      → {p₁ p₂ : PartyId}
+      → {t₁ t₂ : A}
+      → {honesty₁ : Honesty p₁}
+      → {honesty₂ : Honesty p₂}
+      → honesty₁ ≡ Honest {p₁}
+      → honesty₂ ≡ Honest {p₂}
+      → (p₁ , honesty₁) ∈ parties
+      → (p₂ , honesty₂) ∈ parties
+      → N₀ ↝⋆ N₁
+      → N₁ ↝⋆ N₂
+      → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+      → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+      → Delivered N₂
+      → clock N₁ ≡ clock N₂
+      → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+```
+
+Knowledge propagation is a pre-requisite for the chain growth property, that informally says that in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
+
+### link with q-d properties
 
 ## Pending questions
 
