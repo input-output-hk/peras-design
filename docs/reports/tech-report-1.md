@@ -980,10 +980,13 @@ Committee selection in the following simulation was set by limiting each node to
 $$
 P = 1 - (1 - p_\text{lottery})^s
 $$
+
 given
+
 $$
 p_\text{lottery} = (1 - 1 / c)^{(c / t)}
 $$
+
 where $s$ is the node's stake, $t$ is the total stake in the system, and $c$ is the mean committee size.
 
 The following figure compares similar Praos and Peras chains, highlighting how the latter's voting boost affects the choice of preferred chain. The simulation involved 100 nodes and a mean committee size of 10 nodes; the active slot coefficient was set to 0.25 in order to provoke more frequent forking that would normally be observed. The voting boost is a modest 10% per vote.
