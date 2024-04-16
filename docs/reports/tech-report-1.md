@@ -7,11 +7,76 @@ author:
 date: 2024-04-15
 ---
 
+# Executive summary
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ since January 2024.
+
+# Contents
+
+- [x] [Previous work](#previous-work)
+    - [x] [Peras Workshop](#peras-workshop)
+        - [x] [Questions about Peras](#questions-about-peras)
+        - [x] [Potential jugular experiments for Peras](#potential-jugular-experiments-for-peras)
+        - [x] [SRL](#srl)
+- [ ] [Protocol Specification](#protocol-specification)
+    - [x] [Overview](#overview)
+    - [x] [Pseudo-code](#pseudo-code)
+    - [ ] [Agda Specification](#agda-specification)
+        - [x] [Domain model](#domain-model)
+            - [ ] [Agda2hs](#agda2hs)
+        - [x] [Small-step semantics](#small-step-semantics)
+            - [x] [Local state](#local-state)
+            - [x] [Global state](#global-state)
+            - [x] [Global relation](#global-relation)
+        - [x] [Proofs](#proofs)
+        - [ ] [link with q-d properties](#link-with-q-d-properties)
+    - [x] [Pending questions](#pending-questions)
+        - [x] [Certificates](#certificates)
+- [ ] [Network Performance Analysis](#network-performance-analysis)
+    - [x] [Certificates in Block Header](#certificates-in-block-header)
+        - [x] [Baseline - Praos ΔQ Modelling](#baseline---praos-Δq-modelling)
+            - [x] [Model overview](#model-overview)
+            - [x] [Modeling process](#modeling-process)
+        - [x] [Peras ΔQ Model - Blocks](#peras-Δq-model---blocks)
+        - [x] [Conclusion](#conclusion)
+    - [x] [Impact on User Experience](#impact-on-user-experience)
+        - [x] [Model](#model)
+    - [ ] [Impact of Load congestion](#impact-of-load-congestion)
+- [x] [Property-based testing with Dynamic QuickCheck](#property-based-testing-with-dynamic-quickCheck)
+    - [x] [Praos properties](#praos-properties)
+    - [x] [Peras properties](#peras-properties)
+    - [x] [Relating test model to formal model](#relating-test-model-to-formal-model)
+- [x] [Simulations](#2imulations)
+    - [x] [Haskell-based simulation](#haskell-based-simulation)
+        - [x] [Design](#design)
+            - [x] [IOSim](#iosim)
+            - [x] [Node interface](#node-interface)
+            - [x] [Auxiliary data structures](#auxiliary-data-structures)
+            - [x] [Observability](#observability)
+            - [x] [Message routing](#message-routing)
+            - [x] [Sync protocol](#sync-protocol)
+        - [x] [Experiments](#experiments)
+            - [x] [Block production](#block-production)
+            - [x] [Network and Praos chain generation](#network-and-praos-chain-generation)
+            - [x] [February version of Peras](#february-version-of-peras)
+            - [x] ["Split brain"](#split-brain)
+            - [x] [Congestion](#congestion)
+    - [x] [Rust-based simulation](#rust-based-simulation)
+    - [x] [Overall findings from simulation studies](#overall-findings-from-simulation-studies)
+        - [x] [Simulation results](#simulation-results)
+        - [x] [Simulation experiments](#simulation-experiments)
+        - [x] [Simulator design](#simulator-design)
+        - [x] [Integration with QuickCheck Dynamic](#integration-with-quickcheck-dynamic)
+- [ ] [Integration into `cardano-node`](#integration-into-cardano-node)
+    - [ ] [Networking](#networking)
+    - [ ] [Consensus](#consensus)
+    - [ ] [Resources](#resources)
+- [ ] [Conclusion](#conclusion)
+    - [ ] [Future work](#future-work)
+- [ ] [References](#references)
 
 # Previous work
 
-## Peras Workshop
+## Peras workshop
 
 ### Questions about Peras
 
@@ -374,7 +439,6 @@ These numbers are reflected (somewhat inaccurately) in the above graph, represen
 > [!NOTE]
 > The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
 
-
 #### Modeling process
 
 We have experimented with three different libraries for encoding this baseline model:
@@ -477,7 +541,6 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 
 > [!NOTE]
 > In practice, cardano-node use _pipelining_ to avoid having to confirm individually every block/header, eg. when sending multiple blocks to a peer a node won't wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
-
 
 ### Conclusion
 
