@@ -317,7 +317,7 @@ Testing that uses the standard `quickcheck` package is limited to the JSON seria
 
 ## Praos properties
 
-Praos `NodeModel` and `NetworkModel` types test the state transitions related to slot leadership and forging blocks. They can be used with the Haskell node and network implemented in `peras-iosim` or the Rust node and network implementation in `peras-rust`. This dual-language capability demonstrated the feasibility of providing dynamic QuickCheck models for language-agnostic testing. The properties tested are that the forging rate of a node matches the theoretical expectation to within statistical variations and that, sufficiently after genesis, the nodes in a network have a common chain-prefix. 
+Praos `NodeModel` and `NetworkModel` types test the state transitions related to slot leadership and forging blocks. They can be used with the Haskell node and network implemented in `peras-iosim` or the Rust node and network implementation in `peras-rust`. This dual-language capability demonstrated the feasibility of providing dynamic QuickCheck models for language-agnostic testing. The properties tested are that the forging rate of a node matches the theoretical expectation to within statistical variations and that, sufficiently after genesis, the nodes in a network have a common chain-prefix.
 
 ## Peras properties
 
@@ -437,9 +437,30 @@ Finished in 0.0027 seconds
 1 example, 0 failures
 ```
 
+## Relating test model to formal model
+
+As specified in the [Statement of Work](https://drive.google.com/file/d/1vDfwiR24t3K6INkabwR43A4Ryc-j7SzG/view), the team has been working with _Quviq_ to provide assistance and expertise on tighter integration between the Agda specification and the quickcheck-dynamic model. This work resulted in the development of a prototype that demonstrates the feasibility of generating the `quickcheck-dynamic` model from the Agda specification, as described in Milestone 1 of the SOW.
+
+The following picture summarizes how the various parts of the testing framework for Peras are related:
+
+![Agda-QuickCheck Integration](../diagrams/agda-quickcheck.png)
+
+The key points of this line of work are:
+
+1. While both written in Agda, we differentiate the _Formal model_ from the _Test model_ as they serve different purposes. More importantly, we acknowledge the fact there be more than one _Test model_ for a given _Formal model_, depending on the level of abstraction and the properties we want to test,
+2. The _Formal model_ is the actual specification of the protocol and is meant to write _proofs_ related to the protocol (e.g the usual blockchain properties like chain growth, chain quality, etc. and the specific properties of Peras). Ideally, this model should be part of the research work and written in close collaboration with them,
+3. The _Test model_ describes some relevant behaviour of the system for the purpose of asserting a liveness or safety property, in the form of a state machine relating: A state data type, some _signals_ sent to the SUT for testing purpose, and a _step_ function describing possible transitions of the system,
+4. The _Test model_'s soundness w.r.t the _Formal model_ is proven through a _soundness_ theorem that guarantees each sequence of transition in the _Test model_ can be mapped to a valid sequence of transitions in the _Formal model_,
+5. Using agda2hs Haskell code is generated from the _Test model_ and integrated in a small hand-written wrapper complying with quickcheck-dynamic API.
+
+The provided models are very simple toy examples of some chain protocol as the purpose of this first step was to validate the approach and identify potential issues. In further steps, we need to:
+
+1. Work on a more complex and realistic Test model checking some core properties of the Peras protocol,
+2. Ensure the Formal model's semantics is amenable to testability and proving soundness of the Test model.
+
 # Simulations
 
-In order to test the language-neutrality of the testing framework for Peras, we developed both a Haskell-based and a Rust-based simulation of the Peras and Praos protocols. 
+In order to test the language-neutrality of the testing framework for Peras, we developed both a Haskell-based and a Rust-based simulation of the Peras and Praos protocols.
 
 ## Haskell-based simulation
 
@@ -773,7 +794,7 @@ This first "split-brain" experiment with `peras-iosim` involved running a networ
 
 Nodes were divided into two "parities" determined by whether the hash of their name is an even or odd number. When the network is partitioned, only nodes of the same parity are allowed to communicate with each other: the Haskell module `Peras.IOSIM.Experiment.splitBrain` implements the experiment and is readily extensible for defining additional experiments.
 
-Both the Praos and Peras protocols were simulated, with the following Peras parameters for creating a scenario that exhibits occasional cool-down periods and a strong influence of the voting boost. 
+Both the Praos and Peras protocols were simulated, with the following Peras parameters for creating a scenario that exhibits occasional cool-down periods and a strong influence of the voting boost.
 
 ```yaml
 
@@ -843,7 +864,7 @@ The primary findings from this experiment follow.
 - The complexity of the forking, voting, and cool-down in the Peras results highlights the need for capable visualization and analysis tools.
 - The voting boost can impede the reestablishment of consensus after a network partition is restored.
 - It would be convenient to be able to start a simulation from an existing chain, instead of from genesis.
-- VRF-based randomization make it easier to compare simulations with different parameters. 
+- VRF-based randomization make it easier to compare simulations with different parameters.
 - Even though `peras-iosim` runs are not particularly fast, one probably does not need to parallelize them because typical experiments involve many executions of simulations, which means we can take advantage of CPU resources simply by running those different scenarios in parallel.
 - The memory footprint of `peras-iosim` is small (less than 100 MB) if tracing is turned off; with tracing, it is about twenty times that, but still modest.
 
