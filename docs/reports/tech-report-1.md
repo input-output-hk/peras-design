@@ -171,19 +171,19 @@ In order to describe progress with respect of the Ouroboros Peras protocol, a gl
 
 The differences compared to the model proposed in the PoS-NSB paper are
 
-* `execution-order` is not stored and therefore permutations of the messages as well as permutations of parties are not needed
+* the execution order is not stored in the global state and therefore permutations of the messages as well as permutations of parties are not needed
 * there is no global `Progess`
 
-Instead of keeping track of the execution order of the parties in the global state the global relation is defined with respect to parties.
+Instead of keeping track of the execution order of the parties in the global state the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party we know the as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
 
 #### Global relation for reachable worlds
 
-The protocol defines messages to be sent between parties of the system. The specification currently implements the following message types
+The protocol defines messages to be distributed between parties of the system. The specification currently implements the following message types
 
-* Block message: If a party is the slot leader a new block can be created. In case we are in a cooldown phase the block also includes a certificate that references a block of the party's preferred chain.
-* Vote message: A parties creates a vote according to the protocol
+* Block message: When a party is the slot leader a new block can be created and a message notifying the other parties about the block creation is broadcast. Note, in case a cooldown phase according to the Ouroboros Peras protocol is detected the block also includes a certificate that references a block of the party's preferred chain.
+* Vote message: When a party creates a vote according to the protocol, this is wrapped into a message and delivered to the other parties
 
-The global relation expresses the evolution of the global state and describes what states are reachable:
+The global relation expresses the evolution of the global state:
 
 ```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
@@ -211,19 +211,40 @@ The global relation expresses the evolution of the global state and describes wh
 
 The global relation consists of the following constructors:
 
-* Deliver messages: A state transition can be a party consuming a message from the global message buffer. The party might be honest or adversarial, in the latter case a message will be delayed rather than consumed.
+* Deliver: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed.
 * Cast vote: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
 * Create block: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cooldown phase, the party adds a certificate to the block as well
 * Next slot: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate
 
-#### Predicates on global state
-
-Collision free, Forging free predicates
+The reflexive transitive closure of the global relation describes what global states are reachable.
 
 ### Proofs
 
-* Present the detailed specification of the protocol in Agda
-* Protocol properties
+The properties and proofs that we can state with the formal specification are in [Properties.lagda.md](src/Peras/SmallStep/Properties.lagda.md)
+A first property is `knowledge-propagation`, a lemma that describes how knowledge is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
+
+```agda
+    knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
+      → {p₁ p₂ : PartyId}
+      → {t₁ t₂ : A}
+      → {honesty₁ : Honesty p₁}
+      → {honesty₂ : Honesty p₂}
+      → honesty₁ ≡ Honest {p₁}
+      → honesty₂ ≡ Honest {p₂}
+      → (p₁ , honesty₁) ∈ parties
+      → (p₂ , honesty₂) ∈ parties
+      → N₀ ↝⋆ N₁
+      → N₁ ↝⋆ N₂
+      → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+      → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+      → Delivered N₂
+      → clock N₁ ≡ clock N₂
+      → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
+```
+
+
+
+
 * link with q-d properties
 
 ## Pending questions
