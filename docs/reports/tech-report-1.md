@@ -66,13 +66,15 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
         - [x] [Simulation experiments](#simulation-experiments)
         - [x] [Simulator design](#simulator-design)
         - [x] [Integration with QuickCheck Dynamic](#integration-with-quickcheck-dynamic)
-- [ ] [Integration into `cardano-node`](#integration-into-cardano-node)
-    - [ ] [Networking](#networking)
-    - [ ] [Consensus](#consensus)
-    - [ ] [Resources](#resources)
+- [x] [Integration into `cardano-node`](#integration-into-cardano-node)
+    - [x] [Networking](#networking)
+    - [x] [Consensus](#consensus)
+    - [x] [Resources](#resources)
+    - [x] [Experimental implementation](#experimental-implementation)
 - [ ] [Conclusion](#conclusion)
     - [ ] [Future work](#future-work)
 - [ ] [References](#references)
+- [ ] [End notes](#end-notes)
 
 # Previous work
 
@@ -1241,24 +1243,44 @@ The key findings from Rust experiments follow.
 
 Now that it has been demonstrated that it is feasible to export Agda types, functions, and QuickCheck dynamic models to Haskell for testing, an optimal path forward would be to have those generate types dictate the public interfaces for node and network simulations (both in Haskell and in Rust). The current simulation codebase is consistent with this test-driven development (TDD) approach and will only require minor adjustments to yield simulations that are faithful to Peras and that are primarly based on exported Agda types and functions. The same simulation implement will both conform the the `quickcheck-dynamic` models and the requirement for efficient simulation.
 
-# Integration into `cardano-node`
+# Integration into Cardano Node
 
-> [!NOTE] Discuss how the Peras protocol can be tested by putting the certificates either in the block body's header or in transactions within the block. The node's chain-selection algorithm would have to be hacked to defer its choice to a process that examines those and that implements Peras.
+Peras requires changes to message traffic between nodes and the structure of blocks. It increases the computational resources used by nodes.
 
 ## Networking
 
-* adding new protocol similar to `ChainSync` or `TxSubmission` for Votes
-* Certificates are diffused as transactions within blocks
+Peras introduces two new constructs: votes and certificates. Members of the Peras committee cast votes each voting round, and the votes must be received by a block-producing node before the votes expire. A certificate memorializes a quorum of votes (approximately 80% of the committee)  made in the same round for a particular block. A certificate must be included in the first block of a cool-down period, though at least one variant of the protocol envisions each round's certificate being included regardless of cool-down status. Nodes syncing from genesis or an earlier point in the chain's history must be provided the votes or equivalent certificates in order for them to verify the weight of the chain. Thus, the protocol results in the following message traffic:
+
+* Vote messages diffuse votes from voters to the block-producing nodes.
+	* An upper bound (worst-case scenario) on message traffic is that every vote diffuses to every node.
+	* Votes would likely be sent via a new mini-protocol, though it might be possible to represent them as prioritized transactions in the memory pool.
+	* Backpressure for a node's receiving is necessary in order to mitigate DoS attacks that flood a node with votes.
+	* Nodes that have large stake might be allotted several votes. Instead of sending one message per vote, these could be bundles as a message that indicates the number of votes cast.
+	* Votes not recorded on the chain or in a certificate need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
+	* The size of a vote is likely a couple of hundred bytes.
+* Sending a certificate is equivalent to sending a quorum of votes.
+	* Once a node sees a quorum, it can create and diffuse a certificate so it no longer needs to send any more votes for the round.
+	* If non-quorum certificates would obey monoid laws, then votes could be sent as singleton certificates that are progressively aggregate votes towards a quorum. This use of non-quorum certificates would reduce message traffic.
+	* If a certificate for every round is included on the chain, then newly started or syncing nodes need not request certificates or votes for rounds older than the last certificate recorded on the chain.
+	* Certificates not recorded on the chain need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
+	* The size of a certificate is likely a couple of hundred bytes.
+* Certificates are likely too large to be included in the block header without increasing its size over the constitutionally-constrained byte limit.
+	* If the CDDL for blocks were altered, they could be included as a new entry in the block.
+	* Alternatively, a certificate could be stored as a transaction in the block. Such certificate-transactions would incur a fee and would need to be prioritized ahead of transactions in the memory pool.
 
 ## Consensus
 
-* impact of having to deal with dangling votes constantly to select chain
-* new storage for votes
-* impact of verification of votes
+The node's chain-selection algorithm will have to be modified to compute chain weight that includes the boosts from the certificates on the chain. It will also have to do bookkeeping on unrecorded votes and certificates and adjust the relevant data structures when a new preferred chain is selected.
 
 ## Resources
 
-* how much resources requires Peras on top of Praos?
+Peras requires several new types of work by the node: votes and certificates must be created, diffused, persistently cached, and verified. CPU resource for creating a vote are on the order of those used by creating a signature. Verifying a vote likely will use resources similar to verifying the slot leadership of another node, since a similar VRF scheme is used for both voting and slot leadership. Resources for creating or verifying a certificate will depend upon the particular certification scheme selected, for example Approximate Lower Bounds. The burden of verifying votes might be lessened if the certificates containing them can be built incrementally and forwarded to downstream peers which won't have to re-verify the votes.
+
+If certificates for each round are not stored permanently on the chain, then they will have to be persisted locally by each node.
+
+## Experimental implementation
+
+It might be possible to experiment with Peras using real nodes on a special-purpose testnet. Votes and certificates could be represented as ordinary transactions with well-known characteristics. A thread could be added to the node to create and verify votes and certificates. The node's chain-selection code would have to communicate with that thread.
 
 # Conclusion
 
@@ -1267,5 +1289,7 @@ Now that it has been demonstrated that it is feasible to export Agda types, func
 # References
 
 > [!NOTE] Add references to the text above, and include links to the various other papers, reports, etc. we have gathered.
+
+# End notes
 
 [^2]:  This data was kindly provided by [Markus Gufler](https://www.linkedin.com/in/markus-gufler)
