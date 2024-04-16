@@ -211,17 +211,17 @@ The global relation expresses the evolution of the global state:
 
 The global relation consists of the following constructors:
 
-* Deliver: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed.
-* Cast vote: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
-* Create block: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cooldown phase, the party adds a certificate to the block as well
-* Next slot: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate
+* *Deliver*: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed.
+* *Cast vote*: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
+* *Create block*: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cooldown phase, the party adds a certificate to the block as well
+* *Next slot*: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate
 
 The reflexive transitive closure of the global relation describes what global states are reachable.
 
 ### Proofs
 
-The properties and proofs that we can state with the formal specification are in [Properties.lagda.md](src/Peras/SmallStep/Properties.lagda.md)
-A first property is `knowledge-propagation`, a lemma that describes how knowledge is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
+The properties and proofs that we can state with the formal specification are in [Properties.lagda.md](../../src/Peras/SmallStep/Properties.lagda.md)
+A first property is `knowledge-propagation`, a lemma that state that knowledge about blocks is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
 
 ```agda
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
@@ -242,10 +242,9 @@ A first property is `knowledge-propagation`, a lemma that describes how knowledg
       → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
 ```
 
+Knowledge propagation is a pre-requisite for the chain growth property, that informally says that in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
 
-
-
-* link with q-d properties
+### link with q-d properties
 
 ## Pending questions
 
