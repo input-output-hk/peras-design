@@ -176,7 +176,7 @@ The differences compared to the model proposed in the PoS-NSB paper are
 
 Instead of keeping track of the execution order of the parties in the global state the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party we know the as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
 
-#### Global relation for reachable worlds
+#### Global relation
 
 The protocol defines messages to be distributed between parties of the system. The specification currently implements the following message types
 
@@ -220,7 +220,8 @@ The reflexive transitive closure of the global relation describes what global st
 
 ### Proofs
 
-The properties and proofs that we can state with the formal specification are in [Properties.lagda.md](../../src/Peras/SmallStep/Properties.lagda.md)
+The properties and proofs that we can state based upon the formal specification are in [Properties.lagda.md](../../src/Peras/SmallStep/Properties.lagda.md).
+
 A first property is `knowledge-propagation`, a lemma that state that knowledge about blocks is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
 
 ```agda
