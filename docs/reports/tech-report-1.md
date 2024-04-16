@@ -61,13 +61,66 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Overview
 
-This diagram attempts at depicting graphically how the Peras protocol works over a period of time. A high-fidelity version is [available](../diagrams/peras-with-certs.pdf).
+This diagram is a high-level representation of how the Peras protocol works over a period of time.
 
 ![Peras Protocol Overview](../diagrams/peras-with-certs.jpg)
 
+A more detailed presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit).
+
 ## Pseudo-code
 
-* Researchers' pseudo-code is detailed in [this document](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit)
+We initially started working from researchers' pseudo-code which was detailed in various documents:
+* The initial [protocol definition](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) as presented in the Edinburgh workshop, in October 2023,
+* The [post-workshop definition](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4)  which considered votes and blocks diffusion and chain selection in a more integrated manner,
+* The newest version from [March 2024](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) which addressed the shortcomings of the need to consider individual votes in the chain selection process from earlier versions.
+
+In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructed and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on formal specification and prototyping, and the research work. This collective effort lead to write the exact same pseudo-code as a _literate Agda_ document the internal consistency of which can be checked by the Agda compiler while providing a similar level of flexibility and readability than the original document.
+
+This document is available in the [Peras repository](../../src/Peras/ProtocolL.lagda.md) and is a first step towards better integration between research and engineering workstreams.
+
+Next steps include:
+
+* Refine the pseudo-code's syntax to make it readable and maintainable by researchers and engineers alike,
+* Understand how this code relates with the actual Agda code,
+* Equip the pseudo-code with some better semantics.
+
+It is envisioned that at some point this kind of code could become
+commonplace in the security researchers community in order to provide
+formally verifiable and machine-checkable specifications, based on the
+theoretical framework used by researchers (eg. Universal Composition).
+
+## Settlement time
+
+[Practical Settlement Bounds for Longest-Chain Consensus](https://eprint.iacr.org/2022/1571.pdf) by  Peter Gazi, Ling Ren, and Alexander Russell provides a formal treatment of the settlement guarantees for Proof-of-stake blockchains.
+
+_Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement time is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $1^{-60}$.
+
+In practice, the probability for a transaction to be rolled back after 20 blocks is 0.001%, and is exponentially decreasing with the block depth. The following picture from the aforementioned paper shows block settlement failure probability given some block depth for Cardano PoS chain.
+
+![Settlement failure probability / depth](../diagrams/settlement-failure-probability.png)
+
+We also have anecdotal evidences from observations of the Cardano mainchain over the past few years that the settlement time is much lower than the theoretical bound as basically forks over 2 blocks length are exceedingly rare, and no fork over 3 blocks length has been observed on core nodes since the launch of Shelley.
+
+### Settlement bounds for Peras
+
+::: [!WARNING]
+
+Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
+
+:::
+
+While these numbers seem appealing and reasonably small to provide a very high degree of confidence after less than 10 minutes (a block is produced on average every 20s), it should be noted that they are based on non-existent to low adversarial power assumption (eg. lower than 10% total stake), in other words they represent the best case scenario and say nothing about the potential impact of an adversary with significant resources and high motivation to either disrupt the network, eg. as a form of denial of service to degrade the perceived value of Cardano, or more obviously to double spend. As the stakes increase and the network becomes more valuable, the probability of such an attack increases and our confidence in the settlement time should be adjusted accordingly.
+
+In the optimistic case, Peras is expected to provide the level of settlement Praos provides after $k$ blocks after only about few rounds of voting. With the following parameters:
+* Committee size $\cal{S}$ = 2000,
+* Boost per certificate $B = k / 10 = 216$,
+* Quorum $tau = 3\cal{S} / 4 = 1500$,
+* Round length $U = 10$ slots.
+
+we can expect a negligible ($< 1^60$) probability of settlement failure after 10 rounds or 100 slots, which is less than 2 minutes. In other words, Peras improves settlement upper bound over Praos by a factor of 1000, in the _optimistic case_, eg. outside of _cooldown period_.
+
+However, triggering cooldown is cheap and does not require a large adversarial power as it's enough for an adversary to be able to create a relatively short fork that lasts slightly longer than the length of the voting window ($L$) to be able to force a split vote and a cooldown period.
+
 
 ## Agda Specification
 

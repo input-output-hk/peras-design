@@ -1,3 +1,9 @@
+## 2024-04-15
+
+* Working on [technical report](docs/reports/tech-report-1.md), filling in section on quickcheck-dynamic example protocol from Quviq
+* Also trying to provide a better intuition about the protocol and rework the introductory section following our discussions in Paris
+* Some questions for researchers related to committee selection and the number of messages we need to broadcast across the network
+
 ## 2024-04-10
 
 Published [detailed notes](docs/reports/2024-04-10-paris-workshop.md) about the Peras team workshop in Paris
