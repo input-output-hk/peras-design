@@ -7,11 +7,78 @@ author:
 date: 2024-04-15
 ---
 
+# Executive summary
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ since January 2024.
+
+# Contents
+
+- [x] [Previous work](#previous-work)
+    - [x] [Peras Workshop](#peras-workshop)
+        - [x] [Questions about Peras](#questions-about-peras)
+        - [x] [Potential jugular experiments for Peras](#potential-jugular-experiments-for-peras)
+        - [x] [SRL](#srl)
+- [ ] [Protocol Specification](#protocol-specification)
+    - [x] [Overview](#overview)
+    - [x] [Pseudo-code](#pseudo-code)
+    - [ ] [Agda Specification](#agda-specification)
+        - [x] [Domain model](#domain-model)
+            - [ ] [Agda2hs](#agda2hs)
+        - [x] [Small-step semantics](#small-step-semantics)
+            - [x] [Local state](#local-state)
+            - [x] [Global state](#global-state)
+            - [x] [Global relation](#global-relation)
+        - [x] [Proofs](#proofs)
+        - [ ] [link with q-d properties](#link-with-q-d-properties)
+    - [x] [Pending questions](#pending-questions)
+        - [x] [Certificates](#certificates)
+- [ ] [Network Performance Analysis](#network-performance-analysis)
+    - [x] [Certificates in Block Header](#certificates-in-block-header)
+        - [x] [Baseline - Praos ΔQ Modelling](#baseline---praos-Δq-modelling)
+            - [x] [Model overview](#model-overview)
+            - [x] [Modeling process](#modeling-process)
+        - [x] [Peras ΔQ Model - Blocks](#peras-Δq-model---blocks)
+        - [x] [Conclusion](#conclusion)
+    - [x] [Impact on User Experience](#impact-on-user-experience)
+        - [x] [Model](#model)
+    - [ ] [Impact of Load congestion](#impact-of-load-congestion)
+- [x] [Property-based testing with Dynamic QuickCheck](#property-based-testing-with-dynamic-quickCheck)
+    - [x] [Praos properties](#praos-properties)
+    - [x] [Peras properties](#peras-properties)
+    - [x] [Relating test model to formal model](#relating-test-model-to-formal-model)
+- [x] [Simulations](#2imulations)
+    - [x] [Haskell-based simulation](#haskell-based-simulation)
+        - [x] [Design](#design)
+            - [x] [IOSim](#iosim)
+            - [x] [Node interface](#node-interface)
+            - [x] [Auxiliary data structures](#auxiliary-data-structures)
+            - [x] [Observability](#observability)
+            - [x] [Message routing](#message-routing)
+            - [x] [Sync protocol](#sync-protocol)
+        - [x] [Experiments](#experiments)
+            - [x] [Block production](#block-production)
+            - [x] [Network and Praos chain generation](#network-and-praos-chain-generation)
+            - [x] [February version of Peras](#february-version-of-peras)
+            - [x] ["Split brain"](#split-brain)
+            - [x] [Congestion](#congestion)
+    - [x] [Rust-based simulation](#rust-based-simulation)
+    - [x] [Overall findings from simulation studies](#overall-findings-from-simulation-studies)
+        - [x] [Simulation results](#simulation-results)
+        - [x] [Simulation experiments](#simulation-experiments)
+        - [x] [Simulator design](#simulator-design)
+        - [x] [Integration with QuickCheck Dynamic](#integration-with-quickcheck-dynamic)
+- [x] [Integration into `cardano-node`](#integration-into-cardano-node)
+    - [x] [Networking](#networking)
+    - [x] [Consensus](#consensus)
+    - [x] [Resources](#resources)
+    - [x] [Experimental implementation](#experimental-implementation)
+- [ ] [Conclusion](#conclusion)
+    - [ ] [Future work](#future-work)
+- [ ] [References](#references)
+- [ ] [End notes](#end-notes)
 
 # Previous work
 
-## Peras Workshop
+## Peras workshop
 
 ### Questions about Peras
 
@@ -374,7 +441,6 @@ These numbers are reflected (somewhat inaccurately) in the above graph, represen
 > [!NOTE]
 > The current target valency for cardano-node's connection is 20, and while there's a large number of stake pools in operation, there's some significant concentration of stakes which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
 
-
 #### Modeling process
 
 We have experimented with three different libraries for encoding this baseline model:
@@ -477,7 +543,6 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 
 > [!NOTE]
 > In practice, cardano-node use _pipelining_ to avoid having to confirm individually every block/header, eg. when sending multiple blocks to a peer a node won't wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
-
 
 ### Conclusion
 
@@ -980,10 +1045,13 @@ Committee selection in the following simulation was set by limiting each node to
 $$
 P = 1 - (1 - p_\text{lottery})^s
 $$
+
 given
+
 $$
 p_\text{lottery} = (1 - 1 / c)^{(c / t)}
 $$
+
 where $s$ is the node's stake, $t$ is the total stake in the system, and $c$ is the mean committee size.
 
 The following figure compares similar Praos and Peras chains, highlighting how the latter's voting boost affects the choice of preferred chain. The simulation involved 100 nodes and a mean committee size of 10 nodes; the active slot coefficient was set to 0.25 in order to provoke more frequent forking that would normally be observed. The voting boost is a modest 10% per vote.
@@ -1105,11 +1173,16 @@ The following diagram shows the cumulative bytes received by nodes as a function
 
 ## Rust-based simulation
 
-> [!NOTE] To be written.
+The Rust types for Peras nodes and networks mimic the Haskell ones and the messages conform to the Agda-generated types. The Rust implementation demonstrates the feasibility of using language-independent serialization and a foreign-function interface (FFI) for Haskell-based QuickCheck testing of Peras implementations. In particular, the Rust package `serde` has sufficiently configurable serialization so that it interoperates with the default Haskell serializations provided by `Data.Aeson`. (The new `agda2rust` tool has not yet reached a stable release, but it may eventually open possibilities for generating Rust code from the Agda types and specification.) A Rust static library can be linked into Haskell code via Cabal configuration.
+
+The Rust node generates Praos blocks according to the slot-leadership recipe. The Rust network uses the Innovation Team's new network simulation [ce-netsim](https://github.com/input-output-hk/ce-netsim) for transportation block-production and preferred-chain messages among the nodes.
+
+The key findings from Rust experiments follow.
+* It is eminently practical to interface non-Haskell code to QuickCheck Dynamic via language-independent serialization and a foreign-function interface.
+* It is also possible to co-design Rust and Haskell code for Peras so that the implementations mirror each other, aside from language-specific constructs. This might result in not employing the advanced and idiosyncratic features of these two languages, however.
+* The `ce-netsim` architecture and threading model is compatible with Peras simulations, even ones linked to `quickcheck-dynamic` test via FFI.
 
 ## Overall findings from simulation studies
-
-> [!NOTE] Are bullets okay, or should we organize the sections below into paragraphs?
 
 ### Simulation results
 
@@ -1157,6 +1230,7 @@ The following diagram shows the cumulative bytes received by nodes as a function
 	- The `serde` Rust libraries successfully mimic Haskell's `aeson` serialization for JSON.
 	- The `serde` library also supports serialization as CBOR, though its compatibility with Cardano's CBOR serialization has not yet been assessed.
 	- The `agda2rust` tool is not sufficiently mature to generate Peras's Agda types for use in Rust.
+	- The `ce-netsim` library is useful for the message-passing portions of Peras simulations written in Rust.
 	- Using WASM as a Rust compilation target may enable running serverless simulations in a web browser.
 - IOSim
 	- IOSim's single-threaded implementation hinders its usefulness for high performance simulations.
@@ -1169,24 +1243,44 @@ The following diagram shows the cumulative bytes received by nodes as a function
 
 Now that it has been demonstrated that it is feasible to export Agda types, functions, and QuickCheck dynamic models to Haskell for testing, an optimal path forward would be to have those generate types dictate the public interfaces for node and network simulations (both in Haskell and in Rust). The current simulation codebase is consistent with this test-driven development (TDD) approach and will only require minor adjustments to yield simulations that are faithful to Peras and that are primarly based on exported Agda types and functions. The same simulation implement will both conform the the `quickcheck-dynamic` models and the requirement for efficient simulation.
 
-# Integration into `cardano-node`
+# Integration into Cardano Node
 
-> [!NOTE] Discuss how the Peras protocol can be tested by putting the certificates either in the block body's header or in transactions within the block. The node's chain-selection algorithm would have to be hacked to defer its choice to a process that examines those and that implements Peras.
+Peras requires changes to message traffic between nodes and the structure of blocks. It increases the computational resources used by nodes.
 
 ## Networking
 
-* adding new protocol similar to `ChainSync` or `TxSubmission` for Votes
-* Certificates are diffused as transactions within blocks
+Peras introduces two new constructs: votes and certificates. Members of the Peras committee cast votes each voting round, and the votes must be received by a block-producing node before the votes expire. A certificate memorializes a quorum of votes (approximately 80% of the committee)  made in the same round for a particular block. A certificate must be included in the first block of a cool-down period, though at least one variant of the protocol envisions each round's certificate being included regardless of cool-down status. Nodes syncing from genesis or an earlier point in the chain's history must be provided the votes or equivalent certificates in order for them to verify the weight of the chain. Thus, the protocol results in the following message traffic:
+
+* Vote messages diffuse votes from voters to the block-producing nodes.
+	* An upper bound (worst-case scenario) on message traffic is that every vote diffuses to every node.
+	* Votes would likely be sent via a new mini-protocol, though it might be possible to represent them as prioritized transactions in the memory pool.
+	* Backpressure for a node's receiving is necessary in order to mitigate DoS attacks that flood a node with votes.
+	* Nodes that have large stake might be allotted several votes. Instead of sending one message per vote, these could be bundles as a message that indicates the number of votes cast.
+	* Votes not recorded on the chain or in a certificate need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
+	* The size of a vote is likely a couple of hundred bytes.
+* Sending a certificate is equivalent to sending a quorum of votes.
+	* Once a node sees a quorum, it can create and diffuse a certificate so it no longer needs to send any more votes for the round.
+	* If non-quorum certificates would obey monoid laws, then votes could be sent as singleton certificates that are progressively aggregate votes towards a quorum. This use of non-quorum certificates would reduce message traffic.
+	* If a certificate for every round is included on the chain, then newly started or syncing nodes need not request certificates or votes for rounds older than the last certificate recorded on the chain.
+	* Certificates not recorded on the chain need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
+	* The size of a certificate is likely a couple of hundred bytes.
+* Certificates are likely too large to be included in the block header without increasing its size over the constitutionally-constrained byte limit.
+	* If the CDDL for blocks were altered, they could be included as a new entry in the block.
+	* Alternatively, a certificate could be stored as a transaction in the block. Such certificate-transactions would incur a fee and would need to be prioritized ahead of transactions in the memory pool.
 
 ## Consensus
 
-* impact of having to deal with dangling votes constantly to select chain
-* new storage for votes
-* impact of verification of votes
+The node's chain-selection algorithm will have to be modified to compute chain weight that includes the boosts from the certificates on the chain. It will also have to do bookkeeping on unrecorded votes and certificates and adjust the relevant data structures when a new preferred chain is selected.
 
 ## Resources
 
-* how much resources requires Peras on top of Praos?
+Peras requires several new types of work by the node: votes and certificates must be created, diffused, persistently cached, and verified. CPU resource for creating a vote are on the order of those used by creating a signature. Verifying a vote likely will use resources similar to verifying the slot leadership of another node, since a similar VRF scheme is used for both voting and slot leadership. Resources for creating or verifying a certificate will depend upon the particular certification scheme selected, for example Approximate Lower Bounds. The burden of verifying votes might be lessened if the certificates containing them can be built incrementally and forwarded to downstream peers which won't have to re-verify the votes.
+
+If certificates for each round are not stored permanently on the chain, then they will have to be persisted locally by each node.
+
+## Experimental implementation
+
+It might be possible to experiment with Peras using real nodes on a special-purpose testnet. Votes and certificates could be represented as ordinary transactions with well-known characteristics. A thread could be added to the node to create and verify votes and certificates. The node's chain-selection code would have to communicate with that thread.
 
 # Conclusion
 
@@ -1195,5 +1289,7 @@ Now that it has been demonstrated that it is feasible to export Agda types, func
 # References
 
 > [!NOTE] Add references to the text above, and include links to the various other papers, reports, etc. we have gathered.
+
+# End notes
 
 [^2]:  This data was kindly provided by [Markus Gufler](https://www.linkedin.com/in/markus-gufler)
