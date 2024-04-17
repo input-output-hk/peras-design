@@ -7,9 +7,52 @@ author:
 date: 2024-04-15
 ---
 
+The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between November and April 2024. The design of the protocol itself is carried out by the _Research team_ and is not the focus of this document as the paper is still under actively being worked on, but one of the intended benefits of setting up an engineering team is to provide feedback to the research team on the practical implications of their design choices.
+
 # Executive summary
 
-The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between January and April 2024.
+This section lists a number of findings, conclusions, ideas, and known risks that we have garnered as part of the Peras innovation project.
+
+## Findings
+
+### Product-wise
+
+We built evidence the Peras protocol in its most recent incarnation can be implemented on top of Praos, in the existing cardano-node codebase, without compromising the core operations of the node (block creation, validation, and diffusion)
+  * [Network Modelling](#network-performance-analysis) has shown initial versions would add an unbearable overhead to block diffusion
+  * [Simulation](#simulations) and prototyping have allowed us to sketch implementation and better understand the interplay between Peras and Praos
+  * Decoupling votes and certificates handling from blocks handling could pave the way to a smooth incremental [building and deployment](#integration-into-cardano-node) of Peras
+  * While still not formally evaluated (see _Remaining questions_ section) it seems the impact of vote and certificates diffusion on node operation will not be significant and the network will provide strong guarantees those messages can be delivered in a timely fashion
+
+We clarified the expected benefits of Peras over Praos expressed in terms of [_settlement failure probabilities_](#settlement-time): Outside cooldown period, with the proper set of parameters, Peras provides the same probability of settlement failure than Praos **faster** by a factor of roughly 1000, ie. roughly 2 minutes instead of 36 hours.
+
+### Process-wise
+
+The following picture sketches the architecture of the project and the interaction between the various "domains" relevant to Innovation team
+
+![Peras Project Architecture](../diagrams/peras-high-level-architecture.jpg)
+
+We confirmed the relevance of [ΔQ modelling](#network-performance-analysis) technique to provide insights on a protocol's performance profile, and how particular design decisions can impact this performance profile.
+
+We explored the use of formal modelling language Agda to [specify](#protocol-specification) the protocol and application of PoS-specific [proof techniques](#small-step-semantics) to state and prove relevant propertie of the protocol. We also started work on building a trail of evidences from research to implementation by:
+
+* Experimenting with Quviq on the [generation of quickcheck-dynamic](#relating-test-model-to-formal-model) test models from Agda models,
+* Sketching a research-centric [_Domain Specific Language_](#pseudo-code) that could be used in research papers and as a foundation for formal modelling and engineering work.
+
+While prototyping, we demonstrated the applicability of an Agda-centric chain of evidence even to "foreign" languages by testing with quickcheck-dynamic the same properties against Haskell and [Rust implementations](#rust-based-simulation), collaborating with the Creative engineering team on sketching a network simulator library in Rust.
+
+## Remaining questions
+
+There remain a number of open questions that could be investigated in future work increments.
+
+* Peras features, both benefits and shortcomings, need to be aligned with business cases and overall strategy for scaling Cardano. This implies more research is needed in two directions:
+  * From a product and users perspective, to evaluate the actual value Peras delivers and possible counter-measures to its drawbacks (eg. risk of cooldown could be covered by an _options_ or _insurance premium_ mechanism),
+  * From a technical perspective, to explore the parameters space and find the best combinations.
+* There's a number of components about which we have some ideas but no concrete figures or design:
+  * Certificates structure and capabilities,
+  * Votes and certificates CPU requirements and their possible impact on the node,
+  * Optimal committee size,
+* The protocol leaves room for a wide choice of options to design an implementation that should be considered and filtered,
+* There is a need for more theoretical research on ways to make cooldown less impactful.
 
 # Contents
 
@@ -23,6 +66,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
     - [x] [Overview](#overview)
         - [x] [Certificates](#certificates)
     - [x] [Pseudo-code](#pseudo-code)
+    - [x] [Settlement time](#settlement-time)
     - [ ] [Agda Specification](#agda-specification)
         - [x] [Domain model](#domain-model)
             - [x] [Agda2hs](#agda2hs)
@@ -44,7 +88,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
     - [x] [Praos properties](#praos-properties)
     - [x] [Peras properties](#peras-properties)
     - [x] [Relating test model to formal model](#relating-test-model-to-formal-model)
-- [x] [Simulations](#2imulations)
+- [x] [Simulations](#simulations)
     - [x] [Haskell-based simulation](#haskell-based-simulation)
         - [x] [Design](#design)
             - [x] [IOSim](#iosim)
