@@ -166,7 +166,11 @@ We assess the current SRL to be between 3 and 4, given the following [SRL 3](htt
 
 ## Overview
 
-A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides and the research article for details.
+A presentation of the motivation and principles of the protocol is
+available in these
+[slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We
+summarize the main points here but refer the interested reader to the
+slides and the research article for details.
 
 * Peras adds a Voting layer on top of Praos, Cardano's Nakamoto-style consensus protocol.
 * In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least L slots old, where L is a parameter of the construction (e.g., L = 120).
@@ -239,10 +243,9 @@ In the optimistic case, Peras is expected to provide the level of settlement Pra
 * Quorum $tau = 3\cal{S} / 4 = 1500$,
 * Round length $U = 10$ slots.
 
-we can expect a negligible ($< 1^60$) probability of settlement failure after 10 rounds or 100 slots, which is less than 2 minutes. In other words, Peras improves settlement upper bound over Praos by a factor of 1000, in the _optimistic case_, eg. outside of _cooldown period_.
+we can expect a negligible ($< 1^{-60}$) probability of settlement failure after 10 rounds or 100 slots, which is less than 2 minutes. In other words, Peras improves settlement upper bound over Praos by a factor of 1000, in the _optimistic case_, eg. outside of _cooldown period_.
 
 However, triggering cooldown is cheap and does not require a large adversarial power as it's enough for an adversary to be able to create a relatively short fork that lasts slightly longer than the length of the voting window ($L$) to be able to force a split vote and a cooldown period.
-
 
 ## Agda Specification
 
@@ -1357,7 +1360,25 @@ The somewhat nice decoupling between the voting layer and the nakamoto consensus
 
 # Conclusion
 
-## Future work
+## Recommendations
+
+* Build a solid network simulator which we could plug any protocol in
+  * there's the Java thing but it's quzite antiquated
+  * there's netsim but with some shortcomings (lowerlevel, no time simulation)
+* Co-design an Agda DSL for specifying network/consensus protocols
+  * that researchers can use
+  * that's amenable to projection to q-d
+* Polish ΔQ (docs + published library)
+
+## Remaining Risks
+
+* small adversaries can cause cooldown
+* excessive length of the cooldown would make protocol useless
+* votes and certificates handling could be too computationally expensive
+  * could harm node operation and timely block diffusion
+* size of the committee could be too large
+* settlement bounds details -> parameter space exploration
+
 
 # References
 
