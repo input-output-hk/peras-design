@@ -33,6 +33,7 @@ cabalProject:
     haskellPackages.threadscope # For visualizing profiles.
     ghostscript_headless # For visualizing profiles.
     plantuml # For UML diagrams.
+    pandoc # For generating PDF from markdown.
 
   ];
 
@@ -59,7 +60,8 @@ cabalProject:
         -I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
       ''-I"${pkgs.glib.dev}/include/glib-2.0"''
       "-I${pkgs.glib.out}/lib/glib-2.0/include/"
-    ]);
+    ]
+  );
 
   shellHook = ''
     # Agda hook.
