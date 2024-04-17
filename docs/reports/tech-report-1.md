@@ -167,6 +167,7 @@ We assess the current SRL to be between 3 and 4, given the following [SRL 3](htt
 ## Overview
 
 A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides and the research article for details.
+
 * Peras adds a Voting layer on top of Praos, Cardano's Nakamoto-style consensus protocol.
 * In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least L slots old, where L is a parameter of the construction (e.g., L = 120).
 * Votes are broadcast to other nodes through network diffusion.
@@ -190,6 +191,7 @@ The exact construction of Peras certificates is still unknown but we already kno
 ## Pseudo-code
 
 We initially started working from researchers' pseudo-code which was detailed in various documents:
+
 * The initial [protocol definition](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) as presented in the Edinburgh workshop, in October 2023,
 * The [post-workshop definition](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4)  which considered votes and blocks diffusion and chain selection in a more integrated manner,
 * The newest version from [March 2024](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) which addressed the shortcomings of the need to consider individual votes in the chain selection process from earlier versions.
@@ -231,6 +233,7 @@ We also have anecdotal evidences from observations of the Cardano mainchain over
 While these numbers seem appealing and reasonably small to provide a very high degree of confidence after less than 10 minutes (a block is produced on average every 20s), it should be noted that they are based on non-existent to low adversarial power assumption (eg. lower than 10% total stake), in other words they represent the best case scenario and say nothing about the potential impact of an adversary with significant resources and high motivation to either disrupt the network, eg. as a form of denial of service to degrade the perceived value of Cardano, or more obviously to double spend. As the stakes increase and the network becomes more valuable, the probability of such an attack increases and our confidence in the settlement time should be adjusted accordingly.
 
 In the optimistic case, Peras is expected to provide the level of settlement Praos provides after $k$ blocks after only about few rounds of voting. With the following parameters:
+
 * Committee size $\cal{S}$ = 2000,
 * Boost per certificate $B = k / 10 = 216$,
 * Quorum $tau = 3\cal{S} / 4 = 1500$,
@@ -1223,6 +1226,7 @@ The Rust types for Peras nodes and networks mimic the Haskell ones and the messa
 The Rust node generates Praos blocks according to the slot-leadership recipe. The Rust network uses the Innovation Team's new network simulation [ce-netsim](https://github.com/input-output-hk/ce-netsim) for transportation block-production and preferred-chain messages among the nodes.
 
 The key findings from Rust experiments follow.
+
 * It is eminently practical to interface non-Haskell code to QuickCheck Dynamic via language-independent serialization and a foreign-function interface.
 * It is also possible to co-design Rust and Haskell code for Peras so that the implementations mirror each other, aside from language-specific constructs. This might result in not employing the advanced and idiosyncratic features of these two languages, however.
 * The `ce-netsim` architecture and threading model is compatible with Peras simulations, even ones linked to `quickcheck-dynamic` test via FFI.
@@ -1357,24 +1361,24 @@ The somewhat nice decoupling between the voting layer and the nakamoto consensus
 
 # References
 
-* Protocol overview (April 2023): https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit?usp=sharing
-* Latest version (March 2024) of the algorithm: https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit
-* Post-workshop algorithm pseudocode (November 2023): https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4
-* Pre-workshop algorithm pseudocode (November 2023): https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1
-* Peras Workshop Report (November 2023): https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit
-* Quick wins for settlement (November 2023): https://docs.google.com/document/d/1PsmhCYlpSlkpICghog0vBWVTnWAdICuQT1khGZ_feec/edit#heading=h.wefcmsmvzoy5
-* Peras presentation at CSM (September 2023): https://docs.google.com/presentation/d/1eKkrFeQMKlCRQV72yR7xg_RzD8WHaM4jPtUh9rwsrR0/edit#slide=id.g27ebcf9a0c4_3_0
-* Practical Settlement bounds for longest-chain consensus (August 2023): https://eprint.iacr.org/2022/1571.pdf
-* Sidechains requirements for fast settlement (April 2023): https://input-output.atlassian.net/wiki/spaces/SID/pages/3829956994/Main+Chain+to+Sidechain+Finality+Improvement
-* Polkadot's Grandpa finality algorithm (June 2020): https://github.com/w3f/consensus/blob/master/pdf/grandpa.pdf
-* Afgjort: A Partially Synchronous Finality Layer for Blockchains (November 2021): https://eprint.iacr.org/2019/504
-https://miro.com/app/board/uXjVNNffmyI=/
-* Thunderella (2017): https://eprint.iacr.org/2017/913.pdf
-* Goldfish (September 2022): https://arxiv.org/abs/2209.03255
-* Towards Formal Verification of HotStuff-based Byzantine Fault Tolerant Consensus in Agda (March 2022): https://arxiv.org/abs/2203.14711
-* Ouroboros High Assurance work: https://github.com/input-output-hk/ouroboros-high-assurance
-* Peras Project February Monthly demo (February 2023): https://docs.google.com/presentation/d/1xNgpC6ioIC4xM3Gn-LvFPZpw4onwAKNc-3EJY4GKEjs/edit#slide=id.p
-* Peras Project March Monthly demo (March 2023): https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509
+* [Protocol overview](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit?usp=sharing) (April 2023)
+* [Latest version of the algorithm](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) (March 2024)
+* [Post-workshop algorithm pseudocode](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4) (November 2023)
+* [Pre-workshop algorithm pseudocode](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) (November 2023)
+* [Peras Workshop Report](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit) (November 2023)
+* [Quick wins for settlement](https://docs.google.com/document/d/1PsmhCYlpSlkpICghog0vBWVTnWAdICuQT1khGZ_feec/edit#heading=h.wefcmsmvzoy5) (November 2023)
+* [Peras presentation at CSM](https://docs.google.com/presentation/d/1eKkrFeQMKlCRQV72yR7xg_RzD8WHaM4jPtUh9rwsrR0/edit#slide=id.g27ebcf9a0c4_3_0) (September 2023)
+* [Practical Settlement bounds for longest-chain consensus](https://eprint.iacr.org/2022/1571.pdf) (August 2023)
+* [Sidechains requirements for fast settlement](https://input-output.atlassian.net/wiki/spaces/SID/pages/3829956994/Main+Chain+to+Sidechain+Finality+Improvement) (April 2023)
+* [Polkadot's Grandpa finality algorithm](https://github.com/w3f/consensus/blob/master/pdf/grandpa.pdf) (June 2020)
+* [Afgjort: A Partially Synchronous Finality Layer for Blockchains](https://eprint.iacr.org/2019/504) (November 2021)
+* [Thunderella](https://eprint.iacr.org/2017/913.pdf) (2017)
+* [Goldfish](https://arxiv.org/abs/2209.03255) (September 2022)
+* [Towards Formal Verification of HotStuff-based Byzantine Fault Tolerant Consensus in Agda](https://arxiv.org/abs/2203.14711) (March 2022)
+* [Ouroboros High Assurance work](https://github.com/input-output-hk/ouroboros-high-assurance)
+* [Peras Project February Monthly demo](https://docs.google.com/presentation/d/1xNgpC6ioIC4xM3Gn-LvFPZpw4onwAKNc-3EJY4GKEjs/edit#slide=id.p) (February 2023)
+* [Peras Project March Monthly demo](https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509) (March 2023)
+* [Approximate Lower Bound Arguments (ALBA)](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) (May 2024)
 
 # End notes
 
