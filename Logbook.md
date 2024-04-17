@@ -1,3 +1,18 @@
+## 2024-04-17
+
+### Meeting PNSol on Vote network modelling
+
+* Seems like the vote diffusion should not be problematic on sunny days, so the modelling and thinking effort should be focused on "rainy days", eg. what happens under heavy load, eg. CPU load (also possibly network load?). These are the circumstances into which backpressure should be applied
+
+Some key questions to answer to:
+* How much computation do we do on each vote?
+* How much computation do we do on certificate?
+* What kind of backpressure do we need to bake in?
+* ND: "do these things form a monoid" -> pack things together
+
+Interesting observation:
+* We could build certificate to reduce amount of data transferred, eg. trading CPU time (building certificate) for space and network bandwidth consumption
+
 ## 2024-04-15
 
 * Working on [technical report](docs/reports/tech-report-1.md), filling in section on quickcheck-dynamic example protocol from Quviq
