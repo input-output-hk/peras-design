@@ -13,6 +13,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 # Contents
 
+- [ ] [Executive summary](#executive-summary)
 - [x] [Previous work](#previous-work)
     - [x] [Peras Workshop](#peras-workshop)
         - [x] [Questions about Peras](#questions-about-peras)
@@ -20,28 +21,25 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
         - [x] [SRL](#srl)
 - [ ] [Protocol Specification](#protocol-specification)
     - [x] [Overview](#overview)
+        - [x] [Certificates](#certificates)
     - [x] [Pseudo-code](#pseudo-code)
     - [ ] [Agda Specification](#agda-specification)
         - [x] [Domain model](#domain-model)
-            - [ ] [Agda2hs](#agda2hs)
+            - [x] [Agda2hs](#agda2hs)
         - [x] [Small-step semantics](#small-step-semantics)
             - [x] [Local state](#local-state)
             - [x] [Global state](#global-state)
             - [x] [Global relation](#global-relation)
         - [x] [Proofs](#proofs)
-        - [ ] [link with q-d properties](#link-with-q-d-properties)
-    - [x] [Pending questions](#pending-questions)
-        - [x] [Certificates](#certificates)
-- [ ] [Network Performance Analysis](#network-performance-analysis)
+- [x] [Network Performance Analysis](#network-performance-analysis)
     - [x] [Certificates in Block Header](#certificates-in-block-header)
         - [x] [Baseline - Praos ΔQ Modelling](#baseline---praos-Δq-modelling)
             - [x] [Model overview](#model-overview)
             - [x] [Modeling process](#modeling-process)
         - [x] [Peras ΔQ Model - Blocks](#peras-Δq-model---blocks)
         - [x] [Conclusion](#conclusion)
+    - [x] [Votes & Certificates diffusion](#votes-certificates-diffusion)
     - [x] [Impact on User Experience](#impact-on-user-experience)
-        - [x] [Model](#model)
-    - [ ] [Impact of Load congestion](#impact-of-load-congestion)
 - [x] [Property-based testing with Dynamic QuickCheck](#property-based-testing-with-dynamic-quickCheck)
     - [x] [Praos properties](#praos-properties)
     - [x] [Peras properties](#peras-properties)
@@ -74,7 +72,7 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
     - [x] [Experimental implementation](#experimental-implementation)
 - [ ] [Conclusion](#conclusion)
     - [ ] [Future work](#future-work)
-- [ ] [References](#references)
+- [x] [References](#references)
 - [ ] [End notes](#end-notes)
 
 # Previous work
@@ -175,6 +173,19 @@ A presentation of the motivation and principles of the protocol is available in 
 * If a block gains more than a certain threshold of votes (from the same round), a so-called quorum, it gets extra weight B (where each block has a base weight of 1). Since nodes always select the heaviest chain (as opposed to the longest chain, as in Praos), these blocks with extra weight accelerate settlement of all blocks before them.
 * A set of votes (from the same round) can be turned into a short certificate. Certificates are needed during the cooldown period (see below), but they can also be broadcast to nodes that are catching up.
 * If a quorum is not reached in a round, the protocol enters a cooldown period, in order to heal from the “damage” that could result from adversarial strategies centered around withholding adversarial votes. During the cooldown, voting is suspended, and block producers include information required to coordinate the restart (the latest known certificate) in their blocks. The duration of the cooldown period is roughly equal to k + B, where k is the settlement parameter of Praos.
+
+### Certificates
+
+The exact construction of Peras certificates is still unknown but we already know the feature set it should provide:
+
+* A Peras certificate must be reasonably "small" in order to fit within the limits of a single block without leading to increased transmission delay.
+  * The current block size on `mainnet` is 90kB, with each transaction limited to 16kB
+  * In order to not clutter the chain and take up too much block estate, a certificate should fit in a _single transaction_
+* Certificate need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum
+  * Certificate forging should be reasonably fast but is not on the critical of block diffusion: A round spans multiple possible blocks so there's more time to produce and broadcast it
+* Certificate must be reasonably fast to verify as it's on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight
+* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralised certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes
+
 
 ## Pseudo-code
 
@@ -406,29 +417,16 @@ A first property is `knowledge-propagation`, a lemma that state that knowledge a
 
 Knowledge propagation is a pre-requisite for the chain growth property, that informally says that in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
 
-### link with q-d properties
-
-## Pending questions
-
-### Certificates
-
-The exact construction of Peras certificates is still unknown but we already know the feature set it should provide:
-
-* A Peras certificate must be reasonably "small" in order to fit within the limits of a single block without leading to increased transmission delay.
-  * The current block size on `mainnet` is 90kB, with each transaction limited to 16kB
-  * In order to not clutter the chain and take up too much block estate, a certificate should fit in a _single transaction_
-* Certificate need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum
-  * Certificate forging should be reasonably fast but is not on the critical of block diffusion: A round spans multiple possible blocks so there's more time to produce and broadcast it
-* Certificate must be reasonably fast to verify as it's on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight
-* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralised certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes
-
 # Network Performance Analysis
+
+We provide in this section the methodology and results of the analysis of the Peras protocol performance in the context of the Cardano network. This analysis is not complete as it only covers the impact of including certificates in block headers which is is not a property of the protocol anymore. More anlysis is needed on the votes and certificates diffusion process following changes to the protocol in March 2024.
 
 ## Certificates in Block Header
 
 This section provides high-level analysis of the impact of Peras protocol on the existing Cardano network, using [ΔQSD methodology](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/). In order to provide a baseline to compare with, we first applied ΔQ to the existing Praos protocol reconstructing the results that lead to the current set of paremeters defining the performance characteristics of Cardano, following section 4 of the aforementioned paper. We then used the same modelling technique taking into account the Peras protocol **assuming inclusion of certificates in headers** insofar as they impact the core _outcome_ of the Cardano network, namely _block diffusion time_.
 
-Note that one of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
+> [!NOTE]
+> One of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
 
 ### Baseline - Praos ΔQ Modelling
 
@@ -586,6 +584,17 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 ### Conclusion
 
 This analysis demonstrates that Peras certificates cannot be on the critical path of block headers diffusion lest we run the risk of increased delays in block diffusion and number of forks. Certificates either have to be small enough to not require an additional round-trip to transmit on top of the block header, or be part of the block body. Note that in the latter case the certificates should also be relatively small as there's limited space available in blocks.
+
+## Votes & Certificates diffusion
+
+Detailed analysis of votes and certificates diffusion is still ongoing and will be reported in a future document. Some preliminary discussions with PNSol allowed us to identify the following points to consider:
+
+* the vote diffusion should not be problematic on "sunny days", so the modelling and thinking effort should be focused on "rainy days", eg. what happens under heavy load, eg. CPU load (also possibly network load?). These are the circumstances into which backpressure should be applied
+* Some key questions to answer to:
+  * How much computation do we do on each vote?
+  * How much computation do we do on certificate?
+  * What kind of backpressure do we need to bake in?
+* An Interesting observation: We could build certificate to reduce amount of data transferred, eg. trading CPU time (building certificate) for space and network bandwidth consumption
 
 ## Impact on User Experience
 
@@ -1348,7 +1357,24 @@ The somewhat nice decoupling between the voting layer and the nakamoto consensus
 
 # References
 
-> [!NOTE] Add references to the text above, and include links to the various other papers, reports, etc. we have gathered.
+* Protocol overview (April 2023): https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit?usp=sharing
+* Latest version (March 2024) of the algorithm: https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit
+* Post-workshop algorithm pseudocode (November 2023): https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4
+* Pre-workshop algorithm pseudocode (November 2023): https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1
+* Peras Workshop Report (November 2023): https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit
+* Quick wins for settlement (November 2023): https://docs.google.com/document/d/1PsmhCYlpSlkpICghog0vBWVTnWAdICuQT1khGZ_feec/edit#heading=h.wefcmsmvzoy5
+* Peras presentation at CSM (September 2023): https://docs.google.com/presentation/d/1eKkrFeQMKlCRQV72yR7xg_RzD8WHaM4jPtUh9rwsrR0/edit#slide=id.g27ebcf9a0c4_3_0
+* Practical Settlement bounds for longest-chain consensus (August 2023): https://eprint.iacr.org/2022/1571.pdf
+* Sidechains requirements for fast settlement (April 2023): https://input-output.atlassian.net/wiki/spaces/SID/pages/3829956994/Main+Chain+to+Sidechain+Finality+Improvement
+* Polkadot's Grandpa finality algorithm (June 2020): https://github.com/w3f/consensus/blob/master/pdf/grandpa.pdf
+* Afgjort: A Partially Synchronous Finality Layer for Blockchains (November 2021): https://eprint.iacr.org/2019/504
+https://miro.com/app/board/uXjVNNffmyI=/
+* Thunderella (2017): https://eprint.iacr.org/2017/913.pdf
+* Goldfish (September 2022): https://arxiv.org/abs/2209.03255
+* Towards Formal Verification of HotStuff-based Byzantine Fault Tolerant Consensus in Agda (March 2022): https://arxiv.org/abs/2203.14711
+* Ouroboros High Assurance work: https://github.com/input-output-hk/ouroboros-high-assurance
+* Peras Project February Monthly demo (February 2023): https://docs.google.com/presentation/d/1xNgpC6ioIC4xM3Gn-LvFPZpw4onwAKNc-3EJY4GKEjs/edit#slide=id.p
+* Peras Project March Monthly demo (March 2023): https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509
 
 # End notes
 
