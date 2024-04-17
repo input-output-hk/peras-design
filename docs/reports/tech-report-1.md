@@ -8,7 +8,8 @@ date: 2024-04-15
 ---
 
 # Executive summary
-The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ since January 2024.
+
+The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between January and April 2024.
 
 # Contents
 
@@ -80,62 +81,100 @@ The goal of this document is to provide a detailed analysis of the Peras protoco
 
 ## Peras workshop
 
+A follow-up from the  [Peras workshop in Edinburgh](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit) which happened in October 2023 was to define a set of questions and experiments to be conducted in order to better understand the properties of the Peras protocol, along with an assessment of the protocol's _Software readiness level_. The following sections recalls the questions that were raised during the workshop, providing or pointing at some answers, and the SRL assessment along with a comparison with current estimated SRL.
+
 ### Questions about Peras
 
-* How do you detect double voting? Is double voting possible? How can the voting state be bounded?
-* How are the voting committee members selected? What are the properties of the voting committee?
-* Where should votes be included: block body, block header, or some other aggregate
-* Under what circumstance can a cool down be entered?
-* How significant is the risk of suppressing votes to trigger a cooldown period?
-* Should vote contributions be incentivized?
-* How much weight is added per round of voting?
-* How to expose the weight/settlement of a block to a consumer of chain data, such as a wallet?
-* Can included votes be aggregated into an artifact to prove the existence of votes & the weight they provide?
+For each of these questions we check whether or not it's been answered:
+
+* [x] How do you detect double voting? Is double voting possible? How can the voting state be bounded?
+  * each vote is signed individually and the signature is checked by the receiving node
+* [x] How are the voting committee members selected? What are the properties of the voting committee?
+  * Committee members are selected by a VRF-based sortition, its properties are exposed in the paper and [overview](#overview)
+* [x] Where should votes be included: block body, block header, or some other aggregate
+  * models and simulation show that votes need to be aggregated independently and certificates be part of "some" block bodies
+* [ ] Under what circumstance can a cool down be entered?
+  * the question of how much adversarial power is needed to trigger a cooldown period is still open
+* [x] How significant is the risk of suppressing votes to trigger a cooldown period?
+  * it's significant as being abel to trigger cooldowns often ruins the benefits of Peras
+* [x] Should vote contributions be incentivized?
+  * probably not
+* [x] How much weight is added per round of voting?
+  * this is a parameter $B$ in the protocol
+* [ ] How to expose the weight/settlement of a block to a consumer of chain data, such as a wallet?
+  * this has not been addressed yet, as most of the user-facing and business domain aspects of the protocol
+* [x] Can included votes be aggregated into an artifact to prove the existence of votes & the weight they provide?
+  * yes, this is the role of certificates
 
 ### Potential jugular experiments for Peras
 
-* Network traffic simulation of vote messages
-* Protocol formalization & performance simulations of Peras
-* Optimal look-back parameter (measured in number of slots) within a round
-  * Historic analytical study (n-sigma for reliability based on the number of 9s desired)
-* Chain growth simulations for the accumulation of vote data
-* Added chain catch-up time
-* Cost of defusing votes and blocks that contain votes
-* Need to refine: Voting committee selection via sampling needs to define how to analyze the needed properties of the committee.
-* Later SRL: framing for vote packing to improve diffusion.
+We refer the reader to the relevant section for each of those potential experiments:
+
+* [x] Network traffic simulation of vote messages
+  * this has been simulated but needs to be refined
+* [x] Protocol formalization & performance simulations of Peras
+  * this has been done in Agda with (parts of) performance modelling using ΔQ and simulation
+* [x] Optimal look-back parameter (measured in number of slots) within a round
+  * [ ] Historic analytical study (n-sigma for reliability based on the number of 9s desired)
+  * [x] Some parameters value are provided in the research paper and [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)
+* [ ] Chain growth simulations for the accumulation of vote data
+  * This has not been done as the protocol has evolved since the workshop
+* [x] Added chain catch-up time
+  * This is cooldown period length and is estimated in the [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)
+* [ ] Cost of defusing votes and blocks that contain votes
+  * not estimated
+* [ ] Need to refine: Voting committee selection via sampling needs to define how to analyze the needed properties of the committee.
 
 ### SRL
 
-| Questions to resolve                                                                       | Status                                          |
-|--------------------------------------------------------------------------------------------|-------------------------------------------------|
-| A concept formulated?                                                                      | Done                                            |
-| Basic scientific principles underpinning the concept identified?                           | Done                                            |
-| Basic properties of algorithms, representations & concepts defined?                        | Done                                            |
-| Preliminary analytical studies confirm the basic concept?                                  |                                                 |
-| Application identified?                                                                    | Done (? -> Partner chains)                      |
-| Preliminary design solution identified?                                                    | Done, provided by research                      |
-| Preliminary system studies show the application to be feasible?                            |                                                 |
-| Preliminary performance predictions made?                                                  | Done                                            |
-| Basic principles coded?                                                                    |                                                 |
-| Modeling & Simulation used to refine performance predictions further and confirm benefits? |                                                 |
-| Benefits formulated?                                                                       |                                                 |
-| Research & development approach formulated?                                                | Done                                            |
-| Preliminary definition of Laboratory tests and test environments established?              | Preliminary definition of Laboratory tests only |
-| Experiments performed with synthetic data?                                                 |                                                 |
-| Concept/application feasibility & benefits reported in paper                               |                                                 |
+SRL was initially assesed to be between 1 and 2, with the following definitions:
+
+| Questions to resolve                                                                       | Status                |
+|--------------------------------------------------------------------------------------------|-----------------------|
+| A concept formulated?                                                                      | Done                  |
+| Basic scientific principles underpinning the concept identified?                           | Done                  |
+| Basic properties of algorithms, representations & concepts defined?                        | Done                  |
+| Preliminary analytical studies confirm the basic concept?                                  |                       |
+| Application identified?                                                                    | Done (Partner chains) |
+| Preliminary design solution identified?                                                    | Partial               |
+| Preliminary system studies show the application to be feasible?                            |                       |
+| Preliminary performance predictions made?                                                  | Done                  |
+| Basic principles coded?                                                                    |                       |
+| Modeling & Simulation used to refine performance predictions further and confirm benefits? |                       |
+| Benefits formulated?                                                                       |                       |
+| Research & development approach formulated?                                                | Done                  |
+| Preliminary definition of Laboratory tests and test environments established?              | Preliminary           |
+| Experiments performed with synthetic data?                                                 |                       |
+| Concept/application feasibility & benefits reported in paper                               |                       |
+
+
+We assess the current SRL to be between 3 and 4, given the following [SRL 3](https://input-output.atlassian.net/wiki/spaces/CI/pages/3875110920/SRL+3+Analytical+and+or+experimental+critical+function+or+characteristic+proof-of-concept.) definition:
+
+| Questions to resolve                                                                                          | Status     |
+|---------------------------------------------------------------------------------------------------------------|------------|
+| Critical functions/components of the concept/application identified?                                          | Done       |
+| Subsystem or component analytical predictions made?                                                           | Partial    |
+| Subsystem or component performance assessed by Modeling and Simulation?                                       | Partial    |
+| Preliminary performance metrics established for key parameters?                                               | Done       |
+| Laboratory tests and test environments established?                                                           | Done       |
+| Laboratory test support equipment and computing environment completed for component/proof-of-concept testing? | N/A        |
+| Component acquisition/coding completed?                                                                       | ? -> Tweag |
+| Component verification and validation completed?                                                              | Partial    |
+| Analysis of test results completed establishing key performance metrics for components/ subsystems?           | Done       |
+| Analytical verification of critical functions from proof-of-concept made?                                     | Done       |
+| Analytical and experimental proof-of-concept documented?                                                      | Done       |
 
 # Protocol Specification
 
 ## Overview
 
-A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit), we summarizes the main points here but refer the interested reader to the slides and the research article for details.
-
-* Peras essentially adds a _Voting layer_ on top of Cardano's Nakomoto consensus protocol layer, with a fixed committee size and a quorum,
-* Every voting round, stakeholders (SPOs) gets selected to be part of the committee through a stake-based sortition mechanism using their existing VRF keys, and vote for some block which is a small distance from the tip their preferred chain,
-* Votes are broadcast to other nodes through network diffusion,
-* When a node receives enough votes to reach quorum, it creates a certificate that now adds weight and counts towards the chain selection,
-* Certificates can also be broadcast to other nodes that are catching up or did not receive enough votes in a round,
-* From time to time, a quorum is not reached in a round and the network enters a _cooldown period_: The block producer includes latest known certificate in the chain, and no voting happens until cooldown ends.
+A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides and the research article for details.
+* Peras adds a Voting layer on top of Praos, Cardano's Nakamoto-style consensus protocol.
+* In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least L slots old, where L is a parameter of the construction (e.g., L = 120).
+* Votes are broadcast to other nodes through network diffusion.
+* If a block gains more than a certain threshold of votes (from the same round), a so-called quorum, it gets extra weight B (where each block has a base weight of 1). Since nodes always select the heaviest chain (as opposed to the longest chain, as in Praos), these blocks with extra weight accelerate settlement of all blocks before them.
+* A set of votes (from the same round) can be turned into a short certificate. Certificates are needed during the cooldown period (see below), but they can also be broadcast to nodes that are catching up.
+* If a quorum is not reached in a round, the protocol enters a cooldown period, in order to heal from the “damage” that could result from adversarial strategies centered around withholding adversarial votes. During the cooldown, voting is suspended, and block producers include information required to coordinate the restart (the latest known certificate) in their blocks. The duration of the cooldown period is roughly equal to k + B, where k is the settlement parameter of Praos.
 
 ## Pseudo-code
 
@@ -552,7 +591,7 @@ This analysis demonstrates that Peras certificates cannot be on the critical pat
 
 ### Model
 
-We would like to model the outcomes of Peras in terms of _user experience_, eg. how does Peras impacts the user experience?
+We could want to model the outcomes of Peras in terms of _user experience_, eg. how does Peras impacts the user experience?
 From the point of view of the users, the thing that matters is the _settlement time_ of their transactions: How long does it take for a transaction submitted to be _settled_, eg. to have enough (how much?) guarantee that the transaction is definitely part of the chain?
 
 From this point of view, the whole path from transaction submission to observing a (deep enough) block matters which means we need to take into account in our modelling the propagation of the transaction through the mempools of various nodes in the network until it reached a block producer. This also means we need to take into account the potential _delays_ incurred in that journey that can occur because of _mempool congestion_ in the system: When the mempool of a node is full, it won't pull more transactions from the peers that are connected to it.
@@ -588,10 +627,7 @@ N2 ->> N1: Send block
 N1 -->> Alice: Tx in block
 ```
 
-## Impact of Load congestion
-
-* load congestion
-
+This question is discussed in much more details in the [report on timeliness](https://docs.google.com/document/d/1B42ep9mvP472-s6p_1qkVmf_b1-McLNPyXGjGHEVJ0w/edit) and should be considered outside of the scope of Peras protocol itself.
 
 # Property-based testing with Dynamic QuickCheck
 
@@ -1251,22 +1287,42 @@ Peras requires changes to message traffic between nodes and the structure of blo
 
 Peras introduces two new constructs: votes and certificates. Members of the Peras committee cast votes each voting round, and the votes must be received by a block-producing node before the votes expire. A certificate memorializes a quorum of votes (approximately 80% of the committee)  made in the same round for a particular block. A certificate must be included in the first block of a cool-down period, though at least one variant of the protocol envisions each round's certificate being included regardless of cool-down status. Nodes syncing from genesis or an earlier point in the chain's history must be provided the votes or equivalent certificates in order for them to verify the weight of the chain. Thus, the protocol results in the following message traffic:
 
+### Votes
+
 * Vote messages diffuse votes from voters to the block-producing nodes.
 	* An upper bound (worst-case scenario) on message traffic is that every vote diffuses to every node.
-	* Votes would likely be sent via a new mini-protocol, though it might be possible to represent them as prioritized transactions in the memory pool.
+	* Votes would likely be sent via a new mini-protocol very similar to how transactions are propagated:
+        * The downstream peers request list of IDs from upstream peers
+        * They select the ones they don't have in their "mempools" for download
+        * When quorum is reached they stop downloading votes for given round
 	* Backpressure for a node's receiving is necessary in order to mitigate DoS attacks that flood a node with votes.
 	* Nodes that have large stake might be allotted several votes. Instead of sending one message per vote, these could be bundles as a message that indicates the number of votes cast.
 	* Votes not recorded on the chain or in a certificate need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
+* It's relatively straightforward to know the size the votes mempool would take
 	* The size of a vote is likely a couple of hundred bytes.
+    * Votes have a TTL (parameter max. age $A$ of the protocol) which implies there's a strict upper bound on the overall size of the votes mempool
+    * There's also a cap on the number of votes per round (quorum parameter $\tau$)
+    * And it's always possible to trade a bunch of votes with a certificate representing those votes
+
+### Certificates
+
+Certificates (or equivalently quorum of votes in a round) have an impact on the chain selection process as they change the weight.
+
 * Sending a certificate is equivalent to sending a quorum of votes.
 	* Once a node sees a quorum, it can create and diffuse a certificate so it no longer needs to send any more votes for the round.
 	* If non-quorum certificates would obey monoid laws, then votes could be sent as singleton certificates that are progressively aggregate votes towards a quorum. This use of non-quorum certificates would reduce message traffic.
 	* If a certificate for every round is included on the chain, then newly started or syncing nodes need not request certificates or votes for rounds older than the last certificate recorded on the chain.
 	* Certificates not recorded on the chain need to be kept by the node and persistently cached if the node is restarted. They might have to be provided to newly syncing nodes.
-	* The size of a certificate is likely a couple of hundred bytes.
+	* The size of a certificate is likely a few thousand bytes or more
+    * Conceptually, diffusion of certificates can be thought as similar to the diffusion of blocks as certificates are explicitly or implicitly chained together
 * Certificates are likely too large to be included in the block header without increasing its size over the constitutionally-constrained byte limit.
 	* If the CDDL for blocks were altered, they could be included as a new entry in the block.
 	* Alternatively, a certificate could be stored as a transaction in the block. Such certificate-transactions would incur a fee and would need to be prioritized ahead of transactions in the memory pool.
+* At least conceptually, certificates are _fungible_, eg. if I have certificate X for block A and a certificate Y for block B s.t. B $\rightarrow$ A, then I can count chain from B as having twice the weight which is equivalent to having a certificate $Z = X \circ Y$.
+  * This implies that an implementation could choose to merge certificates that are past some threshold, eg. when enough weight has been accumulated the chances of chain fork are negligible, which would limit the storage requirements
+  * This needs to be validated by researchers and is highly dependent on the particular technology used to form certificates
+* Creating, and to a lesser extent validating, certificates could be relatively CPU intensive operations
+  * This means there's an interesting operational tradeoff between resources, CPU on one hand, and memory/network bandwidth on the other, that could be used by an implementation adaptively depending on the environment's conditions: Share quorum of votes directly if there's no pressure on memory and network bandwidth, or spend CPU time to build certificates to reduce footprint
 
 ## Consensus
 
@@ -1278,9 +1334,13 @@ Peras requires several new types of work by the node: votes and certificates mus
 
 If certificates for each round are not stored permanently on the chain, then they will have to be persisted locally by each node.
 
-## Experimental implementation
+## Implementation path
 
-It might be possible to experiment with Peras using real nodes on a special-purpose testnet. Votes and certificates could be represented as ordinary transactions with well-known characteristics. A thread could be added to the node to create and verify votes and certificates. The node's chain-selection code would have to communicate with that thread.
+The somewhat nice decoupling between the voting layer and the nakamoto consensus layer, along with the fact that votes are only taken into account in bulk, eg. when they form a quorum on some round seems to make it possible to implement Peras in a way that doesn't impact too much consensus, and at very least in an incremental way.
+
+* It might be possible to experiment with Peras using real nodes on a special-purpose testnet. Votes and certificates could be represented as ordinary transactions with well-known characteristics. A thread could be added to the node to create and verify votes and certificates. The node's chain-selection code would have to communicate with that thread.
+* A dedicated votes and certificate management process could be built and run separately, with the node only periodically checking this process when it needs to decide upon chain selection. While this might not be acceptable on a real production network due to the added latency on a critical path, it might be good enough to experiment with Peras on a testnet.
+* The network protocol for diffusing votes bears a lot of similarity to the kind of network needed by [Mithril](https://hackmd.io/jwAdFPzZQj-llwfavl8Ahw) on its path to increased decentralization, so the effort to develop those protocols could be shared.
 
 # Conclusion
 
