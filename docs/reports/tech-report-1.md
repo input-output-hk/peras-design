@@ -4,7 +4,7 @@ author:
   - Arnaud Bailly
   - Brian W. Bush
   - Yves Hauser
-date: 2024-04-15
+date: 2024-04-17
 ---
 
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between November and April 2024. The design of the protocol itself is carried out by the _Research team_ and is not the focus of this document as the paper is still under actively being worked on, but one of the intended benefits of setting up an engineering team is to provide feedback to the research team on the practical implications of their design choices.
@@ -115,7 +115,7 @@ There remain a number of open questions that could be investigated in future wor
     - [x] [Resources](#resources)
     - [x] [Experimental implementation](#experimental-implementation)
 - [ ] [Conclusion](#conclusion)
-    - [ ] [Future work](#future-work)
+    - [ ] [Recommendations](#recommendations)
 - [x] [References](#references)
 - [ ] [End notes](#end-notes)
 
@@ -189,7 +189,6 @@ SRL was initially assesed to be between 1 and 2, with the following definitions:
 | Experiments performed with synthetic data?                                                 |                       |
 | Concept/application feasibility & benefits reported in paper                               |                       |
 
-
 We assess the current SRL to be between 3 and 4, given the following [SRL 3](https://input-output.atlassian.net/wiki/spaces/CI/pages/3875110920/SRL+3+Analytical+and+or+experimental+critical+function+or+characteristic+proof-of-concept.) definition:
 
 | Questions to resolve                                                                                          | Status     |
@@ -235,7 +234,6 @@ The exact construction of Peras certificates is still unknown but we already kno
 * Certificate must be reasonably fast to verify as it's on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight
 * The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralised certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes
 
-
 ## Pseudo-code
 
 We initially started working from researchers' pseudo-code which was detailed in various documents:
@@ -263,7 +261,7 @@ theoretical framework used by researchers (eg. Universal Composition).
 
 [Practical Settlement Bounds for Longest-Chain Consensus](https://eprint.iacr.org/2022/1571.pdf) by  Peter Gazi, Ling Ren, and Alexander Russell provides a formal treatment of the settlement guarantees for Proof-of-stake blockchains.
 
-_Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement time is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $1^{-60}$.
+_Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement time is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $10^{-60}$.
 
 In practice, the probability for a transaction to be rolled back after 20 blocks is 0.001%, and is exponentially decreasing with the block depth. The following picture from the aforementioned paper shows block settlement failure probability given some block depth for Cardano PoS chain.
 
@@ -276,7 +274,6 @@ We also have anecdotal evidences from observations of the Cardano mainchain over
 > [!WARNING]
 >
 > Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
-
 
 While these numbers seem appealing and reasonably small to provide a very high degree of confidence after less than 10 minutes (a block is produced on average every 20s), it should be noted that they are based on non-existent to low adversarial power assumption (eg. lower than 10% total stake), in other words they represent the best case scenario and say nothing about the potential impact of an adversary with significant resources and high motivation to either disrupt the network, eg. as a form of denial of service to degrade the perceived value of Cardano, or more obviously to double spend. As the stakes increase and the network becomes more valuable, the probability of such an attack increases and our confidence in the settlement time should be adjusted accordingly.
 
@@ -849,7 +846,6 @@ The Peras simulation employs language-agnostic components that collaborate seaml
 
 ![Workflow for simulation experiments](../diagrams/sim-expts/sim-workflow.png)
 
-
 The IOSim-based Haskell simulator for Peras currently provides a provisional implementation of the Peras protocol's intricacies, including committee selection, voting rounds, and cool-down periods. Presently, the fidelity of the simulation to the Peras protocol is moderate, while the fidelity at the network layer remains low. Substantial refactoring and refinement efforts are deemed necessary moving forward to enhance the simulation's accuracy and effectiveness.
 
 The simulation implements the February version of the Peras protocol, illustrated in the UML (unified modeling language) sequence diagrams below for node behavior and the activity diagram for node state transitions. Nodes receive messages for entering a new slot or new voting round; they also receive new preferred chains or votes from their upstream peers via messages. When the vote, forge blocks, or adopt a new preferred chain, they notify their downstream peers via messages. Note that the detailed behavior of the February protocol differs somewhat from later version such as the March protocol.
@@ -1157,7 +1153,6 @@ The difference is fork adoption results from more Peras votes being received by 
 
 ![Detail of Peras and Praos chain comparison](../diagrams/sim-expts/peras-voting.png)
 
-
 Statistics for rollbacks, such as the ones shown below, are measured in these simulations to quantify the number of slots or blocks that are reverted: such can be used to compute the likelihood of a transaction appearing in a block that is later rolled back. The diagram below show shows a proof-of-principle measurement of rollback lengths in an ensemble of simulations. The horizontal axis shows the number of slots rolled back during the course of the whole simulation, and the vertical axis shows the corresponding number of blocks rolled back: the marginal histograms show the empirically observed frequency of each. Although the voting boost weight is varied among these simulations, it has almost no effect on the rollback statistics.
 
 ![Example of rollback statistics](../diagrams/sim-expts/rollbacks.png)
@@ -1404,25 +1399,23 @@ The somewhat nice decoupling between the voting layer and the nakamoto consensus
 
 # Conclusion
 
+The analyses described in this report provide evidence that the Peras protocol is a viable addition to the Cardano blockchain in that it would significantly speed settlement (or, more precisely, rapidly decrease settlement-failure probabilities) without burdening the nodes with substantial additional computational or bandwidth requirements. Feedback regarding early versions of the Peras protocol, which was untenable for efficient implementation, resulted in minor adjustments to the protocol which make it practical for deployment. The analyses were achieved via a combined program of formalization in Agda, network modeling using the ΔQ methodology, message-passing simulations in Haskell and Rust, and dynamic QuickCheck testing. An important byproduct of this work was the formulation and demonstration of a potentially reusable methodology that delivers a formal specification that is closely tied to a chain of evidence involving modeling, simulation, and conformance testing.
+
+The foregoing analyses have quantified and reduced several risks related to adoption of Peras. In particular, the number and size of vote and certificate messages passing between nodes would not significantly impact a node's performance or tax its bandwidth. Similarly, the size of the block headers would not be impacted by Peras, though some block bodies (one per voting round) would be several hundred bytes longer to accommodate a certificate that attests to a voting quorum having been achieved. The chain weight can be verified externally by examining the history of certificates attached to blocks, but following the current best chain would require a knowledge of the votes or certificates that had not yet been memorialized by inclusion of a certificate in a block: nodes would have to persistently cache such information, which would only require negligible memory and disk space.  Vote and certificate processing have some temporal flexibility, so their resource usage can be managed via backpressure and thread pools.
+
+Several Peras-related risks remain. Primary is that the amount of adversarial stake required to repeatedly force the protocol into a cool-down period has not yet been quantified: the length of that cool-down period would be inversely proportional to the length of the round. Further research is warranted to study variants of the Peras protocol that would shrink the duration of cool-down, or eliminate it altogether, but without increasing the attack surface of the protocol. A related risk is that the settings for the Peras parameters have not been optimized: this would elucidate the tradeoff between rapidity of settlement versus vulnerability to adversarial stake or network disruptions. Committee size is a particularly important parameter to tune because it affects not only the resistance to adversarial conditions and also the network and computations resource burdens. Other heretofore unmitigated risks relate to the computational burden on nodes. Specifically, the CPU resources required to construct and verify voting certificates can only be measured after the detailed algorithm for certificate construction has been specified.
+
 ## Recommendations
 
-* Build a solid network simulator which we could plug any protocol in
-  * there's the Java thing but it's quzite antiquated
-  * there's netsim but with some shortcomings (lowerlevel, no time simulation)
-* Co-design an Agda DSL for specifying network/consensus protocols
-  * that researchers can use
-  * that's amenable to projection to q-d
-* Polish ΔQ (docs + published library)
+The next steps for Peras center upon consolidating the findings of this technical report into a full specification for Peras with suitable level of detail and quantification for the drafting of a Cardano Improvement Proposal (CIP). The detail should be sufficient to write a request for proposals (RFP) that includes acceptance criteria for implementations. Concomitant with that would be an executable specification and QuickCheck Dynamic conformance tests for evaluating implementations: ideally, both would be directly derived from the Agda formulation of Peras. The executable specification could be packaged as a web-based, interactive simulator so that stakeholders can explore the behavior of Peras themselves and build intuition about the protocol. Such artifacts could play an important role in developing a unique value proposition for Peras.
 
-## Remaining Risks
+Work on the Peras protocol highlighted three areas where co-evolving improved tooling would facilitate the full specification of the protocol and provide evidence for the business case for Peras's adoption. Such improvements would lay the groundwork for rapid assessment of other proposed and future protocols.
 
-* small adversaries can cause cooldown
-* excessive length of the cooldown would make protocol useless
-* votes and certificates handling could be too computationally expensive
-  * could harm node operation and timely block diffusion
-* size of the committee could be too large
-* settlement bounds details -> parameter space exploration
+First, numerically quantifying the tradeoffs in settlement time vs resistance to adversaries as a function of the nine new parameters required for configuring Peras requires moderately detailed network simulation. Although work on Peras could continue down the path of elaborating the "homegrown" network simulations described in this document, the alternative approach would be to invest in a more general simulator of network mini-protocols. Such a simulation would operate at a higher level than the existing `netsim`, which currently emphasizes the routing of messages, but could be built upon it. In general, time management and representation of mini-protocols would be required in such a simulator. This recommendation reinforces the conclusions of the recent *Network Simulation Tools Comparison* document, which states "We are now ready to extract these utility tools and combine them into a general-purpose framework so that the team and partners can utilize them and produce consistent output."
 
+Second, polishing the ΔQ toolset via a few capability enhancements, calibrated default settings, improved documentation, and publication would enable a more rigorous analysis of Peras that stakeholders such as researchers, SPOs, and implementers could reproduce and use in studying Peras variants and other proposed protocols. The ΔQ software is already reasonably close to providing such capabilities, but needs some investment and refinement.
+
+Third, the Peras work so far has highlighted the opportunity for co-design of an Agda DSL (domain-specific language) for specifying network consenus protocols in order to bridge the gap between research and implementation. Researchers could employ such a DSL to concretely express the core constructs of protocols, and prototyping teams can elaborate that into a formal specification along with the QuickCheck Dynamics tests that would verify conformance of implementations to that specification. This provides a tighter "chain of evidence" from the research papers defining a protocol into an implementable specification. The proof of principle in this Peras work can be generalized to support development of other consensus protocols and network definitions.
 
 # References
 
@@ -1443,6 +1436,7 @@ The somewhat nice decoupling between the voting layer and the nakamoto consensus
 * [Ouroboros High Assurance work](https://github.com/input-output-hk/ouroboros-high-assurance)
 * [Peras Project February Monthly demo](https://docs.google.com/presentation/d/1xNgpC6ioIC4xM3Gn-LvFPZpw4onwAKNc-3EJY4GKEjs/edit#slide=id.p) (February 2023)
 * [Peras Project March Monthly demo](https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509) (March 2023)
+* [Network Simulation Tools Comparison](https://drive.google.com/file/d/1loxfRSv7q-TBM9f0Ch4Ap_SuBPOKk0uu/view?usp=sharing) (April 2024)
 * [Approximate Lower Bound Arguments (ALBA)](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) (May 2024)
 
 # End notes
