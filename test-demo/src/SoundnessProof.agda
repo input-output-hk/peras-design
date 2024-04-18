@@ -7,7 +7,7 @@ open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
 open import Data.List using (_++_)
 open import Haskell.Prelude hiding (_×_; _×_×_; _,_,_; b; s; t; ⊥; _<>_; _++_) renaming (_,_ to _,ʰ_; _<_ to _<ʰ_)
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality using (_≢_)
 open import Relation.Nullary using (¬_)
 open import Data.Empty
 
@@ -201,8 +201,6 @@ data ValidActions h (env : EnvState) : EnvState → List (Signal h) → List (Sl
   ⟨_,_⟩∷_ : (sig : Signal h)
           → step env sig ≡ Just (env₁ ,ʰ bs)
           → ValidActions h env₁ env₂ sigs ms₁ → ValidActions h env env₂ (sig ∷ sigs) (map (time env ,_) bs ++ ms₁)
-
-open ≡-Reasoning
 
 appendSoundness : Soundness h s (envState s₁) ms
                 → Soundness h s₁ env₁ ms₁
