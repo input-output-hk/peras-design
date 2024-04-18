@@ -99,3 +99,28 @@ jobs:
         export DYLD_LIBRARY_PATH="$PWD/peras_rust/lib"
         nix build .#peras-quickcheck-test
         ./result/bin/peras-quickcheck-test
+  test-demo:
+    name: Test Demo
+    runs-on: self-hosted
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    - name: 🛠️ Install Nix
+      uses: cachix/install-nix-action@v21
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+        extra_nix_config: |
+          allowed-uris = ${{ env.ALLOWED_URIS }}
+          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+          substituters = ${{ env.SUBSTITUTERS }}
+          experimental-features = nix-command flakes
+    - name: 🏗️ Compile Agda
+      run: |
+        nix build .#test-demo-agda
+    - name: 🏗️ Compile Haskell Library
+      run: |
+        nix build .#test-demo
+    - name: 🏗️ Compile Haskell Executable
+      run: |
+        nix build .#test-demo-test
