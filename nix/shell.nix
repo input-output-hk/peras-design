@@ -34,6 +34,8 @@ cabalProject:
     ghostscript_headless # For visualizing profiles.
     plantuml # For UML diagrams.
     pandoc # For generating PDF from markdown.
+    librsvg # SVG conversion in pandoc.
+    mononoki # Font for Agda.
 
   ];
 
