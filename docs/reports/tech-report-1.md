@@ -7,7 +7,7 @@ author:
 date: 2024-04-17
 ---
 
-The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between November and April 2024. The design of the protocol itself is carried out by the _Research team_ and is not the focus of this document as the paper is still actively being worked on, but one of the intended benefits of setting up an engineering team is to provide feedback to the research team on the practical implications of their design choices.
+The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between November and April 2024. The design of the protocol itself is carried out by the _Research team_ and is not the focus of this document as the paper is still actively being worked on.
 
 # Executive summary
 
@@ -17,42 +17,42 @@ This section lists a number of findings, conclusions, ideas, and known risks tha
 
 ### Product-wise
 
-We built evidence that the Peras protocol in its most recent incarnation can be implemented on top of Praos, in the existing cardano-node codebase, without compromising the core operations of the node (block creation, validation, and diffusion)
+We built evidence that the Peras protocol in its most recent incarnation can be implemented on top of Praos, in the existing [ouroboros-consensus](https://github.com/IntersectMBO/ouroboros-consensus) codebase, without compromising the core operations of the node (block creation, validation, and diffusion):
 
-  * [Network Modelling](#network-performance-analysis) has shown initial versions would add an unbearable overhead to block diffusion
-  * [Simulation](#simulations) and prototyping have allowed us to sketch implementation and better understand the interplay between Peras and Praos
-  * Decoupling votes and certificates handling from blocks handling could pave the way to a smooth incremental [build and deployment](#integration-into-cardano-node) of Peras
-  * While still not formally evaluated (see _Remaining questions_ section) it seems the impact of vote and certificates diffusion on node operation will not be significant and the network will provide strong guarantees those messages can be delivered in a timely fashion
+  * [Network Modelling](#network-performance-analysis) has shown initial versions would add an unbearable overhead to block diffusion,
+  * [Simulation](#simulations) and prototyping have allowed us to sketch implementation and better understand the interplay between Peras and Praos,
+  * Decoupling votes and certificates handling from blocks handling could pave the way to a smooth incremental [building and deployment](#integration-into-cardano-node) of Peras,
+  * While still not formally evaluated (see _Remaining questions_ section) it seems the impact of vote and certificates diffusion on node operation will not be significant and the network will provide strong guarantees those messages can be delivered in a timely fashion.
 
 We clarified the expected benefits of Peras over Praos expressed in terms of [_settlement failure probabilities_](#settlement-time): Outside cool-down period, with the proper set of parameters, Peras provides the same probability of settlement failure than Praos **faster** by a factor of roughly 1000, i.e. roughly 2 minutes instead of 36 hours.
 
 ### Process-wise
 
-The following picture sketches the architecture of the project and the interaction between the various "domains" relevant to Innovation team
+The following picture sketches the architecture of the project and the interaction between the various "domains" relevant to the Innovation team's work
 
 ![Peras Project Architecture](../diagrams/peras-high-level-architecture.jpg)
 
-We confirmed the relevance of [ΔQ modeling](#network-performance-analysis) technique to provide insights on a protocol's performance profile, and how particular design decisions (even apparently minor ones) can impact this performance profile.
+We confirmed the relevance of [ΔQ modeling](#network-performance-analysis) technique to provide insights on a protocol's performance profile, and how particular design decisions (even apparently minor ones) can impact this performance profile. We also gave feedback to the maintainers on the current state of the tool and libraries, and how to improve it in order to increase the reach of this technique.
 
-We explored the use of formal modeling language Agda to [specify](#protocol-specification) the protocol and application of PoS-specific [proof techniques](#small-step-semantics) to state and prove relevant properties of the protocol. We also started work on building a trail of evidence from research to implementation by:
+We explored the use of formal modeling language Agda to [specify](#protocol-specification) the protocol and application of Proof-of-Stake-specific [proof techniques](#small-step-semantics) to state and prove relevant properties of the protocol. We also started work on building a trail of evidence from research to implementation by:
 
 - Experimenting with Quviq on the [generation of quickcheck-dynamic](#relating-test-model-to-formal-model) test models from Agda models,
 - Sketching a research-centric [_Domain Specific Language_](#pseudo-code) that could be used in research papers and as a foundation for formal modeling and engineering work.
 
-While prototyping, we demonstrated the applicability of an Agda-centric chain of evidence even to "foreign" languages by testing with `quickcheck-dynamic` the same properties against Haskell and [Rust implementations](#rust-based-simulation), collaborating with the Creative engineering team on sketching a network simulator library in Rust.
+While prototyping, we demonstrated the applicability of an Agda-centric chain of evidence even to "foreign" languages by testing with `quickcheck-dynamic` the same properties against Haskell and [Rust prototypes](#rust-based-simulation), collaborating with the Creative engineering team on sketching a [network simulator](https://github.com/input-output-hk/ce-netsim) library in Rust.
 
 ## Remaining questions
 
 There remain a number of open questions that could be investigated in future work increments.
 
-- Peras features, both benefits and shortcomings, need to be aligned with business cases and overall strategy for scaling Cardano. This implies that more research is needed in two directions:
-    - From a product and user perspective, to evaluate the actual value that Peras delivers and possible countermeasures to its drawbacks (e.g. risk of cool-down that could be covered by an _options_ or _insurance premium_ mechanism),
-    - From a technical perspective, to explore the parameters space and find the optimal combination of parameters.
+- Peras features, both benefits and shortcomings, need to be aligned with business cases and overall strategy for scaling Cardano. This implies more research is needed in two directions:
+	- From a product and user perspective, to evaluate the actual value that Peras delivers and the possible countermeasures to its drawbacks (e.g. the risk of cool-down could be covered by an _options_ or _insurance premium_ mechanism),
+    - From a technical perspective, to explore the parameters space and find the best combinations.
 - There are a number of components about which we have some ideas but no concrete figures or design:
     - Certificate structure and capabilities,
     - Vote and certificate CPU requirements and their possible impact on the node,
     - Optimal committee size,
-- The protocol leaves room for a wide choice of options to design an implementation that should be considered and filtered,
+- The protocol leaves room for a wide choice of options to design an implementation that should be considered and refined,
 - There is a need for more theoretical research on ways to make cool-down less impactful.
 
 # Contents
@@ -110,48 +110,48 @@ There remain a number of open questions that could be investigated in future wor
 
 ## Peras workshop
 
-A follow-up from the  [Peras workshop in Edinburgh](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit) which happened in October 2023 was to define a set of questions and experiments to be conducted in order to better understand the properties of the Peras protocol, along with an assessment of the protocol's _Software readiness level_ (SRL). The following sections recall the questions that were raised during the workshop, providing or pointing to some answers, and the SRL assessment along with a comparison with current estimated SRL.
+A follow-up action from the [Peras workshop in Edinburgh](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit), which happened in September 2023, was to define a set of questions and experiments to be conducted in order to better understand the properties of the Peras protocol, along with an assessment of the protocol's _Software readiness level_. The following sections recall the questions that were raised during the workshop, points to the answers given, and details the SRL assessment along with a comparison with current estimated SRL.
 
 ### Questions about Peras
 
 For each of these questions we check whether or not it has been answered:
 
 * [x] How do you detect double voting? Is double voting possible? How can the voting state be bounded?
-  * each vote is signed individually and the signature is checked by the receiving node
+  * _Each vote is signed individually and the signature is checked by the receiving node_
 * [x] How are the voting committee members selected? What are the properties of the voting committee?
-  * Committee members are selected by a VRF-based sortition, its properties are exposed in the paper and [overview](#overview)
+  * _Committee members are selected by a VRF-based sortition, its properties are exposed in the paper and [overview](#overview)_
 * [x] Where should votes be included: block body, block header, or some other aggregate
-  * models and simulation show that votes need to be aggregated independently and certificates be part of "some" block bodies
+  * _Models and simulation show that votes need to be aggregated independently and certificates be part of "some" block bodies_
 * [ ] Under what circumstance can a cool down be entered?
-  * the question of how much adversarial power is needed to trigger a cool-down period is still open
+  * _The question of how much adversarial power is needed to trigger a cool-down period is still open_
 * [x] How significant is the risk of suppressing votes to trigger a cool-down period?
-  * it is significant, as being able to trigger cool-downs often ruins the benefits of Peras
+  * _It is significant, as being able to trigger cool-downs often ruins the benefits of Peras_
 * [x] Should vote contributions be incentivized?
-  * probably not
+  * _Probably not_
 * [x] How much weight is added per round of voting?
-  * this is a parameter $B$ in the protocol
+  * _This is a parameter $B$ in the protocol whose exact value depends on business requirements_
 * [ ] How to expose the weight/settlement of a block to a consumer of chain data, such as a wallet?
-  * this has not been addressed yet, as most of the user-facing and business domain aspects of the protocol
+  * _This has not been addressed yet, as most of the user-facing and business domain aspects of the protocol_
 * [x] Can included votes be aggregated into an artifact to prove the existence of votes & the weight they provide?
-  * yes, this is the role of certificates
+  * _This is the role of certificates_
 
 ### Potential jugular experiments for Peras
 
 We refer the reader to the relevant section for each of those potential experiments:
 
 * [x] Network traffic simulation of vote messages
-  * this has been simulated but needs to be refined
+  * _This has been [simulated](#simulations) but needs to be refined_
 * [x] Protocol formalization & performance simulations of Peras
-  * this has been done in Agda with (parts of) performance modeling using ΔQ and simulation
+  * _This has been done in [Agda](#agda-specification) with (parts of) performance modeling using [ΔQ](#network-performance-analysis) and simulation_
 * [x] Optimal look-back parameter (measured in number of slots) within a round
-  * [ ] Historic analytical study (*n*-sigma for reliability based on the number of 9s desired)
-  * [x] Some parameters value are provided in the research paper and [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)
+  * [ ] Historic analytical study ($n$-$\sigma$ for reliability based on the number of 9s desired)
+  * [x] _Some parameters value are provided in the research paper and [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)_
 * [ ] Chain growth simulations for the accumulation of vote data
-  * This has not been done as the protocol has evolved since the workshop
+  * _This has not been done as the protocol has evolved since the workshop_
 * [x] Added chain catch-up time
-  * This is cool-down period length and is estimated in the [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)
+  * _This is cool-down period length and is estimated in the [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit#slide=id.g2ca1209fec0_0_450)_
 * [ ] Cost of defusing votes and blocks that contain votes
-  * not estimated
+  * _Not estimated_
 * [ ] Need to refine: Voting committee selection via sampling needs to define how to analyze the needed properties of the committee.
 
 ### SRL
@@ -196,15 +196,14 @@ We assess the current SRL to be between 3 and 4, given the following [SRL 3](htt
 
 ## Overview
 
-A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We
-summarize the main points here but refer the interested reader to the slides and the research article for details.
+A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides and the research article for details.
 
 * Peras adds a Voting layer on top of Praos, Cardano's Nakamoto-style consensus protocol.
-* In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least *L* slots old, where *L* is a parameter of the construction (e.g., *L* = 120).
+* In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least $L$ slots old, where $L$ is a parameter of the construction (e.g., $L$ = 120 slots).
 * Votes are broadcast to other nodes through network diffusion.
-* If a block gains more than a certain threshold of votes (from the same round), a so-called quorum, it gets extra weight *B* (where each block has a base weight of 1). Since nodes always select the heaviest chain (as opposed to the longest chain, as in Praos), these blocks with extra weight accelerate settlement of all blocks before them.
+* If a block gains more than a certain threshold of votes (from the same round), a so-called _quorum_ ($\tau$), it gets extra weight $B$ (where each block has a base weight of 1). Since nodes always select the heaviest chain (as opposed to the longest chain in Praos), these blocks with extra weight accelerate settlement of all blocks before them.
 * A set of votes (from the same round) can be turned into a short certificate. Certificates are needed during the cool-down period (see below), but they can also be broadcast to nodes that are catching up.
-* If a quorum is not reached in a round, the protocol enters a cool-down period, in order to heal from the “damage” that could result from adversarial strategies centered around withholding adversarial votes. During the cool-down, voting is suspended, and block producers include information required to coordinate the restart (the latest known certificate) in their blocks. The duration of the cool-down period is roughly equal to *k* + *B*, where *k* is the settlement parameter of Praos.
+* If a quorum is not reached in a round, the protocol enters a cool-down period, in order to heal from the “damage” that could result from adversarial strategies centered around withholding adversarial votes. During the cool-down, voting is suspended, and block producers include information required to coordinate the restart (the latest known certificate) in their blocks. The duration of the cool-down period is roughly equal to $k$ + $B$, where $k$ is the settlement parameter of Praos (e.g. 2160 blocks as of the time of this writing).
 
 ### Certificates
 
@@ -216,31 +215,31 @@ The exact construction of Peras certificates is still unknown but we already kno
 * Certificates need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum.
   * Certificate forging should be reasonably fast but is not critical for block diffusion: A round spans multiple possible blocks so there is more time to produce and broadcast it.
 * A certificate must be reasonably fast to verify as it is on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight,
-* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralized certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes,
+* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralized certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes.
 
 ## Pseudo-code
 
 We initially started working from researchers' pseudo-code which was detailed in various documents:
 
-* The initial [protocol definition](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) as presented in the Edinburgh workshop, in October 2023,
+* The initial [protocol definition](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) as presented in the Edinburgh workshop, in September 2023,
 * The [post-workshop definition](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4)  which considered votes and blocks diffusion and chain selection in a more integrated manner,
-* The newest version from [March 2024](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) which addressed the shortcomings of the need to consider individual votes in the chain selection process from earlier versions.
+* The newest version from [March 2024](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) which addressed the shortcomings of tallying individual votes in the chain selection process from earlier versions.
 
-In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructured and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on the formal specification, the prototyping, and the research work. This collective effort led to writing the exact same pseudo-code as a _literate Agda_ document the internal consistency of which can be checked by the Agda compiler while providing a similar level of flexibility and readability than the original document.
+In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructured and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on the formal specification, the prototyping work, and the research work. This collective effort led to writing the exact same pseudo-code as a _literate Agda_ document, the internal consistency of which can be checked by the Agda compiler, while providing a similar level of flexibility and readability than the original document.
 
 This document is available in the [Peras repository](../../src/Peras/ProtocolL.lagda.md) and is a first step towards better integration between research and engineering work streams.
 
 Next steps include:
 
-* Refine the pseudo-code's syntax to make it readable and maintainable by researchers and engineers alike,
-* Understand how this code relates to the actual Agda code,
-* Equip the pseudo-code with some better semantics.
+* Refining the pseudo-code's syntax to make it readable and maintainable by researchers and engineers alike,
+* Understanding how this code relates with the actual Agda code,
+* Adding some semantics.
 
 It is envisioned that at some point this kind of code could become commonplace in the security researchers community in order to provide formally verifiable and machine-checkable specifications, based on the theoretical framework used by researchers (e.g. Universal Composition).
 
 ## Settlement time
 
-[Practical Settlement Bounds for Longest-Chain Consensus](https://eprint.iacr.org/2022/1571.pdf) by  Peter Gazi, Ling Ren, and Alexander Russell provides a formal treatment of the settlement guarantees for proof-of-stake (PoS) blockchains.
+[Practical Settlement Bounds for Longest-Chain Consensus](https://eprint.iacr.org/2022/1571.pdf) _(Gazi, Ren, and Russell, 2023)_ provides a formal treatment of the settlement guarantees for proof-of-stake (PoS) blockchains.
 
 _Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement time is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $10^{-60}$.
 
