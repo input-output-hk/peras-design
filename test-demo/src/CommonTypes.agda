@@ -2,8 +2,8 @@
 module CommonTypes where
 
 open import Haskell.Prelude
-open import Data.Nat.Base
-open import Relation.Binary.PropositionalEquality
+open import Data.Nat.Base using (ℕ)
+open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import ProofPrelude
 

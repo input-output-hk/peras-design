@@ -7,7 +7,7 @@ module TestModel where
 open import Data.Nat.Base using (ℕ; _%_)
 open import Data.Sum
 open import Haskell.Prelude
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import CommonTypes
 open import ProofPrelude

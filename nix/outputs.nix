@@ -3,14 +3,17 @@
 let
   project = repoRoot.nix.project;
   peras-agda = repoRoot.nix.peras-agda;
+  test-demo-agda = repoRoot.nix.test-demo;
   rust = repoRoot.nix.rust;
-in [
+in
+[
   (project.flake)
   {
     inherit repoRoot;
     packages.peras = peras-agda;
     packages.peras_topology = rust.peras_topology;
     packages.peras_rust = rust.peras_rust;
+    packages.test-demo-agda = test-demo-agda;
     devShells.profiled = project.variants.profiled.devShell;
   }
 ]
