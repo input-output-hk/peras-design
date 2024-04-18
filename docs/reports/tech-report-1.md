@@ -19,6 +19,11 @@ This section lists a number of findings, conclusions, ideas, and known risks tha
 
 We built evidence that the Peras protocol in its most recent incarnation can be implemented on top of Praos, in the existing cardano-node codebase, without compromising the core operations of the node (block creation, validation, and diffusion)
 
+  * [Network Modelling](#network-performance-analysis) has shown initial versions would add an unbearable overhead to block diffusion
+  * [Simulation](#simulations) and prototyping have allowed us to sketch implementation and better understand the interplay between Peras and Praos
+  * Decoupling votes and certificates handling from blocks handling could pave the way to a smooth incremental [building and deployment](#integration-into-cardano-node) of Peras
+  * While still not formally evaluated (see _Remaining questions_ section) it seems the impact of vote and certificates diffusion on node operation will not be significant and the network will provide strong guarantees those messages can be delivered in a timely fashion
+
 - [Network Modeling](#network-performance-analysis) has shown initial versions would add an unbearable overhead to block diffusion.
 - [Simulation](#simulations) and prototyping have allowed us to sketch implementation and better understand the interplay between Peras and Praos.
 - Decoupling the vote and certificate handling from block handling could pave the way to a smooth incremental [building and deployment](#integration-into-cardano-node) of Peras.
@@ -465,11 +470,13 @@ Here is a graphical representation of the _outcome diagram_ for the ΔQ model of
 ![Outcome diagram for Praos](../diagrams/praos-delta-q.svg)
 
 This model is based on the following assumptions:
+
 * Full block diffusion is separated in a number of steps: request and reply of the block header, then request and reply of the block body,
 * Propagating a block across the network might require several "hops" as there is not a direct connection between every pair of nodes, with the distribution of paths length depending on the network topology,
 * We have not considered the probability of loss in the current model.
 
 The block and body sizes are assumed to be:
+
 * Block header size is smaller than typical MTU of IP network (e.g. 1500 bytes) and therefore requires a single roundtrip of TCP messages for propagation,
 * Block body size is about 64kB which implies propagation requires several TCP packets sending and therefore takes more time.
 
@@ -508,6 +515,7 @@ These numbers are reflected (somewhat inaccurately) in the above graph, represen
 #### Modeling process
 
 We have experimented with three different libraries for encoding this baseline model:
+
 1. Original [ΔQ library](https://github.com/DeltaQ-SD/pnsol-deltaq-clone) built by Neil Davies, which uses randomized sampling to graph the _Cumulative Distribution Function_ resulting from the ΔQ model,
 2. A library for [algebraic representation](https://github.com/DeltaQ-SD/Artjoms) of ΔQ models built to support the [Algebraic Reasoning with Timeliness](https://arxiv.org/pdf/2308.10654v1.pdf) paper, which uses discretization of probability density functions to approximate CFDs resulting from the various ΔQ language combinators,
 3. Another recent library built by Peter Thompson to represent ΔQ probability distributions using [piecewise polynomials](https://github.com/DeltaQ-SD/dqsd-piecewise-poly), which should provide high-fidelity CDFs.
