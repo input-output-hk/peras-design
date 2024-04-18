@@ -215,7 +215,7 @@ The exact construction of Peras certificates is still unknown but we already kno
 * Certificates need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum.
   * Certificate forging should be reasonably fast but is not critical for block diffusion: A round spans multiple possible blocks so there is more time to produce and broadcast it.
 * A certificate must be reasonably fast to verify as it is on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight,
-* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a decentralized certificate construction through a mechanism called a _Telescope_ which at a high-level consists in a (pseudo-)random selection of a sequence of votes.
+* The [ALBA](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) paper provides a construction through a mechanism called a _Telescope_ which seems like a good candidate for Peras certificates.
 
 ## Pseudo-code
 
@@ -241,7 +241,7 @@ It is envisioned that at some point this kind of code could become commonplace i
 
 [Practical Settlement Bounds for Longest-Chain Consensus](https://eprint.iacr.org/2022/1571.pdf) _(Gazi, Ren, and Russell, 2023)_ provides a formal treatment of the settlement guarantees for proof-of-stake (PoS) blockchains.
 
-_Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement time is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $10^{-60}$.
+_Settlement time_ can be defined as the time needed for a given transaction to be considered permanent by some honest party. On Cardano, the upper bound for settlement _time_ is $3k / f$ which sets the maximum number of slots for the network to produce $k$ blocks, where $k$ is the _security parameter_ and $f$ is the _active slot coefficient_. On the current mainchain, this time is 36 hours. Note that even if in practice the settlement time is fixed, in theory this bound is always probabilistic. The security parameter $k$ is chosen in such a way that the probability of a transaction being reverted after $k$ blocks is lower than $10^{-60}$.
 
 In practice, the probability for a transaction to be rolled back after 20 blocks is 0.001%, and is exponentially decreasing with the block depth. The following picture from the aforementioned paper shows block settlement failure probability given some block depth for Cardano PoS chain.
 
@@ -270,11 +270,11 @@ However, triggering cool-down is cheap and does not require a large adversarial 
 
 ## Agda Specification
 
-The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification, there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows one to generate quick-check tests for checking an arbitrary implementation against the reference specification.
+The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification, there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate QuickCheck tests for checking an arbitrary implementation against the reference specification.
 
 ### Domain model
 
-The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extractable domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`. For example the Agda record type for `Block`
+The domain model is defined as Agda data types and implemented with Haskell code extraction (see [agda2hs](#agda2hs) section) in mind. The extractable domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`. For example the Agda record type for `Block`
 
 ```agda
 record Block where
@@ -337,14 +337,15 @@ In order to describe the execution of the protocol, we are proposing a [small-st
 
 #### Local state
 
-The local state is the state of a single party, respectively a single node. It consists of a declarative blocktree, i.e. an abstract data structure representing possible chains specified by a set of properties. In addition to blocks, the blocktree for Ouroboros, Peras also includes votes and certificates and for this reason there are additional properties with respect to those entities.
+The local state is the state of a single party, respectively a single node. It consists of a declarative _blocktree_, i.e. an abstract data structure representing possible chains specified by a set of properties. In addition to blocks, the blocktree for Ouroboros, Peras also includes votes and certificates and for this reason there are additional properties with respect to those entities.
 
-The fields of the blocktree allow to
-* extend the tree with blocks and votes
-* get all blocks, votes, and certificates
-* get the best chain
+The fields of the blocktree allow to:
 
-where the condition which chain is considered the best chain is given by the following properties, which say that the *best* chain is *valid* (`ValidChain` is a predicate asserting that a chain is valid with respect to Ouroboros Praos) and the *heaviest* chain out of all valid chains is the best:
+* Extend the tree with blocks and votes,
+* Get all blocks, votes and certificates,
+* Get the best chain.
+
+where the condition which chain is considered the best is given by the following properties:
 
 ```agda
 valid : ∀ (t : tT) (sl : Slot)
@@ -358,6 +359,8 @@ optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
   → weight c (certs t c) ≤ weight b (certs t b)
 ```
 
+In words, this says that the *best* chain is *valid* (`ValidChain` is a predicate asserting that a chain is valid with respect to Ouroboros Praos) and the *heaviest* chain out of all valid chains is the best.
+
 #### Global state
 
 In order to describe progress with respect to the Ouroboros Peras protocol, a global state is introduced. The global state consists of the following entities:
@@ -368,19 +371,19 @@ In order to describe progress with respect to the Ouroboros Peras protocol, a gl
 * *history:* All the messages that have been sent.
 * *adversarial state:* The adversarial state can be anything, with the type is passed to the specification as a parameter.
 
-The differences compared to the model proposed in the PoS-NSB paper are
+The differences with respect to the model proposed in the PoS-NSB paper are:
 
-* the execution order is not stored in the global state and therefore permutations of the messages as well as permutations of parties are not needed
-* there is no global `Progess`
+* the execution order is not stored in the global state and therefore permutations of the messages as well as permutations of parties are not needed,
+* there is no global `Progess`.
 
-Instead of keeping track of the execution order of the parties in the global state, the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party, we know as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that, before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
+Instead of keeping track of the execution order of the parties in the global state, the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party, we know as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
 
 #### Global relation
 
-The protocol defines messages to be distributed between parties of the system. The specification currently implements the following message types
+The protocol defines messages to be distributed between parties of the system. The specification currently implements the following message types:
 
-* *Block message:* When a party is the slot leader a new block can be created and a message notifying the other parties about the block creation is broadcast. Note, in case a cool-down phase according to the Ouroboros Peras protocol is detected, the block also includes a certificate that references a block of the party's preferred chain.
-* *Vote message:* When a party creates a vote according to the protocol, this is wrapped into a message and delivered to the other parties
+* *Block message:* When a party is the slot leader a new block can be created and a message notifying the other parties about the block creation is broadcast. Note that, in case a cool-down phase according to the Ouroboros Peras protocol is detected, the block also includes a certificate that references a block of the party's preferred chain,
+* *Vote message:* When a party creates a vote according to the protocol, this is wrapped into a message and delivered to the other parties.
 
 The global relation expresses the evolution of the global state:
 
@@ -410,9 +413,9 @@ The global relation expresses the evolution of the global state:
 
 The global relation consists of the following constructors:
 
-* *Deliver*: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed.
-* *Cast vote*: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively.
-* *Create block*: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cool-down phase, the party adds a certificate to the block as well.
+* *Deliver*: A party consuming a message from the global message buffer is a global state transition. The party might be *honest* or *adversarial*, in the latter case a message will be delayed rather than consumed,
+* *Cast vote*: A vote is created by a party and a corresponding message is put into the global message buffer for all parties respectively,
+* *Create block*: If a party is a slot leader, a new block can be created and put into the global message buffer for the other parties. In case that a chain according to the Peras protocol enters a cool-down phase, the party adds a certificate to the block as well,
 * *Next slot*: Allows to advance the global clock by one slot. Note that this is only possible, if all the messages for the current slot are consumed as expressed by the `Delivered` predicate.
 
 The reflexive transitive closure of the global relation describes what global states are reachable.
@@ -442,7 +445,7 @@ A first property is `knowledge-propagation`, a lemma that states that knowledge 
       → allBlocks blockTree t₁ ⊆ allBlocks blockTree t₂
 ```
 
-Knowledge propagation is a pre-requisite for the chain growth property that informally says that, in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
+Knowledge propagation is a pre-requisite for the chain growth property, it informally states that in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
 
 # Network Performance Analysis
 
@@ -626,8 +629,6 @@ Detailed analysis of votes and certificates diffusion is still ongoing and will 
 
 ## Impact on User Experience
 
-### Model
-
 We could want to model the outcomes of Peras in terms of _user experience_, e.g. how does Peras impact the user experience?
 From the point of view of the users, the thing that matters is the _settlement time_ of their transactions: How long does it take for a transaction submitted to be _settled_, e.g. to have enough (how much?) guarantee that the transaction is definitely part of the chain?
 
@@ -666,15 +667,15 @@ N1 -->> Alice: Tx in block
 
 This question is discussed in much more detail in the [report on timeliness](https://docs.google.com/document/d/1B42ep9mvP472-s6p_1qkVmf_b1-McLNPyXGjGHEVJ0w/edit) and should be considered outside of the scope of Peras protocol itself.
 
-# Property-based testing with Dynamic QuickCheck
+# Property-based testing with State-Machine based QuickCheck
 
 The `quickcheck-dynamic` Haskell package enables property-based testing of state machines. It is the primary testing framework used for testing the Peras implementations in Haskell and Rust. Eventually, the dynamic model instances used in `quickcheck-dynamic` will be generated directly from the Agda specification of Peras using `agda2hs`.
 
-Testing that uses the standard (non-dynamic) `quickcheck` package is limited to the JSON serialization tests, such as golden tests and round-trip tests.
+Testing that uses the standard `QuickCheck` package is limited to the JSON serialization tests, such as golden tests and round-trip tests.
 
 ## Praos properties
 
-Praos `NodeModel` and `NetworkModel` types test the state transitions related to slot leadership and forging blocks. They can be used with the Haskell node and network implemented in `peras-iosim` or the Rust node and network implementation in `peras-rust`. This dual-language capability demonstrated the feasibility of providing dynamic QuickCheck models for language-agnostic testing. The properties tested are that the forging rate of a node matches the theoretical expectation to within statistical variations and that, sufficiently after genesis, the nodes in a network have a common chain-prefix.
+Praos `NodeModel` and `NetworkModel` test the state transitions related to slot leadership and forging blocks. They can be used with the Haskell node and network implemented in `peras-iosim`, or the Rust node and network implementation in `peras-rust`. This dual-language capability demonstrated the feasibility of providing dynamic QuickCheck models for language-agnostic testing. The properties tested are that the forging rate of a node matches the theoretical expectation to within statistical variations and that, sufficiently after genesis, the nodes in a network have a common chain-prefix.
 
 ## Peras properties
 
@@ -682,17 +683,10 @@ A `quickcheck-dynamic` model was created for closer and cleaner linkage between 
 
 The "idealized" votes, certificates, blocks, and chains of the QuickCheck model are separated from "realized" ones generated by `agda2hs` and used in the simulations. The idealized version ignores some details like signatures and proofs. It is possible to remove this separation between ideal and real if behaviors are fully deterministic (including the bytes of signatures and proofs). However, this prototype demonstrates the feasibility of having a slightly more abstract model of a node for use in `Test.QuickCheck.StateModel`.
 
-The `NodeModel` has sufficient detail to abstractly implement Peras. (Ideally, this would be generated directly by `agda2hs`.) This instance of `StateModel` uses the executable specification for state transitions and includes generators for actions, constrained by preconditions.
+The [`NodeModel`](https://github.com/input-output-hk/peras-design/blob/4bc364f52dd33665cbb13d03d7ca16efea98f4ee/peras-quickcheck/src/Peras/OptimalModel.hs#L1) has sufficient detail to faitfully represents Peras protocol. Ideally, this would be generated directly by `agda2hs`. This instance of `StateModel` uses the executable specification for state transitions and includes generators for actions, constrained by preconditions.
 
 ```haskell
-data NodeModel = NodeModel
-  { protocol :: Protocol
-  , self :: PartyId
-  , now :: Slot
-  , preferredChain :: ChainIdeal
-  , preferredCerts :: [CertIdeal]
-  , preferredVotes :: [VoteIdeal]
-  }
+data NodeModel = NodeModel { ... }
 ```
 
 ```haskell
@@ -713,48 +707,26 @@ The executable specification for the node model is embodied in a typeclass `Pera
 
 ```haskell
 class Monad m => PerasNode a m where
-  setOwner :: PartyId -> a -> m a
-  setProtocol :: Protocol -> a -> m a
   newSlot :: IsSlotLeader -> IsCommitteeMember -> a -> m ([Message], a)
   newChain :: Chain -> a -> m ([Message], a)
-  someCertificate :: Certificate -> a -> m ([Message], a)
-  someVote :: Vote -> a -> m ([Message], a)
-```
-
-```haskell
-newtype RunMonad n m a = RunMonad {runMonad :: StateT n m a}
-```
-
-```haskell
-instance (Monad m, PerasNode n m) => RunModel NodeModel (RunMonad n m) where
-  perform = ...
-  postcondition = ...
+  ...
 ```
 
 For demonstration purposes, an `instance PerasNode ExampleNode` implements a simple, intentionally buggy, node for exercising the dynamic logic tests. This could be a full Haskell or Rust implementation, an implementation generated via `agda2hs` from operational (executable) semantics in Agda, etc.
 
 ```haskell
-data ExampleNode = ExampleNode
-  { exOwner :: PartyId
-  , exProtocol :: Protocol
-  , exSlot :: Slot
-  , exChain :: Chain
-  , exCerts :: [Certificate]
-  , exVotes :: [Vote]
-  }
+data ExampleNode = ExampleNode { ... }
 
 instance PerasNode ExampleNode Gen where
   ...
 ```
 
-The example property below simply runs a simulation using `ExampleNode` and checks the trace's conformance to the executable specification.
+The example property below simply runs a simulation using `ExampleNode` and checks the trace conforms to the executable specification.
 
 ```haskell
--- | Test whether the simulation conforms to the model.
 propSimulate :: (Actions NodeModel -> Property) -> Property
 propSimulate = forAllDL simulate
 
--- | Initialize and simulate the node.
 simulate :: DL NodeModel ()
 simulate = action initialize >> anyActions_
 
@@ -796,7 +768,7 @@ Finished in 0.0027 seconds
 
 ## Relating test model to formal model
 
-As specified in the [Statement of Work](https://drive.google.com/file/d/1vDfwiR24t3K6INkabwR43A4Ryc-j7SzG/view), the team has been working with _Quviq_ to provide assistance and expertise on tighter integration between the Agda specification and the quickcheck-dynamic model. This work resulted in the development of a prototype that demonstrates the feasibility of generating the `quickcheck-dynamic` model from the Agda specification, as described in Milestone 1 of the SOW.
+The team has been working with [_Quviq_](https://drive.google.com/file/d/1vDfwiR24t3K6INkabwR43A4Ryc-j7SzG/view) to provide assistance and expertise on tighter integration between the Agda specification and the `quickcheck-dynamic` model. This work resulted in the development of a prototype that demonstrates the feasibility of generating the `quickcheck-dynamic` model from the Agda specification, as described in Milestone 1 of the _Statement of Work_.
 
 The following picture summarizes how the various parts of the testing framework for Peras are related:
 
@@ -804,9 +776,9 @@ The following picture summarizes how the various parts of the testing framework 
 
 The key points of this line of work are:
 
-1. While both written in Agda, we differentiate the _Formal model_ from the _Test model_ as they serve different purposes. More importantly, we acknowledge the fact that there may be more than one _Test model_ for a given _Formal model_, depending on the level of abstraction and the properties we want to test,
-2. The _Formal model_ is the actual specification of the protocol and is meant to write _proofs_ related to the protocol (e.g the usual blockchain properties like chain growth, chain quality, etc. and the specific properties of Peras). Ideally, this model should be part of the research work and written in close collaboration with that,
-3. The _Test model_ describes some relevant behavior of the system for the purpose of asserting a liveness or safety property, in the form of a state machine relating: a state data type, some _signals_ sent to the SUT for testing purpose, and a _step_ function describing possible transitions of the system,
+1. While both written in Agda, we differentiate the _Formal model_ from the _Test model_ as they serve different purposes. More importantly, we acknowledge the fact there be more than one _Test model_ for a given _Formal model_, depending on the level of abstraction and the properties we want to test,
+2. The _Formal model_ is the actual [specification](#agda-specification) of the protocol and is meant to write _proofs_ related to the protocol (e.g the usual blockchain properties like chain growth, chain quality, etc. and the specific properties of Peras). Ideally, this model should be part of the research work and written in close collaboration with them,
+3. The _Test model_ describes some relevant behavior of the system for the purpose of asserting a liveness or safety property, in the form of a state machine relating: A state data type, some _signals_ sent to the SUT for testing purpose, and a _step_ function describing possible transitions of the system,
 4. The _Test model_'s soundness w.r.t the _Formal model_ is proven through a _soundness_ theorem that guarantees each sequence of transition in the _Test model_ can be mapped to a valid sequence of transitions in the _Formal model_,
 5. Using `agda2hs` Haskell code is generated from the _Test model_ and integrated in a small hand-written wrapper complying with quickcheck-dynamic API.
 
@@ -823,13 +795,16 @@ In order to test the language-neutrality of the testing framework for Peras, we 
 
 The initial phase of the first Peras PI's work on simulation revolves around discovery. This involves several key tasks, including prototyping and evaluating different simulation architectures, investigating simulation-based analysis workflows, assessing existing network simulation tools, establishing interface and serialization formats, eliciting requirements for both simulation and analysis purposes, and gaining a deeper understanding of Peras behaviors. The first prototype simulation, developed in Haskell, is closely intertwined with the Agda specification. This integration extends to the generation of types directly from Agda. Subsequent work will migrate a significant portion of the Peras implementation from Haskell to functions within the Agda specification, which will necessitate reconceptualizing and refining various components of the simulation.
 
-The Peras simulation employs language-agnostic components that collaborate seamlessly (see figure below). This includes node implementations in Haskell, with Rust implementations forthcoming. Additionally, the native-Haskell simulation utilizes the IOSim packages in a manner consistent with QuickCheck tests in `peras-quickcheck`, which also supports a Foreign Function Interface (FFI) connection to Netsim and `peras-rust`. The simulation setup also encompasses statistically designed experiments, the ability to inject rare events or adversarial behaviors, tools for generating networks and scenarios, as well as analysis and visualization tools to interpret the simulation results. A significant aspect of the workflow is geared towards analysis. This involves an observability approach to gathering metrics, utilization of language-independent file formats, visualization of network structures, and statistical analyses primarily conducted using R.
+The Peras simulation employs language-agnostic components that collaborate seamlessly (see figure below). This includes node implementations in Haskell, with Rust implementations forthcoming. Additionally, the native-Haskell simulation utilizes the [IOSim](https://hackage.haskell.org/package/io-classes) packages in a manner consistent with QuickCheck tests in `peras-quickcheck`, which also supports a _Foreign Function Interface_ (FFI) connection to [Netsim](https://github.com/input-output-hk/ce-netsim) and `peras-rust`. The simulation setup also encompasses statistically designed experiments, the ability to inject rare events or adversarial behaviors, tools for generating networks and scenarios, as well as analysis and visualization tools to interpret the simulation results. A significant aspect of the workflow is geared towards analysis. This involves an observability approach to gathering metrics, utilization of language-independent file formats, visualization of network structures, and statistical analyses primarily conducted using [R](https://www.r-project.org/).
 
 ![Workflow for simulation experiments](../diagrams/sim-expts/sim-workflow.png)
 
 The IOSim-based Haskell simulator for Peras currently provides a provisional implementation of the Peras protocol's intricacies, including committee selection, voting rounds, and cool-down periods. Presently, the fidelity of the simulation to the Peras protocol is moderate, while the fidelity at the network layer remains low. Substantial refactoring and refinement efforts are deemed necessary moving forward to enhance the simulation's accuracy and effectiveness.
 
-The simulation implements the February version of the Peras protocol, illustrated in the UML (unified modeling language) sequence diagrams below for node behavior and the activity diagram for node state transitions. Nodes receive messages for entering a new slot or new voting round; they also receive new preferred chains or votes from their upstream peers via messages. When they vote, forge blocks, or adopt a new preferred chain, they notify their downstream peers via messages. Note that the detailed behavior of the February protocol differs somewhat from later versions such as the March protocol.
+The simulation implements the February version of the Peras protocol, illustrated in the [UML](https://en.wikipedia.org/wiki/Unified_Modeling_Language) sequence diagrams below for node behavior, and the activity diagram for node state transitions. Nodes receive messages for entering a new slot or new voting round; they also receive new preferred chains or votes from their upstream peers via messages. When they vote, forge blocks, or adopt a new preferred chain, they notify their downstream peers via messages.
+
+> [!WARNING]
+> The detailed behavior of the February protocol differs somewhat from later versions such as the March protocol.
 
 ![UML sequence diagram for the February version of the Peras protocol](../diagrams/sim-expts/peras-sequence.png)
 
@@ -841,11 +816,13 @@ The architecture, design, and implementation of the Haskell-based `peras-iosim` 
 
 #### IOSim
 
-The simulator now only lightly uses IOSim's `io-sim` and `io-classes`, although it originally used them heavily. First of all, IOSim's implementation is currently single-threaded with a centralized scheduler that handles the simulated threads. Thus, IOSim does not provide the speed advantages of a parallel simulator. However, it conveniently provides many of the commonly used MTL (monad transformer library) instances typically used with `IO` or `MonadIO` but in a manner compatible with a simulation environment. For example, `threadDelay` in `IOSim` simulates the passage of time whereas in `IO` it blocks while time actually passes. Furthermore, the STM usage in earlier Peras prototypes was first refactored to higher-level constructs (such as STM in the network simulation layer instead of in the nodes themselves) but then finally eliminated altogether. The elimination of STM reduces the boilerplate and thread orchestration in QuickCheck tests and provides a cleaner testing interface to the node, so that interface is far less language dependent. Overall, the added complexity of STM simply was not justified by requirements for the node, since the reference node purposefully should not be highly optimized. Additionally, IOSim's event logging is primarily used to handle logging via the `contra-tracer` package. IOSim's `MonadTime` and `MonadTimer` classes are used for managing the simulation of the passage of time.
+The simulator now only lightly uses IOSim's `io-sim` and `io-classes`, although it originally used them heavily. First of all, IOSim's implementation is currently single-threaded with a centralized scheduler that handles the simulated threads. Thus, IOSim does not provide the speed advantages of a parallel simulator. However, it conveniently provides many of the commonly used [MTL](https://hackage.haskell.org/package/mtl) instances typically used with `IO` or `MonadIO` but in a manner compatible with a simulation environment. For example, `threadDelay` in `IOSim` simulates the passage of time whereas in `IO` it blocks while time passes.
+
+Furthermore, the STM usage in earlier Peras prototypes was first refactored to higher-level constructs (such as STM in the network simulation layer instead of in the nodes themselves) but then finally eliminated altogether. The elimination of STM reduces the boilerplate and thread orchestration in QuickCheck tests and provides a cleaner testing interface to the node, so that interface is far less language dependent. Overall, the added complexity of STM simply was not justified by requirements for the node, since the reference node purposefully should not be highly optimized. Additionally, IOSim's event logging is primarily used to handle logging via the [`contra-tracer`](https://hackage.haskell.org/package/contra-tracer) package. IOSim's `MonadTime` and `MonadTimer` classes are used for managing the simulation of the passage of time.
 
 #### Node interface
 
-The node interface has evolved towards a request-response pattern, with several auxiliary getters and setters. This will further evolve as alignment with the Agda-generated code and QuickCheck Dynamic become tighter. At this point, however, the node interface and implementation is fully sufficient for a completely faithful simulation of the protocol, along with the detailed observability required for quantifying and debugging its performance.
+The node interface has evolved towards a request-response pattern, with several auxiliary getters and setters. This will further evolve as alignment with the Agda-generated code and QuickCheck Dynamic become tighter. At this point, however, the node interface and implementation is sufficient for a fully faithful simulation of the protocol, along with the detailed observability required for quantifying and debugging its performance.
 
 ```haskell
 class PerasNode a where
@@ -874,12 +851,7 @@ data NodeResult = NodeResult
 data NodeStats = NodeStats
   { preferredTip :: [(Slot, BlockHash)]
   , rollbacks :: [Rollback]
-  , slotLeader :: [Slot]
-  , committeeMember :: [Slot]
-  , votingAllowed :: [(RoundNumber, BlockHash)]
-  , cpuTime :: CpuTime
-  , rxBytes :: ByteSize
-  , txBytes :: ByteSize
+  , ...
   }
 ```
 
@@ -966,46 +938,9 @@ data StepResult = StepResult
   }
 
 data Event
-  = Send
-      { uuid :: UniqueId
-      , timestamp :: UTCTime
-      , from :: NodeId
-      , to :: NodeId
-      , payload :: Message
-      , txBytes :: ByteSize
-      }
-  | Drop
-      { uuid :: UniqueId
-      , timestamp :: UTCTime
-      , from :: NodeId
-      , to :: NodeId
-      , payload :: Message
-      , txBytes :: ByteSize
-      }
-  | Receive
-      { uuid :: UniqueId
-      , timestamp :: UTCTime
-      , from :: NodeId
-      , to :: NodeId
-      , payload :: Message
-      , rxBytes :: ByteSize
-      }
-  | SlotLeader
-      { self :: NodeId
-      , slot :: Slot
-      }
-  | CommitteeMember
-      { self :: NodeId
-      , slot :: Slot
-      }
-  | Rolledback
-      { self :: NodeId
-      , rollback :: Rollback
-      }
-  | Compute
-      { self :: NodeId
-      , cpuTime :: CpuTime
-      }
+  = Send { ... }
+  | Drop { ... }
+  | ...
   | Trace Value
 ```
 
@@ -1046,16 +981,16 @@ Five designs for node sync protocol were considered.
 
 These highlight some key design issues:
 
-- `FetchVotes` and `FetchBlocks` trigger multiple responses, as `FetchChain` may also do.
-- Three types of information are being queried (headers, votes, blocks) in only a semi-predictable sequence.
-- The DoS attack surface somewhat depends upon when the node yields agency to its peers.
+- `FetchVotes` and `FetchBlocks` trigger multiple responses, as `FetchChain` may also do,
+- Three types of information are being queried (headers, votes, blocks) in only a semi-predictable sequence,
+- The DoS attack surface somewhat depends upon when the node yields agency to its peers,
 - Pull-based protocols involve more communication than push-based ones.
 
-The current implementation uses a simple request/replies protocol that avoids complexity, but is not explicitly defined as a state machine. This is actually quite similar to the fifth design, but with no `Next` request. It abandons the notion of when the client or server has agency. If the client sends a new request before the stream of responses to the previous request is complete, then responses will be multiplexed.
+The current implementation uses a simple request/reply protocol that avoids complexity, but is not explicitly defined as a state machine. This is actually quite similar to the fifth design, but with no `Next` request. It abandons the notion of when the client or server has agency. If the client sends a new request before the stream of responses to the previous request is complete, then responses will be multiplexed.
 
 ### Experiments
 
-The simulation experiments below use slightly different versions of the ever-evolving Haskell package `peras-iosim`, which relies on the types generated by `agda2hs`, but with the now slightly outdated February version of the Peras protocol. Visualization was performed with the GraphViz tool, and statistical and data analysis was done with R.
+The simulation experiments below use slightly different versions of the ever-evolving Haskell package `peras-iosim`, which relies on the types generated by `agda2hs`, but with the now slightly outdated February version of the Peras protocol. Visualization was performed with the [GraphViz](https://graphviz.org) tool, and statistical and data analysis was done with R.
 
 #### Block production
 
@@ -1317,7 +1252,11 @@ Now that it has been demonstrated that it is feasible to export Agda types, func
 
 # Integration into Cardano Node
 
-Peras requires changes to message traffic between nodes and the structure of blocks. It increases the computational resources used by nodes.
+This section studies the required work and potential impacts of implementing Peras as a core component of the Cardano node. The main impacts identified are that:
+
+* Peras requires significant changes to message traffic between nodes, with new types of messages and network protocols,
+* It _might_ require changes to the structure of blocks,
+* It increases the computational resources used by nodes through the need to produce and validate votes.
 
 ## Networking
 
@@ -1342,7 +1281,7 @@ Peras introduces two new constructs: votes and certificates. Members of the Pera
 
 ### Certificates
 
-Certificates (or equivalently quorum of votes in a round) have an impact on the chain selection process as they change the weight.
+Certificates (or equivalently quorum of votes in a round) have an impact on the chain selection process as they change the weight:
 
 * Sending a certificate is equivalent to sending a quorum of votes.
     * Once a node sees a quorum, it can create and diffuse a certificate so it no longer needs to send any more votes for the round.
@@ -1380,7 +1319,7 @@ The somewhat nice decoupling between the voting layer and the Nakamoto consensus
 
 # Conclusion
 
-The analyses described in this report provide evidence that the Peras protocol is a viable addition to the Cardano blockchain in that it would significantly speed settlement (or, more precisely, rapidly decrease settlement-failure probabilities) without burdening the nodes with substantial additional computational or bandwidth requirements. Feedback regarding early versions of the Peras protocol, which was untenable for efficient implementation, resulted in minor adjustments to the protocol which make it practical for deployment. The analyses were achieved via a combined program of formalization in Agda, network modeling using the ΔQ methodology, message-passing simulations in Haskell and Rust, and dynamic QuickCheck testing. An important byproduct of this work was the formulation and demonstration of a potentially reusable methodology that delivers a formal specification that is closely tied to a chain of evidence involving modeling, simulation, and conformance testing.
+The analyses described in this report provide evidence that the Peras protocol is a viable addition to the Cardano blockchain in that it would significantly speed settlement (or, more precisely, rapidly decrease settlement-failure probabilities) without burdening the nodes with substantial additional computational or bandwidth requirements. Feedback regarding early versions of the Peras protocol, which was untenable for efficient implementation, resulted in minor adjustments to the protocol which make it practical for deployment. The analyses were achieved via a combined program of formalization in Agda, network modeling using the ΔQ methodology, message-passing simulations in Haskell and Rust, and dynamic QuickCheck testing. An important byproduct of this work was the formulation and demonstration of a potentially reusable methodology that delivers a formal specification that forges a chain of evidence tying together modeling, simulation, and conformance testing.
 
 The foregoing analyses have quantified and reduced several risks related to adoption of Peras. In particular, the number and size of vote and certificate messages passing between nodes would not significantly impact a node's performance or tax its bandwidth. Similarly, the size of the block headers would not be impacted by Peras, though some block bodies (one per voting round) would be several hundred bytes longer to accommodate a certificate that attests to a voting quorum having been achieved. The chain weight can be verified externally by examining the history of certificates attached to blocks, but following the current best chain would require a knowledge of the votes or certificates that had not yet been memorialized by inclusion of a certificate in a block: nodes would have to persistently cache such information, which would only require negligible memory and disk space.  Vote and certificate processing have some temporal flexibility, so their resource usage can be managed via backpressure and thread pools.
 
@@ -1392,7 +1331,7 @@ The next steps for Peras center upon consolidating the findings of this technica
 
 Work on the Peras protocol highlighted three areas where co-evolving improved tooling would facilitate the full specification of the protocol and provide evidence for the business case for Peras's adoption. Such improvements would lay the groundwork for rapid assessment of other proposed and future protocols.
 
-First, numerically quantifying the tradeoffs in settlement time vs resistance to adversaries as a function of the nine new parameters required for configuring Peras requires moderately detailed network simulation. Although work on Peras could continue down the path of elaborating the "homegrown" network simulations described in this document, the alternative approach would be to invest in a more general simulator of network mini-protocols. Such a simulation would operate at a higher level than the existing `netsim`, which currently emphasizes the routing of messages, but could be built upon it. In general, time management and representation of mini-protocols would be required in such a simulator. This recommendation reinforces the conclusions of the recent *Network Simulation Tools Comparison* document, which states "We are now ready to extract these utility tools and combine them into a general-purpose framework so that the team and partners can utilize them and produce consistent output."
+First, numerically quantifying the tradeoffs in settlement time vs. resistance to adversaries as a function of the nine new parameters required for configuring Peras requires moderately detailed network simulation. Although work on Peras could continue down the path of elaborating the "homegrown" network simulations described in this document, the alternative approach would be to invest in a more general simulator of network mini-protocols. Such a simulation would operate at a higher level than the existing `netsim`, which currently emphasizes the routing of messages, but could be built upon it. In general, time management and representation of mini-protocols would be required in such a simulator. This recommendation reinforces the conclusions of the recent *Network Simulation Tools Comparison* document, which states "We are now ready to extract these utility tools and combine them into a general-purpose framework so that the team and partners can utilize them and produce consistent output."
 
 Second, polishing the ΔQ toolset via a few capability enhancements, calibrated default settings, improved documentation, and publication would enable a more rigorous analysis of Peras that stakeholders such as researchers, SPOs, and implementers could reproduce and use in studying Peras variants and other proposed protocols. The ΔQ software is already reasonably close to providing such capabilities, but needs some investment and refinement.
 
