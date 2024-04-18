@@ -5,7 +5,7 @@ open import Haskell.Prelude renaming (_<_ to _<ʰ_)
 open import Data.Nat.Base
 open import Data.Sum
 open import Relation.Binary.PropositionalEquality
-open import Relation.Nullary
+open import Relation.Nullary using (¬_)
 
 it : {A : Set} → ⦃ A ⦄ → A
 it ⦃ x ⦄ = x
