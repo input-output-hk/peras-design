@@ -15,6 +15,7 @@ data-files: *.json
 
 library
   exposed-modules:
+    Peras.ALBA
     Peras.Arbitraries
     Peras.Block
     Peras.Chain
@@ -31,15 +32,22 @@ library
                 , base >=4.9 && <5
                 , base16-bytestring
                 , bytestring
+                , cereal
                 , generic-random
                 , hashable
                 , io-classes
                 , quickcheck-instances
+                , random
                 , text
                 , time
   default-extensions:  StrictData
   default-language: Haskell2010
   ghc-options:      -Wall -Wunused-packages
+  -- for ALBA
+  extra-libraries: sodium
+  include-dirs: cbits
+  includes: cbits/blake2b.h
+  c-sources: cbits/blake2b.c
 
 test-suite peras-hs-test
     default-language: Haskell2010
@@ -50,12 +58,15 @@ test-suite peras-hs-test
                       Peras.OrphansSpec
                       Paths_peras_hs
     build-depends:
-                        base >= 4.9 && <5
+                          base >= 4.9 && <5
                   , QuickCheck
+                  , bytestring
+                  , cereal
                   , hspec
                   , hspec-golden-aeson
                   , peras-hs
                   , quickcheck-classes
+                  , quickcheck-instances
 
     build-tool-depends:
        hspec-discover:hspec-discover
