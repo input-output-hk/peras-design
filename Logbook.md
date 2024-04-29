@@ -1,3 +1,41 @@
+## 2024-04-29
+
+### AB on ALBA Certificates
+
+I spent some time building a [Haskell implementation for ALBAs](https://github.com/cardano-scaling/alba), here are some notes related to this experience.
+
+* It uses [libsodium](https://libsodium.gitbook.io/doc) to provide hashing function, just like cardano-base. I did not want to depend on cardano-crypto-class as hashing is the only function I need, but this would  be a good idea later on to handle voting and signatures
+* Hashing is done with Blake2b256. My initial implementation took about 1μs/hash which is 3x what cardano-crypto-class provides. I had a look at the implementation their and it relies on [unsafeCreate](https://hackage.haskell.org/package/bytestring-0.12.1.0/docs/Data-ByteString-Internal.html#v:unsafeCreate) and [useAsCStringLen](https://hackage.haskell.org/package/bytestring-0.12.1.0/docs/Data-ByteString.html#v:useAsCStringLen) which provide much better performance. For some reason, my code is still 30% slower than cardano-crypto-class at ~420ns :shrug:
+  * Perhaps SHA256 would be enough as a hashing function?
+* The code now implements, or is supposed to implement, optimisation from section 3.2 of the paper:
+  * The input set of elements are hashed and their modulus $n_p$ is compared to the iteratively computed hashes and modulus of the selected proof tuples
+  * On a test run for 200 items, with 70/30 honest to faulty ratio, and security parameter 8, it computes 35400 hashes which seems consistent with the theoretical complexity of $\lambda^3 . n_p$
+* It also implements the optimisation on computation of parameter $d$ from section C.1 of the paper but this does not seem to have a significant impact on running time
+* The code as it is checks the number of signatures needed ($u$) is consistent with what's provided in the paper. In the case of a 1000 signatures, for a ratio of 60/40, and a λ of 128, gives $u=232$.
+  * Given a KES signature size of 448 bytes, this gives us a certificate size of 103936 bytes which is about the size of block
+* The biggest issue with the current implementation lies in how the size of the set of items to select from increases over rounds while constructing the proof. Here is an example for the parameter given above, showing the length of the selection set which needs to be paired with input set:
+
+  ```
+  length = 35446
+  length = 95810
+  length = 159506
+  length = 265489
+  length = 441223
+  length = 734386
+  ...
+  ```
+
+  The values of the protocol inner parameters are: u = 234, d = 21192, q = 8.373238874261325e-3
+
+  The value of $d$ is quite large and therefore leads to fast increase in the size of the set.
+* This implementation can generate a proof for 300 items with a λ of 10 and honest fraction of 80% in a bit over _20ms_
+
+Optimising ALBA code was a bit of a journey, took me a while to figure out how to remove the "exponentially increasing" calls to `hash` while constructing the proofs iteratively. I had to resort to profiling support from GHC and manually insert `SCC` pragmas all over the place to get a sense of where the time was spent. Biggest time consumer was garbage allocation, which was up to 10s of GBs for a relatively small run, and is now about 150MB for the aforementioned parameters, which seems quite reasonable.
+
+* I had to look at cardano-base's codebase to understand what I was doing wrong with the call to libsodium: Under the hood it's the exact same code that's called, but I was using allocators from `Foreign` which apparently are quite inefficient
+* I dropped use of `Integer` in computations in favor of `Word64` to ensure fast modulus for bytestrings. It's possible that native code would be even faster here
+* At some point I have tried to dump GHC core in order to understand why my code was allocating so much data, but it wasn't very helpful at a glance
+
 ## 2024-04-17
 
 ### Meeting PNSol on Vote network modelling
