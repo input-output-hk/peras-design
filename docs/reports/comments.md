@@ -29,9 +29,9 @@
 * [x] "In practice, the probability for a transaction to be rolled back after 20 blocks is 0.001%" --- we try to qualify such statements with a disclaimer: "if the parameters (including Delta, for example) are well-chosen, the network is healthy, the online/alert/etc honest stake dominates, and so on" or more opaquely, "while the network satisfies the Praos paper's theorems' preconditions", eg
   * I know, I was referring to the paper, will rephrase accordingly
 * [x] Would it be possible to annotate the graph with how much adversarial stake is assumed, eg? (Instead of mentioning that in the subsequent section.)
-* [ ] "We also have anecdotal evidence from observations of the Cardano mainchain" --- it seems worth emphasizing that we have no reason to believe the (hypothetical) adversary has ever actually attempted to increase settlement times on mainnet Cardano, so the anecdotal observations and the preceding plot are not actually comparable.
+* [x] "We also have anecdotal evidence from observations of the Cardano mainchain" --- it seems worth emphasizing that we have no reason to believe the (hypothetical) adversary has ever actually attempted to increase settlement times on mainnet Cardano, so the anecdotal observations and the preceding plot are not actually comparable.
   * I don't understand why they would not be
-* [ ] "While these numbers seem appealing" --- which numbers? The ones from the graph or the ones from the anecdote?
+* [x] "While these numbers seem appealing" --- which numbers? The ones from the graph or the ones from the anecdote?
   * both?
 * [x] A round length of "U = 10 slots" seems awfully short, ie lots of votes certs etc traffic.
   * yes, that's something we'll need to investigate

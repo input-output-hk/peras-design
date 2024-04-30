@@ -251,6 +251,8 @@ The following picture from the aforementioned paper shows block settlement failu
 
 We also have anecdotal evidence from observations of the Cardano mainchain over the past few years that the settlement time is much shorter than the theoretical bound, as basically forks over 2 blocks length are exceedingly rare, and no fork over 3 blocks length has been observed on core nodes since the launch of Shelley.
 
+There's however no evidence this situation will continue in the future, obviously, as it could very well be the case the network was never seriously under attack, hence we should take those numbers with caution.
+
 ### Settlement bounds for Peras
 
 > [!WARNING]
@@ -614,7 +616,9 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 > Depending on the value of $U$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, e.g. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that is misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
 
 > [!NOTE]
-> In practice, `cardano-node` uses _pipelining_ to avoid having to confirm individually every block/header: e.g. when sending multiple blocks to a peer a node will not wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
+> In practice, `cardano-node` uses _network-level pipelining_ to avoid having to request individually every block/header: e.g. when sending multiple blocks to a peer a node will not wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
+>
+> This is not to be confused with _consensus pipelining_ which streamlines block headers diffusion from upstream to downstream peers. ???
 
 ### Conclusion
 
