@@ -194,7 +194,7 @@ We assess the current SRL to be between 3 and 4, given the following [SRL 3](htt
 | Analytical verification of critical functions from proof-of-concept made?                                     | Done    |
 | Analytical and experimental proof-of-concept documented?                                                      | Done    |
 
-# Protocol Specification
+# Protocol specification
 
 ## Overview
 
@@ -272,7 +272,7 @@ we can expect a negligible ($< 10^{-60}$) probability of settlement failure afte
 
 However, triggering cool-down is cheap and does not require a large adversarial power as it is enough for an adversary to be able to create a relatively short fork that lasts slightly longer than the length of the voting window ($L$) to be able to force a split vote and a cool-down period.
 
-## Agda Specification
+## Agda specification
 
 The formal specification of the Peras protocol is implemented in Agda. It is a declarative specification, there are entities that are only defined by properties rather than by an explicit implementation. But still the specification is extractable to Haskell and allows to generate QuickCheck tests for checking an arbitrary implementation against the reference specification.
 
@@ -453,18 +453,18 @@ A first property is `knowledge-propagation`, a lemma that states that knowledge 
 
 Knowledge propagation is a pre-requisite for the chain growth property, it informally states that in each period, the best chain of any honest party will increase at least by a number that is proportional to the number of lucky slots in that period, where a lucky slot is any slot where an honest party is a slot leader.
 
-# Network Performance Analysis
+# Network performance analysis
 
 We provide in this section the methodology and results of the analysis of the Peras protocol performance in the context of the Cardano network. This analysis is not complete as it only covers the impact of including certificates in block headers, which is not a property of the protocol anymore. More analysis is needed on the votes and certificates diffusion process following changes to the protocol in March 2024.
 
-## Certificates in Block Header
+## Certificates in block header
 
 This section provides high-level analysis of the impact of Peras protocol on the existing Cardano network, using [ΔQSD methodology](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/). In order to provide a baseline to compare with, we first applied ΔQ to the existing Praos protocol reconstructing the results that lead to the current set of parameters defining the performance characteristics of Cardano, following section 4 of the aforementioned paper. We then used the same modeling technique taking into account the Peras protocol **assuming inclusion of certificates in headers** insofar as they impact the core _outcome_ of the Cardano network, namely _block diffusion time_.
 
 > [!NOTE]
 > One of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
 
-### Baseline - Praos ΔQ Modeling
+### Baseline - Praos ΔQ modeling
 
 #### Model overview
 
@@ -587,7 +587,7 @@ This data is gathered through a network of over 100 collaborating nodes that agr
 
 While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
-### Peras ΔQ Model - Blocks
+### Peras ΔQ model - blocks
 
 Things to take into account for modeling Peras:
 
@@ -624,7 +624,7 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 
 This analysis demonstrates that Peras certificates cannot be on the critical path of block headers diffusion lest we run the risk of increased delays in block diffusion and number of forks. Certificates either have to be small enough to not require an additional round-trip to transmit on top of the block header, or be part of the block body. Note that in the latter case the certificates should also be relatively small as there is limited space available in blocks.
 
-## Votes & Certificates diffusion
+## Votes & certificates diffusion
 
 Detailed analysis of votes and certificates diffusion is still ongoing and will be reported in a future document. Some preliminary discussions with PNSol allowed us to identify the following points to consider:
 
@@ -635,7 +635,7 @@ Detailed analysis of votes and certificates diffusion is still ongoing and will 
   * What kind of backpressure do we need to bake in?
 * An interesting observation: We could build certificates to reduce the amount of data transferred, e.g. trading CPU time (building certificate) for space and network bandwidth consumption.
 
-## Impact on User Experience
+## Impact on user experience
 
 ### Model
 
@@ -676,7 +676,7 @@ N1 -->> Alice: Tx in block
 
 This question is discussed in much more detail in the [report on timeliness](https://docs.google.com/document/d/1B42ep9mvP472-s6p_1qkVmf_b1-McLNPyXGjGHEVJ0w/edit) and should be considered outside of the scope of Peras protocol itself.
 
-# Property-based testing with State-Machine based QuickCheck
+# Property-based testing with state-machine based QuickCheck
 
 The `quickcheck-dynamic` Haskell package enables property-based testing of state machines. It is the primary testing framework used for testing the Peras implementations in Haskell and Rust. Eventually, the dynamic model instances used in `quickcheck-dynamic` will be generated directly from the Agda specification of Peras using `agda2hs`.
 
@@ -916,7 +916,7 @@ data ChainIndex = ChainIndex
   }
 ```
 
-Combined, these types allow a node to track the information it has sent or received from downstream or upstream peers, to eliminate recomputing chain weights, to avoid asking multiple peers for the same information, and to record its and its peers' preferred chains, votes, and certificates.
+Combined, these types allow a node to track the information it has sent or received from downstream or upstream peers, to eliminate recomputing chain weights, to avoid asking multiple peers for the same information, and to record its and its peers' preferred chains, votes, and certificates. Note that this instrumentation and optimization does not affect the simulated performance of the node because that performance is tracked via a cost model, regardless of the performance of the simulation code.
 
 #### Observability
 
@@ -958,7 +958,7 @@ The `peras-iosim` executable supports optional capture of the trace as a stream 
 
 #### Message routing
 
-The messaging and state-transition behavior of the network of nodes can be modeled via a discrete event simulation (DES). Such simulations are often parallelized (PDES) in order to take advantage of the speed gains possible from multiple threads of execution. Otherwise, a single thread must manage routing of messages and nodes' computations: for large networks and long simulated times, the simulation's execution may become prohibitively slow. Peras simulations are well suited to *conservative PDES* where strong guarantees ensure that messages are always delivered at monotonically non-decreasing times to each node; the alternative is an *optimistic PDES* where the node and/or message queue states have to be rolled back if a message with an out-of-order timestamp is delivered. A PDES for Peras can be readily constructed if each time a node emits a message it also declares a guarantee that it will not emit another message until a specified later time. Such declarations provide sufficient information for its downstream peers to advance their clocks to the minimum timestamp guaranteed by their upstream peers: i.e., when a node sees empty incoming message queues from all of its upstream peers, it can compute a safe time to advance forward, thus avoiding race conditions or deadlock. Hence, each node can run its own thread and have upstream and downstream message queues directly connected to its peers, all without the centrally managed message routing that would form a potential bottleneck for scaling performance.
+The messaging and state-transition behavior of the network of nodes can be modeled via a discrete event simulation (DES). Such simulations are often parallelized (PDES) in order to take advantage of the speed gains possible from multiple threads of execution. Otherwise, a single thread must manage routing of messages and nodes' computations: for large networks and long simulated times, the simulation's execution may become prohibitively slow. Peras simulations are well suited to *conservative PDES* where strong guarantees ensure that messages are always delivered at monotonically non-decreasing times to each node; the alternative is an *optimistic PDES* where the node and/or message queue states have to be rolled back if a message with an out-of-order timestamp is delivered. A PDES for Peras can be readily constructed if each time a node emits a message it also declares a guarantee that it will not emit another message until a specified later time. Such declarations provide sufficient information for its downstream peers to advance their clocks to the minimum timestamp guaranteed by their upstream peers: i.e., when a node sees empty incoming message queues from all of its upstream peers, it can compute a safe time to advance forward, thus avoiding race conditions or deadlock. Hence, each node can run its own thread and have upstream and downstream message queues directly connected to its peers, all without the centrally managed message routing that would form a potential bottleneck for scaling performance. The experiments described later in this document indicate that PDES is not needed at this time because simulations execute sufficiently fast without it and the cpu resources could be better used for running ensembles of simulations in parallel.
 
 That said, it likely is the case that Peras simulations will not need to simulate contiguous weeks or months of network operation, so at this point `peras-iosim` uses a centrally managed time-ordered priority queue for message routing. Also, instead of each node running autonomously in its own thread, nodes are driven by the receipt of a message and respond with timestamped output messages and a "wakeup" timestamp bounding the node's next activity. If long-running simulations are later required, the node design is consistent with later upgrading the message-routing implementation to a conservative PDES and operating each node in its own thread in a fully parallelized or distributed simulation. The basic rationales against long-running simulations are (1) that ΔQ analyses are better suited for network traffic and resource studies and (2) simulation is best focused on the rare scenarios involving forking and cool-down, which occur below Cardano's Ouroboros security parameter $k$ of 2160 blocks (approximately thirty-six hours).
 
@@ -977,7 +977,7 @@ Five designs for node sync protocol were considered.
     - Client needs to correlate what they received to what they are waiting for, and why - maybe use futures or promises with closures
 3. Sequential mini-protocols
     - Reminiscent of the Ouroboros design currently in production
-    - Client needs to `Cancel` and re-query when they want a different type of information
+    - Client needs to `Cancel` and re-query when they want a different type of information, a pattern which differs from real nodes' simple abandonment of responses that become irrelevant
 4. Parallel mini-protocols
     - Separate threads for each type of sync (header, vote, block)
     - Client needs to orchestrate intra-thread communication
@@ -1043,7 +1043,7 @@ equalsBinomialWithinTails ::
   Bool
 ```
 
-The Peras continuous-integration tests are configured to require that the observed number of blocks matches the theoretical value to within three standard deviations. Practically, this means that a random failure will occur about once in every ten or so invocations of the CI (continuous integration) tests, since each invocation executes 100 tests.
+The Peras continuous-integration tests are configured to require that the observed number of blocks matches the theoretical value to within three standard deviations. Practically, this means that the test measurement is a random variable that will fall outside the three σ range about once in every ten or so invocations of the CI (continuous integration) tests, since each invocation executes 100 tests.
 
 #### Network and Praos chain generation
 
@@ -1078,7 +1078,7 @@ The difference is fork adoption results from more Peras votes being received by 
 
 ![Detail of Peras and Praos chain comparison](../diagrams/sim-expts/peras-voting.png)
 
-Statistics for rollbacks, such as the ones shown below, are measured in these simulations to quantify the number of slots or blocks that are reverted: such can be used to compute the likelihood of a transaction appearing in a block that is later rolled back. The diagram below shows a proof-of-principle measurement of rollback lengths in an ensemble of simulations. The horizontal axis shows the number of slots rolled back during the course of the whole simulation, and the vertical axis shows the corresponding number of blocks rolled back: the marginal histograms show the empirically observed frequency of each. Although the voting boost weight is varied among these simulations, it has almost no effect on the rollback statistics.
+Statistics for rollbacks, such as the ones shown below, are measured in these simulations to quantify the number of slots or blocks that are reverted: such can be used to compute the likelihood of a transaction appearing in a block that is later rolled back. The diagram below shows a proof-of-principle measurement of rollback lengths in an ensemble of simulations. The horizontal axis shows the number of slots rolled back during the course of the whole simulation, and the vertical axis shows the corresponding number of blocks rolled back: the marginal histograms show the empirically observed frequency of each. (Note that the point indicating the number of slots vs blocks rolled back do not represent single rollbacks of that many slots or blocks: instead a simulation might have had many rollbacks and the slots and blocks listed are the total among the rollbacks. Also note that the active slot coefficient was set to a high value in order to provoke more forking.) Although the voting boost weight is varied among these simulations, it has almost no effect on the rollback statistics.
 
 ![Example of rollback statistics](../diagrams/sim-expts/rollbacks.png)
 
@@ -1203,7 +1203,7 @@ The key findings from Rust experiments follow.
 ### Simulation results
 
 - Both Peras and Praos are so stable that one would need very long simulations to observe forks of more than one or two blocks.
-    - Only in cases of very sparse connectivity or slow message diffusion are longer forks seen.
+    - Only in cases of very sparse connectivity or slow message diffusion are longer forks seen in honest networks.
     - Peras quickly stabilizes the chain at the first block or two in each round, so even longer forks typically never last beyond then.
     - Hence, even for honest nodes, we need a mechanism to inject rare events such as multi-block forks, so that the effect of Peras can be studied efficiently.
 - The voting boost can impede the reestablishment of consensus after a network partition is restored.
@@ -1303,7 +1303,7 @@ Certificates (or equivalently quorum of votes in a round) have an impact on the 
 * Certificates are likely too large to be included in the block header without increasing its size over the constitutionally-constrained byte limit.
     * If the CDDL for blocks were altered, they could be included as a new entry in the block.
     * Alternatively, a certificate could be stored as a transaction in the block. Such certificate-transactions would incur a fee and would also need to be prioritized ahead of transactions in the memory pool.
-* At least conceptually, certificates are _fungible_: e.g. if I have certificate X for block A and a certificate Y for block B s.t. B $\rightarrow$ A, then I can count the chain from B as having twice the weight which is equivalent to having a certificate $Z = X \circ Y$.
+* At least conceptually, certificates are _fungible_: e.g. if I have certificate X for block A and a certificate Y for block B s.t. A extends B, then I can count the chain from B as having twice the weight which is equivalent to having a certificate $Z = X \circ Y$.
   * This implies that an implementation could choose to merge certificates that are past some threshold, e.g. when enough weight has been accumulated the chances of chain fork are negligible, which would limit the storage requirements.
   * This needs to be validated by researchers and is highly dependent on the particular technology used to form certificates.
 * Creating, and to a lesser extent validating, certificates could be relatively CPU intensive operations.
