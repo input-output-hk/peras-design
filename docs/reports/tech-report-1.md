@@ -60,7 +60,7 @@ There remain a number of open questions that could be investigated in future wor
 -   [Previous work](#previous-work)
     -   [Peras workshop](#peras-workshop)
         -   [Questions about Peras](#questions-about-peras)
-        -   [Potential jugular experiments for Peras](#potential-jugular-experiments-for-peras)
+        -   [Potential experiments for Peras](#potential-experiments-for-peras)
         -   [SRL](#srl)
 -   [Protocol Specification](#protocol-specification)
     -   [Overview](#overview)
