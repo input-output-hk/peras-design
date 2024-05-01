@@ -1,3 +1,23 @@
+## 2024-05-01
+
+### Probabilities of various Peras scenarios
+
+The document [analytics/analytics-1.md](analytics/analytics-1.md) derives formulae for several Peras scenarios involving adversaries.
+
+- Adversaries refuse to vote in a round, causing a failure to reach a quorum.
+- A non-zero probability of entering a cool-down period results in the chain being in cool-down a fraction of the time it operates.
+- Adversarial block-producers refuse to include certificates in blocks, letting them expire instead. (This would only affect the operation of the protocol during times when a certificate must be recorded on the chain.)
+- Adversaries both forge a block and later muster a quorum to vote for it.
+
+QuickCheck tests could be constructed to test that the chain dynamics conform to these analytic expressions when adversaries act accordingly.
+
+|   |   |   |
+|---|---|---|
+| No honest quorum in round | ![Line plot of no honest quorum](analytics/analytics-1/pnhq-line.png) | ![Contour plot of no honest quorum](analytics/analytics-1/pnhq-contour.png) |
+| Fraction of time in cool down | ![Fraction of time spent in cool-down periods](analytics/analytics-1/pc-line.png) |   |
+| No certificate in honest block | ![Line plot of no certificate in honest block](analytics/analytics-1/pnc-line.png) | ![Contour plot of no certificate in honest block](analytics/analytics-1/pnc-contour.png) |
+| Adversarial block with adversarial quorum | ![Adversarial block with adversarial quorum](analytics/analytics-1/pabq-line.png) |   |
+
 ## 2024-04-29
 
 ### Crypto benchmarks

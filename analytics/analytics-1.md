@@ -1,6 +1,6 @@
 # Probabilistic Analyses - Part I
 
-This document derives analytic expressions for several adversarial Peras scenarios and plots the results.
+This document derives analytic expressions for several adversarial Peras scenarios and plots the results. See [this Jupyter notebook](analytics-1.ipynb) for details of the computations used to make the plots.
 
 
 ## Notation
@@ -85,6 +85,5 @@ p_\text{abq} = p_\text{ab} p_\text{aq} \\
 $$
 
 , where we require a quorum size $\tau = \frac{3}{4} C$.
-
 
 ![Adversarial block with adversarial quorum](analytics-1/pabq-line.png)
