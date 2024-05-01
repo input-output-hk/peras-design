@@ -36,6 +36,7 @@ cabalProject:
     pandoc # For generating PDF from markdown.
     librsvg # SVG conversion in pandoc.
     mononoki # Font for Agda.
+    julia-mono # Font for Agda.
 
   ];
 
