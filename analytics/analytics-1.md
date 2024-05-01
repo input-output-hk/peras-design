@@ -77,8 +77,14 @@ $$
 We combine the probability for producing an adversarial block, $p_\text{ab}$, and the probability for producing an adversarial quorum, $p_\text{aq}$, to yield the probability of adversarial voting for an adversarial quorum, $p_\text{abq}$.
 
 $$
-p_\text{ab} = 1 - (1 - \alpha)^f \\
-p_\text{aq} = \sum_{k=\lceil \tau \rceil}^{T-H} {{T - H} \choose{k}} \beta^k (1 - \beta)^{T-H-k} \\
+p_\text{ab} = 1 - (1 - \alpha)^f
+$$
+
+$$
+p_\text{aq} = \sum_{k=\lceil \tau \rceil}^{T-H} {{T - H} \choose{k}} \beta^k (1 - \beta)^{T-H-k}
+$$
+
+$$
 p_\text{abq} = p_\text{ab} p_\text{aq} \\
  \approx \left( 1 - (1 - \alpha)^f \right) \left( 1 - N_\text{CDF} \left( \frac{\tau - (T - H) \beta}{\sqrt{(T - H) \beta (1 - \beta)}} \right) \right) \\
  \approx \left( 1 - (1 - \alpha)^f \right) N_\text{CDF} \left( - \left( \frac{3}{4} - f \right) \sqrt{\frac{C}{f}} \right)
