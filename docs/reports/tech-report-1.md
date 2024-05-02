@@ -351,12 +351,16 @@ The fields of the blocktree allow to:
 * Get all blocks, votes and certificates,
 * Get the best chain.
 
-where the condition which chain is considered the best is given by the following properties:
+The property stating that the best chain is always a valid chain is such a property:
 
 ```agda
 valid : ∀ (t : tT) (sl : Slot)
   → ValidChain (bestChain sl t)
+```
 
+The condition which chain is considered the best is given by the following property:
+
+```agda
 optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
   → let b = bestChain sl t
     in
@@ -380,9 +384,10 @@ In order to describe progress with respect to the Ouroboros Peras protocol, a gl
 The differences compared to the model proposed in the PoS-NSB paper are:
 
 * the execution order is not stored in the global state and therefore permutations of the messages as well as permutations of parties are not needed,
-* there is no global `Progress`.
+* the `Progress` of the system as described in the PoS-NSB paper is not stored in the global state, as we define the global relation more granular
 
-Instead of keeping track of the execution order of the parties in the global state, the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party, we know as well the party's honesty (`Honesty` is a predicate for a party). Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages in the global message buffer have been delivered.
+Instead of keeping track of the execution order of the parties in the global state, the global relation is defined with respect to parties. The list of parties is considered fixed from the beginning and passed to the specification as a parameter. Together with a party, we know as well the party's honesty (`Honesty` is a predicate for a party).
+Instead of keeping track of progress globally we only need to assert that before the clock reaches the next slot, all the deliverable messages (i.e. messages where the delay is 0) in the global message buffer have been consumed.
 
 #### Global relation
 
