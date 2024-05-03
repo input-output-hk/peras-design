@@ -40,6 +40,12 @@ author:             Arnaud Bailly
 -- An email address to which users can send suggestions, bug reports, and patches.
 maintainer:         arnaud.bailly@iohk.io
 
+-- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
+extra-doc-files:    CHANGELOG.md
+
+-- Extra source files to be distributed with the package, such as examples, or a tutorial module.
+-- extra-source-files:
+
 -- A copyright notice.
 -- copyright:
 category:           Testing
@@ -50,12 +56,6 @@ custom-setup
                , filepath
                , process
                , Cabal
-
--- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
-extra-doc-files:    CHANGELOG.md
-
--- Extra source files to be distributed with the package, such as examples, or a tutorial module.
--- extra-source-files:
 
 common warnings
     ghc-options: -Wall
@@ -71,6 +71,8 @@ library
                      Peras.Node.Netsim
                      Peras.Node.Netsim.Rust
                      Peras.OptimalModel
+                     Peras.SymbolicDynamics.Model
+                     Peras.SymbolicDynamics.Model
 
     other-modules: Data.Statistics.Util
 
