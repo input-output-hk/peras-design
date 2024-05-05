@@ -623,7 +623,7 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 > [!NOTE]
 > In practice, `cardano-node` uses _network-level pipelining_ to avoid having to request individually every block/header: e.g. when sending multiple blocks to a peer a node will not wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
 >
-> This is not to be confused with _consensus pipelining_ which streamlines block headers diffusion from upstream to downstream peers. ???
+> This is not to be confused with _consensus pipelining_ which streamlines block headers diffusion from upstream to downstream peers before waiting for full block body validation.
 
 ### Conclusion
 
