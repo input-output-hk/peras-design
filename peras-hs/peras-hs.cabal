@@ -24,6 +24,8 @@ library
     Peras.Nakamoto
     Peras.Network
     Peras.Orphans
+    Peras.QCD.Node.Model
+    Peras.QCD.State
   hs-source-dirs:   src
   build-depends:
                       aeson
@@ -31,9 +33,12 @@ library
                 , base >=4.9 && <5
                 , base16-bytestring
                 , bytestring
+                , data-default
                 , generic-random
                 , hashable
                 , io-classes
+                , lens
+                , mtl
                 , quickcheck-instances
                 , text
                 , time
