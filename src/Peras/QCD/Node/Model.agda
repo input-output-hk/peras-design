@@ -10,7 +10,7 @@ open import Peras.Crypto using (Hash; Hashable)
 open import Peras.Message using (Message)
 
 {-# FOREIGN AGDA2HS
-import Control.Lens (Lens', lens)
+import Control.Lens (Lens', lens, assign, modifying)
 import Data.Default (Default(..))
 import GHC.Generics (Generic)
 #-}
@@ -287,9 +287,17 @@ _࠺_ : {s : Set} → {a : Set} → Lens' s a → a → State s ⊤
 _࠺_ = assign
 {-# COMPILE AGDA2HS _࠺_ #-}
 
+modifying : {s : Set} → {a : Set} → Lens' s a → (a → a) → State s ⊤
+modifying l f = (assign l ∘ f) =<< use l
+
+_|࠺_ : {s : Set} → {a : Set} → Lens' s a → (a → a) → State s ⊤
+_|࠺_ = modifying
+{-# COMPILE AGDA2HS _|࠺_ #-}
+
 test1 : State NodeModel Slot
 test1 = do
       i <- use nowSlotLens
       nowSlotLens ࠺ (i + 1)
+      nowSlotLens |࠺ (λ j → j + 10)
       use nowSlotLens
 {-# COMPILE AGDA2HS test1 #-}
