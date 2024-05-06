@@ -510,8 +510,6 @@ reference is included in the block.
         → let open Stateᵍ M
               r = v-round clock
               txs = txSelection clock p
-              ch = bestChain blockTree (pred clock) t
-              cts = certs blockTree t ch
               b = record
                     { slotNumber = clock
                     ; creatorId = p
@@ -541,8 +539,6 @@ During a cooldown phase, the block includes a certificate reference.
         → let open Stateᵍ M
               r = v-round clock
               txs = txSelection clock p
-              ch = bestChain blockTree (pred clock) t
-              cts = certs blockTree t ch
               b = record
                     { slotNumber = clock
                     ; creatorId = p
