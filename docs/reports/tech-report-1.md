@@ -5,6 +5,7 @@ author:
   - Brian W. Bush
   - Yves Hauser
 date: 2024-04-17
+monofont: Monaco
 ---
 
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between November and April 2024. The design of the protocol itself is carried out by the _Research team_ and is not the focus of this document as the paper is still actively being worked on.
