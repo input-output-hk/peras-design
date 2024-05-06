@@ -309,10 +309,12 @@ are delegated to the block tree.
     data _[_]→_ : Stateˡ → Message → Stateˡ → Set where
 
       VoteReceived : ∀ {v t}
+          -------------------------
         → ⟪ t ⟫ [ VoteMsg v ]→
           ⟪ addVote blockTree t v ⟫
 
       BlockReceived : ∀ {b t}
+          ----------------------------
         → ⟪ t ⟫ [ BlockMsg b ]→
           ⟪ extendTree blockTree t b ⟫
 ```
@@ -379,10 +381,7 @@ Updating global state
 ```agda
     _,_,_,_↑_ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
     m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
-      ⟦ c , insert p l s , insertₘ m d ms , m ∷ hs , as ⟧
-      where
-        insertₘ : Message → Delay → List Envelope → List Envelope
-        insertₘ m d ms = map (uncurry ⦅_,_, m , d ⦆) parties ++ ms
+      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) parties ++ ms , m ∷ hs , as ⟧
 ```
 Ticking the global clock
 ```agda
