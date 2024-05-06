@@ -13,15 +13,33 @@ import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Peras.Orphans ()
 
+data ParamSymbol
+  = U
+  | A
+  | W
+  | L
+  | B
+  | Τ
+  | R
+  | K
+
+τ :: ParamSymbol
+τ = Τ
+
 data Params = Params
   { paramU :: Natural
-  , paramL :: Natural
   , paramA :: Natural
+  , paramW :: Natural
+  , paramL :: Natural
+  , paramB :: Natural
+  , paramΤ :: Natural
+  , paramR :: Natural
+  , paramK :: Natural
   }
   deriving (Eq, Generic, Ord, Show)
 
 defaultParams :: Params
-defaultParams = Params 120 10 240
+defaultParams = Params 120 240 3600 120 10 300 120 600
 
 instance Default Params where
   def = defaultParams
@@ -79,8 +97,18 @@ protocol =
           (nodePreferredVotes s)
     )
 
-peras :: (Params -> a) -> State NodeModel a
-peras x = x <$> use protocol
+perasParam :: ParamSymbol -> Params -> Natural
+perasParam U = \r -> paramU r
+perasParam A = \r -> paramA r
+perasParam W = \r -> paramW r
+perasParam L = \r -> paramL r
+perasParam B = \r -> paramB r
+perasParam Τ = \r -> paramΤ r
+perasParam R = \r -> paramR r
+perasParam K = \r -> paramK r
+
+peras :: ParamSymbol -> State NodeModel Natural
+peras x = perasParam x <$> use protocol
 
 creatorId :: Lens' NodeModel PartyId
 creatorId =
@@ -197,8 +225,8 @@ discardExpiredCerts :: NodeModification
 discardExpiredCerts =
   do
     now <- use currentSlot
-    u <- peras (\r -> paramU r)
-    a <- peras (\r -> paramA r)
+    u <- peras U
+    a <- peras A
     preferredCerts
       ≕ filter (not . \cert -> u * votingRoundNumber cert + a < now)
 
@@ -206,8 +234,8 @@ discardExpiredVotes :: NodeModification
 discardExpiredVotes =
   do
     now <- use currentSlot
-    u <- peras (\r -> paramU r)
-    a <- peras (\r -> paramA r)
+    u <- peras U
+    a <- peras A
     preferredVotes
       ≕ filter
         (not . \vote -> u * roundNumber (votingRound vote) + a < now)

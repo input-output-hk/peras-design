@@ -20,10 +20,30 @@ import Peras.Orphans ()
 
 -- Protocol parameters.
 
+data ParamSymbol : Set where
+  U : ParamSymbol  -- the length (in slots) of a voting round
+  A : ParamSymbol  -- max. age for including vote certificate
+  W : ParamSymbol  -- weight to cut off for common prefix
+  L : ParamSymbol  -- the cutoff window (in slots) which is ignored to select block to vote for in a round
+  B : ParamSymbol  -- weight boost per vote certificate
+  Τ : ParamSymbol  -- number of votes required for quorum
+  R : ParamSymbol  -- chain-ignorance period
+  K : ParamSymbol  -- the length of a cooldown period (in voting rounds)
+{-# COMPILE AGDA2HS ParamSymbol #-}
+
+τ : ParamSymbol  -- number of votes required for quorum
+τ = Τ
+{-# COMPILE AGDA2HS τ #-}
+
 record Params : Set where
-  field paramU : ℕ  -- round length
-        paramL : ℕ  -- cutoff window
-        paramA : ℕ  -- vote expiration
+  field paramU : ℕ  -- the length (in slots) of a voting round
+        paramA : ℕ  -- max. age for including vote certificate
+        paramW : ℕ  -- weight to cut off for common prefix
+        paramL : ℕ  -- the cutoff window (in slots) which is ignored to select block to vote for in a round
+        paramB : ℕ  -- weight boost per vote certificate
+        paramΤ : ℕ  -- number of votes required for quorum
+        paramR : ℕ  -- chain-ignorance period
+        paramK : ℕ  -- the length of a cooldown period (in voting rounds)
         
 open Params public
 {-# COMPILE AGDA2HS Params deriving (Eq, Generic, Ord, Show) #-}
@@ -32,14 +52,31 @@ defaultParams : Params
 defaultParams =
   record {
     paramU = 120
-  ; paramL = 10
   ; paramA = 240
+  ; paramW = 3600
+  ; paramL = 120
+  ; paramB = 10
+  ; paramΤ = 300
+  ; paramR = 120
+  ; paramK = 600
   }
 {-# COMPILE AGDA2HS defaultParams #-}
 {-# FOREIGN AGDA2HS
 instance Default Params where
   def = defaultParams
 #-}
+
+-- FIXME: Use a proxy so that parameters may have types other than ℕ.
+perasParam : ParamSymbol → Params → ℕ
+perasParam U = paramU
+perasParam A = paramA
+perasParam W = paramW
+perasParam L = paramL
+perasParam B = paramB
+perasParam Τ = paramΤ
+perasParam R = paramR
+perasParam K = paramK
+{-# COMPILE AGDA2HS perasParam #-}
 
 -- Cryptographic functions.
 
@@ -109,8 +146,8 @@ protocol : Lens' NodeModel Params
 protocol = lens' nodeProtocol (λ s x → record s {nodeProtocol = x})
 {-# COMPILE AGDA2HS protocol #-}
 
-peras : (Params → a) → State NodeModel a
-peras x = x <$> use protocol
+peras : ParamSymbol → State NodeModel ℕ
+peras x = perasParam x <$> use protocol
 {-# COMPILE AGDA2HS peras #-}
 
 creatorId : Lens' NodeModel PartyId
@@ -175,22 +212,22 @@ discardExpiredCerts : NodeModification
 discardExpiredCerts =
   do
     now ← use currentSlot
-    u ← peras paramU
-    a ← peras paramA
-    let expired : Certificate → Bool
-        expired cert = u * votingRoundNumber cert + a < now
-    preferredCerts ≕ filter (not ∘ expired)
+    u ← peras U
+    a ← peras A
+    let isExpired : Certificate → Bool
+        isExpired cert = u * votingRoundNumber cert + a < now
+    preferredCerts ≕ filter (not ∘ isExpired)
 {-# COMPILE AGDA2HS discardExpiredCerts #-}
 
 discardExpiredVotes : NodeModification
 discardExpiredVotes =
   do
     now ← use currentSlot
-    u ← peras paramU
-    a ← peras paramA
-    let expired : Vote → Bool
-        expired vote = u * roundNumber (votingRound vote) + a < now
-    preferredVotes ≕ filter (not ∘ expired)
+    u ← peras U
+    a ← peras A
+    let isExpired : Vote → Bool
+        isExpired vote = u * roundNumber (votingRound vote) + a < now
+    preferredVotes ≕ filter (not ∘ isExpired)
 {-# COMPILE AGDA2HS discardExpiredVotes #-}
 
 newSlot : NodeOperation
