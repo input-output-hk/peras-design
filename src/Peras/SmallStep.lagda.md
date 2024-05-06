@@ -327,19 +327,19 @@ are delegated to the block tree.
 ```
 #### When does a party vote in a round?
 ```agda
-    data VoteInRound : Stateˡ → List Certificate → RoundNumber → Set where
+    data VoteInRound : Stateˡ → RoundNumber → Set where
 
-      Regular : ∀ {cts r t} →
+      Regular : ∀ {r t} →
         let
           pref = bestChain blockTree (r * T) t
           cert′ = latestCertSeen blockTree (r * T) t
         in
           r ≡ (round cert′) + 1 -- VR-1A
         → cert′ PointsInto pref -- VR-1B
-          ---------------------------------------
-        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
+          -----------------------------------
+        → VoteInRound ⟪ t ⟫ (MkRoundNumber r)
 
-      AfterCooldown : ∀ {cts r c t} →
+      AfterCooldown : ∀ {r c t} →
         let
           cert⋆ = latestCertOnChain blockTree (r * T) t
           cert′ = latestCertSeen blockTree (r * T) t
@@ -347,8 +347,8 @@ are delegated to the block tree.
           c > 0
         → r ≥ (round cert′) + R       -- VR-2A
         → r ≡ (round cert⋆) + (c * K) -- VR-2B
-          ---------------------------------------
-        → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
+          -----------------------------------
+        → VoteInRound ⟪ t ⟫ (MkRoundNumber r)
 ```
 ## Global state
 
@@ -484,7 +484,7 @@ is added to be consumed immediately.
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound ⟪ t ⟫ cts r
+        → VoteInRound ⟪ t ⟫ r
           -------------------------------------
         → Honest {p} ⊢
             M ⇉ (VoteMsg v , zero , p , lₚ ↑ M)
@@ -530,7 +530,7 @@ reference is included in the block.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → VoteInRound ⟪ t ⟫ cts r
+        → VoteInRound ⟪ t ⟫ r
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
@@ -561,7 +561,7 @@ During a cooldown phase, the block includes a certificate reference.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ (VoteInRound ⟪ t ⟫ cts r)
+        → ¬ (VoteInRound ⟪ t ⟫ r)
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
