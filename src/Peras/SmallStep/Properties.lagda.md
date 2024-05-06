@@ -116,7 +116,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _ _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _) = n≤1+n (clock M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
@@ -241,7 +241,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
     ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
-    ⊆-block (honest-cooldown {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
+    ⊆-block (honest-cooldown {block = b} refl _ _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
 ```
 -->
 ```agda
@@ -442,7 +442,7 @@ those messages adds the blocks into the local trees.
          x∷xs⊆ys→xs⊆ys {x} {xs} = ⊆-trans (xs⊆x∷xs xs x)
 ```
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _ _ _)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
@@ -498,8 +498,8 @@ that period.
         → luckySlots (clock N₁ , clock N₂) ≥ w
         → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
               c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
-              cs₁ = certs blockTree t₁ c₁
-              cs₂ = certs blockTree t₂ c₂
+              cs₁ = certs blockTree t₁
+              cs₂ = certs blockTree t₂
           in ∥ c₁ ∥ cs₁ + w ≤ ∥ c₂ ∥ cs₂
 ```
 

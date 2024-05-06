@@ -167,8 +167,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
                     (allBlocks : tT → List Block)
                     (bestChain : Slot → tT → Chain)
                     (addVote : tT → Vote → tT)
-                    (votes : tT → Chain → List Vote)
-                    (certs : tT → Chain → List Certificate)
+                    (votes : tT → List Vote)
+                    (certs : tT → List Certificate)
          : Set₁ where
 
     allBlocksUpTo : Slot → tT → List Block
@@ -193,42 +193,37 @@ Properties that must hold with respect to blocks and votes
 
       optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
         → let b = bestChain sl t
+              cts = certs t
           in
           ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
         → c ⊆ allBlocksUpTo sl t
-        → ∥ c ∥ certs t c ≤ ∥ b ∥ certs t b
+        → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
       self-contained : ∀ (t : tT) (sl : Slot)
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
-      valid-votes : ∀ (t : tT) (c : Chain)
-        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t c)
+      valid-votes : ∀ (t : tT)
+        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t)
 
-      unique-votes : ∀ (t : tT) (v : Vote) (c : Chain)
-        → let vs = votes t c
+      unique-votes : ∀ (t : tT) (v : Vote)
+        → let vs = votes t
           in
           v ∈ vs
-        → vs ≡ votes (addVote t v) c
+        → vs ≡ votes (addVote t v)
 
-      no-equivocations : ∀ (t : tT) (v : Vote) (c : Chain)
-        → let vs = votes t c
+      no-equivocations : ∀ (t : tT) (v : Vote)
+        → let vs = votes t
           in
           Any (v ∻_) vs
-        → vs ≡ votes (addVote t v) c
+        → vs ≡ votes (addVote t v)
 
       non-quorum : ∀ (t : tT) (r : RoundNumber)
-        → let sl = T * (roundNumber r)
-              b = bestChain sl t
-          in
-          length (votes t b) < τ
-        → getCert r (certs t b) ≡ nothing
+        → length (votes t) < τ
+        → getCert r (certs t) ≡ nothing
 
       quorum : ∀ (t : tT) (r : RoundNumber) (c : Certificate)
-        → let sl = T * (roundNumber r)
-              b = bestChain sl t
-          in
-          length (votes t b) ≥ τ
-        → getCert r (certs t b) ≡ just c
+        → length (votes t) ≥ τ
+        → getCert r (certs t) ≡ just c
 
 ```
 The block tree type
@@ -244,8 +239,8 @@ The block tree type
 
       addVote : T → Vote → T
 
-      votes : T → Chain → List Vote
-      certs : T → Chain → List Certificate
+      votes : T → List Vote
+      certs : T → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
@@ -255,14 +250,10 @@ The block tree type
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
     latestCertOnChain : Slot → T → Certificate
-    latestCertOnChain sl t =
-      let b = bestChain sl t
-      in latestCert (catMaybes $ map certificate b)
+    latestCertOnChain s = latestCert ∘ catMaybes ∘ map certificate ∘ bestChain s
 
-    latestCertSeen : Slot → T → Certificate
-    latestCertSeen sl t =
-      let b = bestChain sl t
-      in latestCert (certs t b)
+    latestCertSeen : T → Certificate
+    latestCertSeen = latestCert ∘ certs
 
   open TreeType
 ```
@@ -332,7 +323,7 @@ are delegated to the block tree.
       Regular : ∀ {r t} →
         let
           pref = bestChain blockTree (r * T) t
-          cert′ = latestCertSeen blockTree (r * T) t
+          cert′ = latestCertSeen blockTree t
         in
           r ≡ (round cert′) + 1 -- VR-1A
         → cert′ PointsInto pref -- VR-1B
@@ -342,7 +333,7 @@ are delegated to the block tree.
       AfterCooldown : ∀ {r c t} →
         let
           cert⋆ = latestCertOnChain blockTree (r * T) t
-          cert′ = latestCertSeen blockTree (r * T) t
+          cert′ = latestCertSeen blockTree t
         in
           c > 0
         → r ≥ (round cert′) + R       -- VR-2A
@@ -468,8 +459,6 @@ is added to be consumed immediately.
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open Stateᵍ M
               r = v-round clock
-              ch = bestChain blockTree clock t
-              cts = certs blockTree t ch
               v = record
                     { votingRound = r
                     ; creatorId = p
@@ -513,7 +502,7 @@ reference is included in the block.
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; parentBlock = hash $ tipBest blockTree clock t
                     ; certificate = nothing
                     ; leadershipProof = prf
                     ; bodyHash = blockHash
@@ -537,12 +526,12 @@ During a cooldown phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
-              r = v-round clock
+              r = roundNumber (v-round clock)
               txs = txSelection clock p
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tipBest blockTree (pred clock) t
+                    ; parentBlock = hash $ tipBest blockTree clock t
                     ; certificate = nothing
                     ; leadershipProof = prf
                     ; bodyHash = blockHash
@@ -552,12 +541,17 @@ During a cooldown phase, the block includes a certificate reference.
                     ; signature = sig
                     }
               lₚ = ⟪ extendTree blockTree t b ⟫
+              cert⋆ = latestCertOnChain blockTree r t
+              cert′ = latestCertSeen blockTree t
+              cts = certs blockTree t
           in
           block ≡ b
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ (VoteInRound ⟪ t ⟫ r)
+        → ¬ Any (λ { c → (round c) + 2 ≡ r }) cts -- (a)
+        → r ≤ A + (round cert′)                   -- (b)
+        → (round cert′) > (round cert⋆)           -- (c)
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
@@ -697,7 +691,7 @@ that there are no hash collisions during the execution of the protocol.
       → h ⊢ M ↷ N
       → history M ⊆ₘ history N
     []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
-    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → h ⊢ M ⇉ N
