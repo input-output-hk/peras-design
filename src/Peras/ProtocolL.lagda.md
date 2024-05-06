@@ -83,7 +83,7 @@ postulate
 Slot and round numbering
 
 * The first slot (in which there can be a block) is 0; subsequent slots are numbered 1, 2 ,...
-* Voting rounds are numbered 0, 1, 2, ..., and voting round $r$ corresponds to slots $rT$, $rT + 1$, $rT + 2$, ..., $(r+1)T - 1$. No votes are cast in round 0, which is successful by definition.
+* Voting rounds are numbered 0, 1, 2, ..., and voting round $r$ corresponds to slots $rU$, $rU + 1$, $rU + 2$, ..., $(r+1)U - 1$. No votes are cast in round 0, which is successful by definition.
 
 ```agda
 Slot = ℕ
@@ -147,7 +147,9 @@ record Vote : Set where
 
 A vote is valid if the committee-membership proof and the signature
 are valid. For simplicity, however, those two are not made explicit in
-the protocol description below.
+the protocol description below. Also, the `block_voted_for` field is
+described as a `Block` whereas, in practice, it would be a hash of the
+block.
 
 A Peras certificate represents an aggregated quorum of votes for a
 specific block at a specific round. Such a certificate is supposed to
@@ -167,7 +169,6 @@ postulate
 
 A Peras chain consists of a set of blocks. A chain is valid if the blocks (ignoring the certificates) form a valid Praos chain.
 
-<!--
 ```agda
 postulate
   Chain : Set
@@ -182,7 +183,6 @@ postulate
 
   round : Certificate -> ℕ
 ```
--->
 
 The following algorithm is used to compute the weight, given a set of certificates:
 
@@ -279,7 +279,7 @@ onNewSlot p s =
            ∧ (round certseen > round certchain)
        ) do
          let b' = Certify b certseen
-         Cpref ← Cpref extendWith b
+         Cpref ← Cpref extendWith b'
          output (Cpref trimmedBy W))
 ```
 
