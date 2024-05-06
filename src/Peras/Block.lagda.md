@@ -126,7 +126,7 @@ record BlockBody : Set
 record Certificate : Set
 
 record Certificate where
-  field votingRoundNumber : ℕ
+  field round : ℕ
         blockRef : Hash Block
 
 open Certificate public

@@ -79,7 +79,6 @@ Delay = Fin 2
 ```
 Messages are put into an envelope which is assigned to a given party and is defined with
 a delay.
-
 ```agda
 record Envelope : Set where
   constructor ⦅_,_,_,_⦆
@@ -152,11 +151,11 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ```agda
   getCert : RoundNumber → List Certificate → Maybe Certificate
-  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ votingRoundNumber)
+  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ round)
 ```
 ```agda
   latestCert : List Certificate → Certificate
-  latestCert = argmax votingRoundNumber cert₀
+  latestCert = argmax round cert₀
 ```
 
 ## BlockTree
@@ -326,39 +325,29 @@ are delegated to the block tree.
         → ⟪ t ⟫ [ BlockMsg b ]→
           ⟪ extendTree blockTree t b ⟫
 ```
-
-#### When vote?
-Party P votes in round r if
-  * Regular
-    * r = round(Certseen) + 1
-    * the round-(r-1) certificate points to Cpref
+#### When does a party vote in a round?
 ```agda
     data VoteInRound : Stateˡ → List Certificate → RoundNumber → Set where
 
       Regular : ∀ {cts r t} →
         let
-          c-pref = bestChain blockTree (r * T) t
-          cert-seen = latestCertSeen blockTree (r * T) t
-          r-seen = votingRoundNumber cert-seen
+          pref = bestChain blockTree (r * T) t
+          cert′ = latestCertSeen blockTree (r * T) t
         in
-          r ≡ r-seen + 1
-        → cert-seen PointsInto c-pref
+          r ≡ (round cert′) + 1 -- VR-1A
+        → cert′ PointsInto pref -- VR-1B
+          ---------------------------------------
         → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
-```
-  * After cooldown
-    * r >= round(Certseen) + R
-    * r = round(Certchain) + cK for some c > 0
-```agda
+
       AfterCooldown : ∀ {cts r c t} →
         let
-          cert-chain = latestCertOnChain blockTree (r * T) t
-          cert-seen = latestCertSeen blockTree (r * T) t
-          r-chain = votingRoundNumber cert-chain
-          r-seen = votingRoundNumber cert-seen
+          cert⋆ = latestCertOnChain blockTree (r * T) t
+          cert′ = latestCertSeen blockTree (r * T) t
         in
           c > 0
-        → r ≥ r-seen + R
-        → r ≡ r-seen + (c * K)
+        → r ≥ (round cert′) + R       -- VR-2A
+        → r ≡ (round cert⋆) + (c * K) -- VR-2B
+          ---------------------------------------
         → VoteInRound ⟪ t ⟫ cts (MkRoundNumber r)
 ```
 ## Global state
