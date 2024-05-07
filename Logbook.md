@@ -1,3 +1,24 @@
+## 2024-05-07
+
+### Team Session
+
+* Welcomed Hans to the team!
+* Drafted stakeholders' map for the project, with an end goal of using that information to plan interviews and "focus group" discussions about the project's goals and deliverables
+  * https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764588192135694&cot=14
+* Started drafting CIP for Peras:
+  * Used [Hackmd](https://hackmd.io/hv_2Rr2dTleBFfI4kV2oqQ?both) to be able to collanoratively edit markdown document for the CIP
+  * Also listed related tasks in issue [#97](https://github.com/input-output-hk/peras-design/issues/97)
+
+* Discussion about recent benchmarks on ALBA and whether or not the variations of time to build a prove could be used as an attack vector
+  * Idea: Given the low cost of building certificates it would be easy for an upstream peer to build them on the fly and share them with a synchronizing peer downstream
+  * In the normal case, certificates form an unbroken chain, one per round voting on some block. Their weight could be accumulated in some ways in order to alleviate the need to keep a lot of them around while not in cooldown.
+  * There's no need to store all certificates while not in cooldown, only the ones relevant to the "best chain" -> second order "pruning"?
+
+* Another quick discussion, on the topic of specification documents and language. The idea of having a formal "pseudo-code" language is appealing but seems like a huge effort
+* Here is an example algorithm from the [Introduction to Reliable and Secure Distributed Computing](https://link.springer.com/book/10.1007/978-3-642-15260-3) book
+
+  ![Pseudo-code for distirbuted systems example](docs/diagrams/pseudo-code.png)
+
 ## 2024-05-06
 
 ### Team retrospective
