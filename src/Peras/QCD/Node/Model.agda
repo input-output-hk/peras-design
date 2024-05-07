@@ -10,8 +10,6 @@ open import Peras.QCD.Util
 {-# LANGUAGE DeriveGeneric #-}
 import Data.Default (Default(..))
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Peras.Orphans ()
 zero :: Natural
 zero = 0
 #-}
@@ -87,40 +85,20 @@ record MembershipProof : Set where
 open MembershipProof public
 {-# COMPILE AGDA2HS MembershipProof newtype deriving (Generic, Show) #-}
 
-instance
-  iMembershipProofEq : Eq MembershipProof
-  iMembershipProofEq ._==_ = eqByBS membershipProofBytes
-{-# COMPILE AGDA2HS iMembershipProofEq #-}
-
 record LeadershipProof : Set where
   field leadershipProofBytes : ByteString
 open LeadershipProof public
 {-# COMPILE AGDA2HS LeadershipProof newtype deriving (Generic, Show) #-}
-
-instance
-  iLeadershipProofEq : Eq LeadershipProof
-  iLeadershipProofEq ._==_ = eqByBS leadershipProofBytes
-{-# COMPILE AGDA2HS iLeadershipProofEq #-}
 
 record Signature : Set where
   field signatureBytes : ByteString
 open Signature public
 {-# COMPILE AGDA2HS Signature newtype deriving (Generic, Show) #-}
 
-instance
-  iSignatureEq : Eq Signature
-  iSignatureEq ._==_ = eqByBS signatureBytes
-{-# COMPILE AGDA2HS iSignatureEq #-}
-
 record VerificationKey : Set where
   field verificationKeyBytes : ByteString
 open VerificationKey public
 {-# COMPILE AGDA2HS VerificationKey newtype deriving (Generic, Show) #-}
-
-instance
-  iVerificationKeyEq : Eq VerificationKey
-  iVerificationKeyEq ._==_ = eqByBS verificationKeyBytes
-{-# COMPILE AGDA2HS iVerificationKeyEq #-}
 
 -- Basics.
 
@@ -197,14 +175,6 @@ record Vote : Set where
 open Vote public
 {-# COMPILE AGDA2HS Vote deriving (Generic, Show) #-}
 
-duplicatedVote : Vote → Vote → Bool
-duplicatedVote x y = eqBy voteRound x y && eqBy voteParty x y
-{-# COMPILE AGDA2HS duplicatedVote #-}
-
-equivocatedVote : Vote → Vote → Bool
-equivocatedVote x y = eqBy voteRound x y && eqBy voteParty x y && not (eqBy voteBlock x y)
-{-# COMPILE AGDA2HS equivocatedVote #-}
-
 -- Messages.
 
 data Message : Set where
@@ -215,6 +185,26 @@ open Message public
 {-# COMPILE AGDA2HS Message deriving (Generic, Show) #-}
 
 -- Instances.
+
+instance
+  iMembershipProofEq : Eq MembershipProof
+  iMembershipProofEq ._==_ = eqByBS membershipProofBytes
+{-# COMPILE AGDA2HS iMembershipProofEq #-}
+
+instance
+  iLeadershipProofEq : Eq LeadershipProof
+  iLeadershipProofEq ._==_ = eqByBS leadershipProofBytes
+{-# COMPILE AGDA2HS iLeadershipProofEq #-}
+
+instance
+  iSignatureEq : Eq Signature
+  iSignatureEq ._==_ = eqByBS signatureBytes
+{-# COMPILE AGDA2HS iSignatureEq #-}
+
+instance
+  iVerificationKeyEq : Eq VerificationKey
+  iVerificationKeyEq ._==_ = eqByBS verificationKeyBytes
+{-# COMPILE AGDA2HS iVerificationKeyEq #-}
 
 instance
   iVoteEq : Eq Vote
@@ -311,20 +301,6 @@ instance Default NodeModel where
   def = emptyNode
 #-}
 
--- State monad for node model.
-
-NodeState : Set → Set
-NodeState s = State NodeModel s
-{-# COMPILE AGDA2HS NodeState #-}
-
-NodeOperation : Set
-NodeOperation = NodeState (List Message)
-{-# COMPILE AGDA2HS NodeOperation #-}
-
-NodeModification : Set
-NodeModification = NodeState ⊤
-{-# COMPILE AGDA2HS NodeModification #-}
-
 -- Lenses for node model.
 
 protocol : Lens' NodeModel Params
@@ -371,6 +347,24 @@ latestCertOnChain : Lens' NodeModel Certificate
 latestCertOnChain = lens' nodeLatestCertOnChain (λ s x → record s {nodeLatestCertOnChain = x})
 {-# COMPILE AGDA2HS latestCertOnChain #-}
 
+-- State monad for node model.
+
+NodeState : Set → Set
+NodeState s = State NodeModel s
+{-# COMPILE AGDA2HS NodeState #-}
+
+NodeOperation : Set
+NodeOperation = NodeState (List Message)
+{-# COMPILE AGDA2HS NodeOperation #-}
+
+NodeModification : Set
+NodeModification = NodeState ⊤
+{-# COMPILE AGDA2HS NodeModification #-}
+
+diffuse : NodeOperation
+diffuse = pure []
+{-# COMPILE AGDA2HS diffuse #-}
+
 -- Cryptographic functions.
 
 SignBlock : Set
@@ -380,12 +374,6 @@ SignBlock =  Slot → PartyId → Hash Block → Maybe Certificate → Block
 SignVote : Set
 SignVote = Round → PartyId → Hash Block → Vote
 {-# COMPILE AGDA2HS SignVote #-}
-
--- Diffusion of messages.
-
-diffuse : NodeOperation
-diffuse = pure []
-{-# COMPILE AGDA2HS diffuse #-}
 
 -- Executable specification.
 
@@ -420,7 +408,7 @@ roundsWithNewQuorums =
     groupByRound : List Vote → List (List Vote)
     groupByRound = groupBy (eqBy voteRound)
     hasQuorum : ℕ → List a → Bool
-    hasQuorum tau votes = count votes >= tau
+    hasQuorum tau votes' = count votes' >= tau
     getRound : List Vote → Round
     getRound [] = zero
     getRound (vote ∷ _) = voteRound vote

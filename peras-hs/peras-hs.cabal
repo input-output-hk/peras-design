@@ -27,6 +27,7 @@ library
     Peras.QCD.Crypto
     Peras.QCD.Node.Model
     Peras.QCD.State
+    Peras.QCD.Util
   hs-source-dirs:   src
   build-depends:
                       aeson

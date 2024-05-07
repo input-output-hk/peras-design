@@ -9,8 +9,6 @@ import Peras.QCD.Util (addOne, count, eqBy, eqByBS, groupBy, unionDescending)
 
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Peras.Orphans ()
 
 zero :: Natural
 zero = 0
@@ -62,32 +60,20 @@ newtype MembershipProof = MembershipProof
   }
   deriving (Generic, Show)
 
-instance Eq MembershipProof where
-  (==) = eqByBS (\r -> membershipProofBytes r)
-
 newtype LeadershipProof = LeadershipProof
   { leadershipProofBytes ::
       ByteString
   }
   deriving (Generic, Show)
 
-instance Eq LeadershipProof where
-  (==) = eqByBS (\r -> leadershipProofBytes r)
-
 newtype Signature = Signature {signatureBytes :: ByteString}
   deriving (Generic, Show)
-
-instance Eq Signature where
-  (==) = eqByBS (\r -> signatureBytes r)
 
 newtype VerificationKey = VerificationKey
   { verificationKeyBytes ::
       ByteString
   }
   deriving (Generic, Show)
-
-instance Eq VerificationKey where
-  (==) = eqByBS (\r -> verificationKeyBytes r)
 
 type Slot = Natural
 
@@ -140,21 +126,23 @@ data Vote = Vote
   }
   deriving (Generic, Show)
 
-duplicatedVote :: Vote -> Vote -> Bool
-duplicatedVote x y =
-  eqBy (\r -> voteRound r) x y && eqBy (\r -> voteParty r) x y
-
-equivocatedVote :: Vote -> Vote -> Bool
-equivocatedVote x y =
-  eqBy (\r -> voteRound r) x y
-    && eqBy (\r -> voteParty r) x y
-    && not (eqBy (\r -> voteBlock r) x y)
-
 data Message
   = NewChain Chain
   | NewVote Vote
   | NewCertificate Certificate
   deriving (Generic, Show)
+
+instance Eq MembershipProof where
+  (==) = eqByBS (\r -> membershipProofBytes r)
+
+instance Eq LeadershipProof where
+  (==) = eqByBS (\r -> leadershipProofBytes r)
+
+instance Eq Signature where
+  (==) = eqByBS (\r -> signatureBytes r)
+
+instance Eq VerificationKey where
+  (==) = eqByBS (\r -> verificationKeyBytes r)
 
 instance Eq Vote where
   x == y =
@@ -230,12 +218,6 @@ emptyNode =
 
 instance Default NodeModel where
   def = emptyNode
-
-type NodeState s = State NodeModel s
-
-type NodeOperation = NodeState [Message]
-
-type NodeModification = NodeState ()
 
 protocol :: Lens' NodeModel Params
 protocol =
@@ -420,13 +402,19 @@ latestCertOnChain =
           x
     )
 
+type NodeState s = State NodeModel s
+
+type NodeOperation = NodeState [Message]
+
+type NodeModification = NodeState ()
+
+diffuse :: NodeOperation
+diffuse = pure []
+
 type SignBlock =
   Slot -> PartyId -> Hash Block -> Maybe Certificate -> Block
 
 type SignVote = Round -> PartyId -> Hash Block -> Vote
-
-diffuse :: NodeOperation
-diffuse = pure []
 
 initialize :: Params -> PartyId -> NodeOperation
 initialize params party =
@@ -455,7 +443,7 @@ roundsWithNewQuorums =
   groupByRound :: [Vote] -> [[Vote]]
   groupByRound = groupBy (eqBy (\r -> voteRound r))
   hasQuorum :: Natural -> [a] -> Bool
-  hasQuorum tau votes = count votes >= tau
+  hasQuorum tau votes' = count votes' >= tau
   getRound :: [Vote] -> Round
   getRound [] = zero
   getRound (vote : _) = voteRound vote
