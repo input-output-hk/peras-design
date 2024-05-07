@@ -10,6 +10,9 @@ Then we spent some time grouping the various items in various "domains" and defi
 
 ![Retrospective Actions](docs/diagrams/2024-05-06-retrospective-plan.jpg)
 
+### Optimising ALBAs
+
+Spent some time optimising ALBAs, implementing the depth-first search suggested by Pyrros to speed up construction of the proof. This turned out to 1/ be quite simple to implement and 2/ provide a dramatic boost in performance.
 
 ## 2024-05-01
 
