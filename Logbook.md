@@ -1,3 +1,16 @@
+## 2024-05-06
+
+### Team retrospective
+
+We followed the [Liked/Lacked/Learned](https://www.funretrospectives.com/the-3-ls-liked-learned-lacked/) retrospective process, yielding the following output:
+
+![Liked/Lacked/Learned](docs/diagrams/2024-05-06-retrospective.jpg)
+
+Then we spent some time grouping the various items in various "domains" and define some actionable item for each of those groupings
+
+![Retrospective Actions](docs/diagrams/2024-05-06-retrospective-plan.jpg)
+
+
 ## 2024-05-01
 
 ### Probabilities of various Peras scenarios
