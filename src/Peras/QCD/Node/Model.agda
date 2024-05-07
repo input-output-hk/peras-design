@@ -396,12 +396,12 @@ roundsWithNewQuorums : State NodeModel (List Round)
 roundsWithNewQuorums =
   do
     tau ← peras τ
-    roundsWithCerts ← fmap certificateRound <$> use certs
-    fmap getRound
-      ∘ filter (hasQuorum tau)
-      ∘ groupByRound
-      ∘ filter (hasNoCertificate roundsWithCerts)
-      <$> use votes
+    roundsWithCerts ← use certs ⇉ fmap certificateRound
+    use votes
+      ⇉ filter (hasNoCertificate roundsWithCerts)
+      ⇉ groupByRound
+      ⇉ filter (hasQuorum tau)
+      ⇉ fmap getRound
   where
     hasNoCertificate : List Round → Vote → Bool
     hasNoCertificate ignoreRounds vote = notElem (voteRound vote) ignoreRounds

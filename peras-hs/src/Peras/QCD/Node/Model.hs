@@ -5,7 +5,7 @@ module Peras.QCD.Node.Model where
 import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (ByteString, Hash (MakeHash), Hashable (hash), emptyBS)
 import Peras.QCD.State (Lens', State, lens', use, (≔), (≕))
-import Peras.QCD.Util (addOne, count, eqBy, eqByBS, groupBy, unionDescending)
+import Peras.QCD.Util (addOne, count, eqBy, eqByBS, groupBy, unionDescending, (⇉))
 
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
@@ -430,12 +430,13 @@ roundsWithNewQuorums :: State NodeModel [Round]
 roundsWithNewQuorums =
   do
     tau <- peras τ
-    roundsWithCerts <- fmap (\r -> certificateRound r) <$> use certs
-    fmap getRound
-      . filter (hasQuorum tau)
-      . groupByRound
-      . filter (hasNoCertificate roundsWithCerts)
-      <$> use votes
+    roundsWithCerts <- use certs ⇉ fmap (\r -> certificateRound r)
+    ( ( (use votes ⇉ filter (hasNoCertificate roundsWithCerts))
+          ⇉ groupByRound
+      )
+        ⇉ filter (hasQuorum tau)
+      )
+      ⇉ fmap getRound
  where
   hasNoCertificate :: [Round] -> Vote -> Bool
   hasNoCertificate ignoreRounds vote =

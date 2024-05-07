@@ -3,10 +3,6 @@ module Peras.QCD.Util where
 import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (ByteString, eqBS)
 
-import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Peras.Orphans ()
-
 zero :: Natural
 zero = 0
 
@@ -16,12 +12,15 @@ eqBy f x y = f x == f y
 eqByBS :: (a -> ByteString) -> a -> a -> Bool
 eqByBS f x y = eqBS (f x) (f y)
 
+(⇉) :: Functor f => f a -> (a -> b) -> f b
+x ⇉ f = fmap f x
+
 addOne :: Natural -> Natural
 addOne = (1 +)
 
 checkDescending :: (a -> a -> Ordering) -> [a] -> Bool
 checkDescending _ [] = True
-checkDescending _ [x] = True
+checkDescending _ [_] = True
 checkDescending f (x : (y : zs)) =
   f x y == GT && checkDescending f (y : zs)
 
