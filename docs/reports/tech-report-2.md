@@ -34,6 +34,6 @@ For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{r
 
 ![Proof size / vote size](../diagrams/alba-proof-size-fixed-params.svg)
 
-Varying the security parameter and the honest to faulty ratio for a fixed set of 1000 votes of size 200 yields the following diagram.
+Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
 ![Proof size / λ & $n_p$](../diagrams/alba-proof-size-lambda.svg)
