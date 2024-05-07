@@ -38,7 +38,7 @@ QuickCheck tests could be constructed to test that the chain dynamics conform to
 
 ### Crypto benchmarks
 
-Raw benchmarls for ALBA
+Raw benchmarks for ALBA
 
 | Name                     | Mean    | MeanLB  | MeanUB  | Stddev  | StddevLB | StddevUB |
 |--------------------------|---------|---------|---------|---------|----------|----------|
