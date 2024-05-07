@@ -3,10 +3,10 @@
 module Peras.QCD.Node.Model where
 
 import Numeric.Natural (Natural)
+import Peras.QCD.Crypto (ByteString, Hash (MakeHash), Hashable (hash), emptyBS)
 import Peras.QCD.State (Lens', State, lens', use, (≔), (≕))
+import Peras.QCD.Util (addOne, count, eqBy, eqByBS, groupBy, unionDescending)
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS (empty)
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
@@ -56,23 +56,6 @@ perasParam Τ = \r -> paramΤ r
 perasParam R = \r -> paramR r
 perasParam K = \r -> paramK r
 
-eqOn :: Eq b => (a -> b) -> a -> a -> Bool
-eqOn f x y = f x == f y
-
-emptyBS :: ByteString
-emptyBS = BS.empty
-eqBS :: ByteString -> ByteString -> Bool
-eqBS = (==)
-
-newtype Hash a = Hash {hashBytes :: ByteString}
-  deriving (Generic, Show)
-
-instance Eq (Hash a) where
-  (==) = eqOn (\r -> hashBytes r)
-
-class Hashable a where
-  hash :: a -> Hash a
-
 newtype MembershipProof = MembershipProof
   { membershipProofBytes ::
       ByteString
@@ -80,7 +63,7 @@ newtype MembershipProof = MembershipProof
   deriving (Generic, Show)
 
 instance Eq MembershipProof where
-  (==) = eqOn (\r -> membershipProofBytes r)
+  (==) = eqByBS (\r -> membershipProofBytes r)
 
 newtype LeadershipProof = LeadershipProof
   { leadershipProofBytes ::
@@ -89,13 +72,13 @@ newtype LeadershipProof = LeadershipProof
   deriving (Generic, Show)
 
 instance Eq LeadershipProof where
-  (==) = eqOn (\r -> leadershipProofBytes r)
+  (==) = eqByBS (\r -> leadershipProofBytes r)
 
 newtype Signature = Signature {signatureBytes :: ByteString}
   deriving (Generic, Show)
 
 instance Eq Signature where
-  (==) = eqOn (\r -> signatureBytes r)
+  (==) = eqByBS (\r -> signatureBytes r)
 
 newtype VerificationKey = VerificationKey
   { verificationKeyBytes ::
@@ -104,7 +87,7 @@ newtype VerificationKey = VerificationKey
   deriving (Generic, Show)
 
 instance Eq VerificationKey where
-  (==) = eqOn (\r -> verificationKeyBytes r)
+  (==) = eqByBS (\r -> verificationKeyBytes r)
 
 type Slot = Natural
 
@@ -143,7 +126,7 @@ data Chain
   deriving (Generic, Show)
 
 genesisHash :: Hash Block
-genesisHash = Hash emptyBS
+genesisHash = MakeHash emptyBS
 
 genesisCert :: Certificate
 genesisCert = MakeCertificate 0 genesisHash
@@ -157,15 +140,15 @@ data Vote = Vote
   }
   deriving (Generic, Show)
 
-duplicateVote :: Vote -> Vote -> Bool
-duplicateVote x y =
-  eqOn (\r -> voteRound r) x y && eqOn (\r -> voteParty r) x y
+duplicatedVote :: Vote -> Vote -> Bool
+duplicatedVote x y =
+  eqBy (\r -> voteRound r) x y && eqBy (\r -> voteParty r) x y
 
 equivocatedVote :: Vote -> Vote -> Bool
 equivocatedVote x y =
-  eqOn (\r -> voteRound r) x y
-    && eqOn (\r -> voteParty r) x y
-    && not (eqOn (\r -> voteBlock r) x y)
+  eqBy (\r -> voteRound r) x y
+    && eqBy (\r -> voteParty r) x y
+    && not (eqBy (\r -> voteBlock r) x y)
 
 data Message
   = NewChain Chain
@@ -175,32 +158,32 @@ data Message
 
 instance Eq Vote where
   x == y =
-    eqOn (\r -> voteRound r) x y
-      && eqOn (\r -> voteParty r) x y
-      && eqOn (\r -> voteBlock r) x y
-      && eqOn (\r -> voteProof r) x y
-      && eqOn (\r -> voteSignature r) x y
+    eqBy (\r -> voteRound r) x y
+      && eqBy (\r -> voteParty r) x y
+      && eqBy (\r -> voteBlock r) x y
+      && eqBy (\r -> voteProof r) x y
+      && eqBy (\r -> voteSignature r) x y
 
 instance Eq Certificate where
   x == y =
-    eqOn (\r -> certificateRound r) x y
-      && eqOn (\r -> certificateBlock r) x y
+    eqBy (\r -> certificateRound r) x y
+      && eqBy (\r -> certificateBlock r) x y
 
 instance Eq Block where
   x == y =
-    eqOn (\r -> slot r) x y
-      && eqOn (\r -> creator r) x y
-      && eqOn (\r -> parent r) x y
-      && eqOn (\r -> certificate r) x y
-      && eqOn (\r -> leadershipProof r) x y
-      && eqOn (\r -> bodyHash r) x y
+    eqBy (\r -> slot r) x y
+      && eqBy (\r -> creator r) x y
+      && eqBy (\r -> parent r) x y
+      && eqBy (\r -> certificate r) x y
+      && eqBy (\r -> leadershipProof r) x y
+      && eqBy (\r -> bodyHash r) x y
 
 instance Hashable Block where
-  hash = \b -> Hash (signatureBytes (signature b))
+  hash = \b -> MakeHash (signatureBytes (signature b))
 
 instance Eq BlockBody where
   x == y =
-    eqOn (\r -> headerHash r) x y && eqOn (\r -> payload r) x y
+    eqBy (\r -> headerHash r) x y && eqBy (\r -> payload r) x y
 
 instance Eq Chain where
   Genesis == Genesis = True
@@ -248,9 +231,11 @@ emptyNode =
 instance Default NodeModel where
   def = emptyNode
 
-type NodeOperation = State NodeModel [Message]
+type NodeState s = State NodeModel s
 
-type NodeModification = State NodeModel ()
+type NodeOperation = NodeState [Message]
+
+type NodeModification = NodeState ()
 
 protocol :: Lens' NodeModel Params
 protocol =
@@ -440,45 +425,8 @@ type SignBlock =
 
 type SignVote = Round -> PartyId -> Hash Block -> Vote
 
-incrementSlot :: Slot -> Slot
-incrementSlot s = s + 1
-
-incrementRound :: Round -> Round
-incrementRound r = r + 1
-
-checkDescending :: (a -> a -> Ordering) -> [a] -> Bool
-checkDescending _ [] = True
-checkDescending _ [x] = True
-checkDescending f (x : (y : zs)) =
-  f x y == GT && checkDescending f (y : zs)
-
-insertDescending :: (a -> a -> Ordering) -> a -> [a] -> [a]
-insertDescending _ x [] = [x]
-insertDescending f x (y : ys) =
-  case f x y of
-    LT -> y : insertDescending f x ys
-    EQ -> y : ys
-    GT -> x : (y : ys)
-
-unionDescending :: Ord b => (a -> b) -> [a] -> [a] -> [a]
-unionDescending f xs ys =
-  foldr (insertDescending (\x y -> compare (f x) (f y))) ys xs
-
-groupBy :: (a -> a -> Bool) -> [a] -> [[a]]
-groupBy _ [] = []
-groupBy f (x : xs) =
-  (x : fst (span (f x) xs)) : groupBy f (snd (span (f x) xs))
-
-count :: [a] -> Natural
-count _ = 0
-
 diffuse :: NodeOperation
 diffuse = pure []
-
-(↞) :: Applicative f => f [a] -> a -> f [a]
-m ↞ x = fmap (\xs -> xs ++ [x]) m
-
-infixl 5 ↞
 
 initialize :: Params -> PartyId -> NodeOperation
 initialize params party =
@@ -495,28 +443,30 @@ roundsWithNewQuorums =
   do
     tau <- peras τ
     roundsWithCerts <- fmap (\r -> certificateRound r) <$> use certs
-    fmap
-      ( \votes ->
-          case votes of
-            [] -> zero
-            vote : _ -> voteRound vote
-      )
-      . filter (\votes -> count votes >= tau)
-      . (groupBy $ eqOn (\r -> voteRound r))
-      . filter (\vote -> notElem (voteRound vote) roundsWithCerts)
+    fmap getRound
+      . filter (hasQuorum tau)
+      . groupByRound
+      . filter (hasNoCertificate roundsWithCerts)
       <$> use votes
-
-updateVotes :: [Vote] -> NodeModification
-updateVotes newVotes =
-  do
-    votes ≕ unionDescending (\r -> voteRound r) newVotes
-    rs <- roundsWithNewQuorums
-    pure ()
+ where
+  hasNoCertificate :: [Round] -> Vote -> Bool
+  hasNoCertificate ignoreRounds vote =
+    notElem (voteRound vote) ignoreRounds
+  groupByRound :: [Vote] -> [[Vote]]
+  groupByRound = groupBy (eqBy (\r -> voteRound r))
+  hasQuorum :: Natural -> [a] -> Bool
+  hasQuorum tau votes = count votes >= tau
+  getRound :: [Vote] -> Round
+  getRound [] = zero
+  getRound (vote : _) = voteRound vote
 
 fetching :: [Chain] -> [Vote] -> NodeOperation
 fetching newChains newVotes =
   do
-    currentSlot ≕ incrementSlot
+    currentSlot ≕ addOne
     updateChains newChains
-    updateVotes newVotes
+    votes ≕ insertVotes newVotes
     diffuse
+ where
+  insertVotes :: [Vote] -> [Vote] -> [Vote]
+  insertVotes = unionDescending (\r -> voteRound r)

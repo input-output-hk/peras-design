@@ -2,12 +2,12 @@ module Peras.QCD.Node.Model where
 
 open import Data.Nat using (ℕ)
 open import Haskell.Prelude
+open import Peras.QCD.Crypto
 open import Peras.QCD.State
+open import Peras.QCD.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS (empty)
 import Data.Default (Default(..))
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
@@ -80,46 +80,7 @@ perasParam R = paramR
 perasParam K = paramK
 {-# COMPILE AGDA2HS perasParam #-}
 
--- Utilities.
-
-eqOn : ⦃ _ : Eq b ⦄ → (a → b) → a → a → Bool
-eqOn f x y = f x == f y
-{-# COMPILE AGDA2HS eqOn #-}
-
 -- Cryptography types.
-
-postulate
-  ByteString : Set
-  emptyBS : ByteString
-  eqBS : ByteString → ByteString → Bool
-{-# FOREIGN AGDA2HS
-emptyBS :: ByteString
-emptyBS = BS.empty
-eqBS :: ByteString -> ByteString -> Bool
-eqBS = (==)
-#-}
-{-# COMPILE GHC ByteString = type BS.ByteString #-}
-{-# COMPILE GHC emptyBS = BS.empty #-}
-{-# COMPILE GHC eqBS = (==) #-}
-
-instance
-  iByteStringEq : Eq ByteString
-  iByteStringEq ._==_ = eqBS
-  
-record Hash (a : Set) : Set where
-  field hashBytes : ByteString
-open Hash public
-{-# COMPILE AGDA2HS Hash newtype deriving (Generic, Show) #-}
-
-instance
-  iHashEq : Eq (Hash a)
-  iHashEq ._==_ = eqOn hashBytes
-{-# COMPILE AGDA2HS iHashEq #-}
-
-record Hashable (a : Set) : Set where
-  field hash : a → Hash a
-open Hashable public
-{-# COMPILE AGDA2HS Hashable class #-}
 
 record MembershipProof : Set where
   field membershipProofBytes : ByteString
@@ -128,7 +89,7 @@ open MembershipProof public
 
 instance
   iMembershipProofEq : Eq MembershipProof
-  iMembershipProofEq ._==_ = eqOn membershipProofBytes
+  iMembershipProofEq ._==_ = eqByBS membershipProofBytes
 {-# COMPILE AGDA2HS iMembershipProofEq #-}
 
 record LeadershipProof : Set where
@@ -138,7 +99,7 @@ open LeadershipProof public
 
 instance
   iLeadershipProofEq : Eq LeadershipProof
-  iLeadershipProofEq ._==_ = eqOn leadershipProofBytes
+  iLeadershipProofEq ._==_ = eqByBS leadershipProofBytes
 {-# COMPILE AGDA2HS iLeadershipProofEq #-}
 
 record Signature : Set where
@@ -148,7 +109,7 @@ open Signature public
 
 instance
   iSignatureEq : Eq Signature
-  iSignatureEq ._==_ = eqOn signatureBytes
+  iSignatureEq ._==_ = eqByBS signatureBytes
 {-# COMPILE AGDA2HS iSignatureEq #-}
 
 record VerificationKey : Set where
@@ -158,17 +119,20 @@ open VerificationKey public
 
 instance
   iVerificationKeyEq : Eq VerificationKey
-  iVerificationKeyEq ._==_ = eqOn verificationKeyBytes
+  iVerificationKeyEq ._==_ = eqByBS verificationKeyBytes
 {-# COMPILE AGDA2HS iVerificationKeyEq #-}
 
 -- Basics.
 
+Slot : Set
 Slot = ℕ
 {-# COMPILE AGDA2HS Slot #-}
 
+Round : Set
 Round = ℕ
 {-# COMPILE AGDA2HS Round #-}
 
+PartyId : Set
 PartyId = VerificationKey
 {-# COMPILE AGDA2HS PartyId #-}
 
@@ -176,6 +140,7 @@ PartyId = VerificationKey
 
 record Certificate : Set
 
+Tx : Set
 Tx = ⊤
 {-# COMPILE AGDA2HS Tx #-}
 
@@ -232,12 +197,12 @@ record Vote : Set where
 open Vote public
 {-# COMPILE AGDA2HS Vote deriving (Generic, Show) #-}
 
-duplicateVote : Vote → Vote → Bool
-duplicateVote x y = eqOn voteRound x y && eqOn voteParty x y
-{-# COMPILE AGDA2HS duplicateVote #-}
+duplicatedVote : Vote → Vote → Bool
+duplicatedVote x y = eqBy voteRound x y && eqBy voteParty x y
+{-# COMPILE AGDA2HS duplicatedVote #-}
 
 equivocatedVote : Vote → Vote → Bool
-equivocatedVote x y = eqOn voteRound x y && eqOn voteParty x y && not (eqOn voteBlock x y)
+equivocatedVote x y = eqBy voteRound x y && eqBy voteParty x y && not (eqBy voteBlock x y)
 {-# COMPILE AGDA2HS equivocatedVote #-}
 
 -- Messages.
@@ -253,26 +218,26 @@ open Message public
 
 instance
   iVoteEq : Eq Vote
-  iVoteEq ._==_ x y = eqOn voteRound x y
-                        && eqOn voteParty x y
-                        && eqOn voteBlock x y
-                        && eqOn voteProof x y
-                        && eqOn voteSignature x y
+  iVoteEq ._==_ x y = eqBy voteRound x y
+                        && eqBy voteParty x y
+                        && eqBy voteBlock x y
+                        && eqBy voteProof x y
+                        && eqBy voteSignature x y
 {-# COMPILE AGDA2HS iVoteEq #-}
 
 instance
   iCertificateEq : Eq Certificate
-  iCertificateEq ._==_ x y = eqOn certificateRound x y && eqOn certificateBlock x y
+  iCertificateEq ._==_ x y = eqBy certificateRound x y && eqBy certificateBlock x y
 {-# COMPILE AGDA2HS iCertificateEq #-}
 
 instance
   iBlockEq : Eq Block
-  iBlockEq ._==_ x y = eqOn slot x y
-                         && eqOn creator x y
-                         && eqOn parent x y
-                         && eqOn certificate x y
-                         && eqOn leadershipProof x y
-                         && eqOn bodyHash x y
+  iBlockEq ._==_ x y = eqBy slot x y
+                         && eqBy creator x y
+                         && eqBy parent x y
+                         && eqBy certificate x y
+                         && eqBy leadershipProof x y
+                         && eqBy bodyHash x y
 {-# COMPILE AGDA2HS iBlockEq #-}
 
 instance
@@ -286,7 +251,7 @@ instance
 
 instance
   iBlockBodyEq : Eq BlockBody
-  iBlockBodyEq ._==_ x y = eqOn headerHash x y && eqOn payload x y
+  iBlockBodyEq ._==_ x y = eqBy headerHash x y && eqBy payload x y
 {-# COMPILE AGDA2HS iBlockBodyEq #-}
 
 instance
@@ -348,10 +313,16 @@ instance Default NodeModel where
 
 -- State monad for node model.
 
-NodeOperation = State NodeModel (List Message)
+NodeState : Set → Set
+NodeState s = State NodeModel s
+{-# COMPILE AGDA2HS NodeState #-}
+
+NodeOperation : Set
+NodeOperation = NodeState (List Message)
 {-# COMPILE AGDA2HS NodeOperation #-}
 
-NodeModification = State NodeModel ⊤
+NodeModification : Set
+NodeModification = NodeState ⊤
 {-# COMPILE AGDA2HS NodeModification #-}
 
 -- Lenses for node model.
@@ -402,66 +373,19 @@ latestCertOnChain = lens' nodeLatestCertOnChain (λ s x → record s {nodeLatest
 
 -- Cryptographic functions.
 
+SignBlock : Set
 SignBlock =  Slot → PartyId → Hash Block → Maybe Certificate → Block
 {-# COMPILE AGDA2HS SignBlock #-}
 
+SignVote : Set
 SignVote = Round → PartyId → Hash Block → Vote
 {-# COMPILE AGDA2HS SignVote #-}
-
--- Arithmetic on slots and rounds.
-
-incrementSlot : Slot → Slot
-incrementSlot s = s + 1
-{-# COMPILE AGDA2HS incrementSlot #-}
-
-incrementRound : Round → Round
-incrementRound r = r + 1
-{-# COMPILE AGDA2HS incrementRound #-}
-
--- List operations.
-
-checkDescending : (a → a → Ordering) → List a → Bool
-checkDescending _ [] = True
-checkDescending _ (x ∷ []) = True
-checkDescending f (x ∷ y ∷ zs) = f x y == GT && checkDescending f (y ∷ zs)
-{-# COMPILE AGDA2HS checkDescending #-}
-
-insertDescending : (a → a → Ordering) → a → List a → List a
-insertDescending _ x [] = x ∷ []
-insertDescending f x (y ∷ ys) = case f x y of λ where
-                                  LT → y ∷ insertDescending f x ys
-                                  EQ → y ∷ ys -- Is it safe to ignore equivocations?
-                                  GT → x ∷ y ∷ ys
-{-# COMPILE AGDA2HS insertDescending #-}
-
-unionDescending : ⦃ _ : Ord b ⦄ → (a → b) → List a → List a → List a
-unionDescending f xs ys = foldr (insertDescending (λ x y → compare (f x) (f y))) ys xs
-{-# COMPILE AGDA2HS unionDescending #-}
-
-{-# TERMINATING #-}
-groupBy : (a → a → Bool) → List a → List (List a)
-groupBy _ [] = []
-groupBy f (x ∷ xs) = let (ys , zs) = span (f x) xs
-                     in (x ∷ ys) ∷ groupBy f zs
-{-# COMPILE AGDA2HS groupBy #-}   
-
-count : List a → ℕ
-count _ = 0
-{-# COMPILE AGDA2HS count #-}
 
 -- Diffusion of messages.
 
 diffuse : NodeOperation
 diffuse = pure []
 {-# COMPILE AGDA2HS diffuse #-}
-
-_↞_ : ⦃ _ : Applicative f ⦄ → f (List a) → a → f (List a)
-_↞_ m x = fmap (λ xs → xs ++ (x ∷ [])) m
-infixl 30 _↞_
-{-# COMPILE AGDA2HS _↞_ #-}
-{-# FOREIGN AGDA2HS
-infixl 5 ↞
-#-}
 
 -- Executable specification.
 
@@ -484,47 +408,41 @@ roundsWithNewQuorums : State NodeModel (List Round)
 roundsWithNewQuorums =
   do
     tau ← peras τ
-    let noCertificate : List Round → Vote → Bool
-        noCertificate ignoreRounds vote = notElem (voteRound vote) ignoreRounds
-    let groupByRound : List Vote → List (List Vote)
-        groupByRound = groupBy $ eqOn voteRound
-    let hasQuorum : List a → Bool
-        hasQuorum votes = count votes >= tau
-    let getRound : List Vote → Round
-        getRound votes = case votes of λ where -- FIXME: We cannot pattern match on constructors in `let`s?
-                           [] → zero
-                           (vote ∷ _) → voteRound vote
     roundsWithCerts ← fmap certificateRound <$> use certs
     fmap getRound
-      ∘ filter hasQuorum
+      ∘ filter (hasQuorum tau)
       ∘ groupByRound
-      ∘ filter (noCertificate roundsWithCerts)
+      ∘ filter (hasNoCertificate roundsWithCerts)
       <$> use votes
+  where
+    hasNoCertificate : List Round → Vote → Bool
+    hasNoCertificate ignoreRounds vote = notElem (voteRound vote) ignoreRounds
+    groupByRound : List Vote → List (List Vote)
+    groupByRound = groupBy (eqBy voteRound)
+    hasQuorum : ℕ → List a → Bool
+    hasQuorum tau votes = count votes >= tau
+    getRound : List Vote → Round
+    getRound [] = zero
+    getRound (vote ∷ _) = voteRound vote
 {-# COMPILE AGDA2HS roundsWithNewQuorums #-}
-
-updateVotes : List Vote → NodeModification
-updateVotes newVotes =
-  do
-    votes ≕ unionDescending voteRound newVotes
-    -- FIXME: Work in progress.
-    rs <- roundsWithNewQuorums
-    pure tt
-{-# COMPILE AGDA2HS updateVotes #-}
 
 fetching : List Chain → List Vote → NodeOperation
 fetching newChains newVotes =
   do
-    currentSlot ≕ incrementSlot
+    currentSlot ≕ addOne
     updateChains newChains
-    updateVotes newVotes
+    votes ≕ insertVotes newVotes
     diffuse
+  where
+    insertVotes : List Vote → List Vote → List Vote
+    insertVotes = unionDescending voteRound
 {-# COMPILE AGDA2HS fetching #-}
 
 {-
 newRound : NodeOperation
 newRound =
   do
-    currentRound ≕ incrementRound
+    currentRound ≕ addOne
     messages
 {-# COMPILE AGDA2HS newRound #-}
 

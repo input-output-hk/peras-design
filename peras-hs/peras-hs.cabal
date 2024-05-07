@@ -24,6 +24,7 @@ library
     Peras.Nakamoto
     Peras.Network
     Peras.Orphans
+    Peras.QCD.Crypto
     Peras.QCD.Node.Model
     Peras.QCD.State
   hs-source-dirs:   src
@@ -32,6 +33,7 @@ library
                 , QuickCheck
                 , base >=4.9 && <5
                 , base16-bytestring
+                , binary
                 , bytestring
                 , data-default
                 , generic-random
