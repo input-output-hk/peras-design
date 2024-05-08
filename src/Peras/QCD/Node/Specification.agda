@@ -110,7 +110,7 @@ certificatesForNewQuorums =
     -- Find which rounds already have certificates.
     roundsWithCerts ← use certs ⇉ fmap certificateRound
     -- Build certificates for rounds that have a new quorum.
-    use votes
+    use votes                                      -- Fetch the votes.
       ⇉ filter (hasNoCertificate roundsWithCerts)  -- Ignore votes that already have certificates.
       ⇉ groupByRound                               -- Group the votes by round.
       ⇉ filter (hasQuorum tau)                     -- Ignore rounds that don't have a quorum of votes.
@@ -174,97 +174,44 @@ fetching newChains newVotes =
     insertCerts = unionDescending certificateRound
 {-# COMPILE AGDA2HS fetching #-}
 
+-- Create a new block.
 blockCreation : List Tx → NodeOperation
 blockCreation txs =
   do
     -- Find the hash of the parent's tip.
     parent ← use preferredChain ⇉ chainTip
-    -- Create a certificate, if needed.
-    let cert = Nothing -- FIXME: Implement.
-    
+    -- Fetch the lifetime of certificates.
+    a ← peras A
+    -- Fetch the current round.
+    r ← use currentRound
+    -- Fetch the latest certificate and the latest on the chain.
+    certPrime ← use latestCertSeen
+    certStar ← use latestCertOnChain
+    -- Check whether a certificate exists from two rounds past.
+    penultimate ←
+      use certs                                 -- Fetch the certificates.
+        ⇉ takeWhile (noMoreThanTwoRoundsOld r)  -- For efficiency, since the list is sorted by decreasing round.
+        ⇉ any (twoRoundsOld r)                  -- Check if any certificates are two rounds old.
+    -- Check that the latest certificate has not expired.
+    unexpired ← pure $ r <= certificateRound certPrime + a
+    -- Check that the latest certificate is newer than the latest on the chain.
+    newer ← pure $ certificateRound certPrime > certificateRound certStar
+    -- Determine whether the latest certificate should be included in the new block.
+    cert ← pure (
+             if not penultimate && unexpired && newer
+               then Just certPrime
+               else Nothing
+           )
     -- Forge the block.
     block ← signBlock <$> use currentSlot <*> use creatorId <*> pure parent <*> pure cert <*> pure txs
     -- Extend the preferred chain.
     chain ← use preferredChain ⇉ extendChain block
     -- Diffuse the new chain.
     diffuse ↞ NewChain chain
-    
-{-
-newRound : NodeOperation
-newRound =
-  do
-    currentRound ≕ addOne
-    messages
-{-# COMPILE AGDA2HS newRound #-}
-
-forgeBlock : HashTip → SignBlock → NodeOperation
-forgeBlock hashTip signBlock =
-  do
-    chain ← use preferredChain
-    parentHash ← pure $ hashTip chain
-    cert ← pure nothing  -- FIXME: Add certificate logic.
-    block ← signBlock <$> use currentSlot <*> use creatorId <*> pure parentHash <*> pure cert
-    chain' ← pure $ block ∷ chain
-    preferredChain ≔ chain'
-    messages ↞ NewChain chain'
--- FIXME: Consider revising notation.
---   * `pure $` could be written as a unary operator like `!`, but `agda2hs` doesn't support that.
---   * `<$> use` could be written as something like `<$>>` to eliminate the need for `use`.
---   * `<$> pure` could be written as something like `<$!` to eliminate the need for `pure`
---   * `use` could also be witeen as a unary operator, but once again `agda2hs` doesn't support that.
-{-# COMPILE AGDA2HS forgeBlock #-}
-
-
-pointsTo : Certificate → Chain → Bool
-pointsTo cert chain =
-  any found chain
   where
-    found : Block → Bool
-    found block = case certificate block of λ where
-                    nothing → False
-                    (just cert') → True -- cert == cert'
-{-# COMPILE AGDA2HS pointsTo #-}
-
--- IGNORE THE FOLLOWING WORK IN PROGRESS
-
-buildCert : NodeModel → List Message → NodeModel × List Message
-buildCert node messages' = node , messages' -- FIXME: To be implemented.
-{-# COMPILE AGDA2HS buildCert #-}
-
-castVote : NodeModel → HashBlock → SignVote → NodeModel × List Message
-castVote node hashBlock signVote =
-  buildCert
-    (record node {nodePreferredVotes = nodePreferredVotes node ++ vote})
-    (map Message.SomeVote vote)
-  where
-    eligible : Block → Bool
-    eligible block = Block.slotNumber block + paramL (nodeProtocol node) <= nodeCurrentSlot node
-    vote = case filter eligible (nodePreferredChain node) of λ where
-      [] → []
-      (block ∷ _) → signVote (nodeCurrentRound node) (nodeCreatorId node) (hashBlock block) ∷ []
-{-# COMPILE AGDA2HS castVote #-}
-
-
-test1 : State NodeModel Slot
-test1 =
-  do
-      i <- use currentSlot
-      currentSlot ≔ (i + 1)
-      currentSlot ≕ (λ j → j + 10)
-      use currentSlot
-{-# COMPILE AGDA2HS test1 #-}
-
--- State transitions.
-
-data Signal : Set where
-  Initialize : Params → PartyId → Signal
-  NewSlot : Signal
-  NewRound : Signal
-  ForgeBlock : Signal
-  CastVote : Signal
-  ReceiveBlock : Block → Signal
-  ReceiveVote : Vote → Signal
-  ReceiveCertificate : Certificate → Signal
-{-# COMPILE AGDA2HS Signal deriving (Eq, Generic, Ord, Show) #-}
-
--}
+    -- Check whether a certificate is no more than two rounds old.
+    noMoreThanTwoRoundsOld : Round → Certificate → Bool
+    noMoreThanTwoRoundsOld r cert = certificateRound cert + 2 <= r
+    -- Check whether a certificate is exactly two rounds old.
+    twoRoundsOld : Round → Certificate → Bool
+    twoRoundsOld r cert = certificateRound cert + 2 == r
