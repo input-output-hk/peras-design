@@ -44,6 +44,10 @@ groupBy f (x : xs) =
 count :: [a] -> Natural
 count _ = 0
 
+firstWithDefault :: a -> [a] -> a
+firstWithDefault x [] = x
+firstWithDefault _ (x : _) = x
+
 (↞) :: Applicative f => f [a] -> a -> f [a]
 m ↞ x = fmap (\xs -> xs ++ [x]) m
 

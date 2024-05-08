@@ -5,7 +5,7 @@ module Peras.QCD.Node.Model where
 import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (ByteString, Hash (MakeHash), Hashable (hash), emptyBS)
 import Peras.QCD.State (Lens', State, lens', use, (≔), (≕))
-import Peras.QCD.Util (addOne, count, eqBy, eqByBS, groupBy, unionDescending, (⇉))
+import Peras.QCD.Util (addOne, count, eqBy, eqByBS, firstWithDefault, groupBy, unionDescending, (⇉))
 
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
@@ -114,8 +114,22 @@ data Chain
 genesisHash :: Hash Block
 genesisHash = MakeHash emptyBS
 
+chainBlocks :: Chain -> [Block]
+chainBlocks Genesis = []
+chainBlocks (ChainBlock block chain) = block : chainBlocks chain
+
 genesisCert :: Certificate
 genesisCert = MakeCertificate 0 genesisHash
+
+certsOnChain :: Chain -> [Certificate]
+certsOnChain Genesis = [genesisCert]
+certsOnChain (ChainBlock block chain) =
+  maybe id (:) (certificate block) $ certsOnChain chain
+
+lastCert :: Chain -> Certificate
+lastCert Genesis = genesisCert
+lastCert (ChainBlock block chain) =
+  maybe (lastCert chain) id (certificate block)
 
 data Vote = Vote
   { voteRound :: Natural
@@ -416,6 +430,17 @@ type SignBlock =
 
 type SignVote = Round -> PartyId -> Hash Block -> Vote
 
+buildCertificate :: [Vote] -> Certificate
+buildCertificate votes' =
+  MakeCertificate (getRound votes') (getBlock votes')
+ where
+  getRound :: [Vote] -> Round
+  getRound [] = zero
+  getRound (vote : _) = voteRound vote
+  getBlock :: [Vote] -> Hash Block
+  getBlock [] = genesisHash
+  getBlock (vote : _) = voteBlock vote
+
 initialize :: Params -> PartyId -> NodeOperation
 initialize params party =
   do
@@ -423,11 +448,57 @@ initialize params party =
     creatorId ≔ party
     diffuse
 
-updateChains :: [Chain] -> NodeModification
-updateChains newChains = pure ()
+isChainPrefix :: Chain -> Chain -> Bool
+isChainPrefix Genesis _ = True
+isChainPrefix (ChainBlock block _) chain' =
+  test (chainBlocks chain')
+ where
+  sl :: Slot
+  sl = slot block
+  hb :: Hash Block
+  hb = hash block
+  test :: [Block] -> Bool
+  test [] = False
+  test (b : bs) = hb == parent b || sl < slot b && test bs
 
-roundsWithNewQuorums :: State NodeModel [Round]
-roundsWithNewQuorums =
+updateChains :: [Chain] -> NodeModification
+updateChains newChains =
+  do
+    certs ≕ insertCerts (concatMap certsOnChain newChains)
+    chains ≕ filter (not . isPrefixOfAnyChain newChains)
+    isPrefixOfOldChains <- use chains ⇉ isPrefixOfAnyChain
+    chains ≕ mappend (filter (not . isPrefixOfOldChains) newChains)
+ where
+  insertCerts :: [Certificate] -> [Certificate] -> [Certificate]
+  insertCerts = unionDescending (\r -> certificateRound r)
+  isPrefixOfAnyChain :: [Chain] -> Chain -> Bool
+  isPrefixOfAnyChain chains' chain =
+    any (isChainPrefix chain) chains'
+
+chainWeight :: Natural -> [Certificate] -> Chain -> Natural
+chainWeight boost certs' chain =
+  count (chainBlocks chain ⇉ hash)
+    + boost
+      * count
+        ( filter
+            (flip elem (certs' ⇉ \r -> certificateBlock r))
+            (chainBlocks chain ⇉ hash)
+        )
+
+heaviestChain :: Natural -> [Certificate] -> [Chain] -> Chain
+heaviestChain _ _ [] = Genesis
+heaviestChain boost certs' (chain : chains') =
+  heaviest (chain, chainWeight boost certs' chain) chains'
+ where
+  heaviest :: (Chain, Natural) -> [Chain] -> Chain
+  heaviest (c, _) [] = c
+  heaviest (c, w) (c' : cs) =
+    if w <= chainWeight boost certs' c'
+      then heaviest (c', chainWeight boost certs' c') cs
+      else heaviest (c, w) cs
+
+certificatesForNewQuorums :: State NodeModel [Certificate]
+certificatesForNewQuorums =
   do
     tau <- peras τ
     roundsWithCerts <- use certs ⇉ fmap (\r -> certificateRound r)
@@ -436,18 +507,23 @@ roundsWithNewQuorums =
       )
         ⇉ filter (hasQuorum tau)
       )
-      ⇉ fmap getRound
+      ⇉ fmap buildCertificate
  where
   hasNoCertificate :: [Round] -> Vote -> Bool
-  hasNoCertificate ignoreRounds vote =
-    notElem (voteRound vote) ignoreRounds
+  hasNoCertificate roundsWithCerts vote =
+    notElem (voteRound vote) roundsWithCerts
   groupByRound :: [Vote] -> [[Vote]]
   groupByRound = groupBy (eqBy (\r -> voteRound r))
   hasQuorum :: Natural -> [a] -> Bool
   hasQuorum tau votes' = count votes' >= tau
-  getRound :: [Vote] -> Round
-  getRound [] = zero
-  getRound (vote : _) = voteRound vote
+
+updateLatestCertSeen :: NodeModification
+updateLatestCertSeen =
+  (use certs ⇉ firstWithDefault genesisCert) >>= (latestCertSeen ≔)
+
+updateLatestCertOnChain :: NodeModification
+updateLatestCertOnChain =
+  (use preferredChain ⇉ lastCert) >>= (latestCertOnChain ≔)
 
 fetching :: [Chain] -> [Vote] -> NodeOperation
 fetching newChains newVotes =
@@ -455,7 +531,16 @@ fetching newChains newVotes =
     currentSlot ≕ addOne
     updateChains newChains
     votes ≕ insertVotes newVotes
+    newCerts <- certificatesForNewQuorums
+    certs ≕ insertCerts newCerts
+    boost <- peras B
+    heaviest <- heaviestChain boost <$> use certs <*> use chains
+    preferredChain ≔ heaviest
+    updateLatestCertSeen
+    updateLatestCertOnChain
     diffuse
  where
   insertVotes :: [Vote] -> [Vote] -> [Vote]
   insertVotes = unionDescending (\r -> voteRound r)
+  insertCerts :: [Certificate] -> [Certificate] -> [Certificate]
+  insertCerts = unionDescending (\r -> certificateRound r)
