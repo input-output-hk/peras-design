@@ -20,13 +20,21 @@ data Σ : Set where
   🄀 : Σ
 ```
 ```agda
-module Vec ⦃ _ : Params ⦄ where
+module _ ⦃ _ : Params ⦄ where
   open import Data.Vec renaming (_∷ʳ_ to _,_)
   open import Data.Nat
   open import Data.Product using (_×_)
 
   open Params ⦃...⦄
-
+```
+<!--
+```agda
+  instance
+    nZ : NonZero T -- TODO: why is this needed..?
+    nZ = T-nonZero
+```
+-->
+```agda
   VotingString = Vec Σ
   
   infix 3 _⟶_
@@ -54,6 +62,16 @@ module Vec ⦃ _ : Params ⦄ where
 ```agda
   LeaderString = Vec (ℕ × ℕ)
 ```
+### Execution
+```agda
+  rnd : ℕ → ⦃ _ : NonZero T ⦄ → ℕ
+  rnd s = s / T
+```
+```agda
+  Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
+  Execution m n refl = LeaderString m × VotingString n
+```
+## Theorem: The voting string in any execution is valid
 
 <!--
 ```agda
@@ -84,22 +102,5 @@ module Rec where
   HS-VI : Valid ⟨⟩
   HS-VII : Valid ⟨⟩
 -}
-```
-
-### Theorem 4.1. The voting string in any execution is valid.
-
-```agda
-
--- Execution = LeaderString × VotingString
--- Execution = ∀ {m n : Size}
---  → m ≡ rnd n
---  → (List m (ℕ × ℕ)) × (List n Σ)
-
-{-
-theorem-4-1 : ∀ {ω : LeaderString} {σ : VotingString}
-  →  
-  → Valid σ
--}
-
 ```
 -->
