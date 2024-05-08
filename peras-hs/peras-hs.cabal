@@ -25,8 +25,13 @@ library
     Peras.Network
     Peras.Orphans
     Peras.QCD.Crypto
+    Peras.QCD.Crypto.Placeholders
     Peras.QCD.Node.Model
+    Peras.QCD.Node.Specification
+    Peras.QCD.Protocol
     Peras.QCD.State
+    Peras.QCD.Types
+    Peras.QCD.Types.Instances
     Peras.QCD.Util
   hs-source-dirs:   src
   build-depends:

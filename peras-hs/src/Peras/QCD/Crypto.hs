@@ -34,6 +34,9 @@ class Hashable a where
 unsafeHash :: H.Hashable a => a -> ByteString
 unsafeHash = LBS.toStrict . B.encode . H.hash
 
+instance Hashable () where
+  hash _ = MakeHash $ unsafeHash ()
+
 instance Hashable ByteString where
   hash = MakeHash . unsafeHash
 
@@ -62,3 +65,10 @@ instance
     MakeHash $
       unsafeHash
         (hashBytes (hash x), hashBytes (hash y), hashBytes (hash z))
+
+castHash :: Hash a -> Hash b
+castHash = MakeHash . \r -> hashBytes r
+
+instance Hashable a => Hashable (Maybe a) where
+  hash Nothing = castHash (hash ())
+  hash (Just x) = castHash (hash ((), x))
