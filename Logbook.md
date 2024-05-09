@@ -6,7 +6,7 @@ Here are the results of the experiment to encode the Peras protocol definition f
 
 ![Snapshot of Peras protocol](docs/diagrams/protocol_2024-05-09_09-16-51.png)
 
-The four main protocol operations are listed below, but helper functions are omitted. The operations are expressed monadically so that the recipe reads as pseudo-code. There are still opportunties for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc.
+The four main protocol operations are listed below, but helper functions are omitted. The operations are expressed monadically so that the recipe reads as pseudo-code. There are still opportunities for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc.
 
 Some ambiguities in the draft specification were also identified:
 
@@ -20,12 +20,16 @@ Some ambiguities in the draft specification were also identified:
 Other lessons learned:
 
 - Bugs in `agda2hs` slowed development work and required awkward workarounds. (Issues for these have been created in the `agda2hs` repository.)
+- Lenses improve readability.
 - Using a `List` for the "set" data structure of the paper creates inefficiencies in the implementation.
     - Set invariants are not trivially enforced.
     - Access and query functions are slow.
 - It might be difficult prove this executable specification matches the properties that are being formally proved.
 - Even though the Agda code is written to look imperative, it has quite a few artifacts of functional style that could be an impediment to some implementors.
+    - It might be better to use `let` statements instead of `← pure $`. Unfortunately, it would be quite difficult to design an assignment operator to replace monadic `let` in Agda.
+    - The functional style avoids introducing lots of intermediate variables, but maybe that would be preferable to using functions as modifiers to monadic state (e.g., `_≕_ : Lens' s a → (a → a) → State s ⊤`).
 - Overall, the Agda code is more verbose than the textual specification.
+- It might be difficult to create Agda code that is simultaneously easily readable by mathematical audiences (e.g., researchers) and software audiences (e.g., implementors).
 
 Next steps (order might vary) that should be discussed before proceeding further:
 

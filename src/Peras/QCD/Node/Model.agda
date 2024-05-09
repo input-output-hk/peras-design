@@ -115,4 +115,3 @@ NodeModification = NodeState ⊤
 diffuse : NodeOperation
 diffuse = pure []
 {-# COMPILE AGDA2HS diffuse #-}
-
