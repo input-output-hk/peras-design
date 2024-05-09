@@ -145,6 +145,7 @@ updateLatestCertOnChain =
     latestCertOnChain ≔ latest
 {-# COMPILE AGDA2HS updateLatestCertOnChain #-}
 
+-- Enter a new slot and record the new chains and votes received.
 fetching : List Chain → List Vote → NodeOperation
 fetching newChains newVotes =
   do
