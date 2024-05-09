@@ -28,8 +28,11 @@ Other lessons learned:
 - Even though the Agda code is written to look imperative, it has quite a few artifacts of functional style that could be an impediment to some implementors.
     - It might be better to use `let` statements instead of `← pure $`. Unfortunately, it would be quite difficult to design an assignment operator to replace monadic `let` in Agda.
     - The functional style avoids introducing lots of intermediate variables, but maybe that would be preferable to using functions as modifiers to monadic state (e.g., `_≕_ : Lens' s a → (a → a) → State s ⊤`).
+    - The `use` and `pure` functions could be eliminated by defining operators (including logical and arithmetic ones) that hide them.
 - Overall, the Agda code is more verbose than the textual specification.
 - It might be difficult to create Agda code that is simultaneously easily readable by mathematical audiences (e.g., researchers) and software audiences (e.g., implementors).
+- Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
+- Creating a full eDSL might be a better approach, but that would involved significantly more effort.
 
 Next steps (order might vary) that should be discussed before proceeding further:
 
