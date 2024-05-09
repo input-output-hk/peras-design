@@ -148,6 +148,9 @@ fetching newChains newVotes =
   do
     -- At the beginning of each slot.
     currentSlot ≕ addOne
+    u ← peras U
+    now ← use currentSlot
+    currentRound ≔ integerDivide now u
     -- Add any new chains and certificates.
     updateChains newChains
     -- Add new votes.
@@ -183,9 +186,6 @@ blockCreation txs =
     -- Fetch the lifetime of certificates.
     a ← peras A
     -- Fetch the current round.
-
-
---UPDATE
     round ← use currentRound
     -- Fetch the latest certificate and the latest on the chain.
     certPrime ← use latestCertSeen
@@ -298,11 +298,11 @@ voting =
     extendedBy : Block → Hash Block → Bool
     extendedBy block blockHash =
       -- FIXME: To be implemented.
-      False
+      _
     inChainIgnorance : Round → ℕ → Certificate → Bool
     inChainIgnorance round r cert = round >= certificateRound cert + r
     afterCooldown : Round → ℕ → Certificate → Bool
     afterCooldown round k cert =
       -- FIXME: To be implemented.
-      False
+      _
 {-# COMPILE AGDA2HS voting #-}

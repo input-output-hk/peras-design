@@ -2,12 +2,12 @@ module Peras.QCD.Node.Specification where
 
 import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (Hash, Hashable (hash))
-import Peras.QCD.Crypto.Placeholders (buildCertificate)
-import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, certs, chains, creatorId, currentSlot, diffuse, latestCertOnChain, latestCertSeen, peras, preferredChain, protocol, votes)
-import Peras.QCD.Protocol (ParamSymbol (B), Params, τ)
+import Peras.QCD.Crypto.Placeholders (buildCertificate, signBlock, signVote)
+import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, NodeState, certs, chains, creatorId, currentRound, currentSlot, diffuse, latestCertOnChain, latestCertSeen, peras, preferredChain, protocol, votes)
+import Peras.QCD.Protocol (ParamSymbol (A, B, K, L, R, U), Params, τ)
 import Peras.QCD.State (State, use, (≔), (≕))
-import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), PartyId, Round, Slot, Vote (voteRound), certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
-import Peras.QCD.Util (addOne, count, eqBy, firstWithDefault, groupBy, unionDescending, (⇉))
+import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound), certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
+import Peras.QCD.Util (addOne, count, eqBy, firstWithDefault, groupBy, integerDivide, unionDescending, (↞), (⇉))
 
 import Peras.QCD.Types.Instances ()
 
@@ -109,6 +109,9 @@ fetching :: [Chain] -> [Vote] -> NodeOperation
 fetching newChains newVotes =
   do
     currentSlot ≕ addOne
+    u <- peras U
+    now <- use currentSlot
+    currentRound ≔ integerDivide now u
     updateChains newChains
     votes ≕ insertVotes newVotes
     newCerts <- certificatesForNewQuorums
@@ -124,3 +127,82 @@ fetching newChains newVotes =
   insertVotes = unionDescending (\r -> voteRound r)
   insertCerts :: [Certificate] -> [Certificate] -> [Certificate]
   insertCerts = unionDescending (\r -> certificateRound r)
+
+blockCreation :: [Tx] -> NodeOperation
+blockCreation txs =
+  do
+    parent <- use preferredChain ⇉ chainTip
+    a <- peras A
+    round <- use currentRound
+    certPrime <- use latestCertSeen
+    certStar <- use latestCertOnChain
+    penultimate <-
+      ( use certs
+          ⇉ takeWhile (noMoreThanTwoRoundsOld round)
+        )
+        ⇉ any (twoRoundsOld round)
+    unexpired <- pure $ round <= certificateRound certPrime + a
+    newer <-
+      pure $
+        certificateRound certPrime > certificateRound certStar
+    cert <-
+      pure
+        ( if not penultimate && unexpired && newer
+            then Just certPrime
+            else Nothing
+        )
+    block <-
+      signBlock
+        <$> use currentSlot
+        <*> use creatorId
+        <*> pure parent
+        <*> pure cert
+        <*> pure txs
+    chain <- use preferredChain ⇉ extendChain block
+    diffuse ↞ NewChain chain
+ where
+  noMoreThanTwoRoundsOld :: Round -> Certificate -> Bool
+  noMoreThanTwoRoundsOld round cert =
+    certificateRound cert + 2 <= round
+  twoRoundsOld :: Round -> Certificate -> Bool
+  twoRoundsOld round cert = certificateRound cert + 2 == round
+
+preagreement :: NodeState (Maybe Block)
+preagreement =
+  do
+    l <- peras L
+    now <- use currentSlot
+    pure Nothing
+
+voting :: NodeOperation
+voting =
+  do
+    agreed <- preagreement
+    case agreed of
+      Nothing -> diffuse
+      Just block -> do
+        now <- use currentSlot
+        round <- use currentRound
+        r <- peras R
+        k <- peras K
+        vr1a <- use latestCertSeen ⇉ oneRoundOld round
+        vr1b <-
+          (use latestCertSeen ⇉ \r -> certificateBlock r)
+            ⇉ extendedBy block
+        vr2a <- use latestCertSeen ⇉ inChainIgnorance round r
+        vr2b <- use latestCertOnChain ⇉ afterCooldown round k
+        if vr1a && vr1b || vr2a && vr2b
+          then do
+            vote <- signVote round <$> use creatorId <*> pure block
+            votes ≕ (vote :)
+            diffuse ↞ NewVote vote
+          else diffuse
+ where
+  oneRoundOld :: Round -> Certificate -> Bool
+  oneRoundOld round cert = certificateRound cert + 1 == round
+  extendedBy :: Block -> Hash Block -> Bool
+  extendedBy block blockHash = False
+  inChainIgnorance :: Round -> Natural -> Certificate -> Bool
+  inChainIgnorance round r cert = round >= certificateRound cert + r
+  afterCooldown :: Round -> Natural -> Certificate -> Bool
+  afterCooldown round k cert = False

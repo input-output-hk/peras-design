@@ -1,7 +1,7 @@
 module Peras.QCD.Crypto.Placeholders where
 
 import Peras.QCD.Crypto (Hash (hashBytes), Hashable (hash))
-import Peras.QCD.Types (Block (MakeBlock), Certificate (MakeCertificate), LeadershipProof (MakeLeadershipProof), MembershipProof (MakeMembershipProof), PartyId, Round, Signature (MakeSignature), Slot, Tx, Vote (voteBlock, voteRound), genesisHash)
+import Peras.QCD.Types (Block (MakeBlock), Certificate (MakeCertificate), LeadershipProof (MakeLeadershipProof), MembershipProof (MakeMembershipProof), PartyId, Round, Signature (MakeSignature), Slot, Tx, Vote (MakeVote, voteBlock, voteRound), genesisHash)
 
 import Numeric.Natural (Natural)
 import Peras.QCD.Types.Instances ()
@@ -28,7 +28,7 @@ signBlock s p h c txs =
 
 signVote :: Round -> PartyId -> Block -> Vote
 signVote r p b =
-  Vote
+  MakeVote
     r
     p
     (hash b)

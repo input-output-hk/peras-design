@@ -85,7 +85,7 @@ lastCert Genesis = genesisCert
 lastCert (ChainBlock block chain) =
   maybe (lastCert chain) id (certificate block)
 
-data Vote = Vote
+data Vote = MakeVote
   { voteRound :: Natural
   , voteParty :: PartyId
   , voteBlock :: Hash Block

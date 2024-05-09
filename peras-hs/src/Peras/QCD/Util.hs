@@ -52,3 +52,6 @@ firstWithDefault _ (x : _) = x
 m ↞ x = fmap (\xs -> xs ++ [x]) m
 
 infixl 5 ↞
+
+integerDivide :: Natural -> Natural -> Natural
+integerDivide x y = x

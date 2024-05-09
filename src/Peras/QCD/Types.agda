@@ -123,6 +123,7 @@ lastCert (ChainBlock block chain) = maybe (lastCert chain) id (certificate block
 -- Votes.
 
 record Vote : Set where
+  constructor MakeVote
   field voteRound : ℕ
         voteParty : PartyId
         voteBlock : Hash Block

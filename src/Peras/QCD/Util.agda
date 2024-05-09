@@ -75,3 +75,7 @@ infixl 30 _↞_
 {-# FOREIGN AGDA2HS
 infixl 5 ↞
 #-}
+
+integerDivide : ℕ → ℕ → ℕ
+integerDivide x y = _
+{-# COMPILE AGDA2HS integerDivide #-}
