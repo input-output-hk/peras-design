@@ -1,6 +1,6 @@
 module Peras.QCD.Util where
 
-open import Data.Nat using (ℕ)
+open import Data.Nat using (ℕ; _/_)
 open import Haskell.Prelude
 open import Peras.QCD.Crypto using (ByteString; eqBS)
 
@@ -76,6 +76,12 @@ infixl 30 _↞_
 infixl 5 ↞
 #-}
 
-integerDivide : ℕ → ℕ → ℕ
-integerDivide x y = _
-{-# COMPILE AGDA2HS integerDivide #-}
+{-# TERMINATING #-}
+divideNat : ℕ → ℕ → ℕ
+divideNat dividend divisor = go 0
+  -- FIXME: Ugh, there must be a better approach.
+  where go : ℕ → ℕ
+        go quotient = if dividend < (quotient + 1) * divisor
+                        then quotient
+                        else go (quotient + 1)
+{-# COMPILE AGDA2HS divideNat #-}

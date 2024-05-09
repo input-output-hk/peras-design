@@ -3,13 +3,15 @@ module Peras.QCD.Node.Specification where
 import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (Hash, Hashable (hash))
 import Peras.QCD.Crypto.Placeholders (buildCertificate, signBlock, signVote)
-import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, NodeState, certs, chains, creatorId, currentRound, currentSlot, diffuse, latestCertOnChain, latestCertSeen, peras, preferredChain, protocol, votes)
-import Peras.QCD.Protocol (ParamSymbol (A, B, K, L, R, U), Params, τ)
+import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, certs, chains, creatorId, currentRound, currentSlot, diffuse, latestCertOnChain, latestCertSeen, peras, preferredChain, protocol, votes)
+import Peras.QCD.Node.Preagreement (preagreement)
+import Peras.QCD.Protocol (ParamSymbol (A, B, K, R, U), Params, τ)
 import Peras.QCD.State (State, use, (≔), (≕))
 import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound), certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
-import Peras.QCD.Util (addOne, count, eqBy, firstWithDefault, groupBy, integerDivide, unionDescending, (↞), (⇉))
+import Peras.QCD.Util (addOne, count, divideNat, eqBy, firstWithDefault, groupBy, unionDescending, (↞), (⇉))
 
 import Peras.QCD.Types.Instances ()
+import Prelude hiding (round)
 
 zero :: Natural
 zero = 0
@@ -111,7 +113,7 @@ fetching newChains newVotes =
     currentSlot ≕ addOne
     u <- peras U
     now <- use currentSlot
-    currentRound ≔ integerDivide now u
+    currentRound ≔ divideNat now u
     updateChains newChains
     votes ≕ insertVotes newVotes
     newCerts <- certificatesForNewQuorums
@@ -131,7 +133,7 @@ fetching newChains newVotes =
 blockCreation :: [Tx] -> NodeOperation
 blockCreation txs =
   do
-    parent <- use preferredChain ⇉ chainTip
+    tip <- use preferredChain ⇉ chainTip
     a <- peras A
     round <- use currentRound
     certPrime <- use latestCertSeen
@@ -155,7 +157,7 @@ blockCreation txs =
       signBlock
         <$> use currentSlot
         <*> use creatorId
-        <*> pure parent
+        <*> pure tip
         <*> pure cert
         <*> pure txs
     chain <- use preferredChain ⇉ extendChain block
@@ -167,12 +169,31 @@ blockCreation txs =
   twoRoundsOld :: Round -> Certificate -> Bool
   twoRoundsOld round cert = certificateRound cert + 2 == round
 
-preagreement :: NodeState (Maybe Block)
-preagreement =
-  do
-    l <- peras L
-    now <- use currentSlot
-    pure Nothing
+extends :: Block -> Certificate -> [Chain] -> Bool
+extends block cert = any chainExtends . fmap chainBlocks
+ where
+  dropUntilBlock :: Slot -> Hash Block -> [Block] -> [Block]
+  dropUntilBlock slotHint target blocks =
+    case dropWhile (\block' -> slotHint < slot block') blocks of
+      [] -> []
+      candidate : _ ->
+        if target == hash candidate
+          then dropWhile (\block' -> slotHint < slot block') blocks
+          else []
+  chainExtends :: [Block] -> Bool
+  chainExtends =
+    any (\block' -> parent block' == certificateBlock cert)
+      . dropUntilBlock (slot block) (hash block)
+
+afterCooldown :: Round -> Natural -> Certificate -> Bool
+afterCooldown round k cert = go 1
+ where
+  go :: Natural -> Bool
+  go c =
+    case compare round (certificateRound cert + c * k) of
+      LT -> False
+      EQ -> True
+      GT -> go (c + 1)
 
 voting :: NodeOperation
 voting =
@@ -181,14 +202,11 @@ voting =
     case agreed of
       Nothing -> diffuse
       Just block -> do
-        now <- use currentSlot
         round <- use currentRound
         r <- peras R
         k <- peras K
         vr1a <- use latestCertSeen ⇉ oneRoundOld round
-        vr1b <-
-          (use latestCertSeen ⇉ \r -> certificateBlock r)
-            ⇉ extendedBy block
+        vr1b <- extends block <$> use latestCertSeen <*> use chains
         vr2a <- use latestCertSeen ⇉ inChainIgnorance round r
         vr2b <- use latestCertOnChain ⇉ afterCooldown round k
         if vr1a && vr1b || vr2a && vr2b
@@ -200,9 +218,5 @@ voting =
  where
   oneRoundOld :: Round -> Certificate -> Bool
   oneRoundOld round cert = certificateRound cert + 1 == round
-  extendedBy :: Block -> Hash Block -> Bool
-  extendedBy block blockHash = False
   inChainIgnorance :: Round -> Natural -> Certificate -> Bool
   inChainIgnorance round r cert = round >= certificateRound cert + r
-  afterCooldown :: Round -> Natural -> Certificate -> Bool
-  afterCooldown round k cert = False

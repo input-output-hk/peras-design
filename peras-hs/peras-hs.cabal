@@ -27,6 +27,7 @@ library
     Peras.QCD.Crypto
     Peras.QCD.Crypto.Placeholders
     Peras.QCD.Node.Model
+    Peras.QCD.Node.Preagreement
     Peras.QCD.Node.Specification
     Peras.QCD.Protocol
     Peras.QCD.State

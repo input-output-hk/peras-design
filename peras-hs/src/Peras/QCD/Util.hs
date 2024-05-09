@@ -53,5 +53,11 @@ m ↞ x = fmap (\xs -> xs ++ [x]) m
 
 infixl 5 ↞
 
-integerDivide :: Natural -> Natural -> Natural
-integerDivide x y = x
+divideNat :: Natural -> Natural -> Natural
+divideNat dividend divisor = go 0
+ where
+  go :: Natural -> Natural
+  go quotient =
+    if dividend < (quotient + 1) * divisor
+      then quotient
+      else go (quotient + 1)

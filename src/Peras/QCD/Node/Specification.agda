@@ -5,6 +5,7 @@ open import Haskell.Prelude
 open import Peras.QCD.Crypto
 open import Peras.QCD.Crypto.Placeholders
 open import Peras.QCD.Node.Model
+open import Peras.QCD.Node.Preagreement
 open import Peras.QCD.Protocol
 open import Peras.QCD.State
 open import Peras.QCD.Types
@@ -12,6 +13,7 @@ open import Peras.QCD.Types.Instances
 open import Peras.QCD.Util
 
 {-# FOREIGN AGDA2HS
+import Prelude hiding (round)
 import Peras.QCD.Types.Instances ()
 zero :: Natural
 zero = 0
@@ -146,11 +148,12 @@ updateLatestCertOnChain =
 fetching : List Chain → List Vote → NodeOperation
 fetching newChains newVotes =
   do
-    -- At the beginning of each slot.
+    -- Increment the slot number.
     currentSlot ≕ addOne
+    -- Update the round number.
     u ← peras U
     now ← use currentSlot
-    currentRound ≔ integerDivide now u
+    currentRound ≔ divideNat now u
     -- Add any new chains and certificates.
     updateChains newChains
     -- Add new votes.
@@ -182,7 +185,7 @@ blockCreation : List Tx → NodeOperation
 blockCreation txs =
   do
     -- Find the hash of the parent's tip.
-    parent ← use preferredChain ⇉ chainTip
+    tip ← use preferredChain ⇉ chainTip
     -- Fetch the lifetime of certificates.
     a ← peras A
     -- Fetch the current round.
@@ -206,7 +209,7 @@ blockCreation txs =
                else Nothing
            )
     -- Forge the block.
-    block ← signBlock <$> use currentSlot <*> use creatorId <*> pure parent <*> pure cert <*> pure txs
+    block ← signBlock <$> use currentSlot <*> use creatorId <*> pure tip <*> pure cert <*> pure txs
     -- Extend the preferred chain.
     chain ← use preferredChain ⇉ extendChain block
     -- Diffuse the new chain.
@@ -220,15 +223,32 @@ blockCreation txs =
     twoRoundsOld round cert = certificateRound cert + 2 == round
 {-# COMPILE AGDA2HS blockCreation #-}
 
--- Select a block to vote for, using preagreement.
-preagreement : NodeState (Maybe Block)
-preagreement =
-  do
-    l ← peras L
-    now ← use currentSlot
-    -- FIXME: To be implemented.
-    pure Nothing
-{-# COMPILE AGDA2HS preagreement #-}
+-- Check whether a block is in the extension of a chain referenced by a certificate.
+extends : Block → Certificate → List Chain → Bool
+extends block cert = any chainExtends ∘ fmap chainBlocks
+  where
+    dropUntilBlock : Slot → Hash Block → List Block → List Block
+    dropUntilBlock slotHint target blocks =
+      let candidates = dropWhile (λ block' → slotHint < slot block') blocks
+      in case candidates of λ where
+        [] → []
+        (candidate ∷ _) → if target == hash iBlockHashable candidate then candidates else []
+    chainExtends : List Block → Bool
+    chainExtends =
+      any (λ block' → parent block' == certificateBlock cert)
+        ∘ dropUntilBlock (slot block) (hash iBlockHashable block)
+{-# COMPILE AGDA2HS extends #-}
+
+-- Check whether an exact multiple of the cool-down period has occured.
+{-# TERMINATING #-}
+afterCooldown : Round → ℕ → Certificate → Bool
+afterCooldown round k cert = go 1
+  where go : ℕ → Bool
+        go c = case compare round (certificateRound cert + c * k) of λ where
+                 LT → False
+                 EQ → True
+                 GT → go (c + 1)
+{-# COMPILE AGDA2HS afterCooldown #-}
 
 -- Vote.
 voting : NodeOperation
@@ -245,32 +265,21 @@ voting =
       -- There was a preagreement block.
       (Just block) →
         do
-          -- Fetch the current slot and round.
-          now ← use currentSlot
+          -- Fetch the current round.
           round ← use currentRound
-          -- Fetch the chain-ignorance period.
+          -- Fetch the chain-ignorance and cool-down durations.
           r ← peras R
-          -- Fetch the cool-down duration.
           k <- peras K
           -- Check whether the latest certificate is from the previous round.
-          vr1a ←
-            use latestCertSeen     -- Fetch the latest certificate.
-              ⇉ oneRoundOld round  -- Check whether that is from the previous round.
+          vr1a ← use latestCertSeen ⇉ oneRoundOld round
           -- Check whether the block ends the chain indicated by the latest certificate.
-          vr1b ←
-            use latestCertSeen    -- Fetch the latest certificate.
-              ⇉ certificateBlock  -- Find which block it certified.
-              ⇉ extendedBy block  -- Check whether the block under consideration extends the certified block.
+          vr1b ← extends block <$> use latestCertSeen <*> use chains
           -- Check whether the certificate is in the chain-ignorance period.
-          vr2a ←
-            use latestCertSeen            -- Fetch the latest certificate.
-              ⇉ inChainIgnorance round r  -- Check whether the certificate falls in the chain-ignorance period.
+          vr2a ← use latestCertSeen ⇉ inChainIgnorance round r
           -- Check whether the cool-down period has ended.
-          vr2b ←
-            use latestCertOnChain  -- Fetch the latest certificate on the preferred chain.
-              ⇉ afterCooldown round k
+          vr2b ← use latestCertOnChain ⇉ afterCooldown round k
           -- Determine whether to vote.
-          if (vr1a && vr1b || vr2a && vr2b)
+          if vr1a && vr1b || vr2a && vr2b
              then (
                -- Vote.
                do
@@ -288,21 +297,10 @@ voting =
                  diffuse
              )
   where
-    afterSlot : Slot → ℕ → Block → Bool
-    afterSlot s l block = slot block + l > s
-    hashOfFirstBlock : List Block → Hash Block
-    hashOfFirstBlock [] = genesisHash
-    hashOfFirstBlock (block ∷ _) = hash iBlockHashable block
+    -- Check whether a certificate is one round old.
     oneRoundOld : Round → Certificate → Bool
     oneRoundOld round cert = certificateRound cert + 1 == round
-    extendedBy : Block → Hash Block → Bool
-    extendedBy block blockHash =
-      -- FIXME: To be implemented.
-      _
+    -- Check whether a certificate is in the chain-ignorance period.
     inChainIgnorance : Round → ℕ → Certificate → Bool
     inChainIgnorance round r cert = round >= certificateRound cert + r
-    afterCooldown : Round → ℕ → Certificate → Bool
-    afterCooldown round k cert =
-      -- FIXME: To be implemented.
-      _
 {-# COMPILE AGDA2HS voting #-}
