@@ -1,3 +1,189 @@
+## 2024-05-09
+
+### Executable specification in Agda
+
+Here are the results of the experiment to encode the Peras protocol definition from the draft paper (shown in the figure below) as an Agda executable specification that compiles to Haskell under `agda2hs` and can be used with `quickcheck-dynamic`.
+
+![Snapshot of Peras protocol](docs/diagrams/protocol_2024-05-09_09-16-51.png)
+
+The four main protocol operations are listed below, but helper functions are omitted. The operations are expressed monadically so that the recipe reads as pseudo-code. There are still opportunities for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc.
+
+Some ambiguities in the draft specification were also identified:
+
+1. *Step 4 of Fetching* does not specify which chain to prefer when more than one chain has the same weight. In previous versions of the protocol, the preferred chain would only be updated if a weightier one was seen. In this version, when several chains have the maximal weight a node might keep switching preferred chains each slot.
+2. *Step 2 VR-1B of Voting* does not define the meaning of "extends the block", nor does the text of the paper. From context, "extends" must be equivalent to "has a descendant block".
+3. *Voting* is silent on how to handle the fact that a party may have many votes.
+4. The "vote" data structure does not record the number of votes that the party has cast in the round.
+5. *Step 2 of Procedure* is incomplete.
+6. Also, it seems that `Certs` should be initialized with the genesis certificate instead of the empty set.
+
+Other lessons learned:
+
+- Bugs in `agda2hs` slowed development work and required awkward workarounds. (Issues for these have been created in the `agda2hs` repository.)
+- Lenses improve readability.
+- Using a `List` for the "set" data structure of the paper creates inefficiencies in the implementation.
+    - Set invariants are not trivially enforced.
+    - Access and query functions are slow.
+- It might be difficult prove this executable specification matches the properties that are being formally proved.
+- Even though the Agda code is written to look imperative, it has quite a few artifacts of functional style that could be an impediment to some implementors.
+    - It might be better to use `let` statements instead of `← pure $`. Unfortunately, it would be quite difficult to design an assignment operator to replace monadic `let` in Agda.
+    - The functional style avoids introducing lots of intermediate variables, but maybe that would be preferable to using functions as modifiers to monadic state (e.g., `_≕_ : Lens' s a → (a → a) → State s ⊤`).
+    - The `use` and `pure` functions could be eliminated by defining operators (including logical and arithmetic ones) that hide them.
+- Overall, the Agda code is more verbose than the textual specification.
+- It might be difficult to create Agda code that is simultaneously easily readable by mathematical audiences (e.g., researchers) and software audiences (e.g., implementors).
+- Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
+- Creating a full eDSL might be a better approach, but that would involved significantly more effort.
+
+Next steps (order might vary) that should be discussed before proceeding further:
+
+- Convert to literate Agda.
+- Implement `quickcheck-dynamic` node-oriented conformance tests using this executable specification.
+- Implement similar network-oriented conformance tests.
+- Test example native implementations in Haskell and Rust.
+- Evaluate suitability for inclusion either in a CIP or as an appendix or supplement.
+- Revise when Peras paper is finalized.
+- Implement cryptographic functions in Agda.
+
+#### Fetching
+
+```agda
+-- Enter a new slot and record the new chains and votes received.
+fetching : List Chain → List Vote → NodeOperation
+fetching newChains newVotes =
+  do
+    -- Increment the slot number.
+    currentSlot ≕ addOne
+    -- Update the round number.
+    u ← peras U
+    now ← use currentSlot
+    currentRound ≔ divideNat now u
+    -- Add any new chains and certificates.
+    updateChains newChains
+    -- Add new votes.
+    votes ≕ insertVotes newVotes
+    -- Turn any new quorums into certificates.
+    newCerts ← certificatesForNewQuorums
+    certs ≕ insertCerts newCerts
+    -- Make the heaviest chain the preferred one.
+    boost ← peras B
+    heaviest ← heaviestChain boost <$> use certs <*> use chains
+    preferredChain ≔ heaviest
+    -- Record the latest certificate seen.
+    updateLatestCertSeen
+    -- Record the latest certificate on the preferred chain.
+    updateLatestCertOnChain
+    -- No messages need to be diffused.
+    diffuse
+```
+
+#### Block creation
+
+```agda
+-- Create a new block.
+blockCreation : List Tx → NodeOperation
+blockCreation txs =
+  do
+    -- Find the hash of the parent's tip.
+    tip ← use preferredChain ⇉ chainTip
+    -- Fetch the lifetime of certificates.
+    a ← peras A
+    -- Fetch the current round.
+    round ← use currentRound
+    -- Fetch the latest certificate and the latest on the chain.
+    certPrime ← use latestCertSeen
+    certStar ← use latestCertOnChain
+    -- Check whether a certificate exists from two rounds past.
+    penultimate ←
+      use certs                                     -- Fetch the certificates.
+        ⇉ takeWhile (noMoreThanTwoRoundsOld round)  -- For efficiency, since the list is sorted by decreasing round.
+        ⇉ any (twoRoundsOld round)                  -- Check if any certificates are two rounds old.
+    -- Check that the latest certificate has not expired.
+    unexpired ← pure $ round <= certificateRound certPrime + a
+    -- Check that the latest certificate is newer than the latest on the chain.
+    newer ← pure $ certificateRound certPrime > certificateRound certStar
+    -- Determine whether the latest certificate should be included in the new block.
+    cert ← pure (
+             if not penultimate && unexpired && newer
+               then Just certPrime
+               else Nothing
+           )
+    -- Forge the block.
+    block ← signBlock <$> use currentSlot <*> use creatorId <*> pure tip <*> pure cert <*> pure txs
+    -- Extend the preferred chain.
+    chain ← use preferredChain ⇉ extendChain block
+    -- Diffuse the new chain.
+    diffuse ↞ NewChain chain
+```
+
+#### Voting
+
+```agda
+-- Vote.
+voting : NodeOperation
+voting =
+  do
+    -- Check for a preagreement block.
+    agreed ← preagreement
+    case agreed of λ where
+      -- There was no preagreement block.
+      Nothing →
+        do
+          -- No messages if preagreement does not yield a block.
+          diffuse
+      -- There was a preagreement block.
+      (Just block) →
+        do
+          -- Fetch the current round.
+          round ← use currentRound
+          -- Fetch the chain-ignorance and cool-down durations.
+          r ← peras R
+          k <- peras K
+          -- Check whether the latest certificate is from the previous round.
+          vr1a ← use latestCertSeen ⇉ oneRoundOld round
+          -- Check whether the block ends the chain indicated by the latest certificate.
+          vr1b ← extends block <$> use latestCertSeen <*> use chains
+          -- Check whether the certificate is in the chain-ignorance period.
+          vr2a ← use latestCertSeen ⇉ inChainIgnorance round r
+          -- Check whether the cool-down period has ended.
+          vr2b ← use latestCertOnChain ⇉ afterCooldown round k
+          -- Determine whether to vote.
+          if vr1a && vr1b || vr2a && vr2b
+             then (
+               -- Vote.
+               do
+                 -- Sign the vote.
+                 vote ← signVote round <$> use creatorId <*> pure block
+                 -- Record the vote.
+                 votes ≕ (vote ∷_)
+                 -- Diffuse the vote.
+                 diffuse ↞ NewVote vote
+              )
+             else (
+               -- Do not vote.
+               do
+                 -- No message because no vote was cast.
+                 diffuse
+             )
+```
+
+#### Preagreement
+
+```agda
+-- Select a block to vote for, using preagreement.
+preagreement : NodeState (Maybe Block)
+preagreement =
+  do
+    -- Fetch the cutoff window for block selection.
+    l ← peras L
+    -- Fetch the current slot.
+    now ← use currentSlot
+    -- Find the newest block older than the cutoff window.
+    use preferredChain               -- Fetch the prefered chain.
+      ⇉ chainBlocks                  -- List its blocks.
+      ⇉ dropWhile (newerThan l now)  -- Ignore the blocks that in the cutoff window.
+      ⇉ foundBlock                   -- Report the newest block found, if any.
+```
+
 ## 2024-05-07
 
 ### Team Session
