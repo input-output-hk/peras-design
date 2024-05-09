@@ -136,6 +136,5 @@ open Vote public
 data Message : Set where
   NewChain : Chain → Message
   NewVote : Vote → Message
-  NewCertificate : Certificate → Message
 open Message public
 {-# COMPILE AGDA2HS Message deriving (Generic, Show) #-}

@@ -39,9 +39,16 @@ signBlock s p h c txs =
     }
 {-# COMPILE AGDA2HS signBlock #-}
 
-SignVote : Set
-SignVote = Round → PartyId → Hash Block → Vote
-{-# COMPILE AGDA2HS SignVote #-}
+signVote : Round → PartyId → Block → Vote
+signVote r p b =
+  record {
+    voteRound = r
+  ; voteParty = p
+  ; voteBlock = hash iBlockHashable b
+  ; voteProof = MakeMembershipProof (hashBytes (hash iPairHashable (r , p)))
+  ; voteSignature = MakeSignature (hashBytes (hash iTripletHashable (r , p , b)))
+  }
+{-# COMPILE AGDA2HS signVote #-}
 
 buildCertificate : List Vote → Certificate
 buildCertificate votes' =

@@ -183,17 +183,20 @@ blockCreation txs =
     -- Fetch the lifetime of certificates.
     a ← peras A
     -- Fetch the current round.
-    r ← use currentRound
+
+
+--UPDATE
+    round ← use currentRound
     -- Fetch the latest certificate and the latest on the chain.
     certPrime ← use latestCertSeen
     certStar ← use latestCertOnChain
     -- Check whether a certificate exists from two rounds past.
     penultimate ←
-      use certs                                 -- Fetch the certificates.
-        ⇉ takeWhile (noMoreThanTwoRoundsOld r)  -- For efficiency, since the list is sorted by decreasing round.
-        ⇉ any (twoRoundsOld r)                  -- Check if any certificates are two rounds old.
+      use certs                                     -- Fetch the certificates.
+        ⇉ takeWhile (noMoreThanTwoRoundsOld round)  -- For efficiency, since the list is sorted by decreasing round.
+        ⇉ any (twoRoundsOld round)                  -- Check if any certificates are two rounds old.
     -- Check that the latest certificate has not expired.
-    unexpired ← pure $ r <= certificateRound certPrime + a
+    unexpired ← pure $ round <= certificateRound certPrime + a
     -- Check that the latest certificate is newer than the latest on the chain.
     newer ← pure $ certificateRound certPrime > certificateRound certStar
     -- Determine whether the latest certificate should be included in the new block.
@@ -211,7 +214,95 @@ blockCreation txs =
   where
     -- Check whether a certificate is no more than two rounds old.
     noMoreThanTwoRoundsOld : Round → Certificate → Bool
-    noMoreThanTwoRoundsOld r cert = certificateRound cert + 2 <= r
+    noMoreThanTwoRoundsOld round cert = certificateRound cert + 2 <= round
     -- Check whether a certificate is exactly two rounds old.
     twoRoundsOld : Round → Certificate → Bool
-    twoRoundsOld r cert = certificateRound cert + 2 == r
+    twoRoundsOld round cert = certificateRound cert + 2 == round
+{-# COMPILE AGDA2HS blockCreation #-}
+
+-- Select a block to vote for, using preagreement.
+preagreement : NodeState (Maybe Block)
+preagreement =
+  do
+    l ← peras L
+    now ← use currentSlot
+    -- FIXME: To be implemented.
+    pure Nothing
+{-# COMPILE AGDA2HS preagreement #-}
+
+-- Vote.
+voting : NodeOperation
+voting =
+  do
+    -- Check for a preagreement block.
+    agreed ← preagreement
+    case agreed of λ where
+      -- There was no preagreement block.
+      Nothing →
+        do
+          -- No messages if preagreement does not yield a block.
+          diffuse
+      -- There was a preagreement block.
+      (Just block) →
+        do
+          -- Fetch the current slot and round.
+          now ← use currentSlot
+          round ← use currentRound
+          -- Fetch the chain-ignorance period.
+          r ← peras R
+          -- Fetch the cool-down duration.
+          k <- peras K
+          -- Check whether the latest certificate is from the previous round.
+          vr1a ←
+            use latestCertSeen     -- Fetch the latest certificate.
+              ⇉ oneRoundOld round  -- Check whether that is from the previous round.
+          -- Check whether the block ends the chain indicated by the latest certificate.
+          vr1b ←
+            use latestCertSeen    -- Fetch the latest certificate.
+              ⇉ certificateBlock  -- Find which block it certified.
+              ⇉ extendedBy block  -- Check whether the block under consideration extends the certified block.
+          -- Check whether the certificate is in the chain-ignorance period.
+          vr2a ←
+            use latestCertSeen            -- Fetch the latest certificate.
+              ⇉ inChainIgnorance round r  -- Check whether the certificate falls in the chain-ignorance period.
+          -- Check whether the cool-down period has ended.
+          vr2b ←
+            use latestCertOnChain  -- Fetch the latest certificate on the preferred chain.
+              ⇉ afterCooldown round k
+          -- Determine whether to vote.
+          if (vr1a && vr1b || vr2a && vr2b)
+             then (
+               -- Vote.
+               do
+                 -- Sign the vote.
+                 vote ← signVote round <$> use creatorId <*> pure block
+                 -- Record the vote.
+                 votes ≕ (vote ∷_)
+                 -- Diffuse the vote.
+                 diffuse ↞ NewVote vote
+              )
+             else (
+               -- Do not vote.
+               do
+                 -- No message because no vote was cast.
+                 diffuse
+             )
+  where
+    afterSlot : Slot → ℕ → Block → Bool
+    afterSlot s l block = slot block + l > s
+    hashOfFirstBlock : List Block → Hash Block
+    hashOfFirstBlock [] = genesisHash
+    hashOfFirstBlock (block ∷ _) = hash iBlockHashable block
+    oneRoundOld : Round → Certificate → Bool
+    oneRoundOld round cert = certificateRound cert + 1 == round
+    extendedBy : Block → Hash Block → Bool
+    extendedBy block blockHash =
+      -- FIXME: To be implemented.
+      False
+    inChainIgnorance : Round → ℕ → Certificate → Bool
+    inChainIgnorance round r cert = round >= certificateRound cert + r
+    afterCooldown : Round → ℕ → Certificate → Bool
+    afterCooldown round k cert =
+      -- FIXME: To be implemented.
+      False
+{-# COMPILE AGDA2HS voting #-}

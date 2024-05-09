@@ -116,6 +116,5 @@ instance
   iMessageEq : Eq Message
   iMessageEq ._==_ (NewChain x) (NewChain y) = x == y
   iMessageEq ._==_ (NewVote x) (NewVote y) = x == y
-  iMessageEq ._==_ (NewCertificate x) (NewCertificate y) = x == y
   iMessageEq ._==_ _ _ = False
 {-# COMPILE AGDA2HS iMessageEq #-}

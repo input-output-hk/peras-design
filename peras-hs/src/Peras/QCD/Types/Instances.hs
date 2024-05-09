@@ -3,7 +3,7 @@
 module Peras.QCD.Types.Instances where
 
 import Peras.QCD.Crypto (Hash, Hashable (hash), castHash)
-import Peras.QCD.Types (Block (bodyHash, certificate, creator, leadershipProof, parent, signature, slot), BlockBody (headerHash, payload), Certificate (certificateBlock, certificateBytes, certificateRound), Chain (ChainBlock, Genesis), LeadershipProof (leadershipProofBytes), MembershipProof (membershipProofBytes), Message (NewCertificate, NewChain, NewVote), Signature (signatureBytes), VerificationKey (verificationKeyBytes), Vote (voteBlock, voteParty, voteProof, voteRound, voteSignature), genesisHash)
+import Peras.QCD.Types (Block (bodyHash, certificate, creator, leadershipProof, parent, signature, slot), BlockBody (headerHash, payload), Certificate (certificateBlock, certificateBytes, certificateRound), Chain (ChainBlock, Genesis), LeadershipProof (leadershipProofBytes), MembershipProof (membershipProofBytes), Message (NewChain, NewVote), Signature (signatureBytes), VerificationKey (verificationKeyBytes), Vote (voteBlock, voteParty, voteProof, voteRound, voteSignature), genesisHash)
 import Peras.QCD.Util (eqBy, eqByBS)
 
 instance Eq MembershipProof where
@@ -81,5 +81,4 @@ tipHash (ChainBlock block _) = hash block
 instance Eq Message where
   NewChain x == NewChain y = x == y
   NewVote x == NewVote y = x == y
-  NewCertificate x == NewCertificate y = x == y
   _ == _ = False

@@ -97,5 +97,4 @@ data Vote = Vote
 data Message
   = NewChain Chain
   | NewVote Vote
-  | NewCertificate Certificate
   deriving (Generic, Show)
