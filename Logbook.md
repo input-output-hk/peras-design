@@ -36,6 +36,7 @@ Other lessons learned:
 
 Next steps (order might vary) that should be discussed before proceeding further:
 
+- Convert to literate Agda.
 - Implement `quickcheck-dynamic` node-oriented conformance tests using this executable specification.
 - Implement similar network-oriented conformance tests.
 - Test example native implementations in Haskell and Rust.
