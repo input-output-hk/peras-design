@@ -4,6 +4,9 @@
 
 Here are the results of the experiment to encode the Peras protocol definition from the draft paper (shown in the figure below) as an Agda executable specification that compiles to Haskell under `agda2hs` and can be used with `quickcheck-dynamic`.
 
+* [Agda source](src/Peras/QCD/)
+* [Generated Haskell](peras-hs/src/Peras/QCD/)
+
 ![Snapshot of Peras protocol](docs/diagrams/protocol_2024-05-09_09-16-51.png)
 
 The four main protocol operations are listed below, but helper functions are omitted. The operations are expressed monadically so that the recipe reads as pseudo-code. There are still opportunities for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc.
@@ -44,7 +47,7 @@ Next steps (order might vary) that should be discussed before proceeding further
 - Revise when Peras paper is finalized.
 - Implement cryptographic functions in Agda.
 
-#### Fetching
+#### [Fetching](src/Peras/QCD/Node/Specification.hs)
 
 ```agda
 -- Enter a new slot and record the new chains and votes received.
@@ -76,7 +79,7 @@ fetching newChains newVotes =
     diffuse
 ```
 
-#### Block creation
+#### [Block creation](src/Peras/QCD/Node/Specification.hs)
 
 ```agda
 -- Create a new block.
@@ -115,7 +118,7 @@ blockCreation txs =
     diffuse ↞ NewChain chain
 ```
 
-#### Voting
+#### [Voting](src/Peras/QCD/Node/Specification.hs)
 
 ```agda
 -- Vote.
@@ -166,7 +169,7 @@ voting =
              )
 ```
 
-#### Preagreement
+#### Preagreement](src/Peras/QCD/Node/Preagreement.hs)
 
 ```agda
 -- Select a block to vote for, using preagreement.
@@ -183,6 +186,20 @@ preagreement =
       ⇉ dropWhile (newerThan l now)  -- Ignore the blocks that in the cutoff window.
       ⇉ foundBlock                   -- Report the newest block found, if any.
 ```
+
+## 2024-05-08
+
+### Peras weekly
+
+- Reviewed past week's progress
+    - Nicholas Clarke had several questions/concerns
+        - Will Peras be compatible with the history of the chain (Praos and Genesis)?
+        - Will Peras be compatible with Genesis?
+        - Are there possible attacks when a node syncs from genesis and receives votes/certificates from other nodes, where those certificates are not recorded on the public chain?
+- Reviewed stakeholder diagram
+    - Nicholas Clarke volunteered to provide Tweag's perspective as a stakeholder and to relate the latest Intersect status/processes
+- Reviewed action items from retrospective
+- Discussed `agda2hs` issues and limitations
 
 ## 2024-05-07
 
