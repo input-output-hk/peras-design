@@ -7,7 +7,7 @@ import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, certs, 
 import Peras.QCD.Node.Preagreement (preagreement)
 import Peras.QCD.Protocol (ParamSymbol (A, B, K, R, U), Params, τ)
 import Peras.QCD.State (State, use, (≔), (≕))
-import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound, voteWeight), Weight, certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
+import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain, Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound, voteWeight), Weight, certsOnChain, genesisCert, genesisHash, lastCert)
 import Peras.QCD.Util (addOne, count, divideNat, eqBy, firstWithDefault, groupBy, unionDescending, (↞), (⇉))
 
 import Peras.QCD.Types.Instances ()
@@ -24,16 +24,15 @@ initialize params party =
     diffuse
 
 chainTip :: Chain -> Hash Block
-chainTip Genesis = genesisHash
-chainTip (ChainBlock block _) = hash block
+chainTip [] = genesisHash
+chainTip (block : _) = hash block
 
 extendChain :: Block -> Chain -> Chain
-extendChain = ChainBlock
+extendChain = (:)
 
 isChainPrefix :: Chain -> Chain -> Bool
-isChainPrefix Genesis _ = True
-isChainPrefix (ChainBlock block _) chain' =
-  test (chainBlocks chain')
+isChainPrefix [] _ = True
+isChainPrefix (block : _) chain' = test chain'
  where
   sl :: Slot
   sl = slot block
@@ -59,16 +58,16 @@ updateChains newChains =
 
 chainWeight :: Natural -> [Certificate] -> Chain -> Natural
 chainWeight boost certs' chain =
-  count (chainBlocks chain ⇉ hash)
+  count (chain ⇉ hash)
     + boost
       * count
         ( filter
             (flip elem (certs' ⇉ \r -> certificateBlock r))
-            (chainBlocks chain ⇉ hash)
+            (chain ⇉ hash)
         )
 
 heaviestChain :: Natural -> [Certificate] -> [Chain] -> Chain
-heaviestChain _ _ [] = Genesis
+heaviestChain _ _ [] = []
 heaviestChain boost certs' (chain : chains') =
   heaviest (chain, chainWeight boost certs' chain) chains'
  where
@@ -171,7 +170,7 @@ blockCreation txs =
   twoRoundsOld round cert = certificateRound cert + 2 == round
 
 extends :: Block -> Certificate -> [Chain] -> Bool
-extends block cert = any chainExtends . fmap chainBlocks
+extends block cert = any chainExtends
  where
   dropUntilBlock :: Slot -> Hash Block -> [Block] -> [Block]
   dropUntilBlock slotHint target blocks =

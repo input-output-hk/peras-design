@@ -38,8 +38,8 @@ emptyNode =
   ; nodeCreatorId = record {verificationKeyBytes = emptyBS}
   ; nodeCurrentSlot = 0
   ; nodeCurrentRound =  0
-  ; nodePreferredChain = Genesis
-  ; nodeChains = Genesis ∷ []
+  ; nodePreferredChain = []
+  ; nodeChains = [] ∷ []
   ; nodeVotes = []
   ; nodeCerts = genesisCert ∷ []  -- FIXME: This differs from the Peras paper.
   ; nodeLatestCertSeen = genesisCert

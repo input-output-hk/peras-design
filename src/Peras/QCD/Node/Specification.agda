@@ -35,20 +35,20 @@ initialize params party =
 
 -- Find the hash of a chain's tip.
 chainTip : Chain → Hash Block
-chainTip Genesis = genesisHash
-chainTip (ChainBlock block _) = hash iBlockHashable block
+chainTip [] = genesisHash
+chainTip (block ∷ _) = hash iBlockHashable block
 {-# COMPILE AGDA2HS chainTip #-}
 
 -- Extend a chain.
 extendChain : Block → Chain → Chain
-extendChain = ChainBlock
+extendChain = _∷_
 {-# COMPILE AGDA2HS extendChain #-}
 
 -- Determine whether one chain is a prefix on another chain.
 isChainPrefix : Chain → Chain → Bool
-isChainPrefix Genesis _ = True
-isChainPrefix (ChainBlock block _) chain' =
-  test (chainBlocks chain')
+isChainPrefix [] _ = True
+isChainPrefix (block ∷ _) chain' =
+  test chain'
   where sl : Slot
         sl = slot block
         hb : Hash Block
@@ -84,7 +84,7 @@ updateChains newChains =
 -- Find the weight of a chain, given a set of certificates.
 chainWeight : ℕ → List Certificate → Chain → ℕ
 chainWeight boost certs' chain =
-  let blocks = chainBlocks chain ⇉ hash iBlockHashable
+  let blocks = chain ⇉ hash iBlockHashable
       certifieds = certs' ⇉ certificateBlock
       z = filter (flip elem certifieds) blocks
   in count blocks + boost * count z
@@ -92,7 +92,7 @@ chainWeight boost certs' chain =
 
 -- Find the heaviest of a list of chains, given a set of certificates.
 heaviestChain : ℕ → List Certificate → List Chain → Chain
-heaviestChain _ _ [] = Genesis
+heaviestChain _ _ [] = []
 heaviestChain boost certs' (chain ∷ chains') = heaviest (chain , chainWeight boost certs' chain) chains'
   where heaviest : Chain × ℕ → List Chain → Chain
         heaviest ( c , _ ) [] = c
@@ -226,7 +226,7 @@ blockCreation txs =
 
 -- Check whether a block is in the extension of a chain referenced by a certificate.
 extends : Block → Certificate → List Chain → Bool
-extends block cert = any chainExtends ∘ fmap chainBlocks
+extends block cert = any chainExtends
   where
     dropUntilBlock : Slot → Hash Block → List Block → List Block
     dropUntilBlock slotHint target blocks =

@@ -62,29 +62,22 @@ data BlockBody = BlockBody
   }
   deriving (Generic, Show)
 
-data Chain
-  = Genesis
-  | ChainBlock Block Chain
-  deriving (Generic, Show)
+type Chain = [Block]
 
 genesisHash :: Hash Block
 genesisHash = MakeHash emptyBS
-
-chainBlocks :: Chain -> [Block]
-chainBlocks Genesis = []
-chainBlocks (ChainBlock block chain) = block : chainBlocks chain
 
 genesisCert :: Certificate
 genesisCert = MakeCertificate 0 genesisHash emptyBS
 
 certsOnChain :: Chain -> [Certificate]
-certsOnChain Genesis = [genesisCert]
-certsOnChain (ChainBlock block chain) =
+certsOnChain [] = [genesisCert]
+certsOnChain (block : chain) =
   maybe id (:) (certificate block) $ certsOnChain chain
 
 lastCert :: Chain -> Certificate
-lastCert Genesis = genesisCert
-lastCert (ChainBlock block chain) =
+lastCert [] = genesisCert
+lastCert (block : chain) =
   maybe (lastCert chain) id (certificate block)
 
 data Vote = MakeVote

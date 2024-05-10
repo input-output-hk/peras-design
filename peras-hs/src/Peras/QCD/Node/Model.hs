@@ -6,7 +6,7 @@ import Numeric.Natural (Natural)
 import Peras.QCD.Crypto (emptyBS)
 import Peras.QCD.Protocol (ParamSymbol, Params, defaultParams, perasParam)
 import Peras.QCD.State (Lens', State, lens', use)
-import Peras.QCD.Types (Certificate, Chain (Genesis), Message, PartyId, Round, Slot, VerificationKey (MakeVerificationKey), Vote, genesisCert)
+import Peras.QCD.Types (Certificate, Chain, Message, PartyId, Round, Slot, VerificationKey (MakeVerificationKey), Vote, genesisCert)
 
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
@@ -33,8 +33,8 @@ emptyNode =
     (MakeVerificationKey emptyBS)
     0
     0
-    Genesis
-    [Genesis]
+    []
+    [[]]
     []
     [genesisCert]
     genesisCert
