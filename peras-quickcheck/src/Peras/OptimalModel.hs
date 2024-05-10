@@ -295,8 +295,8 @@ issueCert Peras{quorum} = do
           . groupBy (on (==) $ voteRound &&& voted)
           $ preferredVotes state
   case candidates of
-    vs@(VoteIdeal{voteRound, voted} : _) -> do
-      let cert = Certificate{votingRoundNumber = voteRound, blockRef = voted}
+    vs@(VoteIdeal{voteRound = round, voted} : _) -> do
+      let cert = Certificate{round, blockRef = voted}
       put $
         state
           { preferredCerts = preferredCerts state <> pure cert
@@ -427,7 +427,7 @@ instance StateModel NodeModel where
       ASomeVote vote -> checkVote now vote
    where
     checkBlock time BlockIdeal{creator, slot, cert} = creator /= self && slot <= time && maybe True (checkCert time) cert
-    checkCert time Certificate{votingRoundNumber} = votingRoundNumber * roundLength <= time
+    checkCert time Certificate{round} = round * roundLength <= time
     checkVote time VoteIdeal{voter, voteRound} = voter /= self && voteRound * roundLength <= time
 
   initialState = def
