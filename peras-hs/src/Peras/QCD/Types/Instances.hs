@@ -3,7 +3,7 @@
 module Peras.QCD.Types.Instances where
 
 import Peras.QCD.Crypto (Hash, Hashable (hash), castHash)
-import Peras.QCD.Types (Block (bodyHash, certificate, creator, leadershipProof, parent, signature, slot), BlockBody (headerHash, payload), Certificate (certificateBlock, certificateBytes, certificateRound), Chain (ChainBlock, Genesis), LeadershipProof (leadershipProofBytes), MembershipProof (membershipProofBytes), Message (NewChain, NewVote), Signature (signatureBytes), VerificationKey (verificationKeyBytes), Vote (voteBlock, voteParty, voteProof, voteRound, voteSignature), genesisHash)
+import Peras.QCD.Types (Block (bodyHash, certificate, creator, leadershipProof, parent, signature, slot), BlockBody (headerHash, payload), Certificate (certificateBlock, certificateBytes, certificateRound), Chain, LeadershipProof (leadershipProofBytes), MembershipProof (membershipProofBytes), Message (NewChain, NewVote), Signature (signatureBytes), VerificationKey (verificationKeyBytes), Vote (voteBlock, voteParty, voteProof, voteRound, voteSignature), genesisHash)
 import Peras.QCD.Util (eqBy, eqByBS)
 
 instance Eq MembershipProof where
@@ -69,14 +69,9 @@ instance Eq BlockBody where
   x == y =
     eqBy (\r -> headerHash r) x y && eqBy (\r -> payload r) x y
 
-instance Eq Chain where
-  Genesis == Genesis = True
-  ChainBlock b c == ChainBlock b' c' = b == b' && c == c'
-  _ == _ = False
-
 tipHash :: Chain -> Hash Block
-tipHash Genesis = genesisHash
-tipHash (ChainBlock block _) = hash block
+tipHash [] = genesisHash
+tipHash (block : _) = hash block
 
 instance Eq Message where
   NewChain x == NewChain y = x == y

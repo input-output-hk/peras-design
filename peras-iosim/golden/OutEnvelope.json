@@ -36,7 +36,7 @@
             "outMessage": {
                 "contents": {
                     "blockRef": "2dfacddf427ebd94",
-                    "votingRoundNumber": 19
+                    "round": 19
                 },
                 "tag": "SomeCertificate"
             },

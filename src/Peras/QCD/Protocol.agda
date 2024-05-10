@@ -5,7 +5,6 @@ open import Haskell.Prelude
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.Default (Default(..))
 import GHC.Generics (Generic)
 #-}
 
@@ -37,7 +36,7 @@ record Params : Set where
         paramK : ℕ  -- the length of a cooldown period (in voting rounds)
         
 open Params public
-{-# COMPILE AGDA2HS Params deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Params deriving (Eq, Generic, Show) #-}
 
 defaultParams : Params
 defaultParams =
@@ -52,10 +51,6 @@ defaultParams =
   ; paramK = 600
   }
 {-# COMPILE AGDA2HS defaultParams #-}
-{-# FOREIGN AGDA2HS
-instance Default Params where
-  def = defaultParams
-#-}
 
 -- FIXME: Use a proxy so that parameters may have types other than ℕ.
 perasParam : ParamSymbol → Params → ℕ

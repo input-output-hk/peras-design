@@ -1,3 +1,13 @@
+## 2024-05-10
+
+### QCD conformance test via Agda executable specification
+
+The [`Peras.QCD.ConformanceSpec`](peras-quickcheck/test/Peras/ConformanceSpec.hs) implements the basic faithfulness test for node implementations. Examples are provided for a perfectly faithful node and a buggy one. This demonstrates the feasibility of the following workflow:
+
+```
+research paper --> Agda executable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+```
+
 ## 2024-05-09
 
 ### Executable specification in Agda

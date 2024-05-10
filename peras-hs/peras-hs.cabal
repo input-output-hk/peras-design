@@ -42,7 +42,6 @@ library
                 , base16-bytestring
                 , binary
                 , bytestring
-                , data-default
                 , generic-random
                 , hashable
                 , io-classes
