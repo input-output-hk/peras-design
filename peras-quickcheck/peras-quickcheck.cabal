@@ -74,6 +74,7 @@ library
                      Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
+                     Peras.QCD.Node.Impl.Buggy
                      Peras.QCD.Node.Impl.Perfect
 
     other-modules: Data.Statistics.Util
