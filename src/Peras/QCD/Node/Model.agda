@@ -10,7 +10,6 @@ open import Peras.QCD.Types.Instances
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.Default (Default(..))
 import GHC.Generics (Generic)
 import Peras.QCD.Types.Instances ()
 #-}
@@ -46,11 +45,6 @@ emptyNode =
   ; nodeLatestCertOnChain = genesisCert
   }
 {-# COMPILE AGDA2HS emptyNode #-}
-
-{-# FOREIGN AGDA2HS
-instance Default NodeModel where
-  def = emptyNode
-#-}
 
 -- Lenses for node model.
 

@@ -4,7 +4,6 @@ module Peras.QCD.Protocol where
 
 import Numeric.Natural (Natural)
 
-import Data.Default (Default (..))
 import GHC.Generics (Generic)
 
 data ParamSymbol
@@ -34,9 +33,6 @@ data Params = Params
 
 defaultParams :: Params
 defaultParams = Params 120 240 3600 120 10 300 120 600
-
-instance Default Params where
-  def = defaultParams
 
 perasParam :: ParamSymbol -> Params -> Natural
 perasParam U = \r -> paramU r

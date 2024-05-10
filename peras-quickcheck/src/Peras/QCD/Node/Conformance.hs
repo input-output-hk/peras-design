@@ -65,16 +65,19 @@ instance StateModel NodeModel where
 
   arbitraryAction _context node =
     -- FIXME: Reconsider how sophisticated these arbitrary instances should be.
+    -- FIXME: Limit the size of generated instances.
     if uninitialized
       then fmap Some . Initialize <$> arbitrary <*> arbitrary
       else
         frequency
-          [ (10, fmap Some . Fetching <$> listOf genChain <*> listOf genVote)
+          [ (5, fmap Some . Fetching <$> listOf genChain <*> genVotes)
           , (1, Some . BlockCreation <$> arbitrary)
-          , (if newRound then 1 else 0, Some . Voting <$> arbitrary)
+          , (if newRound then 50 else 0, Some . Voting <$> arbitrary)
           ]
    where
     uninitialized = (node ^. creatorId) == MakeVerificationKey mempty
+    newRound = (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
+    someBlocks = node ^. chains /= [[]]
     genParty = arbitrary `suchThat` (/= (node ^. creatorId))
     genChain =
       do
@@ -82,11 +85,13 @@ instance StateModel NodeModel where
         tip <- flip drop tip' <$> arbitrary
         block <- signBlock (node ^. currentSlot) <$> genParty <*> pure (tipHash tip) <*> pure Nothing <*> arbitrary
         pure $ block : tip
+    genVotes
+      | someBlocks = listOf genVote
+      | otherwise = pure mempty
     genVote =
       do
         block <- elements =<< elements (node ^. chains)
         signVote (node ^. currentRound) <$> genParty <*> arbitrary <*> pure block
-    newRound = (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
 
 deriving instance Eq (Action NodeModel a)
 deriving instance Show (Action NodeModel a)

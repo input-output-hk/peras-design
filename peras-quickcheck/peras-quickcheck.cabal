@@ -74,6 +74,7 @@ library
                      Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
+                     Peras.QCD.Node.Impl.Perfect
 
     other-modules: Data.Statistics.Util
 
@@ -121,7 +122,8 @@ test-suite peras-quickcheck-test
     default-language: Haskell2010
 
     -- Modules included in this executable, other than Main.
-    other-modules: Peras.NetworkModelSpec
+    other-modules: Peras.ConformanceSpec
+                   Peras.NetworkModelSpec
                    Peras.NodeModelSpec
                    Peras.Node.IOSim
                    Peras.OptimalModelSpec

@@ -5,7 +5,6 @@ open import Haskell.Prelude
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.Default (Default(..))
 import GHC.Generics (Generic)
 #-}
 
@@ -52,10 +51,6 @@ defaultParams =
   ; paramK = 600
   }
 {-# COMPILE AGDA2HS defaultParams #-}
-{-# FOREIGN AGDA2HS
-instance Default Params where
-  def = defaultParams
-#-}
 
 -- FIXME: Use a proxy so that parameters may have types other than ℕ.
 perasParam : ParamSymbol → Params → ℕ

@@ -8,7 +8,6 @@ import Peras.QCD.Protocol (ParamSymbol, Params, defaultParams, perasParam)
 import Peras.QCD.State (Lens', State, lens', use)
 import Peras.QCD.Types (Certificate, Chain, Message, PartyId, Round, Slot, VerificationKey (MakeVerificationKey), Vote, genesisCert)
 
-import Data.Default (Default (..))
 import GHC.Generics (Generic)
 import Peras.QCD.Types.Instances ()
 
@@ -39,9 +38,6 @@ emptyNode =
     [genesisCert]
     genesisCert
     genesisCert
-
-instance Default NodeModel where
-  def = emptyNode
 
 protocol :: Lens' NodeModel Params
 protocol =
