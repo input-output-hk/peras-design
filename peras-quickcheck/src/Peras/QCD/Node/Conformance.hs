@@ -15,17 +15,20 @@ module Peras.QCD.Node.Conformance (
 import Control.Lens ((^.))
 import Control.Monad.State (
   MonadState (get, put),
-  MonadTrans (..),
+  MonadTrans,
   State,
   StateT (StateT),
   evalState,
   execState,
-  gets,
-  modify,
+  lift,
  )
-import Peras.QCD.Node.Model (NodeModel (NodeModel), currentSlot, emptyNode, protocol)
+import Peras.QCD.Crypto.Placeholders (signBlock, signVote)
+import Peras.QCD.Node.Arbitrary ()
+import Peras.QCD.Node.Model (NodeModel, chains, creatorId, currentRound, currentSlot, emptyNode, protocol)
 import Peras.QCD.Protocol (Params (paramU))
-import Peras.QCD.Types (Chain, Message, PartyId, Tx, Vote, Weight)
+import Peras.QCD.Types (Chain, Message, PartyId, Tx, VerificationKey (MakeVerificationKey), Vote, Weight)
+import Peras.QCD.Types.Instances (tipHash)
+import Test.QuickCheck (arbitrary, elements, frequency, listOf, suchThat)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))
 
@@ -60,8 +63,32 @@ instance StateModel NodeModel where
       BlockCreation{} -> True
       Voting{} -> (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
 
-  arbitraryAction _context NodeModel{} = undefined -- FIXME: To be implemented.
+  arbitraryAction _context node =
+    -- FIXME: Reconsider how sophisticated these arbitrary instances should be.
+    if uninitialized
+      then fmap Some . Initialize <$> arbitrary <*> arbitrary
+      else
+        frequency
+          [ (10, fmap Some . Fetching <$> listOf genChain <*> listOf genVote)
+          , (1, Some . BlockCreation <$> arbitrary)
+          , (if newRound then 1 else 0, Some . Voting <$> arbitrary)
+          ]
+   where
+    uninitialized = (node ^. creatorId) == MakeVerificationKey mempty
+    genParty = arbitrary `suchThat` (/= (node ^. creatorId))
+    genChain =
+      do
+        tip' <- elements $ node ^. chains
+        tip <- flip drop tip' <$> arbitrary
+        block <- signBlock (node ^. currentSlot) <$> genParty <*> pure (tipHash tip) <*> pure Nothing <*> arbitrary
+        pure $ block : tip
+    genVote =
+      do
+        block <- elements =<< elements (node ^. chains)
+        signVote (node ^. currentRound) <$> genParty <*> arbitrary <*> pure block
+    newRound = (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
 
+deriving instance Eq (Action NodeModel a)
 deriving instance Show (Action NodeModel a)
 
 instance HasVariables (Action NodeModel a) where

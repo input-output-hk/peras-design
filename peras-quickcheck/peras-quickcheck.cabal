@@ -72,6 +72,7 @@ library
                      Peras.Node.Netsim.Rust
                      Peras.OptimalModel
                      Peras.QCD.Node.API
+                     Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
 
     other-modules: Data.Statistics.Util
@@ -100,6 +101,7 @@ library
                       peras-hs,
                       peras-iosim,
                       quickcheck-dynamic,
+                      quickcheck-instances,
                       random,
                       text
 

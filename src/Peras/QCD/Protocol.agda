@@ -37,7 +37,7 @@ record Params : Set where
         paramK : ℕ  -- the length of a cooldown period (in voting rounds)
         
 open Params public
-{-# COMPILE AGDA2HS Params deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Params deriving (Eq, Generic, Show) #-}
 
 defaultParams : Params
 defaultParams =
