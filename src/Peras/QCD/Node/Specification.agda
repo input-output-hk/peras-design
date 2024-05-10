@@ -125,8 +125,8 @@ certificatesForNewQuorums =
     groupByRound  : List Vote → List (List Vote)
     groupByRound = groupBy (eqBy voteRound)
     -- Check if a group of votes in the same round constitutes a quorum.
-    hasQuorum : ℕ → List a → Bool
-    hasQuorum tau votes' = count votes' >= tau
+    hasQuorum : ℕ → List Vote → Bool
+    hasQuorum tau votes' = sum (fmap voteWeight votes') >= tau
 {-# COMPILE AGDA2HS certificatesForNewQuorums #-}
 
 -- Record the lastest certificate seen.
@@ -252,8 +252,8 @@ afterCooldown round k cert = go 1
 {-# COMPILE AGDA2HS afterCooldown #-}
 
 -- Vote.
-voting : NodeOperation
-voting =
+voting : Weight → NodeOperation
+voting weight =
   do
     -- Check for a preagreement block.
     agreed ← preagreement
@@ -285,7 +285,7 @@ voting =
                -- Vote.
                do
                  -- Sign the vote.
-                 vote ← signVote round <$> use creatorId <*> pure block
+                 vote ← signVote round <$> use creatorId <*> pure weight <*> pure block
                  -- Record the vote.
                  votes ≕ (vote ∷_)
                  -- Diffuse the vote.

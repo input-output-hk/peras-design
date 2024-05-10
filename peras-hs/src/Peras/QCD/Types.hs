@@ -34,6 +34,8 @@ type Round = Natural
 
 type PartyId = VerificationKey
 
+type Weight = Natural
+
 data Certificate = MakeCertificate
   { certificateRound :: Round
   , certificateBlock :: Hash Block
@@ -88,6 +90,7 @@ lastCert (ChainBlock block chain) =
 data Vote = MakeVote
   { voteRound :: Natural
   , voteParty :: PartyId
+  , voteWeight :: Weight
   , voteBlock :: Hash Block
   , voteProof :: MembershipProof
   , voteSignature :: Signature

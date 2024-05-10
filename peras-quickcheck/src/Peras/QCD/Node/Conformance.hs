@@ -25,7 +25,7 @@ import Control.Monad.State (
  )
 import Peras.QCD.Node.Model (NodeModel (NodeModel), currentSlot, emptyNode, protocol)
 import Peras.QCD.Protocol (Params (paramU))
-import Peras.QCD.Types (Chain, Message, PartyId, Tx, Vote)
+import Peras.QCD.Types (Chain, Message, PartyId, Tx, Vote, Weight)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))
 
@@ -42,7 +42,7 @@ instance StateModel NodeModel where
     Initialize :: Params -> PartyId -> Action NodeModel [Message]
     Fetching :: [Chain] -> [Vote] -> Action NodeModel [Message]
     BlockCreation :: [Tx] -> Action NodeModel [Message]
-    Voting :: Action NodeModel [Message]
+    Voting :: Weight -> Action NodeModel [Message]
 
   initialState = emptyNode
 
@@ -51,7 +51,7 @@ instance StateModel NodeModel where
       Initialize params party -> execState (Specification.initialize params party) state
       Fetching chains' votes' -> execState (Specification.fetching chains' votes') state
       BlockCreation txs -> execState (Specification.blockCreation txs) state
-      Voting -> execState Specification.voting state
+      Voting weight -> execState (Specification.voting weight) state
 
   precondition node =
     \case
@@ -79,12 +79,12 @@ instance (Monad m, API.PerasNode n m) => RunModel NodeModel (RunMonad n m) where
   perform _state (Initialize params party) _context = apply $ API.initialize params party
   perform _state (Fetching chains' votes') _context = apply $ API.fetching chains' votes'
   perform _state (BlockCreation txs) _context = apply $ API.blockCreation txs
-  perform _state Voting _context = apply API.voting
+  perform _state (Voting weight) _context = apply $ API.voting weight
 
   postcondition (prior, _) (Initialize params party) _env actual = check prior actual $ Specification.initialize params party
   postcondition (prior, _) (Fetching chains' votes') _env actual = check prior actual $ Specification.fetching chains' votes'
   postcondition (prior, _) (BlockCreation txs) _env actual = check prior actual $ Specification.blockCreation txs
-  postcondition (prior, _) Voting _env actual = check prior actual Specification.voting
+  postcondition (prior, _) (Voting weight) _env actual = check prior actual $ Specification.voting weight
 
 apply :: (Monad m, MonadTrans t, MonadState s (t m)) => (s -> m (a, s)) -> t m a
 apply f = do

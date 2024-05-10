@@ -54,6 +54,10 @@ PartyId : Set
 PartyId = VerificationKey
 {-# COMPILE AGDA2HS PartyId #-}
 
+Weight : Set
+Weight = ℕ
+{-# COMPILE AGDA2HS Weight #-}
+
 -- Blocks.
 
 record Certificate : Set
@@ -126,7 +130,7 @@ record Vote : Set where
   constructor MakeVote
   field voteRound : ℕ
         voteParty : PartyId
---      voteWeight : ℕ
+        voteWeight : Weight
         voteBlock : Hash Block
         voteProof : MembershipProof
         voteSignature : Signature

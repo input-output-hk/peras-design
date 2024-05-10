@@ -7,7 +7,7 @@ import Peras.QCD.Node.Model (NodeModel, NodeModification, NodeOperation, certs, 
 import Peras.QCD.Node.Preagreement (preagreement)
 import Peras.QCD.Protocol (ParamSymbol (A, B, K, R, U), Params, τ)
 import Peras.QCD.State (State, use, (≔), (≕))
-import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound), certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
+import Peras.QCD.Types (Block (parent, slot), Certificate (certificateBlock, certificateRound), Chain (ChainBlock, Genesis), Message (NewChain, NewVote), PartyId, Round, Slot, Tx, Vote (voteRound, voteWeight), Weight, certsOnChain, chainBlocks, genesisCert, genesisHash, lastCert)
 import Peras.QCD.Util (addOne, count, divideNat, eqBy, firstWithDefault, groupBy, unionDescending, (↞), (⇉))
 
 import Peras.QCD.Types.Instances ()
@@ -96,8 +96,9 @@ certificatesForNewQuorums =
     notElem (voteRound vote) roundsWithCerts
   groupByRound :: [Vote] -> [[Vote]]
   groupByRound = groupBy (eqBy (\r -> voteRound r))
-  hasQuorum :: Natural -> [a] -> Bool
-  hasQuorum tau votes' = count votes' >= tau
+  hasQuorum :: Natural -> [Vote] -> Bool
+  hasQuorum tau votes' =
+    sum (fmap (\r -> voteWeight r) votes') >= tau
 
 updateLatestCertSeen :: NodeModification
 updateLatestCertSeen =
@@ -195,8 +196,8 @@ afterCooldown round k cert = go 1
       EQ -> True
       GT -> go (c + 1)
 
-voting :: NodeOperation
-voting =
+voting :: Weight -> NodeOperation
+voting weight =
   do
     agreed <- preagreement
     case agreed of
@@ -211,7 +212,11 @@ voting =
         vr2b <- use latestCertOnChain ⇉ afterCooldown round k
         if vr1a && vr1b || vr2a && vr2b
           then do
-            vote <- signVote round <$> use creatorId <*> pure block
+            vote <-
+              signVote round
+                <$> use creatorId
+                <*> pure weight
+                <*> pure block
             votes ≕ (vote :)
             diffuse ↞ NewVote vote
           else diffuse
