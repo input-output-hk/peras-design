@@ -13,18 +13,16 @@ module Peras.QCD.Node.Conformance (
 ) where
 
 import Control.Lens ((^.))
-import Control.Monad ((<=<))
 import Control.Monad.State (
   MonadState (get, put),
   MonadTrans (..),
+  State,
   StateT (StateT),
   evalState,
   execState,
   gets,
   modify,
  )
-import Data.Function (on)
-import Data.List (sort)
 import Peras.QCD.Node.Model (NodeModel (NodeModel), currentSlot, emptyNode, protocol)
 import Peras.QCD.Protocol (Params (paramU))
 import Peras.QCD.Types (Chain, Message, PartyId, Tx, Vote)
@@ -87,14 +85,17 @@ instance (Monad m, API.PerasNode n m) => RunModel NodeModel (RunMonad n m) where
   postcondition (prior, _) (Fetching chains' votes') _env actual = check prior actual $ Specification.fetching chains' votes'
   postcondition (prior, _) (BlockCreation txs) _env actual = check prior actual $ Specification.blockCreation txs
   postcondition (prior, _) Voting _env actual = check prior actual Specification.voting
+
 apply :: (Monad m, MonadTrans t, MonadState s (t m)) => (s -> m (a, s)) -> t m a
 apply f = do
   (x, s') <- lift . f =<< get
   put s'
   pure x
 
+check :: Monad m => s -> [Message] -> State s [Message] -> m Bool
 check prior actual action =
   pure $ identical actual $ evalState action prior
 
 identical :: [Message] -> [Message] -> Bool
-identical = on (==) sort
+identical x y =
+  x == y || all (`elem` x) y && all (`elem` y) x

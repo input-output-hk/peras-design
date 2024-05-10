@@ -126,6 +126,7 @@ record Vote : Set where
   constructor MakeVote
   field voteRound : ℕ
         voteParty : PartyId
+--      voteWeight : ℕ
         voteBlock : Hash Block
         voteProof : MembershipProof
         voteSignature : Signature
