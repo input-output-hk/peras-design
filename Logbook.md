@@ -169,7 +169,7 @@ voting =
              )
 ```
 
-#### Preagreement](src/Peras/QCD/Node/Preagreement.hs)
+#### [Preagreement](src/Peras/QCD/Node/Preagreement.hs)
 
 ```agda
 -- Select a block to vote for, using preagreement.
