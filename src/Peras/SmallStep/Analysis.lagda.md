@@ -3,6 +3,10 @@ module Peras.SmallStep.Analysis where
 ```
 <!--
 ```agda
+open import Data.Nat
+open import Data.Product using (_×_)
+open import Data.Vec renaming (_∷ʳ_ to _,_)
+
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl)
 
@@ -19,12 +23,16 @@ data Σ : Set where
   ？ : Σ
   🄀 : Σ
 ```
+### Voting strings
+```agda
+VotingString = Vec Σ
+```
+### Leader strings
+```agda
+LeaderString = Vec (ℕ × ℕ)
+```
 ```agda
 module _ ⦃ _ : Params ⦄ where
-  open import Data.Vec renaming (_∷ʳ_ to _,_)
-  open import Data.Nat
-  open import Data.Product using (_×_)
-
   open Params ⦃...⦄
 ```
 <!--
@@ -35,10 +43,8 @@ module _ ⦃ _ : Params ⦄ where
 ```
 -->
 ```agda
-  VotingString = Vec Σ
-  
   infix 3 _⟶_
-  
+
   data _⟶_ : ∀ {n} → VotingString n → VotingString (suc n) → Set where
 
     HS-I : [] ⟶ [] , ⒈
@@ -55,8 +61,27 @@ module _ ⦃ _ : Params ⦄ where
     HS-IV : ∀ {n} {σ : VotingString n}
       → 1 ≤ L
       → L ≤ K
-      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶ 
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
         ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+{-
+    HS-V : ∀ {n} {σ : VotingString n}
+      → 1 ≤ L
+      → L ≤ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+
+    HS-VI : ∀ {n} {σ : VotingString n}
+      → 1 ≤ L
+      → L ≤ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+
+    HS-VII : ∀ {n} {σ : VotingString n}
+      → 1 ≤ L
+      → L ≤ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+-}
 ```
 
 ```agda
@@ -79,11 +104,7 @@ module _ ⦃ _ : Params ⦄ where
         ------
       → L ⟶⋆ N
 ```
-### Leader strings
-```agda
-  LeaderString = Vec (ℕ × ℕ)
-```
-### Execution
+## Execution
 ```agda
   rnd : ℕ → ⦃ _ : NonZero T ⦄ → ℕ
   rnd s = s / T
