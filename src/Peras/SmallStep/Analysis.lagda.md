@@ -63,25 +63,42 @@ module _ ⦃ _ : Params ⦄ where
       → L ≤ K
       → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
         ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
-{-
-    HS-V : ∀ {n} {σ : VotingString n}
-      → 1 ≤ L
-      → L ≤ K
+
+    HS-V-?₁ : ∀ {n} {σ : VotingString n}
+      → L + 1 ≡ K
       → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , ？
+
+    HS-V-?₂ : ∀ {n} {σ : VotingString n}
+      → L + 2 ≡ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , ？
+
+    HS-V-1₁ : ∀ {n} {σ : VotingString n}
+      → L + 1 ≡ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , ⒈
+
+    HS-V-1₂ : ∀ {n} {σ : VotingString n}
+      → L + 2 ≡ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , ⒈
 
     HS-VI : ∀ {n} {σ : VotingString n}
       → 1 ≤ L
       → L ≤ K
-      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+      → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
+        ((σ , 🄀 , ？) ++ replicate L 🄀) , 🄀
 
-    HS-VII : ∀ {n} {σ : VotingString n}
-      → 1 ≤ L
-      → L ≤ K
-      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
--}
+    HS-VII-? : ∀ {n} {σ : VotingString n}
+      → L + 1 ≡ K
+      → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
+        ((σ , 🄀 , ？) ++ replicate L 🄀) , ？
+
+    HS-VII-1 : ∀ {n} {σ : VotingString n}
+      → L + 1 ≡ K
+      → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
+        ((σ , 🄀 , ？) ++ replicate L 🄀) , ⒈
 ```
 
 ```agda
