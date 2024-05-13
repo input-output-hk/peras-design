@@ -13,8 +13,6 @@ import GHC.Generics (Generic)
 
 type ByteString = BS.ByteString
 
-type X = (Int, Int, Int)
-
 emptyBS :: ByteString
 emptyBS = BS.empty
 concatBS :: [ByteString] -> ByteString
@@ -31,40 +29,47 @@ instance Eq (Hash a) where
 class Hashable a where
   hash :: a -> Hash a
 
-unsafeHash :: H.Hashable a => a -> ByteString
-unsafeHash = LBS.toStrict . B.encode . H.hash
+primHash :: H.Hashable a => a -> ByteString
+primHash = LBS.toStrict . B.encode . H.hash
+primHashUnit :: () -> ByteString
+primHashUnit = primHash
+primHashNat :: Natural -> ByteString
+primHashNat = primHash
+primHashBytes :: ByteString -> ByteString
+primHashBytes = primHash
 
 instance Hashable () where
-  hash _ = MakeHash $ unsafeHash ()
+  hash _ = MakeHash $ primHashUnit ()
 
 instance Hashable ByteString where
-  hash = MakeHash . unsafeHash
+  hash = MakeHash . primHashBytes
 
 instance Hashable (Hash a) where
-  hash = (MakeHash . unsafeHash) . \r -> hashBytes r
+  hash = (MakeHash . primHashBytes) . \r -> hashBytes r
 
 instance Hashable Natural where
-  hash = MakeHash . unsafeHash
+  hash = MakeHash . primHashNat
 
 instance Hashable a => Hashable ([a]) where
   hash =
     MakeHash
-      . unsafeHash
+      . primHashBytes
       . concatBS
       . fmap (\x -> hashBytes (hash x))
 
 instance (Hashable a, Hashable b) => Hashable ((a, b)) where
   hash (x, y) =
-    MakeHash $ unsafeHash (hashBytes (hash x), hashBytes (hash y))
+    MakeHash . primHashBytes $
+      concatBS [hashBytes (hash x), hashBytes (hash y)]
 
 instance
   (Hashable a, Hashable b, Hashable c) =>
   Hashable ((a, b, c))
   where
   hash (x, y, z) =
-    MakeHash $
-      unsafeHash
-        (hashBytes (hash x), hashBytes (hash y), hashBytes (hash z))
+    MakeHash . primHashBytes $
+      concatBS
+        [hashBytes (hash x), hashBytes (hash y), hashBytes (hash z)]
 
 castHash :: Hash a -> Hash b
 castHash = MakeHash . \r -> hashBytes r
