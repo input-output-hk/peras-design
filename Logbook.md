@@ -1,9 +1,43 @@
+## 2024-05-13
+
+### Current situation for Peras
+
+* Conformance testing
+  * [Toy example](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/test-demo/src/TestModel.agda#L1) from Quviq demonstrating how to relate a formal model to a test model, deriving Haskell from Agda and proving some equivalence of the test model w.r.t. formal model
+
+    ```
+    research paper ~~> Agda specification <==> Agda testable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+    ```
+
+  * [Autonomous spec & conformance](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/test/Peras/ConformanceSpec.hs#L1) test against faithful and invalid node, showing a derivation path of QC properties from paper, through a "pseudo-code" executable specification:
+
+    ```
+    research paper ~~> Agda executable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+    ```
+  * "Praos" only [Conformance test of foreign code](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/Node/Netsim.hs#L23) using Netsim
+  * "Praos" only [Conformance test of Haskell code](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/NodeModel.hs#L16)
+  * Peras [optimal conformance model](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/OptimalModel.hs#L345) conformance test
+* Agda formal specification
+  * Formalised Peras protocol in small-step semantics along the lines of [POS-NSB]() paper, proving [KLnowledge propagation property](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/src/Peras/SmallStep/Properties.lagda.md#L129)
+  * Started work on proving theorem 4.1 from the peras paper which defines how _voting string_ is derived from execution of the protocol. The goal is to align formal proofs techniques with the model used by researchers
+* ΔQ model
+  * Reproduced [basic results about block diffusion](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-delta-q/plot-dqsd.hs#L20) in Praos
+  * Analysed the impact of [certificates inclusion as part of block headers](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/docs/reports/tech-report-1.md#L596)
+* Simulation(s)
+  * Implemented [Haskell simulator](https://github.com/input-output-hk/peras-design/blob/8fd9ff7eb023c74558b6adedf843a247c3ee555c/peras-iosim/ReadMe.md#L1) for older version of Peras algorithm and ran various scenarios:
+    * Happy path scenario with various sizes (up to 100 nodes?)
+    * Split-brain scenario showing the impact of votes on chain selection
+    * Network congestion impact
+  * various [Analytical scenarios](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/analytics/analytics-1.md#L1) in R
+* Voting & Certificates
+  * Experimental [implementation of ALBA](https://github.com/cardano-scaling/alba) with benchmarks
+
 ## 2024-05-10
 
 ### Voting string analysis in Agda
 
-For doing the voting string analysis I investigated different approches how to represent a voting string in Agda. The first attempt implemented a formal language as described in [Equational Reasoning about Formal Languages in
-Coalgebraic Style](https://www.cse.chalmers.se/~abela/jlamp17.pdf). Following this approach we can specify regular expression defining valid voting strings: 
+For doing the voting string analysis I investigated different approches how to represent a voting 1string in Agda. The first attempt implemented a formal language as described in [Equational Reasoning about Formal Languages in
+Coalgebraic Style](https://www.cse.chalmers.se/~abela/jlamp17.pdf). Following this approach we can specify regular expression defining valid voting strings:
 
 <!--
 ```agda
@@ -44,7 +78,7 @@ infixl 30 _*
 _*[_] : ∀ {i A} → Lang i A → ℕ → Lang i A
 ν (a *[ zero ]) = true
 ν (a *[ suc n ]) = false
-δ (a *[ zero ]) x = ∅ 
+δ (a *[ zero ]) x = ∅
 δ (a *[ suc n ]) x = δ a x · (a *[ n ])
 
 infixl 40 _*[_]
@@ -68,7 +102,7 @@ data Alphabet : Set where
 δ ⟦ 🄀 ⟧ ？ = ∅
 δ ⟦ 🄀 ⟧ 🄀 = ε
 ```
-<!-- 
+<!--
 ```agda
 infixr 5 _∷_
 
@@ -127,7 +161,7 @@ module _ ⦃ _ : Params ⦄ where
 
     ...
 ```
-The second solution is well readable and easier to use in the proofs. 
+The second solution is well readable and easier to use in the proofs.
 
 ### QCD conformance test via Agda executable specification
 
