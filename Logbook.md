@@ -1,5 +1,134 @@
 ## 2024-05-10
 
+### Voting string analysis in Agda
+
+For doing the voting string analysis I investigated different approches how to represent a voting string in Agda. The first attempt implemented a formal language as described in [Equational Reasoning about Formal Languages in
+Coalgebraic Style](https://www.cse.chalmers.se/~abela/jlamp17.pdf). Following this approach we can specify regular expression defining valid voting strings: 
+
+<!--
+```agda
+record Lang (i : Size) (A : Set) : Set where
+  coinductive
+  field
+    ν : Bool
+    δ : ∀{j : Size< i} → A → Lang j A
+
+open Lang
+
+_+_ : ∀ {i A} → Lang i A → Lang i A → Lang i A
+ν (a + b)   = ν a   ∨ ν b
+δ (a + b) x = δ a x + δ b x
+
+infixl 10 _+_
+
+_·_ : ∀ {i A} → Lang i A → Lang i A → Lang i A
+ν (a · b)   = ν a ∧ ν b
+δ (a · b) x = if ν a then δ a x · b + δ b x else δ a x · b
+
+infixl 20 _·_
+
+_* : ∀ {i A} → Lang i A → Lang i A
+ν (a *)   = true
+δ (a *) x = δ a x · a *
+
+infixl 30 _*
+
+∅ : ∀ {i A}  → Lang i A
+ν ∅   = false
+δ ∅ _ = ∅
+
+ε : ∀ {i A} → Lang i A
+ν ε   = true
+δ ε _ = ∅
+
+_*[_] : ∀ {i A} → Lang i A → ℕ → Lang i A
+ν (a *[ zero ]) = true
+ν (a *[ suc n ]) = false
+δ (a *[ zero ]) x = ∅ 
+δ (a *[ suc n ]) x = δ a x · (a *[ n ])
+
+infixl 40 _*[_]
+```
+-->
+```agda
+data Alphabet : Set where
+  ⒈ : Alphabet
+  ？ : Alphabet
+  🄀 : Alphabet
+
+⟦_⟧ : ∀ {i} → Alphabet → Lang i Alphabet
+ν ⟦ _ ⟧ = false
+δ ⟦ ⒈ ⟧ ⒈ = ε
+δ ⟦ ⒈ ⟧ ？ = ∅
+δ ⟦ ⒈ ⟧ 🄀 = ∅
+δ ⟦ ？ ⟧ ⒈ = ∅
+δ ⟦ ？ ⟧ ？ = ε
+δ ⟦ ？ ⟧ 🄀 = ∅
+δ ⟦ 🄀 ⟧ ⒈ = ∅
+δ ⟦ 🄀 ⟧ ？ = ∅
+δ ⟦ 🄀 ⟧ 🄀 = ε
+```
+<!-- 
+```agda
+infixr 5 _∷_
+
+data List (i : Size) {n} (A : Set n) : Set n where
+  [] : List i A
+  _∷_ : ∀ {j : Size< i} → A → List j A → List i A
+
+open List
+
+_∈_ : ∀ {i} {A} → List i A → Lang i A → Bool
+[]      ∈ a = ν a
+(x ∷ w) ∈ a = w ∈ δ a x
+```
+-->
+```agda
+⋯ = (⟦ ⒈ ⟧ + ⟦ ？ ⟧ + ⟦ 🄀 ⟧)*
+
+HS-II = ⋯ · ⟦ ⒈ ⟧
+
+test : (🄀 ∷ ？ ∷ 🄀 ∷ ⒈ ∷ []) ∈ HS-II ≡ true
+test = refl
+```
+
+For voting string we probably don't need the full power of regular expression and therefore we tried to build those direclty as an inductive data type as follows:
+
+```agda
+data Σ : Set where
+  ⒈ : Σ
+  ？ : Σ
+  🄀 : Σ
+
+VotingString = Vec Σ
+
+module _ ⦃ _ : Params ⦄ where
+  open Params ⦃...⦄
+
+  infix 3 _⟶_
+  data _⟶_ : ∀ {n} → VotingString n → VotingString (suc n) → Set where
+
+    HS-I : [] ⟶ [] , ⒈
+
+    HS-II-? : ∀ {n} {σ : VotingString n}
+      → σ , ⒈ ⟶ σ , ⒈ , ？
+
+    HS-II-1 : ∀ {n} {σ : VotingString n}
+      → σ , ⒈ ⟶ σ , ⒈ , ⒈
+
+    HS-III : ∀ {n} {σ : VotingString n}
+      → σ , ？ ⟶ σ , ？ , 🄀
+
+    HS-IV : ∀ {n} {σ : VotingString n}
+      → 1 ≤ L
+      → L ≤ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+
+    ...
+```
+The second solution is well readable and easier to use in the proofs. 
+
 ### QCD conformance test via Agda executable specification
 
 The [`Peras.QCD.ConformanceSpec`](peras-quickcheck/test/Peras/ConformanceSpec.hs) implements the basic faithfulness test for node implementations. Examples are provided for a perfectly faithful node and a buggy one. This demonstrates the feasibility of the following workflow:
