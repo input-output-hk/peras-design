@@ -97,22 +97,20 @@ module _ ⦃ _ : Params ⦄ where
       → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
         ((σ , 🄀 , ？) ++ replicate L 🄀) , ⒈
 ```
-
+Reflexive, transitive closure of the small step relation
 ```agda
   infix  2 _⟶⋆_
-  infixr 2 _⟶⟨_⟩_
-
+  
   variable
     m n : ℕ
     σ : VotingString m
     σ′ : VotingString (suc m)
     σ″ : VotingString n
 ```
-Reflexive, transitive closure of the small step relation
 ```agda
   data _⟶⋆_ : VotingString m → VotingString n → Set where
     [] : σ ⟶⋆ σ
-    _∷_ : σ ⟶ σ′ → σ′ ⟶ σ″ → σ ⟶⋆ σ″
+    _∷_ : σ ⟶ σ′ → σ′ ⟶⋆ σ″ → σ ⟶⋆ σ″
 ```
 ## Execution
 ```agda
