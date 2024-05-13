@@ -14,22 +14,19 @@ open import Peras.Params
 ```
 -->
 ## Protocol Analysis
-
+### Leader strings
+```agda
+LeaderString = Vec (ℕ × ℕ)
+```
 ### Voting strings
-
 ```agda
 data Σ : Set where
   ⒈ : Σ
   ？ : Σ
   🄀 : Σ
 ```
-### Voting strings
 ```agda
 VotingString = Vec Σ
-```
-### Leader strings
-```agda
-LeaderString = Vec (ℕ × ℕ)
 ```
 ```agda
 module _ ⦃ _ : Params ⦄ where
