@@ -101,22 +101,18 @@ module _ ⦃ _ : Params ⦄ where
 ```agda
   infix  2 _⟶⋆_
   infixr 2 _⟶⟨_⟩_
-  infix  3 _∎
 
-  data _⟶⋆_ : ∀ {m n} → VotingString m → VotingString n → Set where
-
-    _∎ : ∀ {m : ℕ}
-      → (M : VotingString m)
-        --------------------
-      → M ⟶⋆ M
-
-    _⟶⟨_⟩_ : ∀ {l n}
-      → (L : VotingString l)
-      → {M : VotingString (suc l)} {N : VotingString n}
-      → L ⟶ M
-      → M ⟶⋆ N
-        ------
-      → L ⟶⋆ N
+  variable
+    m n : ℕ
+    σ : VotingString m
+    σ′ : VotingString (suc m)
+    σ″ : VotingString n
+```
+Reflexive, transitive closure of the small step relation
+```agda
+  data _⟶⋆_ : VotingString m → VotingString n → Set where
+    [] : σ ⟶⋆ σ
+    _∷_ : σ ⟶ σ′ → σ′ ⟶ σ″ → σ ⟶⋆ σ″
 ```
 ## Execution
 ```agda
