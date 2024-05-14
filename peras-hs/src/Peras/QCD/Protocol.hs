@@ -32,7 +32,7 @@ data Params = Params
   deriving (Eq, Generic, Show)
 
 defaultParams :: Params
-defaultParams = Params 120 240 3600 120 10 300 120 600
+defaultParams = Params 20 240 3600 120 10 300 120 600
 
 perasParam :: ParamSymbol -> Params -> Natural
 perasParam U = \r -> paramU r

@@ -19,6 +19,10 @@ zero :: Natural
 zero = 0
 #-}
 
+-- FIXME
+-- FIXME: No quality assurance, review, or other testing has been done on the following translation of the draft paper's protocol!
+-- FIXME
+
 -- Executable specification.
 
 -- Set the protocol parameters and identity of a node.
@@ -213,6 +217,7 @@ blockCreation txs =
     block ← signBlock <$> use currentSlot <*> use creatorId <*> pure tip <*> pure cert <*> pure txs
     -- Extend the preferred chain.
     chain ← use preferredChain ⇉ extendChain block
+    preferredChain ≔ chain
     -- Diffuse the new chain.
     diffuse ↞ NewChain chain
   where

@@ -76,7 +76,7 @@ instance StateModel NodeModel where
           ]
    where
     uninitialized = (node ^. creatorId) == MakeVerificationKey mempty
-    newRound = (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
+    newRound = (node ^. currentSlot) > 0 && (node ^. currentSlot) `mod` paramU (node ^. protocol) == 0
     someBlocks = node ^. chains /= [[]]
     genParty = arbitrary `suchThat` (/= (node ^. creatorId))
     genChain =

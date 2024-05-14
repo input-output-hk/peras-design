@@ -126,7 +126,7 @@ d_defaultParams_60 :: T_Params_26
 d_defaultParams_60 =
   coe
     C_Params'46'constructor_233
-    (coe (120 :: Integer))
+    (coe (20 :: Integer))
     (coe (240 :: Integer))
     (coe (3600 :: Integer))
     (coe (120 :: Integer))

@@ -1164,17 +1164,33 @@ d_blockCreation_160 v0 =
                                                                                                         ( coe
                                                                                                             ( \v11 ->
                                                                                                                 coe
-                                                                                                                  MAlonzo.Code.Peras.QQCD.Util.du__'8606'__96
+                                                                                                                  MAlonzo.Code.Peras.QQCD.State.du_bindState_114
                                                                                                                   ( coe
-                                                                                                                      MAlonzo.Code.Peras.QQCD.State.du_iApplicativeState_156
+                                                                                                                      MAlonzo.Code.Peras.QQCD.State.du__'8788'__316
+                                                                                                                      ( \v12
+                                                                                                                         v13 ->
+                                                                                                                            coe
+                                                                                                                              MAlonzo.Code.Peras.QQCD.Node.Model.du_preferredChain_80
+                                                                                                                              v13
+                                                                                                                      )
+                                                                                                                      v11
                                                                                                                   )
                                                                                                                   ( coe
-                                                                                                                      MAlonzo.Code.Peras.QQCD.Node.Model.d_diffuse_124
-                                                                                                                  )
-                                                                                                                  ( coe
-                                                                                                                      MAlonzo.Code.Peras.QQCD.Types.C_NewChain_156
-                                                                                                                      ( coe
-                                                                                                                          v11
+                                                                                                                      ( \v12 ->
+                                                                                                                          coe
+                                                                                                                            MAlonzo.Code.Peras.QQCD.Util.du__'8606'__96
+                                                                                                                            ( coe
+                                                                                                                                MAlonzo.Code.Peras.QQCD.State.du_iApplicativeState_156
+                                                                                                                            )
+                                                                                                                            ( coe
+                                                                                                                                MAlonzo.Code.Peras.QQCD.Node.Model.d_diffuse_124
+                                                                                                                            )
+                                                                                                                            ( coe
+                                                                                                                                MAlonzo.Code.Peras.QQCD.Types.C_NewChain_156
+                                                                                                                                ( coe
+                                                                                                                                    v11
+                                                                                                                                )
+                                                                                                                            )
                                                                                                                       )
                                                                                                                   )
                                                                                                             )
