@@ -129,7 +129,7 @@ TODO
   open import Peras.Crypto
   open import Data.List using (List)
   open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
-  open import Data.Product using (_,_)
+  open import Data.Product using (_,_; ∃-syntax)
 
   module _ ⦃ _ : Hashable Block ⦄ where
 
@@ -142,9 +142,10 @@ TODO
         → Edge b b′
 
     V = List Block
-    E = (vs : V) → List (∀ {v v′ : Block} → {v ∈ vs} → {v′ ∈ vs} → Edge v v′)
 
-    F = V × E
+    E : V → Set
+    E vs = List (∀ {v v′ : Block} → {v ∈ vs} → {v′ ∈ vs} → Edge v v′)
+    F = ∃[ vs ] (E vs)
 
     data _⊢_ : ∀ {m n : ℕ} → F → (LeaderString m × VotingString n) → Set where
 
