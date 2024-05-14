@@ -56,7 +56,7 @@ data Block = MakeBlock
   }
   deriving (Generic, Show)
 
-data BlockBody = BlockBody
+data BlockBody = MakeBlockBody
   { headerHash :: Hash Block
   , payload :: [Tx]
   }

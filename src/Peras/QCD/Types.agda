@@ -79,6 +79,7 @@ open Block public
 {-# COMPILE AGDA2HS Block deriving (Generic, Show) #-}
 
 record BlockBody : Set where
+  constructor MakeBlockBody
   field headerHash : Hash Block
         payload : List Tx
 open BlockBody public

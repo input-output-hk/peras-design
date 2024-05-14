@@ -69,6 +69,7 @@ library
                      Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
                      Peras.QCD.Node.Impl.Buggy
+                     Peras.QCD.Node.Impl.MAlonzo
                      Peras.QCD.Node.Impl.Perfect
 
     -- Modules included in this library but not exported.
@@ -94,6 +95,7 @@ library
                       mtl,
                       peras-hs,
                       peras-iosim,
+                      peras-malonzo,
                       quickcheck-dynamic,
                       quickcheck-instances,
                       random,
