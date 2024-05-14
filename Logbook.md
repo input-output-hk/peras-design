@@ -1,3 +1,97 @@
+## 2024-05-14
+
+### Next steps
+
+| Domain               | Action                                                                            |
+|----------------------|-----------------------------------------------------------------------------------|
+| Conformance testing  | Executable specification based on MAlonzo to be used in running conformance tests |
+|                      | Express Peras properties as conformance tests (with help from Quviq?)             |
+|                      | Cleanup previous attempts in peras-quickcheck                                     |
+| Simulations          | ?                                                                                 |
+| Networking           | Model votes & certificates propagation w/ ΔQ                                      |
+|                      | Test newest version of ΔQ library                                                 |
+|                      | Prototype voting layer in Haskell                                                 |
+| Votes & certificates | Define votes structure                                                            |
+|                      | Define certificates structure                                                     |
+| Formal specification | Model voting characteristic string                                                |
+| Outreach             | Better understand stakeholders' needs                                             |
+| Project              | Organise in person workshop                                                       |
+
+### Why formal methods?
+
+* Formal verification = formally specifying and proving properties of real world programs
+* Formal verification is _hard_
+  * requires highly trained specialists (eg. PhD level or more) which are few and expensive
+  * significant investment in time
+  * Formal verification of concurrent and distributed systems is _super hard_ and this is essentially 80% of what we are working on
+* The tools, languages, methods are "primitive" when compared to "standards" in software engineering
+  * https://x.com/dr_c0d3/status/1780221920140464187
+  * Of course, when compared to the state of affair in Haskell, it's not too bad
+* Research is not using those tools and languages (yet?)
+  * researchers are not trained on using them anyway
+  * because it's hard and takes time, it would significantly increase _TTP_ (time to publication)
+* Engineering is not using those tools (yet?)
+  * same reasons as above, but worse because proving anything about real world distributed systems is _super hard_
+* If we want Formal methods to have an impact in IOG and the wider Cardano community, we need an _integrated_ strategy:
+  * Define why/where/what we want to apply FM to
+  * Clarify _who_ we are formally proving things for
+  * Train (and retrain) people
+  * Invest in tools
+
+Some notes taken while reading [QED at large](https://ilyasergey.net/papers/qed-at-large.pdf), focusing on _Why proof engineering matters?_ chapter
+
+* Some examples of successful large-scale program verification:
+  * _CompCERT_ which is used in embedded, aeronautics, and offers commercial support, 35kLOC, 87% proofs
+  * [seL4](https://trustworthy.systems/publications/nicta_full_text/7371.pdf) with application in aviation/automotive
+
+    > The central artefact is the Haskell prototype of the kernel. The
+    > prototype is derived from the (informal) requirements and embodies
+    > the design and implementation of algorithms that manage the low-
+    > level hardware details. It can be translated automatically into the
+    > theorem prover Isabelle/HOL to form an executable, design-level
+    > specification of the kernel. The ab- stract, high-level, functional
+    > specification of the kernel can be developed manually, concurrently
+    > and semi-independently, giving further feedback into the design
+    > process.
+
+    > The original Haskell prototype is not part of the proof chain.
+
+    > The correspondence established by the refinement proof ensures that all Hoare logic properties of the abstract model also hold for the refined model.
+
+    > Proofs about concurrent programs are hard, much harder than proofs about sequential programs.
+
+    > We simplify the problem further by implementing interrupt points via polling, rather than temporary enabling of interrupts.
+
+    ![seL4 Design Process](docs/diagrams/sel4-design-process.png)
+
+    ![Proof Layers in seL4](docs/diagrams/sel4-proof-layers.png)
+
+
+  * In distributed systems: formalization and proof of [Raft](https://homes.cs.washington.edu/~mernst/pubs/raft-proof-cpp2016.pdf) properties
+  * BoringSSL is used in Chrome and includes verified crypto in C
+* Challenges in User productivity:
+
+  > Bourke et al. (2012) outline challenges in large-scale verification
+  > projects using proof assistants: (1) new proof engineers joining the
+  > project, (2) expert proof engineering during main development, (3)
+  > proof maintenance, and (4) social and management aspects. They
+  > highlight three lessons: (1) proof automation is crucial, (2) using
+  > introspective tools for quickly finding facts in large databases
+  > gain importantance for productivity, and (3) tools that shorten the
+  > edit-check cycle increase productivity, even when sacrificing
+  > soundness.
+
+* Oldies but goldies from [Social Processes and Proofs of Theorems and Programs](https://www.cs.umd.edu/~gasarch/BLOGPAPERS/social.pdf)
+
+  > It is argued that formal verifications of programs, no matter how
+  > obtained, will not play the same key role in the development of
+  > computer science and software engineering as proofs do in
+  > mathematics. Furthermore the absence of continuity, the
+  > inevitability of change, and the complexity of specification of
+  > significantly many real programs make the formal verification
+  > process difficult to justify and manage. It is felt that ease of
+  > formal verification should not dominate program language design.
+
 ## 2024-05-13
 
 ### Current situation for Peras
