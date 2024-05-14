@@ -1,5 +1,59 @@
 ## 2024-05-14
 
+### `MAlonzo` version of executable specification
+
+We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](src/Peras/QCD/Node/Specification.agda). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs slower, likely because it involves more than two hundred Haskell modules.
+
+* `agda2hs` version: 4m 45.206s (250 tests)
+* `MAlonzo` version: 10m 46.280s (250 tests)
+
+We initially attempted the following workflow in order to avoid manually coding translation between normal Haskell and `MAlonzo`:
+
+1. Compile using `agda --ghc-dont-call-ghc`.
+2. Compile using `agda2hs`, so that the various `{-# COMPILE AGDA2HS ... #-}` types were generated as normal Haskell.
+3. Compile using `agda --compile`, so that the `agda2hs`-generated code could be re-used as implementations via `{-# COMPILE GHC <name> = data ... #-}` pragma.
+
+Two situations block this workflow:
+
+- The `Maybe` type differs between `MAlonzo` and `agda2hs`.
+    - The `{-# COMPILE GHC ... = data ... #-}` pragma requires that all types in the data structure also use that pragma. However, it is impossible (without modifying the generated `MAlonzo` code) to add that pragma to `Maybe`.
+    - One cannot work around this by defining one's own `Maybe a` type because the type parameter `a` results in an extra erasable argument to the generated `Just` constructor. That makes it incompatible with the Haskell `base` library's `Maybe`.
+- `agda` generates natural numbers as Haskell `Integer` whereas `agdah2` generates them as `Natural`.
+
+The workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
+
+```haskell
+runState' :: T_State_10 -> T_NodeModel_8 -> ([S.Message], T_NodeModel_8)
+runState' action node =
+  let
+    Tuple.C__'44'__24 x s = d_runState_18 action $ unsafeCoerce node
+   in
+    (toMessage <$> unsafeCoerce x, unsafeCoerce s)
+
+instance Monad m => PerasNode MAlonzoNode m where
+  initialize params party =
+    pure . runState' (d_initialize_8 (fromParams params) (fromVerificationKey party))
+  fetching chains votes =
+    pure . runState' (d_fetching_136 (fmap fromBlock <$> chains) (fromVote <$> votes))
+  blockCreation txs =
+    pure . runState' (d_blockCreation_160 txs)
+  voting weight =
+    pure . runState' (d_voting_250 $ toInteger weight)
+```
+
+Overall findings:
+
+- It is practical to integrate `MAlonzo` code directly into `quickcheck-dynamic` tests, though this is slightly fragile with respect to modification of the underlying Agda.
+    - Changes to Agda types or functions cause the names of the subsequent, corresponding `MAlonzo` types or functions to be renumbered.
+- Handwritten code is needed to marshal `MAlonzo` to normal Haskell and vice versa.
+    - The use of the `{-# COMPILE GHC ... as ... #-}` pragma saves a small amount of work.
+    - The `{-# COMPILE GHD ... = data ... #-}` pragma can be used only in cases that don't use `MAlonzo.Code.Haskell.Prim` types such as `Maybe`, tuples, etc. (`List` is okay because Agda uses Haskell native lists.)
+    - Any type that transitively uses `{-# COMPILE GHC ... = data ... #-}` must be marshalled manually.
+    - Any type that transitively uses natural numbers must be marshalled manually.
+- The `MAlonzo` code runs at roughly have the speed of the corresponding `agda2hs` code.
+
+Note that the experimental Peras executable specification has not been yet reviewed against the draft paper or otherwise subjected to quality assurance. As we discussed today, one possible path forward is to make decidable some small- and/or big-step parts of the formal spec and then to use the generated `MAlonzo` in `quickcheck-dynamic`.
+
 ### Votes structure
 
 * Assuming we use existing keys and crypto available to a cardano-node, we have the following breakdown for the structure of a vote:
