@@ -20,7 +20,7 @@ Two situations block this workflow:
     - One cannot work around this by defining one's own `Maybe a` type because the type parameter `a` results in an extra erasable argument to the generated `Just` constructor. That makes it incompatible with the Haskell `base` library's `Maybe`.
 - `agda` generates natural numbers as Haskell `Integer` whereas `agdah2` generates them as `Natural`.
 
-The workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
+A workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types, so we just do the latter. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
 
 ```haskell
 runState' :: T_State_10 -> T_NodeModel_8 -> ([S.Message], T_NodeModel_8)
@@ -48,7 +48,7 @@ Overall findings:
 - Handwritten code is needed to marshal `MAlonzo` to normal Haskell and vice versa.
     - The use of the `{-# COMPILE GHC ... as ... #-}` pragma saves a small amount of work.
     - The `{-# COMPILE GHD ... = data ... #-}` pragma can be used only in cases that don't use `MAlonzo.Code.Haskell.Prim` types such as `Maybe`, tuples, etc. (`List` is okay because Agda uses Haskell native lists.)
-    - Any type that transitively uses `{-# COMPILE GHC ... = data ... #-}` must be marshalled manually.
+    - Any type that uses `{-# COMPILE GHC ... = data ... #-}` must be also transitively use it.
     - Any type that transitively uses natural numbers must be marshalled manually.
 - The `MAlonzo` code runs at roughly have the speed of the corresponding `agda2hs` code.
 
@@ -58,6 +58,8 @@ Note that the experimental Peras executable specification has not been yet revie
 
 * Assuming we use existing keys and crypto available to a cardano-node, we have the following breakdown for the structure of a vote:
 
+  |               |     |
+  |---------------|-----|
   | round number  | 8   |
   | cold vkey     | 32  |
   | block hash    | 32  |
