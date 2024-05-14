@@ -1,5 +1,22 @@
 ## 2024-05-14
 
+### Votes structure
+
+* Assuming we use existing keys and crypto available to a cardano-node, we have the following breakdown for the structure of a vote:
+
+  | round number  | 8   |
+  | cold vkey     | 32  |
+  | block hash    | 32  |
+  | VRF proof     | 80  |
+  | VRF vkey      | 32  |
+  | KES signature | 448 |
+  | Op cert       | 102 |
+  | total         | 734 |
+
+* OpCert is needed because that's the only way to verify the KES vkey and therefore the KES Signature
+* The KES signature is required if we don't register some specific key pair for the purpose of Peras voting, which would introduce its own set of problems
+* VRF benchmarks in cardano-crypto-test gives a mean VRF proof time of 100μs
+
 ### Quviq meeting
 
 * Only Max, Ulf is at Agda implementors workshop :smile:
