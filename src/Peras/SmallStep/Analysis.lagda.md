@@ -142,21 +142,30 @@ TODO
         → Edge b b′
 
     V = List Block
-
     E : V → Set
     E vs = List (∀ {v v′ : Block} → {v ∈ vs} → {v′ ∈ vs} → Edge v v′)
+
     F = ∃[ vs ] (E vs)
+
+    postulate
+      IsHonest : Block → Set
 
     data _⊢_ : ∀ {m n : ℕ} → F → (LeaderString m × VotingString n) → Set where
 
     record IsPerasBlocktree
-      {f : F}
-      (blocktree : f ⊢ (ω , σ)): Set where
+      {v : V} {e : E v}
+      (root : V → Block)
+      (blocktree : (v , e) ⊢ (ω , σ)) : Set where
       -- TODO: A1 - A9
+      field
+        A1 : IsHonest (root v)
 
     record PerasBlocktree
       {f : F}
       (blocktree : f ⊢ (ω , σ)): Set where
       field
-        is-PerasBlocktree : IsPerasBlocktree blocktree
+        root : V → Block
+        l# : V → ℕ
+
+        is-PerasBlocktree : IsPerasBlocktree root blocktree
 ```
