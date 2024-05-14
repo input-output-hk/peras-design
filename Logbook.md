@@ -1,5 +1,52 @@
 ## 2024-05-14
 
+### Quviq meeting
+
+* Only Max, Ulf is at Agda implementors workshop :smile:
+
+* What are the next steps?
+* Whole spectrum of conformance testing -> need to define what we think _is_ conformance
+  * specification = draft paper
+  * agnostic to diffusion, focus on how you obey the rules of the protocol
+  * distinguish pure protocol from propagation logic
+* Social aspects => not fun to implement a very detailed spec
+  * "conformance without over specification"
+
+* turn the existing specification readable
+
+* small step semantics -> big step semantics + glue code for execution -> MAlonzo for qcd
+  * most code in spec is not decidable
+  * pb w/ Agda2hs = lot of work to prove correspondence -> avoid extra proof by making the spec decidable and do direct extraction w/ MAlonzo
+  * do qcd purely in Agda? probably cheaper to do it in Haskell
+  * Lean4 is closer to a programming language
+
+* connect small steps semantics to limited subset of test semantics
+  * focusing on executability of a small subset for decidability and executability
+* PBT of human readable pseudo-code?
+
+* property to test: quorum
+  * if a node gets enough votes in a round, it issues a certificate
+  * if a node does not get enough votes in a round, it enters cooldown
+  * => prove property at the spec level -> ensure the test does exert that property
+  * restricting the proof of the property on the actions (subset of the smallsteps semantics)
+
+* define small steps/big steps/actions difference
+  * small steps = all transitions including not observable ones
+  * big steps = observable group of transitions
+
+* Going forward:
+    - Take Yves' small-step semantics
+    - Connect to a qc-d model using our technique and malonzo
+      - The property is still that the messages really match
+    - Actions should be a subset of the protocol, some possibilities:
+      - reaching a quorum (in every round where you have a quorum there should be a certificate)
+      - voting
+    - Make as many simplifying assumptions about the network as possible
+
+* Next steps:
+  * Code review on Brian's code
+  * Meet with Max + Ulf on Tuesday for concrete expression of "quorum formation"
+
 ### Next steps
 
 | Domain               | Action                                                                            |
@@ -25,7 +72,7 @@
   * significant investment in time
   * Formal verification of concurrent and distributed systems is _super hard_ and this is essentially 80% of what we are working on
 * The tools, languages, methods are "primitive" when compared to "standards" in software engineering
-  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1)
+  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1
   * Also, [this](https://www.repository.cam.ac.uk/items/2b447c99-dd97-4447-bb6a-cae0f8254162): A partial formal spec in Isabelle of Ouroboros adds up to 1.2MB of code!
   * Of course, when compared to the state of affair in Haskell, it's not too bad
 * Research is not using those tools and languages (yet?)
