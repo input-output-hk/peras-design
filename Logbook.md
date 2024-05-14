@@ -25,7 +25,8 @@
   * significant investment in time
   * Formal verification of concurrent and distributed systems is _super hard_ and this is essentially 80% of what we are working on
 * The tools, languages, methods are "primitive" when compared to "standards" in software engineering
-  * https://x.com/dr_c0d3/status/1780221920140464187
+  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1)
+  * Also, [this](https://www.repository.cam.ac.uk/items/2b447c99-dd97-4447-bb6a-cae0f8254162): A partial formal spec in Isabelle of Ouroboros adds up to 1.2MB of code!
   * Of course, when compared to the state of affair in Haskell, it's not too bad
 * Research is not using those tools and languages (yet?)
   * researchers are not trained on using them anyway
