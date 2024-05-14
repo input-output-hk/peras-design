@@ -161,6 +161,7 @@ blockCreation txs =
         <*> pure cert
         <*> pure txs
     chain <- use preferredChain ⇉ extendChain block
+    preferredChain ≔ chain
     diffuse ↞ NewChain chain
  where
   noMoreThanTwoRoundsOld :: Round -> Certificate -> Bool

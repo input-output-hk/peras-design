@@ -1,5 +1,6 @@
 module Peras.QCD.Crypto where
 
+open import Data.Nat using (ℕ)
 open import Haskell.Prelude
 
 {-# FOREIGN AGDA2HS
@@ -14,11 +15,11 @@ type ByteString = BS.ByteString
 #-}
 
 {-# FOREIGN GHC
+import qualified Data.Binary as B
+import qualified Data.ByteString as BS (ByteString, concat, empty)
+import qualified Data.ByteString.Lazy as LBS (toStrict)
 import qualified Data.Hashable as H
 #-}
-
-X = Int × Int × Int
-{-# COMPILE AGDA2HS X #-}
 
 -- Byte strings.
 
@@ -59,36 +60,47 @@ open Hashable public
 {-# COMPILE AGDA2HS Hashable class #-}
 
 postulate
-  unsafeHash : a → ByteString
-{-# COMPILE GHC unsafeHash = LBS.toStrict . B.encode . H.hash #-}
+  primHashUnit : ⊤ → ByteString
+  primHashNat : ℕ → ByteString
+  primHashBytes : ByteString → ByteString
+{-# FOREIGN GHC primHash = LBS.toStrict . B.encode . H.hash #-}
+{-# COMPILE GHC primHashUnit = primHash #-}
+{-# COMPILE GHC primHashNat = primHash #-}
+{-# COMPILE GHC primHashBytes = primHash #-}
 {-# FOREIGN AGDA2HS
-unsafeHash :: H.Hashable a => a -> ByteString
-unsafeHash = LBS.toStrict . B.encode . H.hash
+primHash :: H.Hashable a => a -> ByteString
+primHash = LBS.toStrict . B.encode . H.hash
+primHashUnit :: () -> ByteString
+primHashUnit = primHash
+primHashNat :: Natural -> ByteString
+primHashNat = primHash
+primHashBytes :: ByteString -> ByteString
+primHashBytes = primHash
 #-}
 
 instance
   iUnitHashable : Hashable ⊤
-  iUnitHashable .hash _ = MakeHash $ unsafeHash tt
+  iUnitHashable .hash _ = MakeHash $ primHashUnit tt
 {-# COMPILE AGDA2HS iUnitHashable #-}
 
 instance
   iByteStringHashable : Hashable ByteString
-  iByteStringHashable .hash = MakeHash ∘ unsafeHash
+  iByteStringHashable .hash = MakeHash ∘ primHashBytes
 {-# COMPILE AGDA2HS iByteStringHashable #-}
 
 instance
   iHashHashable : Hashable (Hash a)
-  iHashHashable .hash = (MakeHash ∘ unsafeHash) ∘ hashBytes
+  iHashHashable .hash = (MakeHash ∘ primHashBytes) ∘ hashBytes
 {-# COMPILE AGDA2HS iHashHashable #-}
 
 instance
   iNatHashable : Hashable Nat
-  iNatHashable .hash = MakeHash ∘ unsafeHash
+  iNatHashable .hash = MakeHash ∘ primHashNat
 {-# COMPILE AGDA2HS iNatHashable #-}
 
 instance
   iListHashable : ⦃ i : Hashable a ⦄ → Hashable (List a)
-  iListHashable {{i}} .hash = MakeHash ∘ unsafeHash ∘ concatBS ∘ fmap (λ x → hashBytes (hash i x))
+  iListHashable {{i}} .hash = MakeHash ∘ primHashBytes ∘ concatBS ∘ fmap (λ x → hashBytes (hash i x))
 {-# COMPILE AGDA2HS iListHashable #-}
 
 instance
@@ -98,7 +110,7 @@ instance
       hx = hashBytes (hash i x)
       hy = hashBytes (hash j y)
     in
-      MakeHash $ unsafeHash (hx , hy)
+      MakeHash ∘ primHashBytes $ concatBS (hx ∷ hy ∷ [])
 {-# COMPILE AGDA2HS iPairHashable #-}
 
 instance
@@ -109,7 +121,7 @@ instance
       hy = hashBytes (hash j y)
       hz = hashBytes (hash k z)
     in
-      MakeHash $ unsafeHash (hx , hy , hz)
+      MakeHash ∘ primHashBytes $ concatBS (hx ∷ hy ∷ hz ∷ [])
 {-# COMPILE AGDA2HS iTripletHashable #-}
 
 castHash : Hash a → Hash b

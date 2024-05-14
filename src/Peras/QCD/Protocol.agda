@@ -41,7 +41,7 @@ open Params public
 defaultParams : Params
 defaultParams =
   record {
-    paramU = 120
+    paramU = 20
   ; paramA = 240
   ; paramW = 3600
   ; paramL = 120

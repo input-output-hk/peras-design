@@ -13,6 +13,7 @@ import Data.Default (def)
 import Data.Functor (void)
 import Peras.QCD.Node.Conformance (RunMonad (runMonad))
 import Peras.QCD.Node.Impl.Buggy (BuggyNode)
+import Peras.QCD.Node.Impl.MAlonzo (MAlonzoNode)
 import Peras.QCD.Node.Impl.Perfect (PerfectNode)
 import Peras.QCD.Node.Model (NodeModel)
 import Test.Hspec (Spec, describe)
@@ -31,6 +32,9 @@ spec =
       describe "Perfect node"
         . prop "Simulation respects model"
         $ propSimulate propPerfectNode
+      describe "MAlonzo node"
+        . prop "Simulation respects model"
+        $ propSimulate propMAlonzoNode
       describe "Buggy node"
         . prop "Simulation respects model"
         . expectFailure
@@ -70,6 +74,21 @@ propBuggyNode actions =
 -- | Test a property in the buggy node.
 runPropBuggyNode :: Testable a => PropertyM (RunMonad BuggyNode Gen) a -> Gen Property
 runPropBuggyNode p = do
+  Capture eval <- capture
+  -- FIXME: How can we evaluate this in a monad other than `Gen`?
+  flip evalStateT def . runMonad . eval $ monadic' p
+
+-- | Act on the MAlonzo node.
+propMAlonzoNode :: Actions NodeModel -> Property
+propMAlonzoNode actions =
+  property $
+    runPropMAlonzoNode $ do
+      void $ runActions actions
+      assert True
+
+-- | Test a property in the MAlonzo node.
+runPropMAlonzoNode :: Testable a => PropertyM (RunMonad MAlonzoNode Gen) a -> Gen Property
+runPropMAlonzoNode p = do
   Capture eval <- capture
   -- FIXME: How can we evaluate this in a monad other than `Gen`?
   flip evalStateT def . runMonad . eval $ monadic' p
