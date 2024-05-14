@@ -102,10 +102,11 @@ Reflexive, transitive closure of the small step relation
   infix  2 _⟶⋆_
   
   variable
-    m n : ℕ
-    σ : VotingString m
-    σ′ : VotingString (suc m)
-    σ″ : VotingString n
+    m n o : ℕ
+    ω : LeaderString m
+    σ : VotingString n
+    σ′ : VotingString (suc n)
+    σ″ : VotingString o
 ```
 ```agda
   data _⟶⋆_ : VotingString m → VotingString n → Set where
@@ -123,34 +124,40 @@ Reflexive, transitive closure of the small step relation
 ```
 ## Theorem: The voting string in any execution is valid
 
-<!--
+TODO
+
+## Blocktree with certificates
 ```agda
-{-
-module Rec where
-  open import Data.Vec.Recursive
-  open import Data.Product using (_×_; _,_)
+  open import Peras.Block
+  open import Peras.Crypto
+  open import Data.List using (List)
+  open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 
-  data _⟶_ : ∀ {n} → Σ ^ n → Σ ^ (suc n) → Set where
+  module _ ⦃ _ : Hashable Block ⦄ where
 
-    HS-I : [] ⟶ ⒈
+    open Hashable ⦃...⦄
 
-    HS-II-? : ∀ {σ}
-      → (σ , ⒈) ⟶ (σ , ⒈ , ？)
+    data Edge : Block → Block → Set where
 
-    HS-II-1 : ∀ {σ}
-      → (σ , ⒈) ⟶ (σ , ⒈ , ⒈)
+      Parent : ∀ {b b′}
+        → parentBlock b′ ≡ hash b
+        → Edge b b′
 
-    HS-III : ∀ {σ}
-      → (σ , ？) ⟶ (σ , ？ , 🄀)
+    V = List Block
+    E = (v : V) → List (∀ {b b′ : Block} → {b ∈ v} → {b′ ∈ v} → Edge b b′)
 
-    HS-IV : ∀ {σ n}
-      → (σ , ⒈ , ？ , let xx = replicate n 🄀 in {!!}) ⟶ (σ , ⒈ , ？ , 🄀 , 🄀)
+    F = V × E
 
-  HS-IV : Valid ⟨⟩
+    data _⊢_ : ∀ {m n : ℕ} → F → (LeaderString m × VotingString n) → Set where
 
-  HS-V : Valid ⟨⟩
-  HS-VI : Valid ⟨⟩
-  HS-VII : Valid ⟨⟩
--}
+    record IsPerasBlocktree
+      {f : F}
+      (blocktree : f ⊢ (ω Data.Product., σ)): Set where
+      -- TODO: A1 - A9
+
+    record PerasBlocktree
+      {f : F}
+      (blocktree : f ⊢ (ω Data.Product., σ)): Set where
+      field
+        is-PerasBlocktree : IsPerasBlocktree blocktree
 ```
--->
