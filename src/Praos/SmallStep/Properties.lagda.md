@@ -394,6 +394,9 @@ those messages adds the blocks into the local trees.
       superSlots : Slot × Slot → ℕ
       adversarialSlots : Slot × Slot → ℕ
 ```
+# Main theorems
+
+## Chain growth
 
 The chain growth property informally says that in each period, the best chain of any honest
 party will increase at least by a number that is proportional to the number of lucky slots in
