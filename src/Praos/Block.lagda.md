@@ -12,6 +12,7 @@ open import Data.Product using (∃-syntax)
 open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
+open import Relation.Nullary using (Dec)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_)
@@ -116,4 +117,7 @@ data HonestBlock : Block → Set where
     → creatorId b ≡ p
     → h ≡ Honest {p}
     → HonestBlock b
+
+postulate
+  HonestBlock? : (b : Block) → Dec (HonestBlock b)
 ```

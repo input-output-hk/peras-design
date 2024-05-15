@@ -5,7 +5,7 @@ module Praos.SmallStep.Properties where
 <!--
 ```agda
 open import Data.Bool as Bool using (Bool; true; false)
-open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr; length)
+open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr; length; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ; ∈-++⁺ˡ; ∈-resp-≋)
 
@@ -39,6 +39,8 @@ open TreeType
 
 open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
+open import Data.List.Relation.Binary.Sublist.Propositional {A = Block} using () renaming (_⊆_ to _⊆ˡ_)
+
 open import Data.List.Relation.Binary.Subset.Propositional {A = Envelope} renaming (_⊆_ to _⊆ᵐ_)
 
 open import Data.List.Relation.Binary.Equality.Propositional using (_≋_; ≡⇒≋; ≋⇒≡)
@@ -100,6 +102,13 @@ module _ {block₀ : Block}
     open _↝_
     open IsTreeType
     open Envelope
+
+    variable
+      N₁ N₂ : GlobalState
+      p₁ p₂ : PartyId
+      h₁ : Honesty p₁
+      h₂ : Honesty p₂
+      t₁ t₂ : A
 ```
 -->
 <!--
@@ -208,19 +217,11 @@ module _ {block₀ : Block}
         → m′ ∈ ms
         → m ≢ m′
         → m′ ∈ (ms ─ m∈ms)
-
 {-
     m′∈ms─m∈ms {m} {m′} {.(_ ∷ _)} m∈ms (here refl) x = {!!}
     m′∈ms─m∈ms {m} {m′} {.(x ∷ xs)} (here px) (there {x} {xs} y) a = {!!}
     m′∈ms─m∈ms {m} {m′} {.(x ∷ xs)} (there z) (there {x} {xs} y) a = m′∈ms─m∈ms z y a
 -}
-
-{-
-    CertMsg≢BlockMsg : ∀ {p q c b} → ⦅ p , Honest , CertMsg c , zero ⦆ ≢ ⦅ q , Honest , BlockMsg b , zero ⦆
-    CertMsg≢BlockMsg x with cong message x
-    ... | ()
--}
-
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
@@ -302,12 +303,12 @@ The lemma describes how knowledge is propagated between honest parties in the sy
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
       → {p₁ p₂ : PartyId}
       → {t₁ t₂ : A}
-      → {honesty₁ : Honesty p₁}
-      → {honesty₂ : Honesty p₂}
-      → honesty₁ ≡ Honest {p₁}
-      → honesty₂ ≡ Honest {p₂}
-      → (p₁ , honesty₁) ∈ parties
-      → (p₂ , honesty₂) ∈ parties
+      → {h₁ : Honesty p₁}
+      → {h₂ : Honesty p₂}
+      → h₁ ≡ Honest {p₁}
+      → h₂ ≡ Honest {p₂}
+      → (p₁ , h₁) ∈ parties
+      → (p₂ , h₂) ∈ parties
       → N₀ ↝⋆ N₁
       → N₁ ↝⋆ N₂
       → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
@@ -393,6 +394,10 @@ those messages adds the blocks into the local trees.
       luckySlots : Slot × Slot → ℕ
       superSlots : Slot × Slot → ℕ
       adversarialSlots : Slot × Slot → ℕ
+
+    honestAdvantage : Slot × Slot → ℕ
+    honestAdvantage (sl₁ , sl₂) =
+      luckySlots (sl₁ , sl₂) ∸ adversarialSlots (sl₁ , sl₂)
 ```
 # Main theorems
 
@@ -404,11 +409,7 @@ that period.
 
 ```agda
     postulate
-      chain-growth : ∀ {N₁ N₂ : GlobalState}
-        → {p₁ p₂ : PartyId}
-        → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-        → {t₁ t₂ : A}
-        → {w : ℕ}
+      chain-growth : ∀ {w : ℕ}
         → h₁ ≡ Honest {p₁}
         → h₂ ≡ Honest {p₂}
         → N₀ ↝⋆ N₁
@@ -428,7 +429,17 @@ honest party's best chain, there is an honest share of blocks. This share is pro
 the difference between the number of honest and adversarial slots.
 
 ```agda
-
+    postulate
+      chain-quality : ∀ {w : ℕ} {t : A} {bs : List Block} {sl : Slot}
+        → lookup (stateMap N) p ≡ just ⟪ t ⟫
+        → N₀ ↝⋆ N
+        → ForgingFree N
+        → CollisionFree N
+        → h ≡ Honest {p}
+        → sl ≡ clock N
+        → bs ⊆ˡ bestChain blockTree (sl ∸ 1) t
+--      → honestAdvantage (slᵢ , slⱼ) ≥ w
+        → length (filter HonestBlock? bs) ≥ w
 ```
 
 ## Common prefix
@@ -438,8 +449,7 @@ chains of honest parties will always be a common prefix of each other.
 
 ```agda
     postulate
-      common-prefix : ∀ {N : GlobalState}
-        → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
+      common-prefix : ∀ {c : Chain} {k : Slot} {bh : List Block} {t : A}
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
         → N₀ ↝⋆ N
         → ForgingFree N
@@ -447,10 +457,23 @@ chains of honest parties will always be a common prefix of each other.
         → h ≡ Honest {p}
         → let sl = clock N
           in prune k (bestChain blockTree (sl ∸ 1) t) ⪯ c
-           ⊎ ∃[ sl′ ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl))
+           ⊎ Σ[ sl′ ∈ Slot ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl))
 ```
 ## Timed common prefix
 
 ```agda
-
+      timed-common-prefix : ∀ {k : Slot}
+        → {w : ℕ}
+        → h₁ ≡ Honest {p₁}
+        → h₂ ≡ Honest {p₂}
+        → N₀ ↝⋆ N₁
+        → N₁ ↝⋆ N₂
+        → ForgingFree N₂
+        → CollisionFree N₂
+        → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
+        → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
+        → let sl₁ = clock N₁
+              sl₂ = clock N₂
+           in prune k (bestChain blockTree (sl₁ ∸ 1) t₁) ⪯ (bestChain blockTree (sl₂ ∸ 1) t₂)
+              ⊎ Σ[ (sl′ , sl″) ∈ Slot × Slot ] (sl′ < k × sl₁ ≤ sl″ × sl″ ≤ sl₂ × superSlots (sl′ , sl″) < 2 * adversarialSlots (sl′ , sl″))
 ```
