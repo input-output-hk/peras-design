@@ -4,19 +4,15 @@ module Praos.SmallStep where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false; _∧_; not)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
+open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
+open import Data.List using (List; _∷_; []; _++_; cartesianProduct; filter; length; map)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
 open import Data.Maybe using (Maybe; just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
+open import Data.Nat using (_≤?_; _≤_; suc)
 open import Data.Nat.Properties using (≤-totalOrder)
-open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
-open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Data.Unit using (⊤)
-
+open import Data.Product using (∃-syntax; _×_; _,_; uncurry)
 open import Function using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
@@ -50,7 +46,7 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-Messages for sending and receiving blocks, certificates and votes
+Messages for sending and receiving blocks
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
@@ -156,8 +152,6 @@ module _ {block₀ : Block}
 
     field
 ```
-Properties that must hold with respect to blocks and votes
-
 ```agda
       instantiated :
         allBlocks tree₀ ≡ block₀ ∷ []
@@ -242,7 +236,7 @@ The local state initialized with the block tree
 ```
 ### State update
 
-Updating the local state upon receiving a message: Votes and blocks received as messages
+Updating the local state upon receiving a message: Blocks received as messages
 are delegated to the block tree.
 
 ```agda
@@ -353,8 +347,6 @@ An adversarial party might delay a message
           , as′
           ⟧
 ```
-Rather than creating a delayed vote, an adversary can honestly create it and delay the message
-
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
@@ -367,8 +359,6 @@ is added to be consumed immediately.
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 ```
-During regular execution of the protocol, i.e. not in cooldown phase, no certificate
-reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M

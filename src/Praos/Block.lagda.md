@@ -5,16 +5,13 @@ module Praos.Block where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false)
-open import Data.List using (List; null)
-open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe)
+open import Data.List using (List)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Product using (∃-syntax)
 open import Data.Unit using (⊤)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
-open import Relation.Nullary using (yes; no; ¬_)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_)

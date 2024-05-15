@@ -4,27 +4,17 @@ module Praos.Chain where
 
 <!--
 ```agda
-open import Data.Bool using (_∧_; true; false)
-open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; catMaybes; zip) renaming (length to ∣_∣)
-open import Data.List using (List; _++_; _∷_; [])
-open import Data.List.Membership.Propositional using (_∈_)
-open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
-open import Data.List.Relation.Unary.All using (All)
-open import Data.Maybe as M using (nothing; just)
-open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; _≤?_; NonZero; pred; _∸_; z≤n; s≤s)
-open import Data.Nat using (_≤_; _<_; _∸_)
-open import Data.Nat.Properties using (n≮n; _≟_)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Function.Base using (_∘_; _$_)
-open import Relation.Nullary using (¬_; Dec; yes; no)
-open import Relation.Nullary.Decidable using (_×-dec_)
-open import Relation.Binary using (DecidableEquality)
+open import Data.List using (List; _++_; _∷_; []; filter)
+open import Data.Nat using (_≤?_)
+open import Function.Base using (_∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_)
+open Eq using (_≡_)
 
-open import Praos.Crypto
+open import Relation.Binary using (DecidableEquality)
+
 open import Praos.Block
+open import Praos.Crypto
 ```
 -->
 
