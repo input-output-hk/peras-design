@@ -213,7 +213,6 @@ The block tree type
 
   * blockTree
   * slot leader predicate
-  * voting committee membership predicate
   * tx selection
   * The list of parties
   * AdversarialState₀ is the initial adversarial state
@@ -226,7 +225,6 @@ The block tree type
            {adversarialsState₀ : AdversarialState}
            {txSelection : Slot → PartyId → List Tx}
            {parties : Parties}
-
            where
 ```
 The local state initialized with the block tree
@@ -391,20 +389,26 @@ Rather than creating a delayed block, an adversary can honestly create it and de
 The small-step semantics describe the evolution of the global state.
 
 ```agda
+    variable
+      M N : Stateᵍ
+      p : PartyId
+      h : Honesty p
+```
+```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {M N p} {h : Honesty p} {m}
+      Deliver : ∀ {m}
         → h ⊢ M [ m ]⇀ N
           --------------
         → M ↝ N
 
-      CreateBlock : ∀ {M N p} {h : Honesty p}
-        → h ⊢ M ↷ N
+      CreateBlock :
+          h ⊢ M ↷ N
           ---------
         → M ↝ N
 
-      NextSlot : ∀ {M}
-        → Delivered M
+      NextSlot :
+          Delivered M
           -----------
         → M ↝ tick M
 ```
