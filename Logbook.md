@@ -23,6 +23,12 @@ Some notes:
   * the chain following part needs to be consistent with the state of voting, e.g. only provide roll forward/roll backwards that are consistent with the weight of the chain as given by votes
   * new certificates/quorums need to be send to nakamoto layer for chain selction
 
+While working on voting layer, I had the annoying realisation that while diffusing independently votes and blocks work in theory, that's problematic in practice because of the interdependence of votes and blocks:
+* a node could be flooded with irrelevant votes if they don't have a way to verify they are valid, eg. they are votes for a block on preferred chain
+* a node could be flooded with irrelevant blocks if they don't have a way to ensure they are selecting the right chain, which requires the votes
+* In Praos, risks are reduced because you download chains based on their length which can be easily asserted with headers only. And it's hard to forge a header, so if a header is validated the odds its body is valid are very high.
+* But in Peras, you really need those votes to make the decision (or the certificates but we agree this is an optimisation).
+* It's not new, something we already discussed probably several times, but from a practical standpoint it makes things really annoying to implement and is a significant departure from the high-level specification
 
 ## 2024-05-14
 
