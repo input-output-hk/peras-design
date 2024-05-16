@@ -22,7 +22,7 @@ open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
-open import Relation.Nullary.Decidable using (⌊_⌋)
+open import Relation.Nullary.Decidable using (⌊_⌋; ¬?)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
@@ -289,7 +289,7 @@ The block tree type
   module _ {tT : Set}
            {blockTree : TreeType tT}
            {AdversarialState : Set}
-           {adversarialsState₀ : AdversarialState}
+           {adversarialState₀ : AdversarialState}
            {txSelection : Slot → PartyId → List Tx}
            {parties : Parties}
 
@@ -381,7 +381,7 @@ Updating global state
 ```agda
     _,_,_,_↑_ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
     m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
-      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) parties ++ ms , m ∷ hs , as ⟧
+      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) (filter (¬? ∘ (p ≟_) ∘ proj₁) parties) ++ ms , m ∷ hs , as ⟧
 ```
 Ticking the global clock
 ```agda
@@ -496,7 +496,6 @@ reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
-              r = v-round clock
               txs = txSelection clock p
               b = record
                     { slotNumber = clock
@@ -516,7 +515,6 @@ reference is included in the block.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → VoteInRound ⟪ t ⟫ r
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
@@ -531,7 +529,7 @@ During a cooldown phase, the block includes a certificate reference.
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tipBest blockTree clock t
-                    ; certificate = nothing
+                    ; certificate = nothing -- TODO: add certificate
                     ; leadershipProof = prf
                     ; bodyHash = blockHash
                         record { blockHash = hash txs
@@ -562,25 +560,31 @@ Rather than creating a delayed block, an adversary can honestly create it and de
 The small-step semantics describe the evolution of the global state.
 
 ```agda
+    variable
+      M N : Stateᵍ
+      p : PartyId
+      h : Honesty p
+```
+```agda
     data _↝_ : Stateᵍ → Stateᵍ → Set where
 
-      Deliver : ∀ {M N p} {h : Honesty p} {m}
+      Deliver : ∀ {m}
         → h ⊢ M [ m ]⇀ N
           --------------
         → M ↝ N
 
-      CastVote : ∀ {M N p} {h : Honesty p}
-        → h ⊢ M ⇉ N
+      CastVote :
+          h ⊢ M ⇉ N
           ---------
         → M ↝ N
 
-      CreateBlock : ∀ {M N p} {h : Honesty p}
-        → h ⊢ M ↷ N
+      CreateBlock :
+          h ⊢ M ↷ N
           ---------
         → M ↝ N
 
-      NextSlot : ∀ {M}
-        → Delivered M
+      NextSlot :
+          Delivered M
           -----------
         → M ↝ tick M
 ```
@@ -626,6 +630,7 @@ In the paper mentioned above this is big-step semantics.
     ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
 ```
 -->
+
 # Collision free predicate
 
 <!--
@@ -689,7 +694,7 @@ that there are no hash collisions during the execution of the protocol.
     []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
       → h ⊢ M ↷ N
       → history M ⊆ₘ history N
-    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
     []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
 
     []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}

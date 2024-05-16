@@ -115,7 +115,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _) = n≤1+n (clock M)
 
@@ -240,7 +240,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
-    ⊆-block (honest {block = b} refl _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
+    ⊆-block (honest {block = b} refl _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
     ⊆-block (honest-cooldown {block = b} refl _ _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
 ```
 -->
@@ -267,7 +267,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver {M} {M′} (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
+    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
       m∈ms N×p≡t Delivered-N
       with p ℕ.≟ p′
     ... | no p≢p′ =
@@ -374,7 +374,7 @@ adds a block/vote/cert to some p's blocktree
 ```
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} lookup≡just-lₚ m∈ms (VoteReceived {v}))) ⟩ N′↝⋆N₂)
+      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} lookup≡just-lₚ m∈ms (VoteReceived {v}))) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
@@ -391,7 +391,7 @@ adds a block/vote/cert to some p's blocktree
 ```
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {N₁} {N′} {p} {h} (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {p} {h} (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p = knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
@@ -400,7 +400,7 @@ Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next 
 #### CastVote
 CastVote is not relevant for allBlocks
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote {N₁} {N′} (honest {p} {t} {vote = v} refl lookup≡just-lₚ _ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote (honest {p} {t} {vote = v} refl lookup≡just-lₚ _ _ _ _)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
@@ -419,7 +419,7 @@ CastVote is not relevant for allBlocks
 When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
 those messages adds the blocks into the local trees.
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest {p} {t} {block = b} refl lookup≡just-lₚ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock (honest {p} {t} {block = b} refl lookup≡just-lₚ _ _)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
@@ -442,7 +442,7 @@ those messages adds the blocks into the local trees.
          x∷xs⊆ys→xs⊆ys {x} {xs} = ⊆-trans (xs⊆x∷xs xs x)
 ```
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock {N₁} {N′} (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _ _ _)) ⟩ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
