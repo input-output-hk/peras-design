@@ -19,6 +19,10 @@ zero :: Natural
 zero = 0
 #-}
 
+-- FIXME
+-- FIXME: No quality assurance, review, or other testing has been done on the following translation of the draft paper's protocol!
+-- FIXME
+
 -- Executable specification.
 
 -- Set the protocol parameters and identity of a node.
@@ -35,20 +39,20 @@ initialize params party =
 
 -- Find the hash of a chain's tip.
 chainTip : Chain → Hash Block
-chainTip Genesis = genesisHash
-chainTip (ChainBlock block _) = hash iBlockHashable block
+chainTip [] = genesisHash
+chainTip (block ∷ _) = hash iBlockHashable block
 {-# COMPILE AGDA2HS chainTip #-}
 
 -- Extend a chain.
 extendChain : Block → Chain → Chain
-extendChain = ChainBlock
+extendChain = _∷_
 {-# COMPILE AGDA2HS extendChain #-}
 
 -- Determine whether one chain is a prefix on another chain.
 isChainPrefix : Chain → Chain → Bool
-isChainPrefix Genesis _ = True
-isChainPrefix (ChainBlock block _) chain' =
-  test (chainBlocks chain')
+isChainPrefix [] _ = True
+isChainPrefix (block ∷ _) chain' =
+  test chain'
   where sl : Slot
         sl = slot block
         hb : Hash Block
@@ -84,7 +88,7 @@ updateChains newChains =
 -- Find the weight of a chain, given a set of certificates.
 chainWeight : ℕ → List Certificate → Chain → ℕ
 chainWeight boost certs' chain =
-  let blocks = chainBlocks chain ⇉ hash iBlockHashable
+  let blocks = chain ⇉ hash iBlockHashable
       certifieds = certs' ⇉ certificateBlock
       z = filter (flip elem certifieds) blocks
   in count blocks + boost * count z
@@ -92,7 +96,7 @@ chainWeight boost certs' chain =
 
 -- Find the heaviest of a list of chains, given a set of certificates.
 heaviestChain : ℕ → List Certificate → List Chain → Chain
-heaviestChain _ _ [] = Genesis
+heaviestChain _ _ [] = []
 heaviestChain boost certs' (chain ∷ chains') = heaviest (chain , chainWeight boost certs' chain) chains'
   where heaviest : Chain × ℕ → List Chain → Chain
         heaviest ( c , _ ) [] = c
@@ -125,8 +129,8 @@ certificatesForNewQuorums =
     groupByRound  : List Vote → List (List Vote)
     groupByRound = groupBy (eqBy voteRound)
     -- Check if a group of votes in the same round constitutes a quorum.
-    hasQuorum : ℕ → List a → Bool
-    hasQuorum tau votes' = count votes' >= tau
+    hasQuorum : ℕ → List Vote → Bool
+    hasQuorum tau votes' = sum (fmap voteWeight votes') >= tau
 {-# COMPILE AGDA2HS certificatesForNewQuorums #-}
 
 -- Record the lastest certificate seen.
@@ -213,6 +217,7 @@ blockCreation txs =
     block ← signBlock <$> use currentSlot <*> use creatorId <*> pure tip <*> pure cert <*> pure txs
     -- Extend the preferred chain.
     chain ← use preferredChain ⇉ extendChain block
+    preferredChain ≔ chain
     -- Diffuse the new chain.
     diffuse ↞ NewChain chain
   where
@@ -226,7 +231,7 @@ blockCreation txs =
 
 -- Check whether a block is in the extension of a chain referenced by a certificate.
 extends : Block → Certificate → List Chain → Bool
-extends block cert = any chainExtends ∘ fmap chainBlocks
+extends block cert = any chainExtends
   where
     dropUntilBlock : Slot → Hash Block → List Block → List Block
     dropUntilBlock slotHint target blocks =
@@ -252,8 +257,8 @@ afterCooldown round k cert = go 1
 {-# COMPILE AGDA2HS afterCooldown #-}
 
 -- Vote.
-voting : NodeOperation
-voting =
+voting : Weight → NodeOperation
+voting weight =
   do
     -- Check for a preagreement block.
     agreed ← preagreement
@@ -285,7 +290,7 @@ voting =
                -- Vote.
                do
                  -- Sign the vote.
-                 vote ← signVote round <$> use creatorId <*> pure block
+                 vote ← signVote round <$> use creatorId <*> pure weight <*> pure block
                  -- Record the vote.
                  votes ≕ (vote ∷_)
                  -- Diffuse the vote.

@@ -23,7 +23,6 @@ preagreement =
     now ← use currentSlot
     -- Find the newest block older than the cutoff window.
     use preferredChain               -- Fetch the prefered chain.
-      ⇉ chainBlocks                  -- List its blocks.
       ⇉ dropWhile (newerThan l now)  -- Ignore the blocks that in the cutoff window.
       ⇉ foundBlock                   -- Report the newest block found, if any.
   where

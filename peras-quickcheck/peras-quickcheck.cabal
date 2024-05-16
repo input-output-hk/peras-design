@@ -43,7 +43,7 @@ maintainer:         arnaud.bailly@iohk.io
 -- A copyright notice.
 -- copyright:
 category:           Testing
-build-type:         Custom
+build-type:         Simple
 custom-setup
   setup-depends: base
                , directory
@@ -65,14 +65,12 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.NetworkModel
-                     Peras.Network.Netsim
-                     Peras.NodeModel
-                     Peras.Node.Netsim
-                     Peras.Node.Netsim.Rust
-                     Peras.OptimalModel
-
-    other-modules: Data.Statistics.Util
+    exposed-modules: Peras.QCD.Node.API
+                     Peras.QCD.Node.Arbitrary
+                     Peras.QCD.Node.Conformance
+                     Peras.QCD.Node.Impl.Buggy
+                     Peras.QCD.Node.Impl.MAlonzo
+                     Peras.QCD.Node.Impl.Perfect
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -97,7 +95,9 @@ library
                       mtl,
                       peras-hs,
                       peras-iosim,
+                      peras-malonzo,
                       quickcheck-dynamic,
+                      quickcheck-instances,
                       random,
                       text
 
@@ -107,8 +107,6 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
-    extra-libraries: peras_rust
-
 test-suite peras-quickcheck-test
     -- Import common warning flags.
     import:           warnings
@@ -117,11 +115,7 @@ test-suite peras-quickcheck-test
     default-language: Haskell2010
 
     -- Modules included in this executable, other than Main.
-    other-modules: Peras.NetworkModelSpec
-                   Peras.NodeModelSpec
-                   Peras.Node.IOSim
-                   Peras.OptimalModelSpec
-                   Peras.Util
+    other-modules: Peras.ConformanceSpec
 
     -- The interface type and version of the test suite.
     type:             exitcode-stdio-1.0

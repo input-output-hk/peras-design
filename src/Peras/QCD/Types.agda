@@ -54,6 +54,10 @@ PartyId : Set
 PartyId = VerificationKey
 {-# COMPILE AGDA2HS PartyId #-}
 
+Weight : Set
+Weight = ℕ
+{-# COMPILE AGDA2HS Weight #-}
+
 -- Blocks.
 
 record Certificate : Set
@@ -75,6 +79,7 @@ open Block public
 {-# COMPILE AGDA2HS Block deriving (Generic, Show) #-}
 
 record BlockBody : Set where
+  constructor MakeBlockBody
   field headerHash : Hash Block
         payload : List Tx
 open BlockBody public
@@ -82,19 +87,13 @@ open BlockBody public
 
 -- Chains.
 
-data Chain : Set where
-  Genesis : Chain
-  ChainBlock : Block → Chain → Chain
-{-# COMPILE AGDA2HS Chain deriving (Generic, Show) #-}
+Chain : Set
+Chain = List Block
+{-# COMPILE AGDA2HS Chain #-}
 
 genesisHash : Hash Block
 genesisHash = record {hashBytes = emptyBS}
 {-# COMPILE AGDA2HS genesisHash #-}
-
-chainBlocks : Chain → List Block
-chainBlocks Genesis = []
-chainBlocks (ChainBlock block chain) = block ∷ chainBlocks chain
-{-# COMPILE AGDA2HS chainBlocks #-}
 
 -- Certificates.
 
@@ -111,13 +110,13 @@ genesisCert = MakeCertificate 0 genesisHash emptyBS
 {-# COMPILE AGDA2HS genesisCert #-}
 
 certsOnChain : Chain → List Certificate
-certsOnChain Genesis = genesisCert ∷ []
-certsOnChain (ChainBlock block chain) = maybe id _∷_ (certificate block) $ certsOnChain chain
+certsOnChain [] = genesisCert ∷ []
+certsOnChain (block ∷ chain) = maybe id _∷_ (certificate block) $ certsOnChain chain
 {-# COMPILE AGDA2HS certsOnChain #-}
 
 lastCert : Chain → Certificate
-lastCert Genesis = genesisCert
-lastCert (ChainBlock block chain) = maybe (lastCert chain) id (certificate block)
+lastCert [] = genesisCert
+lastCert (block ∷ chain) = maybe (lastCert chain) id (certificate block)
 {-# COMPILE AGDA2HS lastCert #-}
 
 -- Votes.
@@ -126,6 +125,7 @@ record Vote : Set where
   constructor MakeVote
   field voteRound : ℕ
         voteParty : PartyId
+        voteWeight : Weight
         voteBlock : Hash Block
         voteProof : MembershipProof
         voteSignature : Signature

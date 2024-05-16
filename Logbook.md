@@ -1,3 +1,417 @@
+## 2024-05-16
+
+### Design of voting layer
+
+As we are focusing our investigation and prototypibng efforts on the voting layer, I have sketched a somewhat detailed design of what this independent voting layer would look like: https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589087032554&cot=14
+
+![](docs/diagrams/voting-layer-arch.jpg)
+
+Some notes:
+* The _preagreement_ module from the paper is encapsulated away as a separate component that decides on which block to vote on, and at what time
+* The _orange_ parts describe what a test driver would look like, and what kind of messages it needs to input and monitor
+* The voting layer can be conceived as a "basic" chain follower, at least insofar as we are only interested in the voting logic
+  * Inclusion of the latest certificate can be dealt later by exposing an interface for the _Nakamoto_ component to query it for inclusion in the block forged
+* This model includes boths _votes_ and _certificates_ but the latter is an optimisation
+* Votes diffusion is very similar to transaction diffusion: Each peer maintains a "vote pool" which is populated with new votes fetched from upstream peers
+* As voting proceeds in rounds and node need to know whether or not there's a chain of quorums, or a cooldown period, maintaining a round-based index is important
+* Votes are tied to blocks on the _preferred chain_ of the node so should the chain be rolled back, votes need to be discarded, and new votes are only accepted if they point to the preferred chain
+* When a rollback is signaled, votes can be dropped and new votes need to be fetched
+  * The node needs to cancel any pending request
+  * a new request for votes after some round number is issued
+  * vote pool is repopulated with those new votes
+* there is an inherent synchronisation problem here between the blocks and the votes: If we don't have the blocks votes are pointing to, they can't be added to the mempool, but chain selection depends on votes!
+  * the chain following part needs to be consistent with the state of voting, e.g. only provide roll forward/roll backwards that are consistent with the weight of the chain as given by votes
+  * new certificates/quorums need to be send to nakamoto layer for chain selction
+
+
+## 2024-05-14
+
+### `MAlonzo` version of executable specification
+
+We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs slower, likely because it involves more than two hundred Haskell modules.
+
+* `agda2hs` version: 4m 45.206s (250 tests)
+* `MAlonzo` version: 10m 46.280s (250 tests)
+
+We initially attempted the following workflow in order to avoid manually coding translation between normal Haskell and `MAlonzo`:
+
+1. Compile using `agda --ghc-dont-call-ghc`.
+2. Compile using `agda2hs`, so that the various `{-# COMPILE AGDA2HS ... #-}` types were generated as normal Haskell.
+3. Compile using `agda --compile`, so that the `agda2hs`-generated code could be re-used as implementations via `{-# COMPILE GHC <name> = data ... #-}` pragma.
+
+Two situations block this workflow:
+
+- The `Maybe` type differs between `MAlonzo` and `agda2hs`.
+    - The `{-# COMPILE GHC ... = data ... #-}` pragma requires that all types in the data structure also use that pragma. However, it is impossible (without modifying the generated `MAlonzo` code) to add that pragma to `Maybe`.
+    - One cannot work around this by defining one's own `Maybe a` type because the type parameter `a` results in an extra erasable argument to the generated `Just` constructor. That makes it incompatible with the Haskell `base` library's `Maybe`.
+- `agda` generates natural numbers as Haskell `Integer` whereas `agdah2` generates them as `Natural`.
+
+A workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types, so we just do the latter. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs#L1) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
+
+```haskell
+runState' :: T_State_10 -> T_NodeModel_8 -> ([S.Message], T_NodeModel_8)
+runState' action node =
+  let
+    Tuple.C__'44'__24 x s = d_runState_18 action $ unsafeCoerce node
+   in
+    (toMessage <$> unsafeCoerce x, unsafeCoerce s)
+
+instance Monad m => PerasNode MAlonzoNode m where
+  initialize params party =
+    pure . runState' (d_initialize_8 (fromParams params) (fromVerificationKey party))
+  fetching chains votes =
+    pure . runState' (d_fetching_136 (fmap fromBlock <$> chains) (fromVote <$> votes))
+  blockCreation txs =
+    pure . runState' (d_blockCreation_160 txs)
+  voting weight =
+    pure . runState' (d_voting_250 $ toInteger weight)
+```
+
+Overall findings:
+
+- It is practical to integrate `MAlonzo` code directly into `quickcheck-dynamic` tests, though this is slightly fragile with respect to modification of the underlying Agda.
+    - Changes to Agda types or functions cause the names of the subsequent, corresponding `MAlonzo` types or functions to be renumbered.
+- Handwritten code is needed to marshal `MAlonzo` to normal Haskell and vice versa.
+    - The use of the `{-# COMPILE GHC ... as ... #-}` pragma saves a small amount of work.
+    - The `{-# COMPILE GHD ... = data ... #-}` pragma can be used only in cases that don't use `MAlonzo.Code.Haskell.Prim` types such as `Maybe`, tuples, etc. (`List` is okay because Agda uses Haskell native lists.)
+    - Any type that uses `{-# COMPILE GHC ... = data ... #-}` must be also transitively use it.
+    - Any type that transitively uses natural numbers must be marshalled manually.
+- The `MAlonzo` code runs at roughly have the speed of the corresponding `agda2hs` code.
+
+Note that the experimental Peras executable specification has not been yet reviewed against the draft paper or otherwise subjected to quality assurance. As we discussed today, one possible path forward is to make decidable some small- and/or big-step parts of the formal spec and then to use the generated `MAlonzo` in `quickcheck-dynamic`.
+
+### Votes structure
+
+* Assuming we use existing keys and crypto available to a cardano-node, we have the following breakdown for the structure of a vote:
+
+  |               |     |
+  |---------------|-----|
+  | round number  | 8   |
+  | cold vkey     | 32  |
+  | block hash    | 32  |
+  | VRF proof     | 80  |
+  | VRF vkey      | 32  |
+  | KES signature | 448 |
+  | Op cert       | 102 |
+  | total         | 734 |
+
+* OpCert is needed because that's the only way to verify the KES vkey and therefore the KES Signature
+* The KES signature is required if we don't register some specific key pair for the purpose of Peras voting, which would introduce its own set of problems
+* VRF benchmarks in cardano-crypto-test gives a mean VRF proof time of 100μs
+
+### Quviq meeting
+
+* Only Max, Ulf is at Agda implementors workshop :smile:
+
+* What are the next steps?
+* Whole spectrum of conformance testing -> need to define what we think _is_ conformance
+  * specification = draft paper
+  * agnostic to diffusion, focus on how you obey the rules of the protocol
+  * distinguish pure protocol from propagation logic
+* Social aspects => not fun to implement a very detailed spec
+  * "conformance without over specification"
+
+* turn the existing specification readable
+
+* small step semantics -> big step semantics + glue code for execution -> MAlonzo for qcd
+  * most code in spec is not decidable
+  * pb w/ Agda2hs = lot of work to prove correspondence -> avoid extra proof by making the spec decidable and do direct extraction w/ MAlonzo
+  * do qcd purely in Agda? probably cheaper to do it in Haskell
+  * Lean4 is closer to a programming language
+
+* connect small steps semantics to limited subset of test semantics
+  * focusing on executability of a small subset for decidability and executability
+* PBT of human readable pseudo-code?
+
+* property to test: quorum
+  * if a node gets enough votes in a round, it issues a certificate
+  * if a node does not get enough votes in a round, it enters cooldown
+  * => prove property at the spec level -> ensure the test does exert that property
+  * restricting the proof of the property on the actions (subset of the smallsteps semantics)
+
+* define small steps/big steps/actions difference
+  * small steps = all transitions including not observable ones
+  * big steps = observable group of transitions
+
+* Going forward:
+    - Take Yves' small-step semantics
+    - Connect to a qc-d model using our technique and malonzo
+      - The property is still that the messages really match
+    - Actions should be a subset of the protocol, some possibilities:
+      - reaching a quorum (in every round where you have a quorum there should be a certificate)
+      - voting
+    - Make as many simplifying assumptions about the network as possible
+
+* Next steps:
+  * Code review on Brian's code
+  * Meet with Max + Ulf on Tuesday for concrete expression of "quorum formation"
+
+### Next steps
+
+| Domain               | Action                                                                            |
+|----------------------|-----------------------------------------------------------------------------------|
+| Conformance testing  | Executable specification based on MAlonzo to be used in running conformance tests |
+|                      | Express Peras properties as conformance tests (with help from Quviq?)             |
+|                      | Cleanup previous attempts in peras-quickcheck                                     |
+| Simulations          | ?                                                                                 |
+| Networking           | Model votes & certificates propagation w/ ΔQ                                      |
+|                      | Test newest version of ΔQ library                                                 |
+|                      | Prototype voting layer in Haskell                                                 |
+| Votes & certificates | Define votes structure                                                            |
+|                      | Define certificates structure                                                     |
+| Formal specification | Model voting characteristic string                                                |
+| Outreach             | Better understand stakeholders' needs                                             |
+| Project              | Organise in person workshop                                                       |
+
+### Why formal methods?
+
+* Formal verification = formally specifying and proving properties of real world programs
+* Formal verification is _hard_
+  * requires highly trained specialists (eg. PhD level or more) which are few and expensive
+  * significant investment in time
+  * Formal verification of concurrent and distributed systems is _super hard_ and this is essentially 80% of what we are working on
+* The tools, languages, methods are "primitive" when compared to "standards" in software engineering
+  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1
+  * Also, [this](https://www.repository.cam.ac.uk/items/2b447c99-dd97-4447-bb6a-cae0f8254162): A partial formal spec in Isabelle of Ouroboros adds up to 1.2MB of code!
+  * Of course, when compared to the state of affair in Haskell, it's not too bad
+* Research is not using those tools and languages (yet?)
+  * researchers are not trained on using them anyway
+  * because it's hard and takes time, it would significantly increase _TTP_ (time to publication)
+* Engineering is not using those tools (yet?)
+  * same reasons as above, but worse because proving anything about real world distributed systems is _super hard_
+* If we want Formal methods to have an impact in IOG and the wider Cardano community, we need an _integrated_ strategy:
+  * Define why/where/what we want to apply FM to
+  * Clarify _who_ we are formally proving things for
+  * Train (and retrain) people
+  * Invest in tools
+
+Some notes taken while reading [QED at large](https://ilyasergey.net/papers/qed-at-large.pdf), focusing on _Why proof engineering matters?_ chapter
+
+* Some examples of successful large-scale program verification:
+  * _CompCERT_ which is used in embedded, aeronautics, and offers commercial support, 35kLOC, 87% proofs
+  * [seL4](https://trustworthy.systems/publications/nicta_full_text/7371.pdf) with application in aviation/automotive
+
+    > The central artefact is the Haskell prototype of the kernel. The
+    > prototype is derived from the (informal) requirements and embodies
+    > the design and implementation of algorithms that manage the low-
+    > level hardware details. It can be translated automatically into the
+    > theorem prover Isabelle/HOL to form an executable, design-level
+    > specification of the kernel. The ab- stract, high-level, functional
+    > specification of the kernel can be developed manually, concurrently
+    > and semi-independently, giving further feedback into the design
+    > process.
+
+    > The original Haskell prototype is not part of the proof chain.
+
+    > The correspondence established by the refinement proof ensures that all Hoare logic properties of the abstract model also hold for the refined model.
+
+    > Proofs about concurrent programs are hard, much harder than proofs about sequential programs.
+
+    > We simplify the problem further by implementing interrupt points via polling, rather than temporary enabling of interrupts.
+
+    ![seL4 Design Process](docs/diagrams/sel4-design-process.png)
+
+    ![Proof Layers in seL4](docs/diagrams/sel4-proof-layers.png)
+
+
+  * In distributed systems: formalization and proof of [Raft](https://homes.cs.washington.edu/~mernst/pubs/raft-proof-cpp2016.pdf) properties
+  * BoringSSL is used in Chrome and includes verified crypto in C
+* Challenges in User productivity:
+
+  > Bourke et al. (2012) outline challenges in large-scale verification
+  > projects using proof assistants: (1) new proof engineers joining the
+  > project, (2) expert proof engineering during main development, (3)
+  > proof maintenance, and (4) social and management aspects. They
+  > highlight three lessons: (1) proof automation is crucial, (2) using
+  > introspective tools for quickly finding facts in large databases
+  > gain importantance for productivity, and (3) tools that shorten the
+  > edit-check cycle increase productivity, even when sacrificing
+  > soundness.
+
+* Oldies but goldies from [Social Processes and Proofs of Theorems and Programs](https://www.cs.umd.edu/~gasarch/BLOGPAPERS/social.pdf)
+
+  > It is argued that formal verifications of programs, no matter how
+  > obtained, will not play the same key role in the development of
+  > computer science and software engineering as proofs do in
+  > mathematics. Furthermore the absence of continuity, the
+  > inevitability of change, and the complexity of specification of
+  > significantly many real programs make the formal verification
+  > process difficult to justify and manage. It is felt that ease of
+  > formal verification should not dominate program language design.
+
+## 2024-05-13
+
+### Current situation for Peras
+
+* Conformance testing
+  * [Toy example](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/test-demo/src/TestModel.agda#L1) from Quviq demonstrating how to relate a formal model to a test model, deriving Haskell from Agda and proving some equivalence of the test model w.r.t. formal model
+
+    ```
+    research paper ~~> Agda specification <==> Agda testable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+    ```
+
+  * [Autonomous spec & conformance](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/test/Peras/ConformanceSpec.hs#L1) test against faithful and invalid node, showing a derivation path of QC properties from paper, through a "pseudo-code" executable specification:
+
+    ```
+    research paper ~~> Agda executable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+    ```
+  * "Praos" only [Conformance test of foreign code](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/Node/Netsim.hs#L23) using Netsim
+  * "Praos" only [Conformance test of Haskell code](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/NodeModel.hs#L16)
+  * Peras [optimal conformance model](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-quickcheck/src/Peras/OptimalModel.hs#L345) conformance test
+* Agda formal specification
+  * Formalised Peras protocol in small-step semantics along the lines of [POS-NSB]() paper, proving [KLnowledge propagation property](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/src/Peras/SmallStep/Properties.lagda.md#L129)
+  * Started work on proving theorem 4.1 from the peras paper which defines how _voting string_ is derived from execution of the protocol. The goal is to align formal proofs techniques with the model used by researchers
+* ΔQ model
+  * Reproduced [basic results about block diffusion](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/peras-delta-q/plot-dqsd.hs#L20) in Praos
+  * Analysed the impact of [certificates inclusion as part of block headers](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/docs/reports/tech-report-1.md#L596)
+* Simulation(s)
+  * Implemented [Haskell simulator](https://github.com/input-output-hk/peras-design/blob/8fd9ff7eb023c74558b6adedf843a247c3ee555c/peras-iosim/ReadMe.md#L1) for older version of Peras algorithm and ran various scenarios:
+    * Happy path scenario with various sizes (up to 100 nodes?)
+    * Split-brain scenario showing the impact of votes on chain selection
+    * Network congestion impact
+  * various [Analytical scenarios](https://github.com/input-output-hk/peras-design/blob/1a956f5465afed2b0aad679dc563e77ea82c84ab/analytics/analytics-1.md#L1) in R
+* Voting & Certificates
+  * Experimental [implementation of ALBA](https://github.com/cardano-scaling/alba) with benchmarks
+
+## 2024-05-10
+
+### Voting string analysis in Agda
+
+For doing the voting string analysis I investigated different approches how to represent a voting 1string in Agda. The first attempt implemented a formal language as described in [Equational Reasoning about Formal Languages in
+Coalgebraic Style](https://www.cse.chalmers.se/~abela/jlamp17.pdf). Following this approach we can specify regular expression defining valid voting strings:
+
+<!--
+```agda
+record Lang (i : Size) (A : Set) : Set where
+  coinductive
+  field
+    ν : Bool
+    δ : ∀{j : Size< i} → A → Lang j A
+
+open Lang
+
+_+_ : ∀ {i A} → Lang i A → Lang i A → Lang i A
+ν (a + b)   = ν a   ∨ ν b
+δ (a + b) x = δ a x + δ b x
+
+infixl 10 _+_
+
+_·_ : ∀ {i A} → Lang i A → Lang i A → Lang i A
+ν (a · b)   = ν a ∧ ν b
+δ (a · b) x = if ν a then δ a x · b + δ b x else δ a x · b
+
+infixl 20 _·_
+
+_* : ∀ {i A} → Lang i A → Lang i A
+ν (a *)   = true
+δ (a *) x = δ a x · a *
+
+infixl 30 _*
+
+∅ : ∀ {i A}  → Lang i A
+ν ∅   = false
+δ ∅ _ = ∅
+
+ε : ∀ {i A} → Lang i A
+ν ε   = true
+δ ε _ = ∅
+
+_*[_] : ∀ {i A} → Lang i A → ℕ → Lang i A
+ν (a *[ zero ]) = true
+ν (a *[ suc n ]) = false
+δ (a *[ zero ]) x = ∅
+δ (a *[ suc n ]) x = δ a x · (a *[ n ])
+
+infixl 40 _*[_]
+```
+-->
+```agda
+data Alphabet : Set where
+  ⒈ : Alphabet
+  ？ : Alphabet
+  🄀 : Alphabet
+
+⟦_⟧ : ∀ {i} → Alphabet → Lang i Alphabet
+ν ⟦ _ ⟧ = false
+δ ⟦ ⒈ ⟧ ⒈ = ε
+δ ⟦ ⒈ ⟧ ？ = ∅
+δ ⟦ ⒈ ⟧ 🄀 = ∅
+δ ⟦ ？ ⟧ ⒈ = ∅
+δ ⟦ ？ ⟧ ？ = ε
+δ ⟦ ？ ⟧ 🄀 = ∅
+δ ⟦ 🄀 ⟧ ⒈ = ∅
+δ ⟦ 🄀 ⟧ ？ = ∅
+δ ⟦ 🄀 ⟧ 🄀 = ε
+```
+<!--
+```agda
+infixr 5 _∷_
+
+data List (i : Size) {n} (A : Set n) : Set n where
+  [] : List i A
+  _∷_ : ∀ {j : Size< i} → A → List j A → List i A
+
+open List
+
+_∈_ : ∀ {i} {A} → List i A → Lang i A → Bool
+[]      ∈ a = ν a
+(x ∷ w) ∈ a = w ∈ δ a x
+```
+-->
+```agda
+⋯ = (⟦ ⒈ ⟧ + ⟦ ？ ⟧ + ⟦ 🄀 ⟧)*
+
+HS-II = ⋯ · ⟦ ⒈ ⟧
+
+test : (🄀 ∷ ？ ∷ 🄀 ∷ ⒈ ∷ []) ∈ HS-II ≡ true
+test = refl
+```
+
+For voting string we probably don't need the full power of regular expression and therefore we tried to build those direclty as an inductive data type as follows:
+
+```agda
+data Σ : Set where
+  ⒈ : Σ
+  ？ : Σ
+  🄀 : Σ
+
+VotingString = Vec Σ
+
+module _ ⦃ _ : Params ⦄ where
+  open Params ⦃...⦄
+
+  infix 3 _⟶_
+  data _⟶_ : ∀ {n} → VotingString n → VotingString (suc n) → Set where
+
+    HS-I : [] ⟶ [] , ⒈
+
+    HS-II-? : ∀ {n} {σ : VotingString n}
+      → σ , ⒈ ⟶ σ , ⒈ , ？
+
+    HS-II-1 : ∀ {n} {σ : VotingString n}
+      → σ , ⒈ ⟶ σ , ⒈ , ⒈
+
+    HS-III : ∀ {n} {σ : VotingString n}
+      → σ , ？ ⟶ σ , ？ , 🄀
+
+    HS-IV : ∀ {n} {σ : VotingString n}
+      → 1 ≤ L
+      → L ≤ K
+      → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
+        ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+
+    ...
+```
+The second solution is well readable and easier to use in the proofs.
+
+### QCD conformance test via Agda executable specification
+
+The [`Peras.QCD.ConformanceSpec`](peras-quickcheck/test/Peras/ConformanceSpec.hs) implements the basic faithfulness test for node implementations. Examples are provided for a perfectly faithful node and a buggy one. This demonstrates the feasibility of the following workflow:
+
+```
+research paper --> Agda executable specification --> Haskell executable specification --> Dynamic QuickCheck properties
+```
+
 ## 2024-05-09
 
 ### Executable specification in Agda
@@ -234,6 +648,9 @@ Then we spent some time grouping the various items in various "domains" and defi
 
 ![Retrospective Actions](docs/diagrams/2024-05-06-retrospective-plan.jpg)
 
+### Optimising ALBAs
+
+Spent some time optimising ALBAs, implementing the depth-first search suggested by Pyrros to speed up construction of the proof. This turned out to 1/ be quite simple to implement and 2/ provide a dramatic boost in performance.
 
 ## 2024-05-01
 
@@ -259,7 +676,7 @@ QuickCheck tests could be constructed to test that the chain dynamics conform to
 
 ### Crypto benchmarks
 
-Raw benchmarls for ALBA
+Raw benchmarks for ALBA
 
 | Name                     | Mean    | MeanLB  | MeanUB  | Stddev  | StddevLB | StddevUB |
 |--------------------------|---------|---------|---------|---------|----------|----------|

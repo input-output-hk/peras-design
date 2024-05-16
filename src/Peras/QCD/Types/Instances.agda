@@ -100,16 +100,9 @@ instance
   iBlockBodyEq ._==_ x y = eqBy headerHash x y && eqBy payload x y
 {-# COMPILE AGDA2HS iBlockBodyEq #-}
 
-instance
-  iChainEq : Eq Chain
-  iChainEq ._==_ Genesis Genesis = True
-  iChainEq ._==_ (ChainBlock b c) (ChainBlock b' c') = b == b' && c == c'
-  iChainEq ._==_ _ _ = False
-{-# COMPILE AGDA2HS iChainEq #-}
-
 tipHash : Chain → Hash Block
-tipHash Genesis = genesisHash
-tipHash (ChainBlock block _) = hash iBlockHashable block
+tipHash [] = genesisHash
+tipHash (block ∷ _) = hash iBlockHashable block
 {-# COMPILE AGDA2HS tipHash #-}
 
 instance
