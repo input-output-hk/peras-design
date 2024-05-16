@@ -58,21 +58,17 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
       GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
-      initialMap : Map LocalState′
-      initialMap = fromList (
-          (p₁ , ⟪ tree₀ blockTree ⟫)
-        ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
-        ∷ [])
-
       initialState : GlobalState
       initialState = ⟦ 0 , initialMap , [] , [] , adversarialState₀ ⟧
+        where
+          initialMap = fromList (
+              (p₁ , ⟪ tree₀ blockTree ⟫)
+            ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
+            ∷ [])
 
       postulate
         prf : LeadershipProof
         sig : Signature
-
-      txs : List Tx
-      txs = txSelection 1 p₁
 
       b : Block
       b = record
@@ -87,19 +83,20 @@ module _ {block₀ : Block} {cert₀ : Certificate}
                        }
             ; signature = sig
             }
+        where
+          txs = txSelection 1 p₁
+
+      finalState : GlobalState
+      finalState = ⟦ 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
+        where
+          finalMap = fromList (
+              (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
+            ∷ (p₂ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
+            ∷ [])
 
       postulate
         isSlotLeader : IsSlotLeader p₁ 1 prf
         isBlockSignature : IsBlockSignature b sig
-
-      finalMap : Map LocalState′
-      finalMap = fromList (
-          (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
-        ∷ (p₂ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
-        ∷ [])
-
-      finalState : GlobalState
-      finalState = ⟦ 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
 
       _ : initialState ↝⋆ finalState
       _ =    NextSlot All.[]
