@@ -22,7 +22,7 @@ open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
-open import Relation.Nullary.Decidable using (⌊_⌋)
+open import Relation.Nullary.Decidable using (⌊_⌋; ¬?)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
@@ -381,7 +381,7 @@ Updating global state
 ```agda
     _,_,_,_↑_ : Message → Delay → PartyId → Stateˡ → Stateᵍ → Stateᵍ
     m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
-      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) parties ++ ms , m ∷ hs , as ⟧
+      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) (filter (¬? ∘ (p ≟_) ∘ proj₁) parties) ++ ms , m ∷ hs , as ⟧
 ```
 Ticking the global clock
 ```agda
