@@ -5,12 +5,12 @@ module Praos.SmallStep.Properties where
 <!--
 ```agda
 open import Data.Bool as Bool using (Bool; true; false)
-open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr; length; filter)
+open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr; length; filter; applyUpTo)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ; ∈-++⁺ˡ; ∈-resp-≋)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
-open import Data.List.Relation.Unary.Any as Any using (Any; _─_; _∷=_; here; there)
+open import Data.List.Relation.Unary.Any as Any using (Any; _─_; _∷=_; here; there; any?)
 open import Data.List.Relation.Unary.Any.Properties as Any using (¬Any[])
 open import Data.List.Relation.Unary.All as All using (All)
 open import Data.List.Relation.Unary.All.Properties as All using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
@@ -51,6 +51,8 @@ open import Data.Tree.AVL.Map.Membership.Propositional PartyIdO
 open import Data.Tree.AVL.Map.Membership.Propositional.Properties PartyIdO
 
 open import Relation.Unary using (Pred)
+open import Relation.Nullary using (Dec)
+
 open import Level using (Level)
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -390,8 +392,34 @@ those messages adds the blocks into the local trees.
       in contradiction 1+c≤c 1+c≰c
 ```
 ```agda
+    data LuckySlot (sl : Slot) : Set where
+
+      HonestLeader : ∀ {p} {prf}
+        → (p , Honest) ∈ parties
+        → IsSlotLeader sl p prf
+        → LuckySlot sl
+
     postulate
-      luckySlots : Slot × Slot → ℕ
+      LuckySlot? : (sl : Slot) → Dec (LuckySlot sl)
+
+    data AdversarialSlot (sl : Slot) : Set where
+
+      DishonestLeader : ∀ {p} {prf}
+        → (p , Corrupt) ∈ parties
+        → IsSlotLeader sl p prf
+        → AdversarialSlot sl
+
+    data SuperSlot (sl : Slot) : Set where
+
+    SlotInterval = List Slot
+
+    postulate
+      slotInterval : Slot × Slot → SlotInterval
+
+    luckySlots : Slot × Slot → ℕ
+    luckySlots = length ∘ filter LuckySlot? ∘ slotInterval
+
+    postulate
       superSlots : Slot × Slot → ℕ
       adversarialSlots : Slot × Slot → ℕ
 
@@ -421,7 +449,21 @@ that period.
               c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
           in length c₁ + w ≤ length c₂
 ```
-
+Proof by induction on the number of lucky slots in the period.
+The base case follows by monotone chain growth for honest parties.
+<!--
+```agda
+--    chain-growth {w = ℕ.zero} x x₁ x₂ x₃ x₄ x₅ x₆ = {!!}
+```
+The induction step ...
+```agda
+{-
+    chain-growth {w = ℕ.suc n} refl refl x₂ x₃ x₄ x₅ x₆ =
+      let xx = chain-growth {w = n} refl refl x₂ x₃ x₄ x₅ {!!}
+      in {!!}
+-}
+```
+-->
 ## Chain quality
 
 The chain quality property informally says that within any chunk of consecutive blocks in an
@@ -462,6 +504,7 @@ chains of honest parties will always be a common prefix of each other.
 ## Timed common prefix
 
 ```agda
+    postulate
       timed-common-prefix : ∀ {k : Slot}
         → {w : ℕ}
         → h₁ ≡ Honest {p₁}
