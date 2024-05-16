@@ -6,6 +6,7 @@ module Peras.SmallStep.Execution where
 ```agda
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.List using (List; _∷_; [])
+open import Data.List.Relation.Unary.Any using (Any; here)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Maybe using (just; nothing)
@@ -57,14 +58,14 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
       GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
-      start : Map LocalState′
-      start = fromList (
+      initialMap : Map LocalState′
+      initialMap = fromList (
           (p₁ , ⟪ tree₀ blockTree ⟫)
         ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
         ∷ [])
 
       initialState : GlobalState
-      initialState = ⟦ 0 , start , [] , [] , adversarialState₀ ⟧
+      initialState = ⟦ 0 , initialMap , [] , [] , adversarialState₀ ⟧
 
       postulate
         prf : LeadershipProof
@@ -91,31 +92,19 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         isSlotLeader : IsSlotLeader p₁ 1 prf
         isBlockSignature : IsBlockSignature b sig
 
-      end : Map LocalState′
-      end = fromList (
+      finalMap : Map LocalState′
+      finalMap = fromList (
           (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
-        ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
+        ∷ (p₂ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
         ∷ [])
 
-      m : Message
-      m = BlockMsg b
-
-      e₁ e₂ : Envelope
-      e₁ = ⦅ p₁ , Honest , m , zero ⦆
-      e₂ = ⦅ p₂ , Honest , m , zero ⦆
-
       finalState : GlobalState
-      finalState = ⟦ 1 , end , e₂ ∷ [] , m ∷ [] , adversarialState₀ ⟧
-
-      intermediaryState : GlobalState
-      intermediaryState = ⟦ 1 , start , [] , [] , adversarialState₀ ⟧
-
-      s₁ : initialState ↝ intermediaryState
-      s₁ = NextSlot All.[]
-
-      s₂ : intermediaryState ↝ finalState
-      s₂ = CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+      finalState = ⟦ 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
 
       _ : initialState ↝⋆ finalState
-      _ = initialState ↝⟨ s₁ ⟩ (intermediaryState ↝⟨ s₂ ⟩ (finalState ∎))
+      _ =    NextSlot All.[]
+          ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+          ∷′ Deliver (honest refl (here refl) BlockReceived)
+          ∷′ NextSlot All.[]
+          ∷′ []′
 ```
