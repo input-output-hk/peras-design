@@ -9,7 +9,7 @@ import qualified Data.ByteString as BS
 import Generic.Random (genericArbitrary, uniform)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (..), BlockBody (..), Certificate (..))
-import Peras.Chain (RoundNumber (..), Vote (..))
+import Peras.Chain (Vote (..))
 import Peras.Crypto (
   Hash (..),
   LeadershipProof (..),
@@ -19,6 +19,7 @@ import Peras.Crypto (
  )
 import Peras.Event (Event, Rollback, UniqueId (..))
 import Peras.Message (Message, NodeId (..))
+import Peras.Numbering (RoundNumber (..), SlotNumber (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
 import Test.QuickCheck.Instances.Natural ()
@@ -30,19 +31,19 @@ instance Arbitrary NodeId where
       <$> (("Node-" <>) . show <$> (arbitrary @Natural))
 
 instance Arbitrary a => Arbitrary (Hash a) where
-  arbitrary = Hash <$> genByteString 8
+  arbitrary = MkHash <$> genByteString 8
 
 instance Arbitrary Signature where
-  arbitrary = Signature <$> genByteString 8
+  arbitrary = MkSignature <$> genByteString 8
 
 instance Arbitrary LeadershipProof where
-  arbitrary = LeadershipProof <$> genByteString 8
+  arbitrary = MkLeadershipProof <$> genByteString 8
 
 instance Arbitrary MembershipProof where
-  arbitrary = MembershipProof <$> genByteString 8
+  arbitrary = MkMembershipProof <$> genByteString 8
 
 instance Arbitrary VerificationKey where
-  arbitrary = VerificationKey <$> genByteString 8
+  arbitrary = MkVerificationKey <$> genByteString 8
 
 genByteString :: Int -> Gen ByteString
 genByteString n = BS.pack <$> vectorOf n arbitrary
@@ -55,11 +56,14 @@ instance Arbitrary Block where
 
 instance Arbitrary BlockBody where
   arbitrary = genericArbitrary uniform
-  shrink block@BlockBody{payload} =
+  shrink block@MkBlockBody{payload} =
     [block{payload = payload'} | payload' <- shrink payload]
 
 instance Arbitrary RoundNumber where
   arbitrary = MkRoundNumber <$> arbitrary
+
+instance Arbitrary SlotNumber where
+  arbitrary = MkSlotNumber <$> arbitrary
 
 instance Arbitrary Vote where
   arbitrary =

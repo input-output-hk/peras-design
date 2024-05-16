@@ -1,32 +1,63 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Peras.Block where
 
-import Numeric.Natural (Natural)
-import Peras.Crypto (Hash, Hashable, LeadershipProof, Signature(bytes), VerificationKey)
+import Peras.Crypto (Hash (MkHash), Hashable, LeadershipProof, Signature (bytesS), VerificationKey)
+import Peras.Numbering (RoundNumber, SlotNumber)
 
+import GHC.Generics (Generic)
 import Peras.Crypto (Hash (..), Hashable (..))
+import Prelude hiding (round)
 
-type PartyId = Natural
+-- Use `Integer` for compatibility with `MAlonzo`.
+type PartyId = Integer
 
-data Party = MkParty{id :: PartyId, vkey :: VerificationKey}
-               deriving Eq
+data Party = MkParty {pid :: PartyId, pkey :: VerificationKey}
+  deriving (Generic)
+
+instance Eq Party where
+  x == y = pid x == pid y && pkey x == pkey y
 
 type Tx = ()
 
-type Slot = Natural
+data Block = MkBlock
+  { slotNumber :: SlotNumber
+  , creatorId :: PartyId
+  , parentBlock :: Hash Block
+  , certificate :: Maybe Certificate
+  , leadershipProof :: LeadershipProof
+  , signature :: Signature
+  , bodyHash :: Hash [Tx]
+  }
+  deriving (Generic)
 
-data Block = Block{slotNumber :: Slot, creatorId :: PartyId,
-                   parentBlock :: Hash Block, certificate :: Maybe Certificate,
-                   leadershipProof :: LeadershipProof, signature :: Signature,
-                   bodyHash :: Hash [Tx]}
-               deriving Eq
+data BlockBody = MkBlockBody
+  { blockHash :: Hash [Tx]
+  , payload :: [Tx]
+  }
+  deriving (Generic)
 
-data BlockBody = BlockBody{blockHash :: Hash [Tx], payload :: [Tx]}
-                   deriving Eq
+data Certificate = MkCertificate
+  { round :: RoundNumber
+  , blockRef :: Hash Block
+  }
+  deriving (Generic)
 
-data Certificate = Certificate{round :: Natural,
-                               blockRef :: Hash Block}
-                     deriving Eq
+instance Eq Certificate where
+  x == y = round x == round y && blockRef x == blockRef y
+
+instance Eq Block where
+  x == y =
+    slotNumber x == slotNumber y
+      && creatorId x == creatorId y
+      && parentBlock x == parentBlock y
+      && leadershipProof x == leadershipProof y
+      && certificate x == certificate y
+      && signature x == signature y
+      && bodyHash x == bodyHash y
+
+instance Eq BlockBody where
+  x == y = blockHash x == blockHash y && payload x == payload y
 
 instance Hashable Block where
-    hash = \ b -> Hash (bytes (signature b))
-
+  hash = \b -> MkHash (bytesS (signature b))

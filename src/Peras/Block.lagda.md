@@ -7,33 +7,47 @@ module Peras.Block where
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; null)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe)
+open import Data.Maybe using (Maybe; maybe′)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Unit using (⊤)
+open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 open import Relation.Nullary using (yes; no; ¬_)
 
-import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_)
+import Relation.Binary.PropositionalEquality as Equ
+open Equ using (_≡_; _≢_)
 
 open import Peras.Crypto
+open import Peras.Numbering
 
-open import Haskell.Prelude using (Eq)
-{-# FOREIGN AGDA2HS import Peras.Crypto (Hash (..), Hashable (..)) #-}
+{-# FOREIGN AGDA2HS
+{-# LANGUAGE DeriveGeneric #-}
+import GHC.Generics (Generic)
+import Peras.Crypto (Hash (..), Hashable (..))
+import Prelude hiding (round)
+#-}
+
+{-# FOREIGN GHC
+import qualified Peras.Block as G
+#-}
 ```
 -->
 
 ## PartyId
 
 ```agda
-PartyId = ℕ -- TODO: Data.Fin ?
+PartyId = ℕ  -- FIXME: Data.Fin ?
 ```
+
 <!--
 ```agda
-{-# COMPILE AGDA2HS PartyId deriving (Eq) #-}
+{-# FOREIGN AGDA2HS
+-- Use `Integer` for compatibility with `MAlonzo`.
+type PartyId = Integer
+#-}
 ```
 -->
 
@@ -49,15 +63,21 @@ PartyIdO = <-strictTotalOrder
 ```agda
 record Party : Set where
   constructor MkParty
-  field id : PartyId
-        vkey : VerificationKey
+  field pid : PartyId
+        pkey : VerificationKey
 
 open Party public
+
+instance
+  iPartyEq : Eq Party
+  iPartyEq .Haskell._==_ x y = pid x Haskell.== pid y && pkey x Haskell.== pkey y
 ```
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Party deriving Eq #-}
+{-# COMPILE AGDA2HS Party deriving (Generic) #-}
+{-# COMPILE GHC Party = data G.Party (G.MkParty) #-}
+{-# COMPILE AGDA2HS iPartyEq #-}
 ```
 -->
 
@@ -76,6 +96,7 @@ data Honesty : PartyId → Set where
 PartyTup = ∃[ p ] (Honesty p)
 Parties = List PartyTup
 ```
+
 ```agda
 postulate
   Honest≢Corrupt : ∀ {p₁ p₂} {h₁ : Honesty p₁} {h₂ : Honesty p₂}
@@ -100,18 +121,6 @@ Tx = ⊤
 ```
 -->
 
-## Slot
-
-```agda
-Slot = ℕ
-```
-
-<!--
-```agda
-{-# COMPILE AGDA2HS Slot #-}
-```
--->
-
 ## Block and Certificate
 
 In addition to a Praos block, there is an optional field for the included certificate.
@@ -126,13 +135,18 @@ record BlockBody : Set
 record Certificate : Set
 
 record Certificate where
-  field round : ℕ
+  constructor MkCertificate
+  field round : RoundNumber
         blockRef : Hash Block
 
+  roundNumber : ℕ
+  roundNumber = getRoundNumber round
+  
 open Certificate public
 
 record Block where
-  field slotNumber : Slot
+  constructor MkBlock
+  field slotNumber : SlotNumber
         creatorId : PartyId
         parentBlock : Hash Block
         certificate : Maybe Certificate
@@ -140,6 +154,9 @@ record Block where
         signature : Signature
         bodyHash : Hash (List Tx)
 
+  slotNumber' : ℕ
+  slotNumber' = getSlotNumber slotNumber
+  
 open Block public
 
 postulate
@@ -147,6 +164,7 @@ postulate
   _≟-BlockHash_ : DecidableEquality (Hash Block)
 
 record BlockBody where
+  constructor MkBlockBody
   field blockHash : Hash (List Tx)
         payload : List Tx
 
@@ -162,21 +180,60 @@ data HonestBlock : Block → Set where
 ```
 <!--
 ```agda
-{-# COMPILE AGDA2HS Block deriving Eq #-}
-{-# COMPILE AGDA2HS BlockBody deriving Eq #-}
-{-# COMPILE AGDA2HS Certificate deriving Eq #-}
+{-# COMPILE AGDA2HS Block deriving (Generic) #-}
+{-# COMPILE GHC Block = data G.Block (G.MkBlock) #-}
+{-# COMPILE AGDA2HS BlockBody deriving (Generic) #-}
+{-# COMPILE GHC BlockBody = data G.BlockBody (G.MkBlockBody) #-}
+{-# COMPILE AGDA2HS Certificate deriving (Generic) #-}
+{-# COMPILE GHC Certificate = data G.Certificate (G.MkCertificate) #-}
+
+instance
+  iMaybeEq : {a : Set} → ⦃ i : Eq a ⦄ → Eq (Maybe a)
+  iMaybeEq {{i}} ._==_ x y =
+    maybe′
+      (λ x' → maybe′ (λ y' → x' == y') False y)
+      (maybe′ (λ _ → False) True y)
+      x
 ```
 -->
 
 ```agda
+
+instance
+  iCertificateEq : Eq Certificate
+  iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
+  
+instance
+  iBlockEq : Eq Block
+  iBlockEq ._==_ x y = slotNumber x == slotNumber y
+                         && creatorId x == creatorId y
+                         && parentBlock x == parentBlock y
+                         && leadershipProof x == leadershipProof y
+                         && certificate x == certificate y
+                         && signature x == signature y
+                         && bodyHash x == bodyHash y
+                         -- FIXME: In principle, we only need to check equality of the signatures.
+
+instance
+  iBlockBodyEq : Eq BlockBody
+  iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
+  
 private
   instance
     hashBlock : Hashable Block
     hashBlock = record
       { hash = λ b →
-                 (let record { bytes = s } = signature b
+                 (let record { bytesS = s } = signature b
                   in record { hashBytes = s })
       }
+```
+
+<!--
+```agda
+{-# COMPILE AGDA2HS iCertificateEq #-}
+{-# COMPILE AGDA2HS iBlockEq #-}
+{-# COMPILE AGDA2HS iBlockBodyEq #-}
 
 {-# COMPILE AGDA2HS hashBlock #-}
 ```
+-->

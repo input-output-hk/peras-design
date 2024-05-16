@@ -95,7 +95,6 @@ library
                       mtl,
                       peras-hs,
                       peras-iosim,
-                      peras-malonzo,
                       quickcheck-dynamic,
                       quickcheck-instances,
                       random,

@@ -27,7 +27,6 @@ import Data.Foldable (foldrM)
 import Data.List (delete)
 import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Data.Ratio ((%))
-import Peras.Block (Slot)
 import Peras.Event (CpuTime, Event (Drop))
 import Peras.IOSim.Experiment (experimentFactory, noVeto)
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..), mkUniqueId)
@@ -52,6 +51,7 @@ import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (simulationStart)
 import Peras.Message (Message (..), NodeId (..))
+import Peras.Numbering (SlotNumber)
 import System.IO (hPutStr, stderr)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Random (randomRIO)
@@ -60,7 +60,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.PQueue.Min as PQ
 
 {-# NOINLINE showProgress #-}
-showProgress :: Bool -> Slot -> UTCTime -> Int -> a -> a
+showProgress :: Bool -> SlotNumber -> UTCTime -> Int -> a -> a
 showProgress True _slot time size x =
   unsafePerformIO $
     randomRIO (0 :: Int, 99)

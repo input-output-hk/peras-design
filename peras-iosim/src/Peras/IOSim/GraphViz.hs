@@ -66,7 +66,7 @@ chainGraph networkState =
           , G.AttributeSetValue (G.NameId "label") (G.StringId "genesis")
           ]
       nodeId bid = G.NodeId (G.StringId $ show' bid) Nothing
-      mkNode Block{..} =
+      mkNode MkBlock{..} =
         G.NodeStatement
           (nodeId signature)
           [ G.AttributeSetValue (G.NameId "shape") (G.StringId "record")

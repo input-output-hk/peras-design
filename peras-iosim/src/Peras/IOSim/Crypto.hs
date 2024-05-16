@@ -12,7 +12,7 @@ module Peras.IOSim.Crypto (
   uniformRandom,
 ) where
 
-import Peras.Crypto (LeadershipProof (LeadershipProof), MembershipProof (MembershipProof), Signature (Signature))
+import Peras.Crypto (LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
 import System.Random (mkStdGen, uniformR)
 
 import Data.ByteString as BS
@@ -79,22 +79,22 @@ signBlock ::
   VrfOutput ->
   a ->
   Signature
-signBlock vrf _ = Signature $ randomBytes VrfBlockSignature vrf
+signBlock vrf _ = MkSignature $ randomBytes VrfBlockSignature vrf
 
 signVote ::
   VrfOutput ->
   a ->
   Signature
-signVote vrf _ = Signature $ randomBytes VrfVoteSignature vrf
+signVote vrf _ = MkSignature $ randomBytes VrfVoteSignature vrf
 
 proveLeadership ::
   VrfOutput ->
   a ->
   LeadershipProof
-proveLeadership vrf _ = LeadershipProof $ randomBytes VrfLeadershipProof vrf
+proveLeadership vrf _ = MkLeadershipProof $ randomBytes VrfLeadershipProof vrf
 
 proveMembership ::
   VrfOutput ->
   a ->
   MembershipProof
-proveMembership vrf _ = MembershipProof $ randomBytes VrfMembershipProof vrf
+proveMembership vrf _ = MkMembershipProof $ randomBytes VrfMembershipProof vrf

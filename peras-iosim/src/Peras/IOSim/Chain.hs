@@ -33,12 +33,13 @@ import Data.Default (Default (def))
 import Data.Foldable (foldr')
 import Data.List (nub)
 import Data.Maybe (fromMaybe)
-import Peras.Block (Block (..), BlockBody, Slot)
-import Peras.Chain (Chain, RoundNumber, Vote (..))
+import Peras.Block (Block (..), BlockBody)
+import Peras.Chain (Chain, Vote (..))
 import Peras.IOSim.Chain.Types (BlockTree, ChainState (..))
 import Peras.IOSim.Hash (BlockHash, BodyHash, VoteHash, genesisHash, hashBlock, hashBody, hashVote)
 import Peras.IOSim.Protocol.Types (Invalid (..))
 import Peras.IOSim.Types (VoteWithBlock)
+import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
 import qualified Data.Map as M
@@ -203,16 +204,16 @@ filterDanglingVotes f state =
     { danglingVotes = S.filter (either (const False) f . flip lookupVote state) $ danglingVotes state
     }
 
-blockInWindow :: (Slot, Slot) -> Block -> Bool
-blockInWindow (oldest, newest) Block{slotNumber} = oldest <= slotNumber && slotNumber <= newest
+blockInWindow :: (SlotNumber, SlotNumber) -> Block -> Bool
+blockInWindow (oldest, newest) MkBlock{slotNumber} = oldest <= slotNumber && slotNumber <= newest
 
-blocksInWindow :: (Slot, Slot) -> Chain -> [Block]
+blocksInWindow :: (SlotNumber, SlotNumber) -> Chain -> [Block]
 blocksInWindow window = filter (blockInWindow window)
 
 buildChain :: Block -> ChainState -> Either [BlockHash] Chain
 buildChain block ChainState{blockIndex} =
   let
-    buildChain' block'@Block{parentBlock} (blocksFound, blocksMissing)
+    buildChain' block'@MkBlock{parentBlock} (blocksFound, blocksMissing)
       | parentBlock == genesisHash = (blocksFound', blocksMissing)
       | otherwise = case parentBlock `M.lookup` blockIndex of
           Just block'' -> buildChain' block'' (blocksFound', blocksMissing)

@@ -18,7 +18,7 @@ module Peras.IOSim.Hash (
 
 import Peras.Block as Block (Block, BlockBody (blockHash), Tx)
 import Peras.Chain as Chain (Vote (signature))
-import Peras.Crypto as Crypto (Hash (..), Hashable (hash), Signature (bytes))
+import Peras.Crypto as Crypto (Hash (..), Hashable (hash), Signature (bytesS))
 
 type BlockHash = Hash Block
 
@@ -26,7 +26,7 @@ hashBlock :: Block -> BlockHash
 hashBlock = hash
 
 genesisHash :: BlockHash
-genesisHash = Hash mempty
+genesisHash = MkHash mempty
 
 hashTip :: [Block] -> BlockHash
 hashTip [] = genesisHash
@@ -37,7 +37,7 @@ type BodyHash = Hash [Tx]
 type VoteHash = Hash Vote
 
 hashVote :: Vote -> VoteHash
-hashVote = Crypto.Hash . Crypto.bytes . Chain.signature
+hashVote = Crypto.MkHash . Crypto.bytesS . Chain.signature
 
 hashBody :: BlockBody -> BodyHash
 hashBody = Block.blockHash
@@ -45,8 +45,8 @@ hashBody = Block.blockHash
 type ChainHash = Hash [Block]
 
 hashChain :: [Block] -> ChainHash
-hashChain [] = Hash . hashBytes $ genesisHash
-hashChain (block : _) = Hash . hashBytes $ hashBlock block
+hashChain [] = MkHash . hashBytes $ genesisHash
+hashChain (block : _) = MkHash . hashBytes $ hashBlock block
 
 castHash :: Hash a -> Hash b
-castHash Hash{..} = Hash{..}
+castHash MkHash{..} = MkHash{..}
