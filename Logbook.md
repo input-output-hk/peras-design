@@ -2,7 +2,7 @@
 
 ### `MAlonzo` version of executable specification
 
-We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](src/Peras/QCD/Node/Specification.agda). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs slower, likely because it involves more than two hundred Haskell modules.
+We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs slower, likely because it involves more than two hundred Haskell modules.
 
 * `agda2hs` version: 4m 45.206s (250 tests)
 * `MAlonzo` version: 10m 46.280s (250 tests)
@@ -20,7 +20,7 @@ Two situations block this workflow:
     - One cannot work around this by defining one's own `Maybe a` type because the type parameter `a` results in an extra erasable argument to the generated `Just` constructor. That makes it incompatible with the Haskell `base` library's `Maybe`.
 - `agda` generates natural numbers as Haskell `Integer` whereas `agdah2` generates them as `Natural`.
 
-A workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types, so we just do the latter. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
+A workaround for the above blockers involves manually writing code to cast between the `MAlonzo` representation and the `agda2hs` representation. That more-or-less involves the same amount of work as just working with the `agda`-generated `MAlonzo` types, so we just do the latter. The following fragment of [`Peras.QCD.Node.Impl.MAlonzo`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/peras-quickcheck/src/Peras/QCD/Node/Impl/MAlonzo.hs#L1) illustrates the essence of interfacing `MAlonzo` code to normal Haskell:
 
 ```haskell
 runState' :: T_State_10 -> T_NodeModel_8 -> ([S.Message], T_NodeModel_8)
