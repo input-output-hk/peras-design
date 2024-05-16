@@ -5,7 +5,7 @@ module Peras.SmallStep.Properties where
 <!--
 ```agda
 open import Data.Bool as Bool using (Bool; true; false)
-open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr)
+open import Data.List as List using (List; []; _∷_; null; map; _++_; foldr; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ; ∈-++⁺ˡ; ∈-resp-≋)
 
@@ -29,6 +29,7 @@ open import Data.Unit using (⊤; tt)
 open import Function.Base using (_∘_; id; _$_; flip)
 
 open import Relation.Nullary using (yes; no; ¬_)
+open import Relation.Nullary.Decidable using (¬?)
 open import Relation.Nullary.Negation using (contradiction)
 
 open import Peras.Block
@@ -235,13 +236,13 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → h ⊢ M ⇉ N
       → messages M ⊆ᵐ messages N
-    ⊆-vote (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, VoteMsg v , zero ⦆) parties
+    ⊆-vote {p = p} (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, VoteMsg v , zero ⦆) (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
 
     ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
       → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
-    ⊆-block (honest {block = b} refl _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
-    ⊆-block (honest-cooldown {block = b} refl _ _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) parties
+    ⊆-block {p = p} (honest {block = b} refl _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆)  (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
+    ⊆-block {p = p} (honest-cooldown {block = b} refl _ _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
 ```
 -->
 ```agda
