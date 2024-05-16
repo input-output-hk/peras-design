@@ -230,7 +230,7 @@ We initially started working from researchers' pseudo-code which was detailed in
 
 In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructured and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on the formal specification, the prototyping work, and the research work. This collective effort led to writing the exact same pseudo-code as a _literate Agda_ document, the internal consistency of which can be checked by the Agda compiler, while providing a similar level of flexibility and readability than the original document.
 
-This document is available in the [Peras repository](../../src/Peras/ProtocolL.lagda.md) and is a first step towards better integration between research and engineering work streams.
+This document is available in the [Peras repository](https://github.com/input-output-hk/peras-design/blob/65d8a98817df119b3902e43e5acca86fdcca6f92/src/Peras/ProtocolL.lagda.md#L1) and is a first step towards better integration between research and engineering work streams.
 
 Next steps include:
 
@@ -340,7 +340,7 @@ propGenesisInSlot0 c v = MkEqual (slot (last c) , 0) (prop-genesis-in-slot0 v)
 
 ### Small-step semantics
 
-In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](../../src/Peras/SmallStep.lagda.md) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics of the Ouroboros Praos part of the protocol are explained in the following sections.
+In order to describe the execution of the protocol, we are proposing a [small-step semantics for Ouroboros Peras](https://github.com/input-output-hk/peras-design/blob/65d8a98817df119b3902e43e5acca86fdcca6f92/src/Peras/SmallStep.lagda.md#L1) in Agda based on ideas from the small-step semantics for Ouroboros Praos as laid out in the PoS-NSB paper. The differences in the small-step semantics of the Ouroboros Praos part of the protocol are explained in the following sections.
 
 #### Local state
 
@@ -434,7 +434,7 @@ The reflexive transitive closure of the global relation describes what global st
 
 ### Proofs
 
-The properties and proofs that we can state based upon the formal specification are in [Properties.lagda.md](../../src/Peras/SmallStep/Properties.lagda.md).
+The properties and proofs that we can state based upon the formal specification are in [Properties.lagda.md](https://github.com/input-output-hk/peras-design/blob/65d8a98817df119b3902e43e5acca86fdcca6f92/src/Peras/SmallStep/Properties.lagda.md#L1).
 
 A first property is `knowledge-propagation`, a lemma that states that knowledge about blocks is propagated between honest parties in the system. In detail the lemma expresses that for two honest parties the blocks in the blocktree of the first party will be a subset of the blocks of the second party after any number of state transitions into a state where all the messages have been delivered. Or in Agda:
 
@@ -1100,7 +1100,7 @@ Findings from the simulation runs highlight the impracticality of blindly runnin
 
 This first "split-brain" experiment with `peras-iosim` involved running a network of 100 nodes with fivefold connectivity for 15 minutes, but where nodes are partitioned into two non-communicating sets between the 5th and 10th minute. The nodes quickly establish consensus after genesis, but split into two long-lived forks after the 5th minute; shortly after the 10th minute, one of the forks is abandoned as consensus is reestablished.
 
-Nodes were divided into two "parities" determined by whether the hash of their name is an even or odd number. When the network is partitioned, only nodes of the same parity are allowed to communicate with each other: the Haskell module `Peras.IOSIM.Experiment.splitBrain` implements the experiment and is readily extensible for defining additional experiments.
+Nodes were divided into two "parities" determined by whether the hash of their name is an even or odd number. When the network is partitioned, only nodes of the same parity are allowed to communicate with each other: the Haskell module [`Peras.IOSIM.Experiment.splitBrain`](https://github.com/input-output-hk/peras-design/blob/65d8a98817df119b3902e43e5acca86fdcca6f92/peras-iosim/src/Peras/IOSim/Experiment.hs#L1) implements the experiment and is readily extensible for defining additional experiments.
 
 Both the Praos and Peras protocols were simulated, with the following Peras parameters for creating a scenario that exhibits occasional cool-down periods and a strong influence of the voting boost.
 
