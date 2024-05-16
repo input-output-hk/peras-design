@@ -1,3 +1,29 @@
+## 2024-05-16
+
+### Design of voting layer
+
+As we are focusing our investigation and prototypibng efforts on the voting layer, I have sketched a somewhat detailed design of what this independent voting layer would look like: https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589087032554&cot=14
+
+![](docs/diagrams/voting-layer-arch.jpg)
+
+Some notes:
+* The _preagreement_ module from the paper is encapsulated away as a separate component that decides on which block to vote on, and at what time
+* The _orange_ parts describe what a test driver would look like, and what kind of messages it needs to input and monitor
+* The voting layer can be conceived as a "basic" chain follower, at least insofar as we are only interested in the voting logic
+  * Inclusion of the latest certificate can be dealt later by exposing an interface for the _Nakamoto_ component to query it for inclusion in the block forged
+* This model includes boths _votes_ and _certificates_ but the latter is an optimisation
+* Votes diffusion is very similar to transaction diffusion: Each peer maintains a "vote pool" which is populated with new votes fetched from upstream peers
+* As voting proceeds in rounds and node need to know whether or not there's a chain of quorums, or a cooldown period, maintaining a round-based index is important
+* Votes are tied to blocks on the _preferred chain_ of the node so should the chain be rolled back, votes need to be discarded, and new votes are only accepted if they point to the preferred chain
+* When a rollback is signaled, votes can be dropped and new votes need to be fetched
+  * The node needs to cancel any pending request
+  * a new request for votes after some round number is issued
+  * vote pool is repopulated with those new votes
+* there is an inherent synchronisation problem here between the blocks and the votes: If we don't have the blocks votes are pointing to, they can't be added to the mempool, but chain selection depends on votes!
+  * the chain following part needs to be consistent with the state of voting, e.g. only provide roll forward/roll backwards that are consistent with the weight of the chain as given by votes
+  * new certificates/quorums need to be send to nakamoto layer for chain selction
+
+
 ## 2024-05-14
 
 ### `MAlonzo` version of executable specification
