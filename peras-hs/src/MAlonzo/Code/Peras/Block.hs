@@ -494,9 +494,35 @@ d_iBlockEq_160 =
         )
     )
 
+-- Peras.Block.iBlockBodyEq
+d_iBlockBodyEq_166 :: MAlonzo.Code.Haskell.Prim.Eq.T_Eq_8
+d_iBlockBodyEq_166 =
+  coe
+    MAlonzo.Code.Haskell.Prim.Eq.C_Eq'46'constructor_7
+    ( coe
+        ( \v0 v1 ->
+            MAlonzo.Code.Haskell.Prim.Bool.d__'38''38'__6
+              ( coe
+                  MAlonzo.Code.Peras.Crypto.d_eqBS_8
+                  ( MAlonzo.Code.Peras.Crypto.d_hashBytes_20
+                      (coe d_blockHash_120 (coe v0))
+                  )
+                  ( MAlonzo.Code.Peras.Crypto.d_hashBytes_20
+                      (coe d_blockHash_120 (coe v1))
+                  )
+              )
+              ( coe
+                  MAlonzo.Code.Haskell.Prim.Eq.du_eqList_76
+                  (coe MAlonzo.Code.Haskell.Prim.Eq.d_iEqUnit_42)
+                  (coe d_payload_122 (coe v0))
+                  (coe d_payload_122 (coe v1))
+              )
+        )
+    )
+
 -- Peras.Block.hashBlock
-d_hashBlock_166 :: MAlonzo.Code.Peras.Crypto.T_Hashable_34
-d_hashBlock_166 =
+d_hashBlock_172 :: MAlonzo.Code.Peras.Crypto.T_Hashable_34
+d_hashBlock_172 =
   coe
     MAlonzo.Code.Peras.Crypto.C_Hashable'46'constructor_173
     ( coe

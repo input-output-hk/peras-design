@@ -1667,7 +1667,7 @@ du_stateMap_732 ::
 du_stateMap_732 v0 = coe d_stateMap_534 (coe v0)
 
 -- Peras.SmallStep._._._↝_
-d__'8605'__762
+d__'8605'__764
   a0
   a1
   a2
@@ -1686,24 +1686,24 @@ d__'8605'__762
   a15
   a16 =
     ()
-data T__'8605'__762
-  = C_Deliver_766
+data T__'8605'__764
+  = C_Deliver_768
       Integer
       MAlonzo.Code.Peras.Block.T_Honesty_26
       T_Message_62
       T__'8866'_'91'_'93''8640'__594
-  | C_CastVote_768
+  | C_CastVote_770
       Integer
       MAlonzo.Code.Peras.Block.T_Honesty_26
       T__'8866'_'8649'__640
-  | C_CreateBlock_770
+  | C_CreateBlock_772
       Integer
       MAlonzo.Code.Peras.Block.T_Honesty_26
       T__'8866'_'8631'__676
-  | C_NextSlot_772 MAlonzo.Code.Data.List.Relation.Unary.All.T_All_44
+  | C_NextSlot_774 MAlonzo.Code.Data.List.Relation.Unary.All.T_All_44
 
 -- Peras.SmallStep._._._↝⋆_
-d__'8605''8902'__774
+d__'8605''8902'__776
   a0
   a1
   a2
@@ -1722,15 +1722,15 @@ d__'8605''8902'__774
   a15
   a16 =
     ()
-data T__'8605''8902'__774
-  = C__'8718'_778
-  | C__'8605''10216'_'10217'__786
+data T__'8605''8902'__776
+  = C_'91''93''8242'_778
+  | C__'8759''8242'__780
       T_State'7501'_520
-      T__'8605'__762
-      T__'8605''8902'__774
+      T__'8605'__764
+      T__'8605''8902'__776
 
 -- Peras.SmallStep._._.↝⋆∘↝⋆
-d_'8605''8902''8728''8605''8902'_794 ::
+d_'8605''8902''8728''8605''8902'_782 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -1766,10 +1766,10 @@ d_'8605''8902''8728''8605''8902'_794 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T__'8605''8902'__774 ->
-  T__'8605''8902'__774 ->
-  T__'8605''8902'__774
-d_'8605''8902''8728''8605''8902'_794
+  T__'8605''8902'__776 ->
+  T__'8605''8902'__776 ->
+  T__'8605''8902'__776
+d_'8605''8902''8728''8605''8902'_782
   ~v0
   ~v1
   ~v2
@@ -1790,24 +1790,24 @@ d_'8605''8902''8728''8605''8902'_794
   ~v17
   v18
   v19 =
-    du_'8605''8902''8728''8605''8902'_794 v18 v19
-du_'8605''8902''8728''8605''8902'_794 ::
-  T__'8605''8902'__774 ->
-  T__'8605''8902'__774 ->
-  T__'8605''8902'__774
-du_'8605''8902''8728''8605''8902'_794 v0 v1 =
+    du_'8605''8902''8728''8605''8902'_782 v18 v19
+du_'8605''8902''8728''8605''8902'_782 ::
+  T__'8605''8902'__776 ->
+  T__'8605''8902'__776 ->
+  T__'8605''8902'__776
+du_'8605''8902''8728''8605''8902'_782 v0 v1 =
   case coe v0 of
-    C__'8718'_778 -> coe v1
-    C__'8605''10216'_'10217'__786 v3 v5 v6 ->
+    C_'91''93''8242'_778 -> coe v1
+    C__'8759''8242'__780 v3 v5 v6 ->
       coe
-        C__'8605''10216'_'10217'__786
+        C__'8759''8242'__780
         v3
         v5
-        (coe du_'8605''8902''8728''8605''8902'_794 (coe v6) (coe v1))
+        (coe du_'8605''8902''8728''8605''8902'_782 (coe v6) (coe v1))
     _ -> MAlonzo.RTE.mazUnreachableError
 
 -- Peras.SmallStep._._.↝∘↝⋆
-d_'8605''8728''8605''8902'_812 ::
+d_'8605''8728''8605''8902'_792 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -1843,10 +1843,10 @@ d_'8605''8728''8605''8902'_812 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T__'8605''8902'__774 ->
-  T__'8605'__762 ->
-  T__'8605''8902'__774
-d_'8605''8728''8605''8902'_812
+  T__'8605''8902'__776 ->
+  T__'8605'__764 ->
+  T__'8605''8902'__776
+d_'8605''8728''8605''8902'_792
   ~v0
   ~v1
   ~v2
@@ -1867,26 +1867,26 @@ d_'8605''8728''8605''8902'_812
   v17
   v18
   v19 =
-    du_'8605''8728''8605''8902'_812 v17 v18 v19
-du_'8605''8728''8605''8902'_812 ::
+    du_'8605''8728''8605''8902'_792 v17 v18 v19
+du_'8605''8728''8605''8902'_792 ::
   T_State'7501'_520 ->
-  T__'8605''8902'__774 ->
-  T__'8605'__762 ->
-  T__'8605''8902'__774
-du_'8605''8728''8605''8902'_812 v0 v1 v2 =
+  T__'8605''8902'__776 ->
+  T__'8605'__764 ->
+  T__'8605''8902'__776
+du_'8605''8728''8605''8902'_792 v0 v1 v2 =
   case coe v1 of
-    C__'8718'_778 ->
-      coe C__'8605''10216'_'10217'__786 v0 v2 (coe C__'8718'_778)
-    C__'8605''10216'_'10217'__786 v4 v6 v7 ->
+    C_'91''93''8242'_778 ->
+      coe C__'8759''8242'__780 v0 v2 (coe C_'91''93''8242'_778)
+    C__'8759''8242'__780 v4 v6 v7 ->
       coe
-        C__'8605''10216'_'10217'__786
+        C__'8759''8242'__780
         v4
         v6
-        (coe du_'8605''8728''8605''8902'_812 (coe v0) (coe v7) (coe v2))
+        (coe du_'8605''8728''8605''8902'_792 (coe v0) (coe v7) (coe v2))
     _ -> MAlonzo.RTE.mazUnreachableError
 
 -- Peras.SmallStep._._.CollisionFree
-d_CollisionFree_832
+d_CollisionFree_804
   a0
   a1
   a2
@@ -1904,14 +1904,14 @@ d_CollisionFree_832
   a14
   a15 =
     ()
-data T_CollisionFree_832
-  = C_collision'45'free_846
+data T_CollisionFree_804
+  = C_collision'45'free_818
       MAlonzo.Code.Peras.Block.T_Block_62
       MAlonzo.Code.Peras.Block.T_Block_62
       MAlonzo.Code.Data.List.Relation.Unary.All.T_All_44
 
 -- Peras.SmallStep._._._._⊆_
-d__'8838'__850 ::
+d__'8838'__822 ::
   T_TreeType_386 ->
   () ->
   AgdaAny ->
@@ -1923,10 +1923,10 @@ d__'8838'__850 ::
   [T_Message_62] ->
   [T_Message_62] ->
   ()
-d__'8838'__850 = erased
+d__'8838'__822 = erased
 
 -- Peras.SmallStep._._._._⊇_
-d__'8839'__852 ::
+d__'8839'__824 ::
   T_TreeType_386 ->
   () ->
   AgdaAny ->
@@ -1938,10 +1938,10 @@ d__'8839'__852 ::
   [T_Message_62] ->
   [T_Message_62] ->
   ()
-d__'8839'__852 = erased
+d__'8839'__824 = erased
 
 -- Peras.SmallStep._._._._⊆_
-d__'8838'__856 ::
+d__'8838'__828 ::
   T_TreeType_386 ->
   () ->
   AgdaAny ->
@@ -1953,10 +1953,10 @@ d__'8838'__856 ::
   [MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14] ->
   [MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14] ->
   ()
-d__'8838'__856 = erased
+d__'8838'__828 = erased
 
 -- Peras.SmallStep._._.⊆→⊆-cartesianProduct
-d_'8838''8594''8838''45'cartesianProduct_868 ::
+d_'8838''8594''8838''45'cartesianProduct_840 ::
   T_TreeType_386 ->
   () ->
   AgdaAny ->
@@ -1974,7 +1974,7 @@ d_'8838''8594''8838''45'cartesianProduct_868 ::
   MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-d_'8838''8594''8838''45'cartesianProduct_868
+d_'8838''8594''8838''45'cartesianProduct_840
   ~v0
   ~v1
   ~v2
@@ -1985,8 +1985,8 @@ d_'8838''8594''8838''45'cartesianProduct_868
   v7
   v8
   v9 =
-    du_'8838''8594''8838''45'cartesianProduct_868 v5 v6 v7 v8 v9
-du_'8838''8594''8838''45'cartesianProduct_868 ::
+    du_'8838''8594''8838''45'cartesianProduct_840 v5 v6 v7 v8 v9
+du_'8838''8594''8838''45'cartesianProduct_840 ::
   [T_Message_62] ->
   [T_Message_62] ->
   ( T_Message_62 ->
@@ -1996,7 +1996,7 @@ du_'8838''8594''8838''45'cartesianProduct_868 ::
   MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-du_'8838''8594''8838''45'cartesianProduct_868 v0 v1 v2 v3 v4 =
+du_'8838''8594''8838''45'cartesianProduct_840 v0 v1 v2 v3 v4 =
   coe
     MAlonzo.Code.Data.List.Membership.Propositional.Properties.du_'8712''45'cartesianProduct'8314'_360
     (MAlonzo.Code.Agda.Builtin.Sigma.d_fst_28 (coe v3))
@@ -2031,7 +2031,7 @@ du_'8838''8594''8838''45'cartesianProduct_868 v0 v1 v2 v3 v4 =
     )
 
 -- Peras.SmallStep._._.collision-free-resp-⊇
-d_collision'45'free'45'resp'45''8839'_884 ::
+d_collision'45'free'45'resp'45''8839'_856 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2066,13 +2066,13 @@ d_collision'45'free'45'resp'45''8839'_884 ::
   [MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14] ->
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   ( T_Message_62 ->
     MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
     MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
   ) ->
-  T_CollisionFree_832
-d_collision'45'free'45'resp'45''8839'_884
+  T_CollisionFree_804
+d_collision'45'free'45'resp'45''8839'_856
   ~v0
   ~v1
   ~v2
@@ -2092,21 +2092,21 @@ d_collision'45'free'45'resp'45''8839'_884
   v16
   v17
   v18 =
-    du_collision'45'free'45'resp'45''8839'_884 v15 v16 v17 v18
-du_collision'45'free'45'resp'45''8839'_884 ::
+    du_collision'45'free'45'resp'45''8839'_856 v15 v16 v17 v18
+du_collision'45'free'45'resp'45''8839'_856 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   ( T_Message_62 ->
     MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
     MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
   ) ->
-  T_CollisionFree_832
-du_collision'45'free'45'resp'45''8839'_884 v0 v1 v2 v3 =
+  T_CollisionFree_804
+du_collision'45'free'45'resp'45''8839'_856 v0 v1 v2 v3 =
   case coe v2 of
-    C_collision'45'free_846 v4 v5 v6 ->
+    C_collision'45'free_818 v4 v5 v6 ->
       coe
-        C_collision'45'free_846
+        C_collision'45'free_818
         (coe v4)
         (coe v5)
         ( coe
@@ -2160,7 +2160,7 @@ du_collision'45'free'45'resp'45''8839'_884 v0 v1 v2 v3 =
     _ -> MAlonzo.RTE.mazUnreachableError
 
 -- Peras.SmallStep._._.[]-hist-common-prefix
-d_'91''93''45'hist'45'common'45'prefix_904 ::
+d_'91''93''45'hist'45'common'45'prefix_876 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2202,7 +2202,7 @@ d_'91''93''45'hist'45'common'45'prefix_904 ::
   T_Message_62 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-d_'91''93''45'hist'45'common'45'prefix_904
+d_'91''93''45'hist'45'common'45'prefix_876
   ~v0
   ~v1
   ~v2
@@ -2226,16 +2226,16 @@ d_'91''93''45'hist'45'common'45'prefix_904
   v20
   ~v21
   v22 =
-    du_'91''93''45'hist'45'common'45'prefix_904 v20 v22
-du_'91''93''45'hist'45'common'45'prefix_904 ::
+    du_'91''93''45'hist'45'common'45'prefix_876 v20 v22
+du_'91''93''45'hist'45'common'45'prefix_876 ::
   T__'8866'_'91'_'93''8640'__594 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-du_'91''93''45'hist'45'common'45'prefix_904 v0 v1 =
+du_'91''93''45'hist'45'common'45'prefix_876 v0 v1 =
   coe seq (coe v0) (coe v1)
 
 -- Peras.SmallStep._._.[]⇀-collision-free
-d_'91''93''8640''45'collision'45'free_920 ::
+d_'91''93''8640''45'collision'45'free_892 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2273,10 +2273,10 @@ d_'91''93''8640''45'collision'45'free_920 ::
   Integer ->
   MAlonzo.Code.Peras.Block.T_Honesty_26 ->
   T_Message_62 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   T__'8866'_'91'_'93''8640'__594 ->
-  T_CollisionFree_832
-d_'91''93''8640''45'collision'45'free_920
+  T_CollisionFree_804
+d_'91''93''8640''45'collision'45'free_892
   ~v0
   ~v1
   ~v2
@@ -2299,16 +2299,16 @@ d_'91''93''8640''45'collision'45'free_920
   ~v19
   v20
   v21 =
-    du_'91''93''8640''45'collision'45'free_920 v20 v21
-du_'91''93''8640''45'collision'45'free_920 ::
-  T_CollisionFree_832 ->
+    du_'91''93''8640''45'collision'45'free_892 v20 v21
+du_'91''93''8640''45'collision'45'free_892 ::
+  T_CollisionFree_804 ->
   T__'8866'_'91'_'93''8640'__594 ->
-  T_CollisionFree_832
-du_'91''93''8640''45'collision'45'free_920 v0 v1 =
+  T_CollisionFree_804
+du_'91''93''8640''45'collision'45'free_892 v0 v1 =
   coe seq (coe v0) (coe seq (coe v1) (coe v0))
 
 -- Peras.SmallStep._._.[]↷-hist-common-prefix
-d_'91''93''8631''45'hist'45'common'45'prefix_942 ::
+d_'91''93''8631''45'hist'45'common'45'prefix_914 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2349,7 +2349,7 @@ d_'91''93''8631''45'hist'45'common'45'prefix_942 ::
   T_Message_62 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-d_'91''93''8631''45'hist'45'common'45'prefix_942
+d_'91''93''8631''45'hist'45'common'45'prefix_914
   ~v0
   ~v1
   ~v2
@@ -2371,12 +2371,12 @@ d_'91''93''8631''45'hist'45'common'45'prefix_942
   ~v18
   v19
   ~v20 =
-    du_'91''93''8631''45'hist'45'common'45'prefix_942 v19
-du_'91''93''8631''45'hist'45'common'45'prefix_942 ::
+    du_'91''93''8631''45'hist'45'common'45'prefix_914 v19
+du_'91''93''8631''45'hist'45'common'45'prefix_914 ::
   T__'8866'_'8631'__676 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-du_'91''93''8631''45'hist'45'common'45'prefix_942 v0 =
+du_'91''93''8631''45'hist'45'common'45'prefix_914 v0 =
   coe
     seq
     (coe v0)
@@ -2385,7 +2385,7 @@ du_'91''93''8631''45'hist'45'common'45'prefix_942 v0 =
     )
 
 -- Peras.SmallStep._._.[]⇉-hist-common-prefix
-d_'91''93''8649''45'hist'45'common'45'prefix_960 ::
+d_'91''93''8649''45'hist'45'common'45'prefix_932 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2426,7 +2426,7 @@ d_'91''93''8649''45'hist'45'common'45'prefix_960 ::
   T_Message_62 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-d_'91''93''8649''45'hist'45'common'45'prefix_960
+d_'91''93''8649''45'hist'45'common'45'prefix_932
   ~v0
   ~v1
   ~v2
@@ -2448,12 +2448,12 @@ d_'91''93''8649''45'hist'45'common'45'prefix_960
   ~v18
   v19
   ~v20 =
-    du_'91''93''8649''45'hist'45'common'45'prefix_960 v19
-du_'91''93''8649''45'hist'45'common'45'prefix_960 ::
+    du_'91''93''8649''45'hist'45'common'45'prefix_932 v19
+du_'91''93''8649''45'hist'45'common'45'prefix_932 ::
   T__'8866'_'8649'__640 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34 ->
   MAlonzo.Code.Data.List.Relation.Unary.Any.T_Any_34
-du_'91''93''8649''45'hist'45'common'45'prefix_960 v0 =
+du_'91''93''8649''45'hist'45'common'45'prefix_932 v0 =
   coe
     seq
     (coe v0)
@@ -2462,7 +2462,7 @@ du_'91''93''8649''45'hist'45'common'45'prefix_960 v0 =
     )
 
 -- Peras.SmallStep._._.[]↷-collision-free
-d_'91''93''8631''45'collision'45'free_974 ::
+d_'91''93''8631''45'collision'45'free_946 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2499,10 +2499,10 @@ d_'91''93''8631''45'collision'45'free_974 ::
   T_State'7501'_520 ->
   Integer ->
   MAlonzo.Code.Peras.Block.T_Honesty_26 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   T__'8866'_'8631'__676 ->
-  T_CollisionFree_832
-d_'91''93''8631''45'collision'45'free_974
+  T_CollisionFree_804
+d_'91''93''8631''45'collision'45'free_946
   ~v0
   ~v1
   ~v2
@@ -2524,25 +2524,25 @@ d_'91''93''8631''45'collision'45'free_974
   ~v18
   v19
   v20 =
-    du_'91''93''8631''45'collision'45'free_974 v15 v16 v19 v20
-du_'91''93''8631''45'collision'45'free_974 ::
+    du_'91''93''8631''45'collision'45'free_946 v15 v16 v19 v20
+du_'91''93''8631''45'collision'45'free_946 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   T__'8866'_'8631'__676 ->
-  T_CollisionFree_832
-du_'91''93''8631''45'collision'45'free_974 v0 v1 v2 v3 =
+  T_CollisionFree_804
+du_'91''93''8631''45'collision'45'free_946 v0 v1 v2 v3 =
   coe
-    du_collision'45'free'45'resp'45''8839'_884
+    du_collision'45'free'45'resp'45''8839'_856
     (coe v0)
     (coe v1)
     (coe v2)
     ( \v4 ->
-        coe du_'91''93''8631''45'hist'45'common'45'prefix_942 (coe v3)
+        coe du_'91''93''8631''45'hist'45'common'45'prefix_914 (coe v3)
     )
 
 -- Peras.SmallStep._._.[]⇉-collision-free
-d_'91''93''8649''45'collision'45'free_988 ::
+d_'91''93''8649''45'collision'45'free_960 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2579,10 +2579,10 @@ d_'91''93''8649''45'collision'45'free_988 ::
   T_State'7501'_520 ->
   Integer ->
   MAlonzo.Code.Peras.Block.T_Honesty_26 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   T__'8866'_'8649'__640 ->
-  T_CollisionFree_832
-d_'91''93''8649''45'collision'45'free_988
+  T_CollisionFree_804
+d_'91''93''8649''45'collision'45'free_960
   ~v0
   ~v1
   ~v2
@@ -2604,25 +2604,25 @@ d_'91''93''8649''45'collision'45'free_988
   ~v18
   v19
   v20 =
-    du_'91''93''8649''45'collision'45'free_988 v15 v16 v19 v20
-du_'91''93''8649''45'collision'45'free_988 ::
+    du_'91''93''8649''45'collision'45'free_960 v15 v16 v19 v20
+du_'91''93''8649''45'collision'45'free_960 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T_CollisionFree_832 ->
+  T_CollisionFree_804 ->
   T__'8866'_'8649'__640 ->
-  T_CollisionFree_832
-du_'91''93''8649''45'collision'45'free_988 v0 v1 v2 v3 =
+  T_CollisionFree_804
+du_'91''93''8649''45'collision'45'free_960 v0 v1 v2 v3 =
   coe
-    du_collision'45'free'45'resp'45''8839'_884
+    du_collision'45'free'45'resp'45''8839'_856
     (coe v0)
     (coe v1)
     (coe v2)
     ( \v4 ->
-        coe du_'91''93''8649''45'hist'45'common'45'prefix_960 (coe v3)
+        coe du_'91''93''8649''45'hist'45'common'45'prefix_932 (coe v3)
     )
 
 -- Peras.SmallStep._._.↝-collision-free
-d_'8605''45'collision'45'free_998 ::
+d_'8605''45'collision'45'free_970 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2657,10 +2657,10 @@ d_'8605''45'collision'45'free_998 ::
   [MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14] ->
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T__'8605'__762 ->
-  T_CollisionFree_832 ->
-  T_CollisionFree_832
-d_'8605''45'collision'45'free_998
+  T__'8605'__764 ->
+  T_CollisionFree_804 ->
+  T_CollisionFree_804
+d_'8605''45'collision'45'free_970
   ~v0
   ~v1
   ~v2
@@ -2680,36 +2680,36 @@ d_'8605''45'collision'45'free_998
   v16
   v17
   v18 =
-    du_'8605''45'collision'45'free_998 v15 v16 v17 v18
-du_'8605''45'collision'45'free_998 ::
+    du_'8605''45'collision'45'free_970 v15 v16 v17 v18
+du_'8605''45'collision'45'free_970 ::
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T__'8605'__762 ->
-  T_CollisionFree_832 ->
-  T_CollisionFree_832
-du_'8605''45'collision'45'free_998 v0 v1 v2 v3 =
+  T__'8605'__764 ->
+  T_CollisionFree_804 ->
+  T_CollisionFree_804
+du_'8605''45'collision'45'free_970 v0 v1 v2 v3 =
   case coe v2 of
-    C_Deliver_766 v4 v5 v8 v9 ->
-      coe du_'91''93''8640''45'collision'45'free_920 (coe v3) (coe v9)
-    C_CastVote_768 v4 v5 v8 ->
+    C_Deliver_768 v4 v5 v8 v9 ->
+      coe du_'91''93''8640''45'collision'45'free_892 (coe v3) (coe v9)
+    C_CastVote_770 v4 v5 v8 ->
       coe
-        du_'91''93''8649''45'collision'45'free_988
+        du_'91''93''8649''45'collision'45'free_960
         (coe v0)
         (coe v1)
         (coe v3)
         (coe v8)
-    C_CreateBlock_770 v4 v5 v8 ->
+    C_CreateBlock_772 v4 v5 v8 ->
       coe
-        du_'91''93''8631''45'collision'45'free_974
+        du_'91''93''8631''45'collision'45'free_946
         (coe v0)
         (coe v1)
         (coe v3)
         (coe v8)
-    C_NextSlot_772 v5 -> coe v3
+    C_NextSlot_774 v5 -> coe v3
     _ -> MAlonzo.RTE.mazUnreachableError
 
 -- Peras.SmallStep._._.↝⋆-collision-free
-d_'8605''8902''45'collision'45'free_1018 ::
+d_'8605''8902''45'collision'45'free_990 ::
   MAlonzo.Code.Peras.Block.T_Block_62 ->
   MAlonzo.Code.Peras.Block.T_Certificate_66 ->
   ( Integer ->
@@ -2744,10 +2744,10 @@ d_'8605''8902''45'collision'45'free_1018 ::
   [MAlonzo.Code.Agda.Builtin.Sigma.T_Σ_14] ->
   T_State'7501'_520 ->
   T_State'7501'_520 ->
-  T__'8605''8902'__774 ->
-  T_CollisionFree_832 ->
-  T_CollisionFree_832
-d_'8605''8902''45'collision'45'free_1018
+  T__'8605''8902'__776 ->
+  T_CollisionFree_804 ->
+  T_CollisionFree_804
+d_'8605''8902''45'collision'45'free_990
   ~v0
   ~v1
   ~v2
@@ -2767,23 +2767,23 @@ d_'8605''8902''45'collision'45'free_1018
   ~v16
   v17
   v18 =
-    du_'8605''8902''45'collision'45'free_1018 v15 v17 v18
-du_'8605''8902''45'collision'45'free_1018 ::
+    du_'8605''8902''45'collision'45'free_990 v15 v17 v18
+du_'8605''8902''45'collision'45'free_990 ::
   T_State'7501'_520 ->
-  T__'8605''8902'__774 ->
-  T_CollisionFree_832 ->
-  T_CollisionFree_832
-du_'8605''8902''45'collision'45'free_1018 v0 v1 v2 =
+  T__'8605''8902'__776 ->
+  T_CollisionFree_804 ->
+  T_CollisionFree_804
+du_'8605''8902''45'collision'45'free_990 v0 v1 v2 =
   case coe v1 of
-    C__'8718'_778 -> coe v2
-    C__'8605''10216'_'10217'__786 v4 v6 v7 ->
+    C_'91''93''8242'_778 -> coe v2
+    C__'8759''8242'__780 v4 v6 v7 ->
       coe
-        du_'8605''45'collision'45'free_998
+        du_'8605''45'collision'45'free_970
         (coe v0)
         (coe v4)
         (coe v6)
         ( coe
-            du_'8605''8902''45'collision'45'free_1018
+            du_'8605''8902''45'collision'45'free_990
             (coe v4)
             (coe v7)
             (coe v2)
@@ -2791,7 +2791,7 @@ du_'8605''8902''45'collision'45'free_1018 v0 v1 v2 =
     _ -> MAlonzo.RTE.mazUnreachableError
 
 -- Peras.SmallStep._._.ForgingFree
-d_ForgingFree_1030
+d_ForgingFree_1002
   a0
   a1
   a2
@@ -2809,8 +2809,8 @@ d_ForgingFree_1030
   a14
   a15 =
     ()
-data T_ForgingFree_1030
-  = C_forging'45'free_1044
+data T_ForgingFree_1002
+  = C_forging'45'free_1016
       T_State'7501'_520
       MAlonzo.Code.Peras.Block.T_Block_62
       Integer
