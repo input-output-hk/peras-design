@@ -34,7 +34,7 @@ import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
-import Peras.Block (Block (parentBlock), Slot)
+import Peras.Block (Block (parentBlock))
 import Peras.Chain (Chain, Vote)
 import Peras.Event (CpuTime)
 import Peras.IOSim.Experiment (Veto, noVeto)
@@ -44,6 +44,7 @@ import Peras.IOSim.Node.Types (PerasNode (getBlocks, getPreferredChain, getVotes
 import Peras.IOSim.Nodes (SomeNode)
 import Peras.IOSim.Types (Coin, simulationStart)
 import Peras.Message (NodeId)
+import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()
 import System.Random (StdGen, mkStdGen)
 import Test.QuickCheck (Arbitrary (..))
@@ -89,7 +90,7 @@ data Network m = Network
   deriving stock (Generic)
 
 data NetworkState = NetworkState
-  { _lastSlot :: Slot
+  { _lastSlot :: SlotNumber
   , _lastTime :: UTCTime
   , _currentStates :: Map NodeId SomeNode
   , _pending :: PQ.MinQueue OutEnvelope

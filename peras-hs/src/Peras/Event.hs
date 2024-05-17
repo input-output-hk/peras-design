@@ -5,13 +5,12 @@ import Control.Monad.Class.MonadTime (NominalDiffTime)
 import Data.Aeson (Value)
 import Data.ByteString (ByteString)
 import Data.Time (UTCTime)
-import Numeric.Natural (Natural)
-import Peras.Block (Slot)
 import Peras.Message (Message, NodeId)
+import Peras.Numbering (SlotNumber)
 
 newtype UniqueId = UniqueId {uniqueId :: ByteString}
 
-type ByteSize = Natural
+type ByteSize = Integer
 
 type CpuTime = NominalDiffTime
 
@@ -42,11 +41,11 @@ data Event
       }
   | SlotLeader
       { self :: NodeId
-      , slot :: Slot
+      , slot :: SlotNumber
       }
   | CommitteeMember
       { self :: NodeId
-      , slot :: Slot
+      , slot :: SlotNumber
       }
   | Rolledback
       { self :: NodeId
@@ -59,9 +58,9 @@ data Event
   | Trace Value
 
 data Rollback = Rollback
-  { atSlot :: Slot
-  , slotsRolledBack :: Natural
-  , blocksRolledBack :: Natural
+  { atSlot :: SlotNumber
+  , slotsRolledBack :: Integer
+  , blocksRolledBack :: Integer
   , fromWeight :: Double
   , toWeight :: Double
   }
