@@ -562,7 +562,7 @@ The small-step semantics describe the evolution of the global state.
 
 ```agda
     variable
-      M N : Stateᵍ
+      M N O : Stateᵍ
       p : PartyId
       h : Honesty p
 ```
@@ -596,39 +596,31 @@ In the paper mentioned above this is big-step semantics.
 
 ```agda
     infix  2 _↝⋆_
-    infixr 2 _↝⟨_⟩_
-    infix  3 _∎
+    infixr 2 _∷′_
+    infix  3 []′
 
     data _↝⋆_ : Stateᵍ → Stateᵍ → Set where
-
-      _∎ : ∀ M
-          -------
-        → M ↝⋆ M
-
-      _↝⟨_⟩_ : ∀ L {M N}
-        → L ↝ M
-        → M ↝⋆ N
-          ------
-        → L ↝⋆ N
+      []′ : M ↝⋆ M
+      _∷′_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
 ```
 <!--
 ### Composition
 ```agda
-    ↝⋆∘↝⋆ : ∀ {M N O}
-      → M ↝⋆ N
+    ↝⋆∘↝⋆ :
+        M ↝⋆ N
       → N ↝⋆ O
       → M ↝⋆ O
-    ↝⋆∘↝⋆ (_ ∎) M↝⋆O = M↝⋆O
-    ↝⋆∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝⋆O = (_ ↝⟨ M↝M₁ ⟩ (↝⋆∘↝⋆ M₁↝⋆N N↝⋆O))
+    ↝⋆∘↝⋆ []′ M↝⋆O = M↝⋆O
+    ↝⋆∘↝⋆ (M↝M₁ ∷′ M₁↝⋆N) N↝⋆O = M↝M₁ ∷′ ↝⋆∘↝⋆ M₁↝⋆N N↝⋆O
 ```
 ### Post-composition
 ```agda
-    ↝∘↝⋆ : ∀ {M N O}
-      → M ↝⋆ N
+    ↝∘↝⋆ :
+        M ↝⋆ N
       → N ↝ O
       → M ↝⋆ O
-    ↝∘↝⋆ {M} {N} {O} (_ ∎) N↝O = M ↝⟨ N↝O ⟩ (O ∎)
-    ↝∘↝⋆ {M} (_ ↝⟨ M↝M₁ ⟩ M₁↝⋆N) N↝O = M ↝⟨ M↝M₁ ⟩ (↝∘↝⋆ M₁↝⋆N N↝O)
+    ↝∘↝⋆ []′ N↝O =  N↝O ∷′ []′
+    ↝∘↝⋆ (M↝M₁ ∷′ M₁↝⋆N) N↝O = M↝M₁ ∷′ ↝∘↝⋆ M₁↝⋆N N↝O
 ```
 -->
 
@@ -748,8 +740,8 @@ When the current state is collision free, previous states were so too
 ```
 <!--
 ```agda
-    ↝⋆-collision-free (_ ∎) N = N
-    ↝⋆-collision-free (_ ↝⟨ N₁↝N₂ ⟩ N₂↝⋆N₃) N₃ =
+    ↝⋆-collision-free ([]′) N = N
+    ↝⋆-collision-free (N₁↝N₂ ∷′ N₂↝⋆N₃) N₃ =
       ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
 ```
 -->
