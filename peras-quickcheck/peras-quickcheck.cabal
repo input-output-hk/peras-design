@@ -65,7 +65,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.QCD.Node.API
+    exposed-modules: Peras.ChainWeight
+                     Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
                      Peras.QCD.Node.Impl.Buggy
