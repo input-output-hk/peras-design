@@ -49,6 +49,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            where
 
     private
+```
+This is a very simple example of the execution of the protocol in the small-step semantics. There are only 2 parties and both parties are honest. The first party is the slot leader in the first slot and creates a block. The block is then delivered to the second party. The second party receives the block and the protocol moves to the next slot.
+```agda
       p₁ p₂ : PartyId
       p₁ = 1
       p₂ = 2
@@ -58,7 +61,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
       LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
       GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
-
+```
+Initial state
+```agda
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
@@ -66,7 +71,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
               (p₁ , ⟪ tree₀ blockTree ⟫)
             ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
             ∷ [])
-
+```
+```agda
       postulate
         prf : LeadershipProof
         sig : Signature
@@ -86,7 +92,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
             }
         where
           txs = txSelection (MkSlotNumber 1) p₁
-
+```
+Final state after the execution of all the steps
+```agda
       finalState : GlobalState
       finalState = ⟦ MkSlotNumber 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
         where
@@ -94,11 +102,14 @@ module _ {block₀ : Block} {cert₀ : Certificate}
               (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
             ∷ (p₂ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
             ∷ [])
-
+```
+```agda
       postulate
         isSlotLeader : IsSlotLeader p₁ (MkSlotNumber 1) prf
         isBlockSignature : IsBlockSignature b sig
-
+```
+Execution of the protocol
+```agda
       _ : initialState ↝⋆ finalState
       _ =    NextSlot All.[]
           ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
