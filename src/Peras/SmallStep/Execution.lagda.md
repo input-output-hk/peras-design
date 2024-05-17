@@ -10,10 +10,12 @@ open import Data.List.Relation.Unary.Any using (Any; here)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Maybe using (just; nothing)
+open import Data.Nat using (_+_; _*_)
+open import Data.Nat.Properties using (+-identityˡ; +-identityʳ)
 open import Function using (_∘_; id; _$_; flip)
 
 open import Peras.Chain
-open import Peras.Crypto
+open import Peras.Crypto hiding (isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
@@ -28,18 +30,33 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 -->
 
 ```agda
-module _ {block₀ : Block} {cert₀ : Certificate}
+module _ {block₀}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
          (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ _ : Params ⦄
          where
 
   open Hashable ⦃...⦄
-  open Params ⦃...⦄
+
+  cert₀ : Certificate
+  cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
+
+  instance
+    params : Params
+    params = record
+               { T = 2
+               ; K = 1
+               ; R = 1
+               ; L = 1
+               ; A = 1
+               ; τ = 1
+               ; B = 1
+               ; W = 1
+               }
+  open Params
 
   module _ {A : Set}
            (blockTree : TreeType A)
@@ -81,7 +98,7 @@ Initial state
       b = record
             { slotNumber = MkSlotNumber 1
             ; creatorId = p₁
-            ; parentBlock = hash $ tipBest blockTree (MkSlotNumber 1) (tree₀ blockTree)
+            ; parentBlock = hash $ tipBest blockTree (MkSlotNumber 1) (tree₀ blockTree) -- TODO: hash $ tip block₀
             ; certificate = nothing
             ; leadershipProof = prf
             ; bodyHash = blockHash
@@ -93,27 +110,57 @@ Initial state
         where
           txs = txSelection (MkSlotNumber 1) p₁
 ```
+```agda
+      postulate
+        prf' : MembershipProof
+        sig' : Signature
+
+      v : Vote
+      v = record
+            { votingRound = MkRoundNumber 1
+            ; creatorId = p₁
+            ; proofM = prf'
+            ; blockHash = hash $ tipBest blockTree (MkSlotNumber 1) (extendTree blockTree (tree₀ blockTree) b) -- TODO: hash $ tip b
+            ; signature = sig'
+            }
+```
 Final state after the execution of all the steps
 ```agda
       finalState : GlobalState
-      finalState = ⟦ MkSlotNumber 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 3 , finalMap , [] , VoteMsg v ∷ BlockMsg b ∷ [] , adversarialState₀ ⟧
         where
           finalMap = fromList (
-              (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
-            ∷ (p₂ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
+              (p₁ , ⟪ addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v ⟫)
+            ∷ (p₂ , ⟪ addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v ⟫)
             ∷ [])
 ```
 ```agda
       postulate
         isSlotLeader : IsSlotLeader p₁ (MkSlotNumber 1) prf
         isBlockSignature : IsBlockSignature b sig
+
+        isCommitteeMember : IsCommitteeMember p₁ (MkRoundNumber 1) prf'
+        isVoteSignature : IsVoteSignature v sig'
+
+      -- TODO: prove it
+      postulate
+        h₂ : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
+               PointsInto (bestChain blockTree (MkSlotNumber $ 2) (extendTree blockTree (tree₀ blockTree) b))
+
+        h₃ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
+
+      h₁ : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
+      h₁ rewrite h₃ = refl
 ```
 Execution of the protocol
 ```agda
       _ : initialState ↝⋆ finalState
-      _ =    NextSlot All.[]
+      _ =    NextSlot All.[]  -- slot 1
           ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ∷′ Deliver (honest refl (here refl) BlockReceived)
-          ∷′ NextSlot All.[]
+          ∷′ NextSlot All.[]  -- slot 2
+          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular h₁ h₂))
+          ∷′ Deliver (honest refl (here refl) VoteReceived)
+          ∷′ NextSlot All.[]  -- slot 3
           ∷′ []′
 ```
