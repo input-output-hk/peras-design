@@ -33,6 +33,9 @@ library
     MAlonzo.Code.Peras.QQCD.Types.Instances
     MAlonzo.Code.Peras.QQCD.Util
     MAlonzo.Code.Peras.SmallStep
+    MAlonzo.Code.Peras.SmallStep.Experiment
+    MAlonzo.Code.Peras.SmallStep.Experiment.Impl
+    MAlonzo.Code.Peras.SmallStep.Experiment.Types
     MAlonzo.RTE
     Peras.Arbitraries
     Peras.Block
@@ -53,6 +56,8 @@ library
     Peras.QCD.Types.Instances
     Peras.QCD.Util
     Peras.SmallStep
+    Peras.SmallStep.Experiment
+    Peras.SmallStep.Experiment.Types
   other-modules:
     MAlonzo.Code.Agda.Builtin.Bool
     MAlonzo.Code.Agda.Builtin.Char
