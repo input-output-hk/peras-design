@@ -28,7 +28,7 @@ record NodeModel : Set where
         nodeLatestCertSeen : Certificate
         nodeLatestCertOnChain : Certificate
 open NodeModel public
-{-# COMPILE AGDA2HS NodeModel deriving (Generic) #-}
+{-# COMPILE AGDA2HS NodeModel deriving (Generic, Show) #-}
 
 emptyNode : NodeModel
 emptyNode =
