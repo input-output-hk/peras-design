@@ -1,3 +1,23 @@
+## 2024-05-17
+
+### Formal specification
+
+Changed the reflexive transitive closure of the small-step semantics to a List-like syntax similar to what has been proposed in `test-demo`. This allows to express execution steps in a concise way and could be used as DSL for specifying test-cases and attack-scenarios. An example of the new syntax is shown below:
+
+```agda
+      _ : initialState ↝⋆ finalState
+      _ =    NextSlot All.[]  -- slot 1
+          ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+          ∷′ Deliver (honest refl (here refl) BlockReceived)
+          ∷′ NextSlot All.[]  -- slot 2
+          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular h₁ h₂))
+          ∷′ Deliver (honest refl (here refl) VoteReceived)
+          ∷′ NextSlot All.[]  -- slot 3
+          ∷′ []′
+```
+
+The example above shows only the execution path and all the details are omitted. See `Peras.SmallStep.Execution` for the full example.
+
 ## 2024-05-16
 
 ### Design of voting layer
