@@ -17,7 +17,6 @@ index-state:
 packages:
   peras-hs
   peras-iosim
-  peras-malonzo
   peras-quickcheck
   peras-delta-q
   test-demo

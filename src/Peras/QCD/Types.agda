@@ -20,25 +20,25 @@ record MembershipProof : Set where
   constructor MakeMembershipProof
   field membershipProofBytes : ByteString
 open MembershipProof public
-{-# COMPILE AGDA2HS MembershipProof newtype deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS MembershipProof newtype deriving (Generic) #-}
 
 record LeadershipProof : Set where
   constructor MakeLeadershipProof
   field leadershipProofBytes : ByteString
 open LeadershipProof public
-{-# COMPILE AGDA2HS LeadershipProof newtype deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS LeadershipProof newtype deriving (Generic) #-}
 
 record Signature : Set where
   constructor MakeSignature
   field signatureBytes : ByteString
 open Signature public
-{-# COMPILE AGDA2HS Signature newtype deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Signature newtype deriving (Generic) #-}
 
 record VerificationKey : Set where
   constructor MakeVerificationKey
   field verificationKeyBytes : ByteString
 open VerificationKey public
-{-# COMPILE AGDA2HS VerificationKey newtype deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS VerificationKey newtype deriving (Generic) #-}
 
 -- Basics.
 
@@ -76,14 +76,14 @@ record Block : Set where
         signature : Signature
         bodyHash : Hash (List Tx)
 open Block public
-{-# COMPILE AGDA2HS Block deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Block deriving (Generic) #-}
 
 record BlockBody : Set where
   constructor MakeBlockBody
   field headerHash : Hash Block
         payload : List Tx
 open BlockBody public
-{-# COMPILE AGDA2HS BlockBody deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS BlockBody deriving (Generic) #-}
 
 -- Chains.
 
@@ -103,7 +103,7 @@ record Certificate where
         certificateBlock : Hash Block
         certificateBytes : ByteString
 open Certificate public
-{-# COMPILE AGDA2HS Certificate deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Certificate deriving (Generic) #-}
 
 genesisCert : Certificate
 genesisCert = MakeCertificate 0 genesisHash emptyBS
@@ -130,7 +130,7 @@ record Vote : Set where
         voteProof : MembershipProof
         voteSignature : Signature
 open Vote public
-{-# COMPILE AGDA2HS Vote deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Vote deriving (Generic) #-}
 
 -- Messages.
 
@@ -138,4 +138,4 @@ data Message : Set where
   NewChain : Chain → Message
   NewVote : Vote → Message
 open Message public
-{-# COMPILE AGDA2HS Message deriving (Generic, Show) #-}
+{-# COMPILE AGDA2HS Message deriving (Generic) #-}

@@ -29,9 +29,9 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
-import Peras.Block (Block (..), BlockBody (BlockBody), Certificate (Certificate), PartyId)
-import Peras.Chain (Chain, RoundNumber (roundNumber), Vote (..))
-import Peras.Crypto (Hash (Hash))
+import Peras.Block (Block (..), BlockBody (MkBlockBody), Certificate (MkCertificate), PartyId)
+import Peras.Chain (Chain, Vote (..))
+import Peras.Crypto (Hash (MkHash))
 import Peras.Event (ByteSize, CpuTime, Rollback (..))
 import Peras.IOSim.Chain (
   Invalid (HashOfUnknownBlock),
@@ -78,6 +78,7 @@ import Peras.IOSim.Protocol (
 import Peras.IOSim.Protocol.Types (Protocol (..))
 import Peras.IOSim.Types (Coin)
 import Peras.Message (Message (..), NodeId)
+import Peras.Numbering (RoundNumber, SlotNumber (getSlotNumber))
 import Test.QuickCheck (Arbitrary (..))
 
 import qualified Data.Aeson as A
@@ -262,7 +263,7 @@ adjustMessageDelays NodeContext{slot} message result@NodeResult{..} =
   do
     tip <- uses chainStateLens $ hashTip . preferredChain
     bandwidth <- use nicBandwidthLens
-    let individualDelays = fromRational . (/ fromIntegral bandwidth) . (% 1_000_000) . fromIntegral . messageSize . outMessage <$> outputs
+    let individualDelays = fromRational . (/ fromIntegral bandwidth) . (% 1_000_000) . messageSize . outMessage <$> outputs
         cumulativeDelays = scanl1 (+) individualDelays
         delayMessage output delay = output{outTime = delay `addUTCTime` outTime output}
         outputs' = zipWith delayMessage outputs cumulativeDelays
@@ -353,24 +354,24 @@ doLeading context@NodeContext{slot} =
         makeCertificate [] = Nothing
         makeCertificate votes =
           Just
-            . uncurry Certificate
+            . uncurry MkCertificate
             . head
             . maximumBy (on compare length)
             . group
             . sort
-            $ (\MkVote{..} -> (roundNumber votingRound, blockHash)) <$> votes
+            $ (\MkVote{..} -> (votingRound, blockHash)) <$> votes
     vrf <- use vrfOutputLens
     -- Forge the new block.
     block <-
-      Block slot
+      MkBlock slot
         <$> use ownerLens
         <*> uses chainStateLens (hashTip . preferredChain)
         <*> uses chainStateLens (makeCertificate . eligibleDanglingVotes)
         <*> pure (proveLeadership vrf ())
         <*> pure (signBlock vrf ())
-        <*> pure (Hash $ randomBytes VrfBodyHash vrf)
+        <*> pure (MkHash $ randomBytes VrfBodyHash vrf)
     chainStateLens %= appendBlock block
-    chainStateLens %= addBody (BlockBody (bodyHash block) mempty)
+    chainStateLens %= addBody (MkBlockBody (bodyHash block) mempty)
     -- FIXME: Implement `prefixCutoffWeight` logic.
     makeResultDownstreams
       context
@@ -421,8 +422,8 @@ newChain context@NodeContext{..} proposed =
               (prefix, suffix) ->
                 let
                   atSlot = if null prefix then 0 else slotNumber $ head prefix
-                  slotsRolledBack = slotNumber (head suffix) - atSlot
-                  blocksRolledBack = fromIntegral $ length suffix
+                  slotsRolledBack = getSlotNumber $ slotNumber (head suffix) - atSlot
+                  blocksRolledBack = toInteger $ length suffix
                  in
                   pure Rollback{..}
     if toWeight > fromWeight

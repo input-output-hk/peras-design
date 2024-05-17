@@ -4,7 +4,7 @@
             "tag": "Stop"
         },
         {
-            "inBytes": 6,
+            "inBytes": -24,
             "inId": "144b93bb7914a92f",
             "inMessage": {
                 "contents": "2c07ece8aa7f9474",
@@ -18,15 +18,15 @@
             "tag": "Stop"
         },
         {
-            "inBytes": 2,
+            "inBytes": 4,
             "inId": "d63dfdb809674f77",
             "inMessage": {
                 "contents": {
                     "blockHash": "14086c5d0769a99b",
-                    "committeeMembershipProof": "fcab0836e6ee6825",
-                    "creatorId": 28,
+                    "creatorId": -2,
+                    "proofM": "fcab0836e6ee6825",
                     "signature": "3e3e8c6f7e12488f",
-                    "votingRound": 13
+                    "votingRound": -17
                 },
                 "tag": "SomeVote"
             },

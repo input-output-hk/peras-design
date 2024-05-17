@@ -35,6 +35,7 @@ open import Relation.Nullary.Negation using (contradiction)
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
+open import Peras.Numbering
 open import Peras.Params using (Params)
 open import Peras.SmallStep
 open TreeType
@@ -62,7 +63,7 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
-         (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
+         (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -76,7 +77,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (txSelection : Slot → PartyId → List Tx)
+           (txSelection : SlotNumber → PartyId → List Tx)
            (parties : Parties)
            where
 ```
@@ -92,7 +93,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     states₀ = foldr (λ where (p , _) m → insert p state₀ m ) empty parties
 
     N₀ : GlobalState
-    N₀ = ⟦ 0
+    N₀ = ⟦ MkSlotNumber 0
          , states₀
          , []
          , []
@@ -110,21 +111,23 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 -->
 <!--
 ```agda
+    clock' : GlobalState → ℕ
+    clock' = getSlotNumber ∘ clock
     clock-incr : ∀ {M N : GlobalState}
       → M ↝ N
-      → clock M ≤ clock N
+      → clock' M ≤ clock' N
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
-    clock-incr {M} (NextSlot _) = n≤1+n (clock M)
+    clock-incr {M} (NextSlot _) = n≤1+n (clock' M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
       → M ↝⋆ N
-      → clock M ≤ clock N
-    clock-incr⋆ (_ ∎) = ≤-refl
-    clock-incr⋆ (_ ↝⟨ x ⟩ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
+      → clock' M ≤ clock' N
+    clock-incr⋆ []′ = ≤-refl
+    clock-incr⋆ ( x ∷′ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
 ```
 -->
 ### Knowledge propagation
@@ -183,7 +186,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → b ∈ allBlocks blockTree t₁
         → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
              Σ[ (s₀ , s₁ , s₂) ∈ (N₀ ↝⋆ M) × (M ↝ M′) × (M′ ↝⋆ N) ] (
-               s ≡ ↝⋆∘↝⋆ s₀ (_ ↝⟨ s₁ ⟩ s₂) × ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M′))
+               s ≡ ↝⋆∘↝⋆ s₀ (s₁ ∷′ s₂) × ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M′))
 ```
 <!--
 ```agda
@@ -260,15 +263,15 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → b ∈ allBlocks blockTree t
 ```
 ```agda
-    knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M (_ ∎) m∈ms N×p≡t Delivered-M =
+    knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M []′ m∈ms N×p≡t Delivered-M =
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
 ```
 ```agda
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ⟩ M′↝⋆N)
+    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (M↝M′@(Deliver (honest {p′} {lₚ} {lₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ∷′ M′↝⋆N)
       m∈ms N×p≡t Delivered-N
       with p ℕ.≟ p′
     ... | no p≢p′ =
@@ -288,19 +291,19 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CastVote x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CastVote x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(CreateBlock x₂) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CreateBlock x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ p∈ps N₀↝⋆M (_ ↝⟨ M↝M′@(NextSlot Delivered-M) ⟩ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlot Delivered-M) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
 ```
 ```agda
@@ -344,12 +347,12 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```
 #### base case
 ```agda
-    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ∎) N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ _ = knowledge-propagation₀ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂
+    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps N₀↝⋆N₁ []′ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ _ = knowledge-propagation₀ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂
 ```
 #### Deliver
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {lₚ} {.(⟪ extendTree blockTree _ _ ⟫)} {.(BlockMsg _)} lookup≡just-lₚ m∈ms (BlockReceived {b} {t}))) ⟩ N′↝⋆N₂)
+      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver (honest {p} {lₚ} {.(⟪ extendTree blockTree _ _ ⟫)} {.(BlockMsg _)} lookup≡just-lₚ m∈ms (BlockReceived {b} {t}))) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
@@ -375,7 +378,7 @@ adds a block/vote/cert to some p's blocktree
 ```
 ```agda
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} lookup≡just-lₚ m∈ms (VoteReceived {v}))) ⟩ N′↝⋆N₂)
+      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver (honest {p} {⟪ t ⟫} {.(⟪ addVote blockTree _ _ ⟫)} {.(VoteMsg _)} lookup≡just-lₚ m∈ms (VoteReceived {v}))) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
@@ -392,7 +395,7 @@ adds a block/vote/cert to some p's blocktree
 ```
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(Deliver {p} {h} (corrupt {p} m∈ms)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver {p} {h} (corrupt {p} m∈ms)) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p = knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
@@ -401,7 +404,7 @@ Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next 
 #### CastVote
 CastVote is not relevant for allBlocks
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CastVote (honest {p} {t} {vote = v} refl lookup≡just-lₚ _ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CastVote (honest {p} {t} {vote = v} refl lookup≡just-lₚ _ _ _ _)) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
@@ -420,7 +423,7 @@ CastVote is not relevant for allBlocks
 When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
 those messages adds the blocks into the local trees.
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock (honest {p} {t} {block = b} refl lookup≡just-lₚ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CreateBlock (honest {p} {t} {block = b} refl lookup≡just-lₚ _ _)) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
@@ -443,7 +446,7 @@ those messages adds the blocks into the local trees.
          x∷xs⊆ys→xs⊆ys {x} {xs} = ⊆-trans (xs⊆x∷xs xs x)
 ```
 ```agda
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (_ ↝⟨ N₁↝N′@(CreateBlock (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _ _ _)) ⟩ N′↝⋆N₂)
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CreateBlock (honest-cooldown {p} {t} {block = b} refl lookup≡just-lₚ _ _ _ _ _)) ∷′ N′↝⋆N₂)
       N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 ```
@@ -467,16 +470,16 @@ those messages adds the blocks into the local trees.
 ```
 #### NextSlot
 ```agda
-    knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ (_ ↝⟨ (NextSlot _) ⟩ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
-      let 1+c≤c = ≤-trans (≤-reflexive (cong ℕ.suc (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
-          1+c≰c = 1+n≰n {clock N₂}
+    knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ ((NextSlot _) ∷′ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
+      let 1+c≤c = ≤-trans (≤-reflexive (cong (ℕ.suc ∘ getSlotNumber) (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
+          1+c≰c = 1+n≰n {clock' N₂}
       in contradiction 1+c≤c 1+c≰c
 ```
 ```agda
     postulate
-      luckySlots : Slot × Slot → ℕ
-      superSlots : Slot × Slot → ℕ
-      adversarialSlots : Slot × Slot → ℕ
+      luckySlots : SlotNumber × SlotNumber → SlotNumber
+      superSlots : SlotNumber × SlotNumber → SlotNumber
+      adversarialSlots : SlotNumber × SlotNumber → SlotNumber
 ```
 
 The chain growth property informally says that in each period, the best chain of any honest
@@ -496,9 +499,9 @@ that period.
         → N₁ ↝⋆ N₂
         → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
         → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
-        → luckySlots (clock N₁ , clock N₂) ≥ w
-        → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
-              c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
+        → getSlotNumber (luckySlots (clock N₁ , clock N₂)) ≥ w
+        → let c₁ = bestChain blockTree (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
+              c₂ = bestChain blockTree (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
               cs₁ = certs blockTree t₁
               cs₂ = certs blockTree t₂
           in ∥ c₁ ∥ cs₁ + w ≤ ∥ c₂ ∥ cs₂
@@ -522,15 +525,15 @@ chains of honest parties will always be a common prefix of each other.
 ```agda
     postulate
       common-prefix : ∀ {N : GlobalState}
-        → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
+        → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : A}
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
         → N₀ ↝⋆ N
         → ForgingFree N
         → CollisionFree N
         → h ≡ Honest {p}
         → let sl = clock N
-          in prune k (bestChain blockTree (sl ∸ 1) t) ⪯ c
-           ⊎ ∃[ sl′ ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl))
+          in prune k (bestChain blockTree (MkSlotNumber $ getSlotNumber sl ∸ 1) t) ⪯ c
+           ⊎ ∃[ sl′ ] (getSlotNumber sl′ < getSlotNumber k × getSlotNumber (superSlots (sl′ , sl)) < 2 * getSlotNumber (adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix
 
