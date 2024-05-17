@@ -23,14 +23,15 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import Generic.Random (genericArbitrary, uniform)
 import Peras.Arbitraries ()
-import Peras.Block (Block, PartyId, Slot)
-import Peras.Chain (Chain, RoundNumber, Vote)
+import Peras.Block (Block, PartyId)
+import Peras.Chain (Chain, Vote)
 import Peras.Event (ByteSize, CpuTime, Event, Rollback)
 import Peras.IOSim.Hash (BlockHash, VoteHash)
 import Peras.IOSim.Message.Types (InEnvelope, OutEnvelope)
 import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Types (Coin, simulationStart)
 import Peras.Message (NodeId)
+import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..))
 import Test.QuickCheck.Instances.Time ()
@@ -42,7 +43,7 @@ type TraceSelf m = Value -> m ()
 data NodeContext m = NodeContext
   { protocol :: Protocol
   , totalStake :: Coin
-  , slot :: Slot
+  , slot :: SlotNumber
   , clock :: UTCTime
   , traceSelf :: TraceSelf m
   }
@@ -51,10 +52,10 @@ hoistNodeContext :: (forall a. m a -> n a) -> NodeContext m -> NodeContext n
 hoistNodeContext f NodeContext{..} = NodeContext{traceSelf = f . traceSelf, ..}
 
 data NodeStats = NodeStats
-  { preferredTip :: [(Slot, BlockHash)]
+  { preferredTip :: [(SlotNumber, BlockHash)]
   , rollbacks :: [Rollback]
-  , slotLeader :: [Slot]
-  , committeeMember :: [Slot]
+  , slotLeader :: [SlotNumber]
+  , committeeMember :: [SlotNumber]
   , votingAllowed :: [(RoundNumber, BlockHash)]
   , cpuTime :: CpuTime
   , rxBytes :: ByteSize
@@ -87,13 +88,13 @@ instance Arbitrary NodeStats where
 data TraceReport
   = TraceValue
       { self :: NodeId
-      , slot :: Slot
+      , slot :: SlotNumber
       , clock :: UTCTime
       , value :: Value
       }
   | TraceStats
       { self :: NodeId
-      , slot :: Slot
+      , slot :: SlotNumber
       , clock :: UTCTime
       , statistics :: NodeStats
       }

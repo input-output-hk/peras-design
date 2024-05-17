@@ -27,9 +27,10 @@ open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
+open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
-open import Peras.Block
+open import Peras.Numbering
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
@@ -131,7 +132,7 @@ block₀ denotes the genesis block that is passed in as a module parameter.
 module _ {block₀ : Block} {cert₀ : Certificate}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
          {IsVoteSignature : Vote → Signature → Set}
-         {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
+         {IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set}
          {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -151,11 +152,11 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ```agda
   getCert : RoundNumber → List Certificate → Maybe Certificate
-  getCert (MkRoundNumber r) = head ∘ filter ((_≟ r) ∘ round)
+  getCert r = head ∘ filter ((_≟-RoundNumber r) ∘ round)
 ```
 ```agda
   latestCert : List Certificate → Certificate
-  latestCert = argmax round cert₀
+  latestCert = argmax roundNumber cert₀
 ```
 
 ## BlockTree
@@ -165,14 +166,14 @@ module _ {block₀ : Block} {cert₀ : Certificate}
                     (tree₀ : tT)
                     (extendTree : tT → Block → tT)
                     (allBlocks : tT → List Block)
-                    (bestChain : Slot → tT → Chain)
+                    (bestChain : SlotNumber → tT → Chain)
                     (addVote : tT → Vote → tT)
                     (votes : tT → List Vote)
                     (certs : tT → List Certificate)
          : Set₁ where
 
-    allBlocksUpTo : Slot → tT → List Block
-    allBlocksUpTo sl t = filter ((_≤? sl) ∘ slotNumber) (allBlocks t)
+    allBlocksUpTo : SlotNumber → tT → List Block
+    allBlocksUpTo sl t = filter ((_≤? getSlotNumber sl) ∘ slotNumber') (allBlocks t)
 
     field
 ```
@@ -188,10 +189,10 @@ Properties that must hold with respect to blocks and votes
       extendable-votes : ∀ (t : tT) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
-      valid : ∀ (t : tT) (sl : Slot)
+      valid : ∀ (t : tT) (sl : SlotNumber)
         → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
-      optimal : ∀ (c : Chain) (t : tT) (sl : Slot)
+      optimal : ∀ (c : Chain) (t : tT) (sl : SlotNumber)
         → let b = bestChain sl t
               cts = certs t
           in
@@ -199,7 +200,7 @@ Properties that must hold with respect to blocks and votes
         → c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
-      self-contained : ∀ (t : tT) (sl : Slot)
+      self-contained : ∀ (t : tT) (sl : SlotNumber)
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
       valid-votes : ∀ (t : tT)
@@ -235,7 +236,7 @@ The block tree type
       tree₀ : T
       extendTree : T → Block → T
       allBlocks : T → List Block
-      bestChain : Slot → T → Chain
+      bestChain : SlotNumber → T → Chain
 
       addVote : T → Vote → T
 
@@ -246,10 +247,10 @@ The block tree type
                       tree₀ extendTree allBlocks bestChain
                       addVote votes certs
 
-    tipBest : Slot → T → Block
+    tipBest : SlotNumber → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
-    latestCertOnChain : Slot → T → Certificate
+    latestCertOnChain : SlotNumber → T → Certificate
     latestCertOnChain s = latestCert ∘ catMaybes ∘ map certificate ∘ bestChain s
 
     latestCertSeen : T → Certificate
@@ -290,7 +291,7 @@ The block tree type
            {blockTree : TreeType tT}
            {AdversarialState : Set}
            {adversarialState₀ : AdversarialState}
-           {txSelection : Slot → PartyId → List Tx}
+           {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties}
 
            where
@@ -324,22 +325,22 @@ are delegated to the block tree.
 
       Regular : ∀ {r t} →
         let
-          pref = bestChain blockTree (r * T) t
+          pref = bestChain blockTree (MkSlotNumber $ r * T) t
           cert′ = latestCertSeen blockTree t
         in
-          r ≡ (round cert′) + 1 -- VR-1A
+          r ≡ (roundNumber cert′) + 1 -- VR-1A
         → cert′ PointsInto pref -- VR-1B
           -----------------------------------
         → VoteInRound ⟪ t ⟫ (MkRoundNumber r)
 
       AfterCooldown : ∀ {r c t} →
         let
-          cert⋆ = latestCertOnChain blockTree (r * T) t
+          cert⋆ = latestCertOnChain blockTree (MkSlotNumber $ r * T) t
           cert′ = latestCertSeen blockTree t
         in
           c > 0
-        → r ≥ (round cert′) + R       -- VR-2A
-        → r ≡ (round cert⋆) + (c * K) -- VR-2B
+        → r ≥ (roundNumber cert′) + R       -- VR-2A
+        → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
           -----------------------------------
         → VoteInRound ⟪ t ⟫ (MkRoundNumber r)
 ```
@@ -354,7 +355,7 @@ The global state consists of the following fields:
 
 * Current slot of the system
 ```agda
-        clock : Slot
+        clock : SlotNumber
 ```
 * Map with local state per party
 ```agda
@@ -388,7 +389,7 @@ Ticking the global clock
     tick : Stateᵍ → Stateᵍ
     tick M =
       record M {
-        clock = suc (clock M) ;
+        clock = next (clock M) ;
         messages = map (λ where
           e → record e { delay = decr (delay e) }) (messages M)
       }
@@ -461,8 +462,8 @@ is added to be consumed immediately.
               v = record
                     { votingRound = r
                     ; creatorId = p
-                    ; committeeMembershipProof = prf
-                    ; blockHash = hash $ tipBest blockTree (clock ∸ L) t
+                    ; proofM = prf
+                    ; blockHash = hash $ tipBest blockTree (clock earlierBy L) t
                     ; signature = sig
                     }
               lₚ = ⟪ addVote blockTree t v ⟫
@@ -523,7 +524,7 @@ During a cooldown phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
-              r = roundNumber (v-round clock)
+              r = getRoundNumber (v-round clock)
               txs = txSelection clock p
               b = record
                     { slotNumber = clock
@@ -538,7 +539,7 @@ During a cooldown phase, the block includes a certificate reference.
                     ; signature = sig
                     }
               lₚ = ⟪ extendTree blockTree t b ⟫
-              cert⋆ = latestCertOnChain blockTree r t
+              cert⋆ = latestCertOnChain blockTree (MkSlotNumber $ r * T) t
               cert′ = latestCertSeen blockTree t
               cts = certs blockTree t
           in
@@ -546,9 +547,9 @@ During a cooldown phase, the block includes a certificate reference.
         → lookup stateMap p ≡ just ⟪ t ⟫
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ Any (λ { c → (round c) + 2 ≡ r }) cts -- (a)
-        → r ≤ A + (round cert′)                   -- (b)
-        → (round cert′) > (round cert⋆)           -- (c)
+        → ¬ Any (λ { c → (roundNumber c) + 2 ≡ r }) cts -- (a)
+        → r ≤ A + (roundNumber cert′)                   -- (b)
+        → (roundNumber cert′) > (roundNumber cert⋆)     -- (c)
           --------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)

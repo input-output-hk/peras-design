@@ -24,60 +24,51 @@ open Eq using (_≢_)
 
 open import Peras.Crypto
 open import Peras.Block
+open import Peras.Numbering
 open import Peras.Params
 
 open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; _,_; _×_)
+
+{-# FOREIGN AGDA2HS
+{-# LANGUAGE DeriveGeneric #-}
+import GHC.Generics (Generic)
+#-}
+
+{-# FOREIGN GHC
+import qualified Peras.Chain as G
+#-}
 ```
 -->
 
 ## Voting
 
-### Round number
-
-```agda
-record RoundNumber : Set where
-  constructor MkRoundNumber
-  field roundNumber : ℕ
-
-  prev : RoundNumber
-  prev = record { roundNumber = pred roundNumber }
-
-open RoundNumber public
-```
-
-<!--
-```agda
-{-# COMPILE AGDA2HS RoundNumber newtype deriving Eq #-}
-```
--->
-
-```agda
-_≟-RoundNumber_ : DecidableEquality RoundNumber
-(MkRoundNumber r₁) ≟-RoundNumber (MkRoundNumber r₂) with r₁ ≟ r₂
-... | yes p = yes (cong MkRoundNumber p)
-... | no ¬p =  no (¬p ∘ cong roundNumber)
-
-```
-
-<!--
 ### Vote
 
 ```agda
 record Vote : Set where
   constructor MkVote
-  field votingRound              : RoundNumber
-        creatorId                : PartyId
-        committeeMembershipProof : MembershipProof
-        blockHash                : Hash Block
-        signature                : Signature
+  field votingRound : RoundNumber
+        creatorId   : PartyId
+        proofM      : MembershipProof
+        blockHash   : Hash Block
+        signature   : Signature
 
 open Vote public
+
+instance
+  iVoteEq : Eq Vote
+  iVoteEq ._==_ x y = votingRound x == votingRound y
+                        && creatorId x == creatorId y
+                        && proofM x == proofM y
+                        && blockHash x == blockHash y
+                        && signature x == signature y
 ```
--->
 
 <!--
 ```agda
-{-# COMPILE AGDA2HS Vote deriving Eq #-}
+{-# COMPILE AGDA2HS Vote deriving (Generic) #-}
+{-# COMPILE GHC Vote = data G.Vote (G.MkVote) #-}
+{-# COMPILE AGDA2HS iVoteEq #-}
 ```
 -->
 
@@ -117,7 +108,7 @@ module _ {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Se
     IsCommitteeMember
         (creatorId v)
         (votingRound v)
-        (committeeMembershipProof v)
+        (proofM v)
     × IsVoteSignature v (signature v)
 ```
 
@@ -150,7 +141,7 @@ Chain = List Block
 ```
 <!--
 ```agda
-{-# COMPILE AGDA2HS Chain deriving Eq #-}
+{-# COMPILE AGDA2HS Chain #-}
 ```
 -->
 
@@ -167,8 +158,8 @@ data _⪯_ : Chain → Chain → Set where
 ### Chain pruning
 
 ```agda
-prune : Slot → Chain → Chain
-prune sl = filter ((_≤? sl) ∘ slotNumber)
+prune : SlotNumber → Chain → Chain
+prune (MkSlotNumber sl) = filter ((_≤? sl) ∘ slotNumber')
 ```
 ### Chain weight
 
@@ -201,12 +192,12 @@ module _ ⦃ _ : Hashable Block ⦄
   _PointsInto?_ c = any? ((blockRef c ≟-BlockHash_) ∘ hash)
 ```
 ```agda
-  StartOfRound : Slot → RoundNumber → Set
-  StartOfRound sl (MkRoundNumber r) = sl ≡ r * T
+  StartOfRound : SlotNumber → RoundNumber → Set
+  StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * T
 ```
 ```agda
-  v-round : Slot → ⦃ _ : NonZero T ⦄ → RoundNumber
-  v-round s = MkRoundNumber (s / T)
+  v-round : SlotNumber → ⦃ _ : NonZero T ⦄ → RoundNumber
+  v-round (MkSlotNumber s) = MkRoundNumber (s / T)
 ```
 ### Chain weight
 
@@ -231,7 +222,7 @@ open import Data.List.Membership.Propositional using (_∈_)
 -->
 ```agda
 module _ {block₀ : Block}
-         {IsSlotLeader : PartyId → Slot → LeadershipProof → Set}
+         {IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set}
          {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          where
@@ -269,12 +260,6 @@ foldl1Maybe f xs =
         Nothing xs
 
 {-# COMPILE AGDA2HS foldl1Maybe #-}
-
-instance
-  postulate
-    iBlockEq : Eq Block
-
--- {-# COMPILE AGDA2HS iBlockEq #-}
 
 prefix : List Block -> List Block -> List Block -> List Block
 prefix acc (x ∷ xs) (y ∷ ys) =

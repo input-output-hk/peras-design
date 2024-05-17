@@ -15,6 +15,7 @@ open import Function using (_∘_; id; _$_; flip)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Block
+open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep
 open TreeType
@@ -30,7 +31,7 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
-         (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
+         (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -44,7 +45,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (txSelection : Slot → PartyId → List Tx)
+           (txSelection : SlotNumber → PartyId → List Tx)
            where
 
     private
@@ -59,7 +60,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 
       initialState : GlobalState
-      initialState = ⟦ 0 , initialMap , [] , [] , adversarialState₀ ⟧
+      initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
           initialMap = fromList (
               (p₁ , ⟪ tree₀ blockTree ⟫)
@@ -72,9 +73,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
       b : Block
       b = record
-            { slotNumber = 1
+            { slotNumber = MkSlotNumber 1
             ; creatorId = p₁
-            ; parentBlock = hash $ tipBest blockTree 1 (tree₀ blockTree)
+            ; parentBlock = hash $ tipBest blockTree (MkSlotNumber 1) (tree₀ blockTree)
             ; certificate = nothing
             ; leadershipProof = prf
             ; bodyHash = blockHash
@@ -84,10 +85,10 @@ module _ {block₀ : Block} {cert₀ : Certificate}
             ; signature = sig
             }
         where
-          txs = txSelection 1 p₁
+          txs = txSelection (MkSlotNumber 1) p₁
 
       finalState : GlobalState
-      finalState = ⟦ 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 2 , finalMap , [] , BlockMsg b ∷ [] , adversarialState₀ ⟧
         where
           finalMap = fromList (
               (p₁ , ⟪ extendTree blockTree (tree₀ blockTree) b ⟫)
@@ -95,7 +96,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
             ∷ [])
 
       postulate
-        isSlotLeader : IsSlotLeader p₁ 1 prf
+        isSlotLeader : IsSlotLeader p₁ (MkSlotNumber 1) prf
         isBlockSignature : IsBlockSignature b sig
 
       _ : initialState ↝⋆ finalState

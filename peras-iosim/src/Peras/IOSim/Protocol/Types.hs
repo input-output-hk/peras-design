@@ -10,17 +10,16 @@ import Control.Exception (Exception (..))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 
 data Protocol = Peras
   { activeSlotCoefficient :: Double
   , pCommitteeLottery :: Double
-  , roundDuration :: Natural
+  , roundDuration :: Integer
   , votingBoost :: Double
-  , votingWindow :: (Natural, Natural)
+  , votingWindow :: (Integer, Integer)
   , votingQuorum :: Int
-  , voteMaximumAge :: Natural
-  , cooldownDuration :: Natural
+  , voteMaximumAge :: Integer
+  , cooldownDuration :: Integer
   , prefixCutoffWeight :: Double
   }
   deriving stock (Eq, Generic, Ord, Read, Show)

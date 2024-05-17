@@ -35,6 +35,7 @@ open import Relation.Nullary.Negation using (contradiction)
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
+open import Peras.Numbering
 open import Peras.Params using (Params)
 open import Peras.SmallStep
 open TreeType
@@ -62,7 +63,7 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
-         (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
+         (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -76,7 +77,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (txSelection : Slot → PartyId → List Tx)
+           (txSelection : SlotNumber → PartyId → List Tx)
            (parties : Parties)
            where
 ```
@@ -92,7 +93,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     states₀ = foldr (λ where (p , _) m → insert p state₀ m ) empty parties
 
     N₀ : GlobalState
-    N₀ = ⟦ 0
+    N₀ = ⟦ MkSlotNumber 0
          , states₀
          , []
          , []
@@ -110,19 +111,21 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 -->
 <!--
 ```agda
+    clock' : GlobalState → ℕ
+    clock' = getSlotNumber ∘ clock
     clock-incr : ∀ {M N : GlobalState}
       → M ↝ N
-      → clock M ≤ clock N
+      → clock' M ≤ clock' N
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
-    clock-incr {M} (NextSlot _) = n≤1+n (clock M)
+    clock-incr {M} (NextSlot _) = n≤1+n (clock' M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
       → M ↝⋆ N
-      → clock M ≤ clock N
+      → clock' M ≤ clock' N
     clock-incr⋆ []′ = ≤-refl
     clock-incr⋆ ( x ∷′ x₁) = ≤-trans (clock-incr x) (clock-incr⋆ x₁)
 ```
@@ -468,15 +471,15 @@ those messages adds the blocks into the local trees.
 #### NextSlot
 ```agda
     knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ ((NextSlot _) ∷′ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
-      let 1+c≤c = ≤-trans (≤-reflexive (cong ℕ.suc (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
-          1+c≰c = 1+n≰n {clock N₂}
+      let 1+c≤c = ≤-trans (≤-reflexive (cong (ℕ.suc ∘ getSlotNumber) (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
+          1+c≰c = 1+n≰n {clock' N₂}
       in contradiction 1+c≤c 1+c≰c
 ```
 ```agda
     postulate
-      luckySlots : Slot × Slot → ℕ
-      superSlots : Slot × Slot → ℕ
-      adversarialSlots : Slot × Slot → ℕ
+      luckySlots : SlotNumber × SlotNumber → SlotNumber
+      superSlots : SlotNumber × SlotNumber → SlotNumber
+      adversarialSlots : SlotNumber × SlotNumber → SlotNumber
 ```
 
 The chain growth property informally says that in each period, the best chain of any honest
@@ -496,9 +499,9 @@ that period.
         → N₁ ↝⋆ N₂
         → lookup (stateMap N₁) p₁ ≡ just ⟪ t₁ ⟫
         → lookup (stateMap N₂) p₂ ≡ just ⟪ t₂ ⟫
-        → luckySlots (clock N₁ , clock N₂) ≥ w
-        → let c₁ = bestChain blockTree ((clock N₁) ∸ 1) t₁
-              c₂ = bestChain blockTree ((clock N₂) ∸ 1) t₂
+        → getSlotNumber (luckySlots (clock N₁ , clock N₂)) ≥ w
+        → let c₁ = bestChain blockTree (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
+              c₂ = bestChain blockTree (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
               cs₁ = certs blockTree t₁
               cs₂ = certs blockTree t₂
           in ∥ c₁ ∥ cs₁ + w ≤ ∥ c₂ ∥ cs₂
@@ -522,15 +525,15 @@ chains of honest parties will always be a common prefix of each other.
 ```agda
     postulate
       common-prefix : ∀ {N : GlobalState}
-        → {p : PartyId} {h : Honesty p} {c : Chain} {k : Slot} {bh : List Block} {t : A}
+        → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : A}
         → lookup (stateMap N) p ≡ just ⟪ t ⟫
         → N₀ ↝⋆ N
         → ForgingFree N
         → CollisionFree N
         → h ≡ Honest {p}
         → let sl = clock N
-          in prune k (bestChain blockTree (sl ∸ 1) t) ⪯ c
-           ⊎ ∃[ sl′ ] (sl′ < k × superSlots (sl′ , sl) < 2 * adversarialSlots (sl′ , sl))
+          in prune k (bestChain blockTree (MkSlotNumber $ getSlotNumber sl ∸ 1) t) ⪯ c
+           ⊎ ∃[ sl′ ] (getSlotNumber sl′ < getSlotNumber k × getSlotNumber (superSlots (sl′ , sl)) < 2 * getSlotNumber (adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix
 

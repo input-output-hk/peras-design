@@ -1,23 +1,42 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Peras.Crypto where
 
 import Data.ByteString
+import GHC.Generics (Generic)
 
-newtype Hash a = Hash{hashBytes :: ByteString}
-                   deriving Eq
+eqBS :: ByteString -> ByteString -> Bool
+eqBS = (==)
+
+newtype Hash a = MkHash {hashBytes :: ByteString}
+  deriving (Generic)
+
+instance Eq (Hash a) where
+  x == y = eqBS (hashBytes x) (hashBytes y)
 
 class Hashable a where
-    hash :: a -> Hash a
+  hash :: a -> Hash a
 
-newtype MembershipProof = MembershipProof{proofM :: ByteString}
-                            deriving Eq
+newtype MembershipProof = MkMembershipProof {proofM :: ByteString}
+  deriving (Generic)
 
-newtype LeadershipProof = LeadershipProof{proof :: ByteString}
-                            deriving Eq
+instance Eq MembershipProof where
+  x == y = eqBS (proofM x) (proofM y)
 
-newtype Signature = Signature{bytes :: ByteString}
-                      deriving Eq
+newtype LeadershipProof = MkLeadershipProof {proofL :: ByteString}
+  deriving (Generic)
 
-newtype VerificationKey = VerificationKey{verificationKey ::
-                                          ByteString}
-                            deriving Eq
+instance Eq LeadershipProof where
+  x == y = eqBS (proofL x) (proofL y)
 
+newtype Signature = MkSignature {bytesS :: ByteString}
+  deriving (Generic)
+
+instance Eq Signature where
+  x == y = eqBS (bytesS x) (bytesS y)
+
+newtype VerificationKey = MkVerificationKey {keyV :: ByteString}
+  deriving (Generic)
+
+instance Eq VerificationKey where
+  x == y = eqBS (keyV x) (keyV y)

@@ -20,8 +20,6 @@ import Control.Monad.Writer
 import Control.Tracer (Tracer, traceWith)
 import Data.Default (def)
 import Data.Map (keysSet)
-import Numeric.Natural (Natural)
-import Peras.Block (Slot)
 import Peras.Event (Event (CommitteeMember, Compute, Receive, Rolledback, Send, SlotLeader, Trace))
 import Peras.IOSim.Message.Types (InEnvelope (..), OutEnvelope (..))
 import Peras.IOSim.Network.Types (Topology (..))
@@ -31,6 +29,7 @@ import Peras.IOSim.Protocol.Types (Protocol)
 import Peras.IOSim.Simulate.Types (Parameters (..))
 import Peras.IOSim.Types (Coin, simulationStart)
 import Peras.Message (NodeId)
+import Peras.Numbering (SlotNumber)
 
 import qualified Peras.IOSim.Nodes.Honest as Honest (Node (Node))
 
@@ -55,7 +54,7 @@ initializeNode ::
 initializeNode Parameters{maximumStake, messageBandwidth} nodeId downstreams =
   fmap HonestNode $
     Honest.Node nodeId
-      <$> ((fromIntegral . abs :: Int -> Natural) <$> getRandom)
+      <$> ((toInteger . abs :: Int -> Integer) <$> getRandom)
       <*> getRandomR (1, maximumStake)
       <*> pure messageBandwidth
       <*> getRandomR (0, 1)
@@ -81,7 +80,7 @@ observeNode ::
   Monad m =>
   (Event -> m ()) ->
   NodeId ->
-  Slot ->
+  SlotNumber ->
   UTCTime ->
   InEnvelope ->
   NodeResult ->
@@ -105,7 +104,7 @@ stepNode ::
   Protocol ->
   Coin ->
   a ->
-  Slot ->
+  SlotNumber ->
   UTCTime ->
   InEnvelope ->
   (StepResult, a)

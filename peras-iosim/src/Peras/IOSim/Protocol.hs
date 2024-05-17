@@ -14,7 +14,6 @@ module Peras.IOSim.Protocol (
   isSlotLeader,
   isFirstSlotInRound,
   quorumOnChain,
-  roundNumber,
   validCandidate,
   validCandidateWindow,
   validChain,
@@ -27,8 +26,8 @@ module Peras.IOSim.Protocol (
 import Control.Monad (forM_, unless)
 import Control.Monad.Except (MonadError (throwError))
 import Data.Function (on)
-import Peras.Block (Block (Block, slotNumber), Slot)
-import Peras.Chain (Chain, RoundNumber (..), Vote (..))
+import Peras.Block (Block (MkBlock, slotNumber))
+import Peras.Chain (Chain, Vote (..))
 import Peras.IOSim.Chain (
   filterDanglingVotes,
   isBlockOnChain,
@@ -40,6 +39,7 @@ import Peras.IOSim.Crypto (VrfOutput, committeMemberRandom, slotLeaderRandom)
 import Peras.IOSim.Hash (hashBlock)
 import Peras.IOSim.Protocol.Types (Invalid (..), Protocol (..))
 import Peras.IOSim.Types (Coin, VoteWithBlock)
+import Peras.Numbering (RoundNumber (..), SlotNumber (..))
 
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -69,32 +69,32 @@ isCommitteeMember pCommitteeLottery' _total vrf staked =
 
 candidateWindow ::
   Protocol ->
-  Slot ->
-  (Slot, Slot)
-candidateWindow Peras{votingWindow} s =
-  ( s - min s (fst votingWindow)
-  , s - min s (snd votingWindow)
+  SlotNumber ->
+  (SlotNumber, SlotNumber)
+candidateWindow Peras{votingWindow} (MkSlotNumber s) =
+  ( MkSlotNumber $ s - min s (fst votingWindow)
+  , MkSlotNumber $ s - min s (snd votingWindow)
   )
 
 inclusionWindow ::
   Protocol ->
-  Slot ->
-  (Slot, Slot)
-inclusionWindow Peras{voteMaximumAge} s =
-  ( s - min s voteMaximumAge
-  , s - min s 1
+  SlotNumber ->
+  (SlotNumber, SlotNumber)
+inclusionWindow Peras{voteMaximumAge} (MkSlotNumber s) =
+  ( MkSlotNumber $ s - min s voteMaximumAge
+  , MkSlotNumber $ s - min s 1
   )
 
 discardExpiredVotes ::
   Protocol ->
-  Slot ->
+  SlotNumber ->
   ChainState ->
   ChainState
-discardExpiredVotes protocol@Peras{voteMaximumAge = aa} now =
+discardExpiredVotes protocol@Peras{voteMaximumAge = aa} (MkSlotNumber now) =
   filterDanglingVotes $
     \(vote, _) ->
       let
-        s = firstSlotInRound protocol $ votingRound vote
+        MkSlotNumber s = firstSlotInRound protocol $ votingRound vote
        in
         s + 1 <= now && now <= s + aa
 
@@ -149,9 +149,9 @@ validCandidate protocol state (vote, block) =
     else throwError VoteNeverRecorded
 
 validCandidateWindow :: Protocol -> VoteWithBlock -> Either Invalid ()
-validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{votingRound = r}, Block{slotNumber}) =
+validCandidateWindow protocol@Peras{votingWindow = (lLow, lHigh)} (MkVote{votingRound = r}, MkBlock{slotNumber = MkSlotNumber{getSlotNumber = slotNumber}}) =
   let
-    s = firstSlotInRound protocol r
+    MkSlotNumber s = firstSlotInRound protocol r
    in
     unless (s <= slotNumber + lLow && slotNumber + lHigh <= s) $
       throwError VoteOutsideCandidateWindow
@@ -169,14 +169,14 @@ voteAllowedInRound protocol state MkVote{votingRound} =
   unless (voteInRound protocol votingRound state) $
     throwError VoteNotAllowedInRound
 
-currentRound :: Protocol -> Slot -> RoundNumber
-currentRound Peras{roundDuration = tt} s = MkRoundNumber $ s `div` tt
+currentRound :: Protocol -> SlotNumber -> RoundNumber
+currentRound Peras{roundDuration = tt} (MkSlotNumber s) = MkRoundNumber $ s `div` tt
 
-firstSlotInRound :: Protocol -> RoundNumber -> Slot
-firstSlotInRound Peras{roundDuration = tt} MkRoundNumber{roundNumber = r} = r * tt
+firstSlotInRound :: Protocol -> RoundNumber -> SlotNumber
+firstSlotInRound Peras{roundDuration = tt} MkRoundNumber{getRoundNumber = r} = MkSlotNumber $ r * tt
 
-isFirstSlotInRound :: Protocol -> Slot -> Bool
-isFirstSlotInRound Peras{roundDuration = tt} s = s `mod` tt == 0
+isFirstSlotInRound :: Protocol -> SlotNumber -> Bool
+isFirstSlotInRound Peras{roundDuration = tt} (MkSlotNumber s) = s `mod` tt == 0
 
 chainWeight :: Protocol -> ChainState -> Double
 chainWeight protocol state =
@@ -201,12 +201,12 @@ voteInRound :: Protocol -> RoundNumber -> ChainState -> Bool
 voteInRound _ (MkRoundNumber 0) _ = False
 voteInRound protocol (MkRoundNumber r) state =
   let
-    kk = toInteger $ cooldownDuration protocol
-    quorum = quorumOnChain protocol state . MkRoundNumber . fromIntegral
+    kk = cooldownDuration protocol
+    quorum = quorumOnChain protocol state . MkRoundNumber
     condition r' = quorum r' && not (quorum $ r' + 1)
    in
-    quorum (toInteger r - 1)
-      || any condition [toInteger r - kk, toInteger r - 2 * kk .. 0]
+    quorum (r - 1)
+      || any condition [r - kk, r - 2 * kk .. 0]
 
 -- | "Predicate `quorumOnChain`$(C, D, r)$ checks whether this is a round-$r$
 --   *quorum* in $C$ and $D$ for a block on $C$: "a *quorum*, which consists of

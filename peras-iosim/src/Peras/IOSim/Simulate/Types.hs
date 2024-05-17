@@ -7,15 +7,15 @@ module Peras.IOSim.Simulate.Types (
 
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Peras.Block (Slot)
 import Peras.Event (ByteSize)
 import Peras.IOSim.Experiment (Experiment)
 import Peras.IOSim.Network.Types (Delay)
 import Peras.IOSim.Types (Coin)
+import Peras.Numbering (SlotNumber)
 
 data Parameters = Parameters
   { randomSeed :: Int
-  , endSlot :: Slot
+  , endSlot :: SlotNumber
   , peerCount :: Int
   , downstreamCount :: Int
   , totalStake :: Maybe Coin
