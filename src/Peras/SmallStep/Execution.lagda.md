@@ -14,6 +14,7 @@ open import Function using (_∘_; id; _$_; flip)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Block
+open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep
 open TreeType
@@ -29,7 +30,7 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
          (IsVoteSignature : Vote → Signature → Set)
-         (IsSlotLeader : PartyId → Slot → LeadershipProof → Set)
+         (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
          (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
@@ -43,7 +44,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
            (blockTree : TreeType A)
            {AdversarialState : Set}
            (adversarialState₀ : AdversarialState)
-           (txSelection : Slot → PartyId → List Tx)
+           (txSelection : SlotNumber → PartyId → List Tx)
            where
 
     private
@@ -64,20 +65,20 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         ∷ [])
 
       initialState : GlobalState
-      initialState = ⟦ 0 , start , [] , [] , adversarialState₀ ⟧
+      initialState = ⟦ MkSlotNumber 0 , start , [] , [] , adversarialState₀ ⟧
 
       postulate
         prf : LeadershipProof
         sig : Signature
 
       txs : List Tx
-      txs = txSelection 1 p₁
+      txs = txSelection (MkSlotNumber 1) p₁
 
       b : Block
       b = record
-            { slotNumber = 1
+            { slotNumber = MkSlotNumber 1
             ; creatorId = p₁
-            ; parentBlock = hash $ tipBest blockTree 1 (tree₀ blockTree)
+            ; parentBlock = hash $ tipBest blockTree (MkSlotNumber 1) (tree₀ blockTree)
             ; certificate = nothing
             ; leadershipProof = prf
             ; bodyHash = blockHash
@@ -88,7 +89,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
             }
 
       postulate
-        isSlotLeader : IsSlotLeader p₁ 1 prf
+        isSlotLeader : IsSlotLeader p₁ (MkSlotNumber 1) prf
         isBlockSignature : IsBlockSignature b sig
 
       end : Map LocalState′
@@ -105,10 +106,10 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       e₂ = ⦅ p₂ , Honest , m , zero ⦆
 
       finalState : GlobalState
-      finalState = ⟦ 1 , end , e₂ ∷ [] , m ∷ [] , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 1 , end , e₂ ∷ [] , m ∷ [] , adversarialState₀ ⟧
 
       intermediaryState : GlobalState
-      intermediaryState = ⟦ 1 , start , [] , [] , adversarialState₀ ⟧
+      intermediaryState = ⟦ MkSlotNumber 1 , start , [] , [] , adversarialState₀ ⟧
 
       s₁ : initialState ↝ intermediaryState
       s₁ = NextSlot All.[]

@@ -23,11 +23,11 @@ typecheck: $(HSFILES) $(LHSFILES)
 # From https://stackoverflow.com/questions/34621364/makefile-compile-o-from-c-files
 $(HSDIR)/%.hs: %.agda
 	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
-	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR) $^
+	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 $(HSDIR)/%.hs: %.lagda.md
 	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
-	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR) $^
+	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 .PHONY : clean veryclean
 clean:
