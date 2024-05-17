@@ -35,9 +35,9 @@ The module [`Peras.ChainWeight`](peras-quickcheck/src/Peras/ChainWeight.hs] demo
 [`Peras.ChainWeight`](peras-quickcheck/src/Peras/ChainWeight.hs) uses both unmangled types and unmangled functions:
 
 - The Agda [`Peras.SmallStep.Experiment.Types`](src/Peras/SmallStep/Experiment/Types.lagda.md) contains a `NodeState` types that becomes normal Haskell in [`Peras.SmallStep.Experiment.Types`](peras-hs/src/Peras/SmallStep/Experiment/Types.hs). It also contains `NodeTransition` consisting of the output and the new state: normally one would just use a tuple for this, but a data type had to be created because tuples in `MAlonzo` not tuples in the Haskell prelude.
-- The Haskell [`MAlonzo.Code.Peras.SmallStep.Experiment.Types`](src/MAlonzo/Code/Peras/SmallStep/Experiment/Types.hs) references that generated type via a pattern synonym.
-- The Agda [`Peras.SmallStep.Experiment.Impl`](src/peras/SmallStep/Experiment/Impl.agda) contains the function needed by the Haskell, but it uses identifiers that are not legal for Haskell. Thus, we could not use `{-# COMPILE AGDA2HS ... as ... #-}` to access it from Haskell.
-- Instead, we'll use the mangled names in [`MAlonzo.Code.Peras.SmallStep.Experiment.Impl`](peras-hs/src/MAlonzo/Code/Peras/SmallStep/Experiment/Impl.hs) by importing them into the Agda [`Peras.SmallStep.Experiment`](src/Peras/SmallStep/Execution.lagda.md) and then accessing that from Haskell as [`Peras.SmallStep.Experiment`](peras-hs/src/Peras/SmallStep/Execution.hs).
+- The Haskell [`MAlonzo.Code.Peras.SmallStep.Experiment.Types`](peras-hs/src/MAlonzo/Code/Peras/SmallStep/Experiment/Types.hs) references that generated type via a pattern synonym.
+- The Agda [`Peras.SmallStep.Experiment.Impl`](src/Peras/SmallStep/Experiment/Impl.agda) contains the function needed by the Haskell, but it uses identifiers that are not legal for Haskell. Thus, we could not use `{-# COMPILE AGDA2HS ... as ... #-}` to access it from Haskell.
+- Instead, we'll use the mangled names in [`MAlonzo.Code.Peras.SmallStep.Experiment.Impl`](peras-hs/src/MAlonzo/Code/Peras/SmallStep/Experiment/Impl.hs) by importing them into the Agda [`Peras.SmallStep.Experiment`](src/Peras/SmallStep/Experiment.lagda.md) and then accessing that from Haskell as [`Peras.SmallStep.Experiment`](peras-hs/src/Peras/SmallStep/Experiment.hs).
 
 Thus, two types of indirection are needed to avoid dealing with unmangled names:
 
