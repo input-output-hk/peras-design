@@ -19,7 +19,7 @@ open import Peras.Crypto hiding (isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
-open import Peras.SmallStep
+open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
 open TreeType
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
@@ -141,45 +141,48 @@ Final state after the execution of all the steps
 
         isCommitteeMember : IsCommitteeMember p₁ (MkRoundNumber 1) prf'
         isVoteSignature : IsVoteSignature v sig'
-
+```
+Properties of cert₀
+```agda
       cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c → cert₀ PointsInto c
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _ ∷ _)} (Cons _ _ _ v) = there (cert₀PointsIntoValidChain v)
-
-      open IsTreeType
 ```
 Based on properties of the blocktree we can show the following
 ```agda
+      open IsTreeType
+
       latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen blockTree (extendTree blockTree t b) ≡ latestCertSeen blockTree t
       latestCert-extendTree≡latestCert {t} {b} =
         cong (latestCert {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature}) $
         extendable-certs (is-TreeType blockTree) t b
 ```
-Trace dependent properties
-```agda
-      latestCert≡cert₀ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
-      latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
-        where
-          latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
-          latestCert≡cert₀' rewrite (instantiated-certs (is-TreeType blockTree)) = refl
-
-      vr-1a : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
-      vr-1a rewrite latestCert≡cert₀ = refl
-
-      vr-1b : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
-             PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
-      vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-        valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
-```
 Execution trace of the protocol
 ```agda
       _ : initialState ↝⋆ finalState
       _ =    NextSlot empty  -- slot 1
-          ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
-          ∷′ Deliver (honest refl (here refl) BlockReceived)
-          ∷′ NextSlot empty  -- slot 2
-          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
-          ∷′ Deliver (honest refl (here refl) VoteReceived)
-          ∷′ NextSlot empty  -- slot 3
-          ∷′ []′
+          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+          ↣ Deliver (honest refl (here refl) BlockReceived)
+          ↣ NextSlot empty  -- slot 2
+          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Deliver (honest refl (here refl) VoteReceived)
+          ↣ NextSlot empty  -- slot 3
+          ↣ ∎
+```
+Trace dependent properties
+```agda
+          where
+            latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
+            latestCert≡cert₀' rewrite (instantiated-certs (is-TreeType blockTree)) = refl
+
+            latestCert≡cert₀ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
+            latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
+
+            vr-1a : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
+            vr-1a rewrite latestCert≡cert₀ = refl
+
+            vr-1b : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
+              PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
+            vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
+              valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
 ```
