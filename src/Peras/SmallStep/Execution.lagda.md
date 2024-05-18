@@ -7,7 +7,7 @@ module Peras.SmallStep.Execution where
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.List using (List; _∷_; [])
 open import Data.List.Relation.Unary.Any using (Any; here; there)
-open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Unary.All using (All) renaming ([] to empty)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Maybe using (just; nothing)
 open import Data.Nat using (_+_; _*_)
@@ -22,7 +22,7 @@ open import Peras.Params
 open import Peras.SmallStep
 open TreeType
 
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -163,23 +163,23 @@ Trace dependent properties
           latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
           latestCert≡cert₀' rewrite (instantiated-certs (is-TreeType blockTree)) = refl
 
-      h₂ : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
-             PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
-      h₂ rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-        valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
+      vr-1a : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
+      vr-1a rewrite latestCert≡cert₀ = refl
 
-      h₁ : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
-      h₁ rewrite latestCert≡cert₀ = refl
+      vr-1b : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
+             PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
+      vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
+        valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
 ```
-Execution of the protocol
+Execution trace of the protocol
 ```agda
       _ : initialState ↝⋆ finalState
-      _ =    NextSlot All.[]  -- slot 1
+      _ =    NextSlot empty  -- slot 1
           ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ∷′ Deliver (honest refl (here refl) BlockReceived)
-          ∷′ NextSlot All.[]  -- slot 2
-          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular h₁ h₂))
+          ∷′ NextSlot empty  -- slot 2
+          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ∷′ Deliver (honest refl (here refl) VoteReceived)
-          ∷′ NextSlot All.[]  -- slot 3
+          ∷′ NextSlot empty  -- slot 3
           ∷′ []′
 ```
