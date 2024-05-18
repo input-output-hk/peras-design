@@ -6,7 +6,7 @@ module Peras.SmallStep.Execution where
 ```agda
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.List using (List; _∷_; [])
-open import Data.List.Relation.Unary.Any using (Any; here)
+open import Data.List.Relation.Unary.Any using (Any; here; there)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Maybe using (just; nothing)
@@ -142,15 +142,34 @@ Final state after the execution of all the steps
         isCommitteeMember : IsCommitteeMember p₁ (MkRoundNumber 1) prf'
         isVoteSignature : IsVoteSignature v sig'
 
-      -- TODO: prove it
-      postulate
-        h₂ : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
-               PointsInto (bestChain blockTree (MkSlotNumber $ 2) (extendTree blockTree (tree₀ blockTree) b))
+      cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c → cert₀ PointsInto c
+      cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
+      cert₀PointsIntoValidChain {.(_ ∷ _ ∷ _)} (Cons _ _ _ v) = there (cert₀PointsIntoValidChain v)
 
-        h₃ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
+      open IsTreeType
+```
+Based on properties of the blocktree we can show the following
+```agda
+      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen blockTree (extendTree blockTree t b) ≡ latestCertSeen blockTree t
+      latestCert-extendTree≡latestCert {t} {b} =
+        cong (latestCert {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature}) $
+        extendable-certs (is-TreeType blockTree) t b
+```
+Trace dependent properties
+```agda
+      latestCert≡cert₀ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
+      latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
+        where
+          latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
+          latestCert≡cert₀' rewrite (instantiated-certs (is-TreeType blockTree)) = refl
+
+      h₂ : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
+             PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
+      h₂ rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
+        valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
 
       h₁ : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
-      h₁ rewrite h₃ = refl
+      h₁ rewrite latestCert≡cert₀ = refl
 ```
 Execution of the protocol
 ```agda

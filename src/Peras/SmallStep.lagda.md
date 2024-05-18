@@ -183,8 +183,14 @@ Properties that must hold with respect to blocks and votes
       instantiated :
         allBlocks tree₀ ≡ block₀ ∷ []
 
+      instantiated-certs :
+        certs tree₀ ≡ cert₀ ∷ []
+
       extendable : ∀ (t : tT) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
+
+      extendable-certs : ∀ (t : tT) (b : Block)
+        → certs (extendTree t b) ≡ certs t
 
       extendable-votes : ∀ (t : tT) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
