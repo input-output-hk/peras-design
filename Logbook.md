@@ -6,14 +6,14 @@ Changed the reflexive transitive closure of the small-step semantics to a List-l
 
 ```agda
       _ : initialState ↝⋆ finalState
-      _ =    NextSlot All.[]  -- slot 1
-          ∷′ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
-          ∷′ Deliver (honest refl (here refl) BlockReceived)
-          ∷′ NextSlot All.[]  -- slot 2
-          ∷′ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular h₁ h₂))
-          ∷′ Deliver (honest refl (here refl) VoteReceived)
-          ∷′ NextSlot All.[]  -- slot 3
-          ∷′ []′
+      _ =    NextSlot empty  -- slot 1
+          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+          ↣ Deliver (honest refl (here refl) BlockReceived)
+          ↣ NextSlot empty  -- slot 2
+          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Deliver (honest refl (here refl) VoteReceived)
+          ↣ NextSlot empty  -- slot 3
+          ↣ ∎
 ```
 
 The example above shows only the execution path and all the details are omitted. See `Peras.SmallStep.Execution` for the full example.
