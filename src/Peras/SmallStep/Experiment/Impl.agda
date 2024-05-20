@@ -4,7 +4,7 @@ open import Haskell.Prelude
 open import Peras.Block using (Block; signature)
 open import Peras.Crypto using (Hashable; MkHash; bytesS)
 open import Peras.Params using (Params)
-open import Peras.SmallStep.Experiment.Types using (NodeState; preferredChain; NodeTransition; MkNodeTransition)
+open import Peras.SmallStep.Experiment.Types
 
 open Hashable ⦃...⦄
 
@@ -31,8 +31,14 @@ open import Peras.Chain using (Chain; ∥_∥_)
 
 nodeTransition : Chain → NodeState → NodeTransition Bool
 nodeTransition candidate state =
-  if ∥ candidate ∥ [] > ∥ preferredChain state ∥ []
-      then MkNodeTransition True $ record state {preferredChain = candidate}
-      else MkNodeTransition False state
+  let certs = []
+  in if ∥ candidate ∥ certs > ∥ preferredChain state ∥ certs
+        then MkNodeTransition True $ record state {preferredChain = candidate}
+        else MkNodeTransition False state
 
 {-# COMPILE GHC nodeTransition as nodeTransition #-}
+
+getPreferredChain : NodeState → NodeTransition Chain
+getPreferredChain state = MkNodeTransition (preferredChain state) state
+
+{-# COMPILE GHC getPreferredChain as getPreferredChain #-}

@@ -88,3 +88,41 @@ d_final_28 v0 =
   case coe v0 of
     C_MkNodeTransition_30 v1 v2 -> coe v2
     _ -> MAlonzo.RTE.mazUnreachableError
+
+-- Peras.SmallStep.Experiment.Types.Signal
+d_Signal_32 = ()
+type T_Signal_32 = G.Signal
+pattern C_NewChain_34 a0 = G.NewChain a0
+pattern C_ReportPreference_36 = G.ReportPreference
+check_NewChain_34 ::
+  MAlonzo.Code.Agda.Builtin.List.T_List_10
+    ()
+    MAlonzo.Code.Peras.Block.T_Block_62 ->
+  T_Signal_32
+check_NewChain_34 = G.NewChain
+check_ReportPreference_36 :: T_Signal_32
+check_ReportPreference_36 = G.ReportPreference
+cover_Signal_32 :: G.Signal -> ()
+cover_Signal_32 x =
+  case x of
+    G.NewChain _ -> ()
+    G.ReportPreference -> ()
+
+-- Peras.SmallStep.Experiment.Types.Response
+d_Response_38 = ()
+type T_Response_38 = G.Response
+pattern C_ChainAdopted_40 a0 = G.ChainAdopted a0
+pattern C_ChainReported_42 a0 = G.ChainReported a0
+check_ChainAdopted_40 :: Bool -> T_Response_38
+check_ChainAdopted_40 = G.ChainAdopted
+check_ChainReported_42 ::
+  MAlonzo.Code.Agda.Builtin.List.T_List_10
+    ()
+    MAlonzo.Code.Peras.Block.T_Block_62 ->
+  T_Response_38
+check_ChainReported_42 = G.ChainReported
+cover_Response_38 :: G.Response -> ()
+cover_Response_38 x =
+  case x of
+    G.ChainAdopted _ -> ()
+    G.ChainReported _ -> ()

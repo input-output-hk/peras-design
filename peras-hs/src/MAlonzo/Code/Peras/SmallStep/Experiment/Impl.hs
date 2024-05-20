@@ -145,3 +145,25 @@ d_nodeTransition_16 v0 v1 =
               (coe v1)
         )
     )
+
+-- Peras.SmallStep.Experiment.Impl.getPreferredChain
+getPreferredChain ::
+  MAlonzo.Code.Peras.SmallStep.Experiment.Types.T_NodeState_8 ->
+  MAlonzo.Code.Peras.SmallStep.Experiment.Types.T_NodeTransition_18
+    ( MAlonzo.Code.Agda.Builtin.List.T_List_10
+        ()
+        MAlonzo.Code.Peras.Block.T_Block_62
+    )
+getPreferredChain = coe d_getPreferredChain_24
+d_getPreferredChain_24 ::
+  MAlonzo.Code.Peras.SmallStep.Experiment.Types.T_NodeState_8 ->
+  MAlonzo.Code.Peras.SmallStep.Experiment.Types.T_NodeTransition_18
+    [MAlonzo.Code.Peras.Block.T_Block_62]
+d_getPreferredChain_24 v0 =
+  coe
+    MAlonzo.Code.Peras.SmallStep.Experiment.Types.C_MkNodeTransition_30
+    ( coe
+        MAlonzo.Code.Peras.SmallStep.Experiment.Types.d_preferredChain_12
+        (coe v0)
+    )
+    (coe v0)
