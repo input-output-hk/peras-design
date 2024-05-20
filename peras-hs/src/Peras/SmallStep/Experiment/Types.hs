@@ -16,12 +16,22 @@ data NodeTransition a = MkNodeTransition
   }
   deriving (Eq, Generic, Show)
 
+newtype Act = NewChain Chain
+  deriving (Eq, Generic, Show)
+
+data Query
+  = QueryChain
+  | QueryWeight
+  deriving (Eq, Generic, Show)
+
 data Signal
-  = NewChain Chain
-  | ReportPreference
+  = Transition Act
+  | Observe Query
   deriving (Eq, Generic, Show)
 
 data Response
-  = ChainAdopted Bool
-  | ChainReported Chain
+  = UnitResponse
+  | BoolResponse Bool
+  | NatResponse Integer
+  | ChainResponse Chain
   deriving (Eq, Generic, Show)

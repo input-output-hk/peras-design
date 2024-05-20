@@ -16,24 +16,22 @@ import MAlonzo.Code.Peras.SmallStep.Experiment.Impl as M
 ```
 -->
 ```agda
-mkResponse : (a → Response) → NodeTransition a → NodeTransition Response
-mkResponse f (MkNodeTransition x state) = MkNodeTransition (f x) state
-
-nodeTransition' : Chain → NodeState → NodeTransition Bool
-nodeTransition' = nodeTransition
 
 nextState : Signal → NodeState → NodeTransition Response
-nextState (NewChain chain) = mkResponse ChainAdopted ∘ nodeTransition' chain
-nextState ReportPreference = mkResponse ChainReported ∘ getPreferredChain
+nextState = signalImpl
+
+propNeverShortens : NodeState → NodeState → Bool
+propNeverShortens initial final = length (preferredChain initial) <= length (preferredChain final)
 ```
 <!--
 ```agda
-{-# COMPILE AGDA2HS mkResponse #-}
 {-# FOREIGN AGDA2HS
-nodeTransition' :: Chain -> NodeState -> NodeTransition Bool
-nodeTransition' = M.nodeTransition
+nextState :: Signal -> NodeState -> NodeTransition Response
+nextState = M.signalImpl
 #-}
-{-# COMPILE AGDA2HS nextState #-}
+{-# COMPILE AGDA2HS propNeverShortens #-}
+{-# COMPILE GHC nextState as nextState #-}
+{-# COMPILE GHC propNeverShortens as propNeverShortens #-}
 ```
 -->
 ```agda

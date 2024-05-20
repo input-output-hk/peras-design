@@ -9,8 +9,10 @@
 
 module Peras.ChainWeight (
   BuggyNode,
+  PerasNode,
   PerfectNode,
   RunMonad (..),
+  Action (..),
 ) where
 
 import Control.Monad.State (
@@ -22,7 +24,7 @@ import Control.Monad.State (
 import Data.Default (Default (..))
 import Peras.Arbitraries ()
 import Peras.Chain (Chain)
-import Peras.SmallStep.Experiment.Types (NodeState (MkNodeState), NodeTransition (..), Response (..), Signal (..))
+import Peras.SmallStep.Experiment.Types (Act (..), NodeState (MkNodeState), NodeTransition (..), Query (..), Response (..), Signal (..))
 import Test.QuickCheck (arbitrary, frequency)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))
@@ -38,13 +40,14 @@ instance DynLogicModel NodeState
 
 instance StateModel NodeState where
   data Action NodeState a where
-    Act :: Signal -> Action NodeState Response
+    MkAction :: Signal -> Action NodeState Response
   initialState = MkNodeState mempty
-  nextState state (Act signal) _var = final $ ES.nextState signal state
+  nextState state (MkAction signal) _var = final $ ES.nextState signal state
   arbitraryAction _context _state =
     frequency
-      [ (3, Some . Act . NewChain <$> arbitrary)
-      , (1, pure . Some $ Act ReportPreference)
+      [ (8, Some . MkAction . Transition . NewChain <$> arbitrary)
+      , (1, pure . Some . MkAction $ Observe QueryChain)
+      , (1, pure . Some . MkAction $ Observe QueryWeight)
       ]
 
 deriving instance Eq (Action NodeState a)
@@ -57,7 +60,9 @@ instance HasVariables (Action NodeState a) where
 
 class Monad m => PerasNode a m where
   newChain :: Chain -> a -> m (Bool, a)
-  reportPreference :: a -> m (Chain, a)
+  observeChain :: a -> m Chain
+  observeWeight :: a -> m Integer
+  observeWeight = fmap (toInteger . length) . observeChain
 
 newtype RunMonad n m a = RunMonad {runMonad :: StateT n m a}
   deriving newtype (Functor, Applicative, Monad, MonadState n)
@@ -68,15 +73,22 @@ instance MonadTrans (RunMonad n) where
   lift = RunMonad . lift
 
 instance (Monad m, PerasNode n m) => RunModel NodeState (RunMonad n m) where
-  perform _state (Act (NewChain chain)) _context = ChainAdopted <$> apply (newChain chain)
-  perform _state (Act ReportPreference) _context = ChainReported <$> apply reportPreference
-  postcondition (prior, _) (Act signal) _env actual =
+  perform _state (MkAction (Transition (NewChain chain))) _context = BoolResponse <$> apply (newChain chain)
+  perform _state (MkAction (Observe QueryChain)) _context = ChainResponse <$> apply' observeChain
+  perform _state (MkAction (Observe QueryWeight)) _context = NatResponse <$> apply' observeWeight
+  postcondition (prior, _) (MkAction signal) _env actual =
     pure $ actual == output (ES.nextState signal prior)
 
 apply :: (Monad m, MonadTrans t, MonadState s (t m)) => (s -> m (a, s)) -> t m a
 apply f = do
   (x, s') <- lift . f =<< get
   put s'
+  pure x
+
+apply' :: (Monad m, MonadTrans t, MonadState s (t m)) => (s -> m a) -> t m a
+apply' f = do
+  s <- get
+  x <- lift $ f s
   pure x
 
 -- Examples
@@ -91,7 +103,7 @@ instance Monad m => PerasNode PerfectNode m where
   newChain chain node
     | length chain > length (preferredChain node) = pure (True, MkPerfectNode chain)
     | otherwise = pure (False, node)
-  reportPreference node = pure (preferredChain node, node)
+  observeChain = pure . preferredChain
 
 newtype BuggyNode = MkBuggyNode {preferredChain' :: Chain}
   deriving (Eq, Show)
@@ -105,4 +117,4 @@ instance Monad m => PerasNode BuggyNode m where
     | length chain >= length (preferredChain' node) && length chain > 3 = pure (True, MkBuggyNode chain)
     | length chain > length (preferredChain' node) = pure (True, MkBuggyNode chain)
     | otherwise = pure (False, node)
-  reportPreference node = pure (preferredChain' node, node)
+  observeChain = pure . preferredChain'

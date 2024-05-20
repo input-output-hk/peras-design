@@ -30,19 +30,39 @@ instance
 
 open import Peras.Chain using (Chain; ∥_∥_)
 
-nodeTransition : Chain → NodeState → NodeTransition Bool
-nodeTransition candidate state =
+newChain : Chain → NodeState → NodeTransition Bool
+newChain candidate state =
   let certs = []
   in if ∥ candidate ∥ certs > ∥ preferredChain state ∥ certs
         then MkNodeTransition True $ record state {preferredChain = candidate}
         else MkNodeTransition False state
 
-getPreferredChain : NodeState → NodeTransition Chain
-getPreferredChain state = MkNodeTransition (preferredChain state) state
+getChain : NodeState → NodeTransition Chain
+getChain state = MkNodeTransition (preferredChain state) state
+
+mkResponse : (a → Response) → NodeTransition a → NodeTransition Response
+mkResponse f (MkNodeTransition x state) = MkNodeTransition (f x) state
+
+transitionImpl : Act → NodeState → NodeTransition Response
+transitionImpl (NewChain chain) = mkResponse BoolResponse ∘ newChain chain
+
+observeImpl : Query → NodeState → Response
+observeImpl QueryChain = ChainResponse ∘ preferredChain
+observeImpl QueryWeight = NatResponse ∘ foldr (const $ _+_ 1) 0 ∘ preferredChain
+
+signalImpl : Signal → NodeState → NodeTransition Response
+signalImpl (Transition act) state = transitionImpl act state
+signalImpl (Observe query) state = MkNodeTransition (observeImpl query state) state
+
+neverShortens? : List Act → NodeState → Bool
+neverShortens? signals state =
+  let certs = []
+      state' = foldl (flip $ fmap final ∘ transitionImpl) state signals
+  in ∥ preferredChain state' ∥ certs >= ∥ preferredChain state ∥ certs
 ```
 <!--
 ```agda
-{-# COMPILE GHC nodeTransition as nodeTransition #-}
-{-# COMPILE GHC getPreferredChain as getPreferredChain #-}
+{-# COMPILE GHC signalImpl as signalImpl #-}
+{-# COMPILE GHC neverShortens? as neverShortensDec #-}
 ```
 -->

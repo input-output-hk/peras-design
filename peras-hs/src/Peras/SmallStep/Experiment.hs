@@ -4,16 +4,9 @@ import MAlonzo.Code.Peras.SmallStep.Experiment.Impl as M
 import Peras.Chain (Chain)
 import Peras.SmallStep.Experiment.Types
 
-mkResponse ::
-  (a -> Response) -> NodeTransition a -> NodeTransition Response
-mkResponse f (MkNodeTransition x state) =
-  MkNodeTransition (f x) state
+propNeverShortens :: NodeState -> NodeState -> Bool
+propNeverShortens initial final =
+  length (preferredChain initial) <= length (preferredChain final)
 
 nextState :: Signal -> NodeState -> NodeTransition Response
-nextState (NewChain chain) =
-  mkResponse ChainAdopted . nodeTransition' chain
-nextState ReportPreference =
-  mkResponse ChainReported . getPreferredChain
-
-nodeTransition' :: Chain -> NodeState -> NodeTransition Bool
-nodeTransition' = M.nodeTransition
+nextState = M.signalImpl

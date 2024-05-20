@@ -89,40 +89,74 @@ d_final_28 v0 =
     C_MkNodeTransition_30 v1 v2 -> coe v2
     _ -> MAlonzo.RTE.mazUnreachableError
 
--- Peras.SmallStep.Experiment.Types.Signal
-d_Signal_32 = ()
-type T_Signal_32 = G.Signal
+-- Peras.SmallStep.Experiment.Types.Act
+d_Act_32 = ()
+type T_Act_32 = G.Act
 pattern C_NewChain_34 a0 = G.NewChain a0
-pattern C_ReportPreference_36 = G.ReportPreference
 check_NewChain_34 ::
   MAlonzo.Code.Agda.Builtin.List.T_List_10
     ()
     MAlonzo.Code.Peras.Block.T_Block_62 ->
-  T_Signal_32
+  T_Act_32
 check_NewChain_34 = G.NewChain
-check_ReportPreference_36 :: T_Signal_32
-check_ReportPreference_36 = G.ReportPreference
-cover_Signal_32 :: G.Signal -> ()
-cover_Signal_32 x =
+cover_Act_32 :: G.Act -> ()
+cover_Act_32 x =
   case x of
     G.NewChain _ -> ()
-    G.ReportPreference -> ()
+
+-- Peras.SmallStep.Experiment.Types.Query
+d_Query_36 = ()
+type T_Query_36 = G.Query
+pattern C_QueryChain_38 = G.QueryChain
+pattern C_QueryWeight_40 = G.QueryWeight
+check_QueryChain_38 :: T_Query_36
+check_QueryChain_38 = G.QueryChain
+check_QueryWeight_40 :: T_Query_36
+check_QueryWeight_40 = G.QueryWeight
+cover_Query_36 :: G.Query -> ()
+cover_Query_36 x =
+  case x of
+    G.QueryChain -> ()
+    G.QueryWeight -> ()
+
+-- Peras.SmallStep.Experiment.Types.Signal
+d_Signal_42 = ()
+type T_Signal_42 = G.Signal
+pattern C_Transition_44 a0 = G.Transition a0
+pattern C_Observe_46 a0 = G.Observe a0
+check_Transition_44 :: T_Act_32 -> T_Signal_42
+check_Transition_44 = G.Transition
+check_Observe_46 :: T_Query_36 -> T_Signal_42
+check_Observe_46 = G.Observe
+cover_Signal_42 :: G.Signal -> ()
+cover_Signal_42 x =
+  case x of
+    G.Transition _ -> ()
+    G.Observe _ -> ()
 
 -- Peras.SmallStep.Experiment.Types.Response
-d_Response_38 = ()
-type T_Response_38 = G.Response
-pattern C_ChainAdopted_40 a0 = G.ChainAdopted a0
-pattern C_ChainReported_42 a0 = G.ChainReported a0
-check_ChainAdopted_40 :: Bool -> T_Response_38
-check_ChainAdopted_40 = G.ChainAdopted
-check_ChainReported_42 ::
+d_Response_48 = ()
+type T_Response_48 = G.Response
+pattern C_UnitResponse_50 = G.UnitResponse
+pattern C_BoolResponse_52 a0 = G.BoolResponse a0
+pattern C_NatResponse_54 a0 = G.NatResponse a0
+pattern C_ChainResponse_56 a0 = G.ChainResponse a0
+check_UnitResponse_50 :: T_Response_48
+check_UnitResponse_50 = G.UnitResponse
+check_BoolResponse_52 :: Bool -> T_Response_48
+check_BoolResponse_52 = G.BoolResponse
+check_NatResponse_54 :: Integer -> T_Response_48
+check_NatResponse_54 = G.NatResponse
+check_ChainResponse_56 ::
   MAlonzo.Code.Agda.Builtin.List.T_List_10
     ()
     MAlonzo.Code.Peras.Block.T_Block_62 ->
-  T_Response_38
-check_ChainReported_42 = G.ChainReported
-cover_Response_38 :: G.Response -> ()
-cover_Response_38 x =
+  T_Response_48
+check_ChainResponse_56 = G.ChainResponse
+cover_Response_48 :: G.Response -> ()
+cover_Response_48 x =
   case x of
-    G.ChainAdopted _ -> ()
-    G.ChainReported _ -> ()
+    G.UnitResponse -> ()
+    G.BoolResponse _ -> ()
+    G.NatResponse _ -> ()
+    G.ChainResponse _ -> ()
