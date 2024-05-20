@@ -101,6 +101,8 @@ instance Default BuggyNode where
 
 instance Monad m => PerasNode BuggyNode m where
   newChain chain node
-    | length chain > length (preferredChain' node) && length chain `mod` 10 /= 0 = pure (True, MkBuggyNode chain)
+    | length chain `mod` 20 == 0 = pure (False, MkBuggyNode $ drop 1 chain)
+    | length chain >= length (preferredChain' node) && length chain > 3 = pure (True, MkBuggyNode chain)
+    | length chain > length (preferredChain' node) = pure (True, MkBuggyNode chain)
     | otherwise = pure (False, node)
   reportPreference node = pure (preferredChain' node, node)

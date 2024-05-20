@@ -1,3 +1,4 @@
+```agda
 module Peras.SmallStep.Experiment.Impl where
 
 open import Haskell.Prelude
@@ -36,9 +37,12 @@ nodeTransition candidate state =
         then MkNodeTransition True $ record state {preferredChain = candidate}
         else MkNodeTransition False state
 
-{-# COMPILE GHC nodeTransition as nodeTransition #-}
-
 getPreferredChain : NodeState → NodeTransition Chain
 getPreferredChain state = MkNodeTransition (preferredChain state) state
-
+```
+<!--
+```agda
+{-# COMPILE GHC nodeTransition as nodeTransition #-}
 {-# COMPILE GHC getPreferredChain as getPreferredChain #-}
+```
+-->
