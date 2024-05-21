@@ -1,3 +1,15 @@
+## 2024-05-20
+
+### Dynamic QuickCheck for new Agda+Haskell workflow
+
+The new tests [`Peras.ChainWeightSpec`](peras-quickcheck/test/peras/ChainWeightSpec.hs) check both (1) that the implementation being tested matches the output of the specification and (2) that an Agda property [`Peras.SmallStep.Experiment.propNeverShortens`](src/Peras/SmallStep/Experiment.lagda.md) holds.
+
+Overall findings from the Agda+Haskell experiment are the following:
+
+1. It is feasible to use non-`agda2hs` properties in Haskell tests by carefully use of Agda pragmas to generate `MAlonzo` and `agda2hs` code. The approach avoids ever referencing mangled names, but it does require some indirection and separation of interface vs implementation.
+2. The situation would be far simplier if one could use a pure Agda state-machine testing framework instead of having to export code to Haskell and then test there.
+3. The `StateModel` and `RunModel` of `quickcheck-dynamic` seem a little out of sync with this use case where the model and its properties are known to be correct because of Agda proofs and only the implementation is being tested.
+
 ## 2024-05-17
 
 ### Formal specification
