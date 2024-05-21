@@ -1,3 +1,19 @@
+## 2024-05-21
+
+### Clarifying Agda/Haskell interactions
+
+The following picture attempts to clarify the relationship between Agda and Haskell as it's been explored recently:
+
+![[Agda-Haskell Interactions](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589706996014&cot=14)](docs/diagrams/agda-haskell-interactions.jpg)
+
+* Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than Agda2hs and Haskell's `Prelude` obviously
+* Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (Eg. numbers, lists, tuples, etc.)
+* The Agda code separates `Types` from `Impl`ementation in order to ease generation
+* `Types` are generated using agda2hs to provide unmangled names and simple structures on the Haskell side
+* `Impl` is generate usign GHC to enable full use of stdlib stuff, with toplevel _interface_ functions generated with unmangled names
+* `Types` are also taken into account when compiling using GHC but they are only "virtual", eg. the compiler makes the GHC-generated code depend on the agda2hs generated types
+* Hand-written Haskell code can call unmangled types and functions
+
 ## 2024-05-20
 
 ### Dynamic QuickCheck for new Agda+Haskell workflow
