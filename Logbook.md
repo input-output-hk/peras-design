@@ -1,5 +1,13 @@
 ## 2024-05-21
 
+### Meeting w/ Quviq
+
+Next steps:
+1. Share the full paper
+2. Define the property we want to test
+3. Tour of Agda code to know where to plug-in
+4. Sketch the testing model together
+
 ### Clarifying Agda/Haskell interactions
 
 The following picture attempts to clarify the relationship between Agda and Haskell as it's been explored recently:
