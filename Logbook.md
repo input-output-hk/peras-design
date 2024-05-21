@@ -14,6 +14,33 @@ The following picture attempts to clarify the relationship between Agda and Hask
 * `Types` are also taken into account when compiling using GHC but they are only "virtual", eg. the compiler makes the GHC-generated code depend on the agda2hs generated types
 * Hand-written Haskell code can call unmangled types and functions
 
+### Chain weight in block headers
+
+Just like the Praos header being signed increases the confidence a node has in the validity of the length claim and thus allows a node to select chain (and pass to downstream peers) before downloading all its block bodies, we could add the weight of the chain to the header as a simple 64 bits field thus making it possible to select chain without having to verify immediately the certificates which would be provided with the bodies.
+
+```
+header =
+  [ header_body
+  , body_signature : $kes_signature
+  ]
+
+header_body =
+  [ block_number     : uint
+  , slot             : uint
+  , weight           : uint
+  , prev_hash        : $hash32 / null
+  , issuer_vkey      : $vkey
+  , vrf_vkey         : $vrf_vkey
+  , vrf_result       : $vrf_cert ; replaces nonce_vrf and leader_vrf
+  , block_body_size  : uint
+  , block_body_hash  : $hash32 ; merkle triple root
+  , operational_cert
+  , [ protocol_version ]
+  ]
+```
+
+This would prevent any risk of compromising block diffusion time, while at the same time avoiding or at least significantly reducing DoS or similar attacks because of unverified or unverifiable chain selection based on weight.
+
 ## 2024-05-20
 
 ### Dynamic QuickCheck for new Agda+Haskell workflow
