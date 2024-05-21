@@ -131,7 +131,13 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 -->
 
-block₀ denotes the genesis block that is passed in as a module parameter.
+`block₀` denotes the genesis block, `cert₀` is certificate for the first voting
+round referencing the genesis block. Both are module parameters together with
+the relations
+  * `IsCommitteeMember`
+  * `IsVoteSignature`
+  * `IsSlotLeader`
+  * `IsBlockSignature`
 
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
@@ -165,6 +171,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 
 ## BlockTree
+
+A block-tree is defined by properties - an implementation of the block-tree
+has to fulfil all the properties mentioned below:
 
 ```agda
   record IsTreeType {tT : Set}
@@ -238,8 +247,8 @@ Properties that must hold with respect to blocks and votes
         → getCert r (certs t) ≡ just c
 
 ```
-The block tree type
-
+In addition to blocks the block-tree manages votes and certificates as well.
+The block tree type is defined as follows:
 ```agda
   record TreeType (T : Set) : Set₁ where
 
@@ -270,7 +279,8 @@ The block tree type
   open TreeType
 ```
 ## Local state
-
+The local state is the state of a single party and consists of the block-tree of the
+party.
 ```agda
   record LocalState {A : Set} (blockTree : TreeType A) : Set where
     constructor ⟪_⟫
