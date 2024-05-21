@@ -47,13 +47,17 @@ open Party
 # Small-step semantics
 
 The small-step semantics define the possible evolution of the global state of the system
-under the Peras protocol modelling honest and adversary parties.
+under the Peras protocol modelling honest and adversarial parties. The number of parties
+is fixed during the execution of the protocol.
 
-The goal is to show *safety* and *liveness* for the protocol.
+Reference:
+* Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
+* Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-Reference: Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
+## Messages
 
-Messages for sending and receiving blocks, certificates and votes
+Messages for sending and receiving blocks and votes - certificates are not diffused explicitly
+in the protocol with the exception of bootstraping the system.
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
@@ -73,7 +77,8 @@ Message-injective′ : ∀ {b₁ b₂}
 Message-injective′ = contraposition Message-injective
 ```
 -->
-Messages can be delayed by an adversary. Delay is either 0, 1
+Messages can be delayed by an adversary. Delay is either *0*, for not delayed or *1* when
+delayed to the next slot.
 
 ```agda
 Delay = Fin 2
@@ -409,8 +414,7 @@ updating the local block tree and putting the local state back into the global s
 ```agda
     data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → Stateᵍ → Message → Stateᵍ → Set where
 ```
-An honest party consumes a message from the global message buffer and updates the
-the local state
+An honest party consumes a message from the global message buffer and updates the local state
 ```agda
       honest : ∀ {p} {lₚ lₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just lₚ
@@ -455,7 +459,7 @@ An adversarial party might delay a message
 A party can cast a vote for a block, if
   * the current slot is the first slot in a voting round
   * the party is a member of the voting committee
-  * the chain is not in a cooldown phase
+  * the chain is not in a cool-down phase
 
 Voting updates the party's local state and for all other parties a message
 is added to be consumed immediately.
@@ -489,7 +493,7 @@ Rather than creating a delayed vote, an adversary can honestly create it and del
 ## Create
 
 A party can create a new block by adding it to the local block tree and gossiping the
-block creation messages to the other parties. Block creation is possilble, if
+block creation messages to the other parties. Block creation is possible, if
   * the block signature is correct
   * the party is the slot leader
 
@@ -498,7 +502,7 @@ is added to be consumed immediately.
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → Stateᵍ → Stateᵍ → Set where
 ```
-During regular execution of the protocol, i.e. not in cooldown phase, no certificate
+During regular execution of the protocol, i.e. not in cool-down phase, no certificate
 reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
@@ -526,7 +530,7 @@ reference is included in the block.
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , lₚ ↑ M)
 ```
-During a cooldown phase, the block includes a certificate reference.
+During a cool-down phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open Stateᵍ M
@@ -597,8 +601,6 @@ The small-step semantics describe the evolution of the global state.
 ```
 
 ## Reflexive, transitive closure
-
-In the paper mentioned above this is big-step semantics.
 
 ```agda
     infix  2 _↝⋆_

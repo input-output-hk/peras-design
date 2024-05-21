@@ -59,6 +59,10 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 ```
 -->
 
+## Peras properties
+
+The goal is to show *safety* and *liveness* for the protocol.
+
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
          (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
