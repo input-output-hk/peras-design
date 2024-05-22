@@ -410,43 +410,29 @@ the global state.
 An honest party consumes a message from the global message buffer and updates
 the local state
 ```agda
-      honest : ∀ {p} {t t′} {m} {c s ms hs as}
-        → lookup s p ≡ just t
-        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
+      honest : ∀ {p} {t t′} {m} {N}
+        → let open State N in
+          lookup stateMap p ≡ just t
+        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
-          ----------------------------------------
+          ------------------------------------------------
         → Honest {p} ⊢
-          ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ m ]⇀
-          ⟦ c
-          , insert p t′ s
-          , ms ─ m∈ms
-          , hs
-          , as
-          ⟧
+          N [ m ]⇀ record N
+            { stateMap = insert p t′ stateMap
+            ; messages = messages ─ m∈ms
+            }
 ```
 An adversarial party might delay a message
 ```agda
-      corrupt : ∀ {p c s ms hs as as′} {m}
-        → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
-          -----------------------------------------
+      corrupt : ∀ {p} {as} {m} {N}
+        → let open State N in
+          (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ messages)
+          -------------------------------------------------
         → Corrupt {p} ⊢
-          ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ m ]⇀
-          ⟦ c
-          , s -- TODO: insert p t s
-          , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
-          , hs
-          , as′
-          ⟧
+          N [ m ]⇀ record N
+            { messages = m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
+            ; adversarialState = as
+            }
 ```
 ## Voting
 
