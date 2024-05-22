@@ -178,17 +178,17 @@ A block-tree is defined by properties - an implementation of the block-tree
 has to fulfil all the properties mentioned below:
 
 ```agda
-  record IsTreeType {tT : Set}
-                    (tree₀ : tT)
-                    (extendTree : tT → Block → tT)
-                    (allBlocks : tT → List Block)
-                    (bestChain : SlotNumber → tT → Chain)
-                    (addVote : tT → Vote → tT)
-                    (votes : tT → List Vote)
-                    (certs : tT → List Certificate)
+  record IsTreeType {T : Set}
+                    (tree₀ : T)
+                    (extendTree : T → Block → T)
+                    (allBlocks : T → List Block)
+                    (bestChain : SlotNumber → T → Chain)
+                    (addVote : T → Vote → T)
+                    (votes : T → List Vote)
+                    (certs : T → List Certificate)
          : Set₁ where
 
-    allBlocksUpTo : SlotNumber → tT → List Block
+    allBlocksUpTo : SlotNumber → T → List Block
     allBlocksUpTo sl t = filter ((_≤? getSlotNumber sl) ∘ slotNumber') (allBlocks t)
 
     field
@@ -205,19 +205,19 @@ as proposed in the paper.
       instantiated-certs :
         certs tree₀ ≡ cert₀ ∷ []
 
-      extendable : ∀ (t : tT) (b : Block)
+      extendable : ∀ (t : T) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      extendable-certs : ∀ (t : tT) (b : Block)
+      extendable-certs : ∀ (t : T) (b : Block)
         → certs (extendTree t b) ≡ certs t
 
-      extendable-votes : ∀ (t : tT) (v : Vote)
+      extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
-      valid : ∀ (t : tT) (sl : SlotNumber)
+      valid : ∀ (t : T) (sl : SlotNumber)
         → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
 
-      optimal : ∀ (c : Chain) (t : tT) (sl : SlotNumber)
+      optimal : ∀ (c : Chain) (t : T) (sl : SlotNumber)
         → let b = bestChain sl t
               cts = certs t
           in
@@ -225,29 +225,29 @@ as proposed in the paper.
         → c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
-      self-contained : ∀ (t : tT) (sl : SlotNumber)
+      self-contained : ∀ (t : T) (sl : SlotNumber)
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
-      valid-votes : ∀ (t : tT)
+      valid-votes : ∀ (t : T)
         → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t)
 
-      unique-votes : ∀ (t : tT) (v : Vote)
+      unique-votes : ∀ (t : T) (v : Vote)
         → let vs = votes t
           in
           v ∈ vs
         → vs ≡ votes (addVote t v)
 
-      no-equivocations : ∀ (t : tT) (v : Vote)
+      no-equivocations : ∀ (t : T) (v : Vote)
         → let vs = votes t
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
 
-      non-quorum : ∀ (t : tT) (r : RoundNumber)
+      non-quorum : ∀ (t : T) (r : RoundNumber)
         → length (votes t) < τ
         → findCert r (certs t) ≡ nothing
 
-      quorum : ∀ (t : tT) (r : RoundNumber) (c : Certificate)
+      quorum : ∀ (t : T) (r : RoundNumber) (c : Certificate)
         → length (votes t) ≥ τ
         → findCert r (certs t) ≡ just c
 
@@ -287,13 +287,13 @@ In addition to the parameters already introduced above we introduce the
 following parameters
 
   * The type of the block-tree
-  * AdversarialState₀ is the initial adversarial state
+  * adversarialState₀ is the initial adversarial state
   * Tx selection function per party and slot number
   * The list of parties
 
 ```agda
-  module _ {tT : Set} {blockTree : TreeType tT}
-           {AdversarialState : Set} {adversarialState₀ : AdversarialState}
+  module _ {T : Set} {blockTree : TreeType T}
+           {S : Set} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties}
 
@@ -306,7 +306,7 @@ following parameters
 Updating the block-tree upon receiving a message for vote and block messages.
 
 ```agda
-    data _[_]→_ : tT → Message → tT → Set where
+    data _[_]→_ : T → Message → T → Set where
 
       VoteReceived : ∀ {v t}
           ----------------------------
@@ -322,11 +322,11 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 ```agda
-    data VoteInRound : tT → RoundNumber → Set where
+    data VoteInRound : T → RoundNumber → Set where
 
       Regular : ∀ {r t} →
         let
-          pref = bestChain (MkSlotNumber $ r * T) t
+          pref = bestChain (MkSlotNumber $ r * U) t
           cert′ = latestCertSeen t
         in
           r ≡ (roundNumber cert′) + 1 -- VR-1A
@@ -336,7 +336,7 @@ cool-down phase.
 
       AfterCooldown : ∀ {r c t} →
         let
-          cert⋆ = latestCertOnChain (MkSlotNumber $ r * T) t
+          cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
           cert′ = latestCertSeen t
         in
           c > 0
@@ -362,7 +362,7 @@ The global state consists of the following fields:
 ```
 * Map with local state per party
 ```agda
-        stateMap : Map tT
+        stateMap : Map T
 ```
 * All the messages that have been sent but not yet been delivered
 ```agda
@@ -374,7 +374,7 @@ The global state consists of the following fields:
 ```
 * Adversarial state
 ```agda
-        adversarialState : AdversarialState
+        adversarialState : S
 ```
 Progress
 ```agda
@@ -383,7 +383,7 @@ Progress
 ```
 Updating global state
 ```agda
-    _,_,_,_↑_ : Message → Delay → PartyId → tT → State → State
+    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
       ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) (filter (¬? ∘ (p ≟_) ∘ proj₁) parties) ++ ms , m ∷ hs , as ⟧
 ```
@@ -545,7 +545,7 @@ During a cool-down phase, the block includes a certificate reference.
                     ; signature = sig
                     }
               tₚ = extendTree t b
-              cert⋆ = latestCertOnChain (MkSlotNumber $ r * T) t
+              cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
               cert′ = latestCertSeen t
               cts = certs t
           in

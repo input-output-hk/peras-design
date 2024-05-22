@@ -76,8 +76,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
   open Hashable ⦃...⦄
   open Params ⦃...⦄
 
-  module _ {tT : Set} (blockTree : TreeType tT)
-           {AdversarialState : Set} (adversarialState₀ : AdversarialState)
+  module _ {T : Set} (blockTree : TreeType T)
+           {S : Set} (adversarialState₀ : S)
            (txSelection : SlotNumber → PartyId → List Tx)
            (parties : Parties)
 
@@ -87,9 +87,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     open TreeType blockTree
 
-    GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {tT} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+    GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
-    states₀ : Map tT
+    states₀ : Map T
     states₀ = foldr (λ where (p , _) m → insert p tree₀ m ) empty parties
 
     N₀ : GlobalState
@@ -159,7 +159,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
     knowledge-propagation1 : ∀ {N : GlobalState}
         → {p₁ p : PartyId}
-        → {t₁ t : tT}
+        → {t₁ t : T}
         → {h₁ : Honesty p₁}
         → {b : Block}
         → (p₁ , h₁) ∈ parties
@@ -176,7 +176,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     postulate
       knowledge-propagation₁ : ∀ {N : GlobalState}
         → {p₁ p : PartyId}
-        → {t₁ t : tT}
+        → {t₁ t : T}
         → {h₁ : Honesty p₁}
         → {b : Block}
         → (p₁ , h₁) ∈ parties
@@ -251,7 +251,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     knowledge-propagation₂ : ∀ {M N : GlobalState}
         → {p : PartyId}
-        → {t : tT}
+        → {t : T}
         → {h : Honesty p}
         → {b : Block}
         → (p , h) ∈ parties
@@ -309,7 +309,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     knowledge-propagation₀ : ∀ {N : GlobalState}
         → {p₁ p₂ : PartyId}
-        → {t₁ t₂ : tT}
+        → {t₁ t₂ : T}
         → {honest₁ : Honesty p₁}
         → {honest₂ : Honesty p₂}
         → (p₁ , honest₁) ∈ parties
@@ -330,7 +330,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 ```agda
     knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
       → {p₁ p₂ : PartyId}
-      → {t₁ t₂ : tT}
+      → {t₁ t₂ : T}
       → {honesty₁ : Honesty p₁}
       → {honesty₂ : Honesty p₂}
       → honesty₁ ≡ Honest {p₁}
@@ -491,7 +491,7 @@ that period.
       chain-growth : ∀ {N₁ N₂ : GlobalState}
         → {p₁ p₂ : PartyId}
         → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-        → {t₁ t₂ : tT}
+        → {t₁ t₂ : T}
         → {w : ℕ}
         → h₁ ≡ Honest {p₁}
         → h₂ ≡ Honest {p₂}
@@ -525,7 +525,7 @@ chains of honest parties will always be a common prefix of each other.
 ```agda
     postulate
       common-prefix : ∀ {N : GlobalState}
-        → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : tT}
+        → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : T}
         → lookup (stateMap N) p ≡ just t
         → N₀ ↝⋆ N
         → ForgingFree N

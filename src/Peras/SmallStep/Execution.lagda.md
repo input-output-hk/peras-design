@@ -46,7 +46,7 @@ module _ {block₀}
   instance
     params : Params
     params = record
-               { T = 2
+               { U = 2
                ; K = 1
                ; R = 1
                ; L = 1
@@ -57,10 +57,8 @@ module _ {block₀}
                }
   open Params
 
-  module _ {A : Set}
-           (blockTree : TreeType A)
-           {AdversarialState : Set}
-           (adversarialState₀ : AdversarialState)
+  module _ {T : Set} (blockTree : TreeType T)
+           {S : Set} (adversarialState₀ : S)
            (txSelection : SlotNumber → PartyId → List Tx)
            where
 
@@ -77,7 +75,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (p₁ , Honest) ∷ (p₂ , Honest) ∷ []
 
-      GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 Initial state
 ```agda

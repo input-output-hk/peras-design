@@ -18,7 +18,7 @@ instance
   defaultParams =
     record
     {
-      T = 20
+      U = 20
     ; K = 120
     ; R = 120
     ; L = 120

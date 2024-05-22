@@ -10,7 +10,7 @@ open import Data.Nat using (ℕ; NonZero)
 ## Peras parameters
 ```agda
 record Params : Set where
-  field T : ℕ
+  field U : ℕ
         K : ℕ
         R : ℕ
         L : ℕ
@@ -19,10 +19,10 @@ record Params : Set where
         B : ℕ -- FIXME: Float
         W : ℕ
 
-        T-nonZero : NonZero T
+        T-nonZero : NonZero U
 
 ```
-#### T
+#### U
 The length (in slots) of a voting round
 
 #### K
