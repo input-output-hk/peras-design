@@ -520,7 +520,7 @@ certificate reference is included in the block.
         → lookup stateMap p ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-          --------------------------------------
+          --------------------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
@@ -553,7 +553,7 @@ During a cool-down phase, the block includes a certificate reference.
         → ¬ Any (λ { c → (roundNumber c) + 2 ≡ r }) cts -- (a)
         → r ≤ A + (roundNumber cert′)                   -- (b)
         → (roundNumber cert′) > (roundNumber cert⋆)     -- (c)
-          -----------------------------------------
+          ----------------------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
