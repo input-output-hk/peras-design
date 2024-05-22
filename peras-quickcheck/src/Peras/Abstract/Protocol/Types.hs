@@ -1,43 +1,78 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Peras.Abstract.Protocol.Types where
 
-import Data.Time.Clock (UTCTime)
-import Peras.Block (Block, Certificate, Party)
-import Peras.Chain (Vote)
-import Peras.Crypto (Hash, LeadershipProof)
-import Peras.Numbering (RoundNumber)
+import Control.Concurrent.STM.TVar (TVar)
+import Data.Set (Set, singleton)
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
+import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
+import Peras.Chain (Chain, Vote)
+import Peras.Crypto (Hash (MkHash), LeadershipProof)
+import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Orphans ()
 
--- | Bundle the handling of voting events and access to the vote API.
-type VotingComponent m = VotingCallback m -> VoteApi m -> m ()
-
--- | Invoke a voting component.
-type VotingCallback m = VotingEvent -> m ()
-
--- | There is only one type of voting event.
-data VotingEvent = Voting
-  { round :: RoundNumber
-  -- ^ The round being voted upon.
-  , leadership :: Maybe LeadershipProof
-  -- ^ The leadership proof, if the party is a membership of the committee.
+data PerasParams = PerasParams
+  { perasU :: Natural
+  -- ^ Round length.
+  , perasA :: Natural
+  -- ^ Certificate expiration age.
+  , perasR :: Natural
+  -- ^ Length of chain-ignorance period.
+  , perasK :: Natural
+  -- ^ Length of cool-down period.
+  , perasΔ :: Natural
+  -- ^ Delivery guarantee for diffusion.
   }
+  deriving (Eq, Generic, Show)
 
--- | API for voting queries to other components such as the node.
-data VoteApi m = VoteApi
-  { preagreement :: RoundNumber -> Party -> LeadershipProof -> m (Maybe Block)
-  -- ^ Call the preagreement procedure to find the candidate block being voted upon.
-  , latestCertSeen :: UTCTime -> m Certificate
-  -- ^ The latest certificate seen, as of the time specified.
-  , latestCertOnChain :: UTCTime -> m Certificate
-  -- ^ The latest certificate on the preferred chain, as of the time specified.
-  , blockExtends :: UTCTime -> Block -> Certificate -> m Bool
-  -- ^ Whether the block extends the block certified by the certificate, as of the time specified.
-  , recordVote :: Vote -> m ()
-  -- ^ Record a vote in the node's database.
-  , diffuseVote :: Vote -> m ()
-  -- ^ Diffuse a new vote.
+data PerasState = PerasState
+  { chainPref :: Chain
+  , chains :: Set Chain
+  , votes :: Set Vote
+  , certs :: Set Certificate
+  , certPrime :: (Certificate, SlotNumber)
+  , certStar :: Certificate
   }
+  deriving (Eq, Generic, Show)
 
--- | Cryptography API.
-data CryptoApi m = CryptoApi
-  { signVote :: RoundNumber -> Party -> Hash Block -> LeadershipProof -> m Vote
-  -- ^ Sign a vote.
-  }
+initialState :: PerasState
+initialState =
+  PerasState
+    { chainPref = genesisChain
+    , chains = singleton genesisChain
+    , votes = mempty
+    , certs = mempty -- FIXME: Should this be `singleton genesisCert`?
+    , certPrime = (genesisCert, systemStart)
+    , certStar = genesisCert
+    }
+
+type Fetching m = TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m ()
+
+type BlockCreation m = TVar PerasState -> SlotNumber -> m ()
+
+type Voting m = TVar PerasState -> RoundNumber -> Preagreement m -> m ()
+
+type Preagreement m = TVar PerasState -> RoundNumber -> m (Maybe (Block, VotingWeight))
+
+type CreateSignedBlock m = SlotNumber -> Party -> Hash Block -> Maybe Certificate -> LeadershipProof -> Payload -> m Block
+
+type CreateSignedCertificate m = RoundNumber -> Set Vote -> m Certificate
+
+type CreateSignedVote m = RoundNumber -> Party -> Hash Block -> LeadershipProof -> VotingWeight -> m Vote
+
+type VotingWeight = Natural
+
+type Payload = [Tx]
+
+systemStart :: SlotNumber
+systemStart = 0
+
+genesisHash :: Hash Block
+genesisHash = MkHash mempty
+
+genesisChain :: Chain
+genesisChain = mempty
+
+genesisCert :: Certificate
+genesisCert = MkCertificate 0 genesisHash
