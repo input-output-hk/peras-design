@@ -50,6 +50,13 @@ model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
 adversarial parties share adversarial state, which is generic state.
 
+The following sub-sections cover the Peras protocol (see Figure 2: The Peras
+protocol)
+
+  * [Fetching](SmallStep.lagda.md#fetching)
+  * [Block creation](SmallStep.lagda.md#block-creation)
+  * [Voting](SmallStep.lagda.md#voting)
+
 Reference:
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
@@ -138,10 +145,12 @@ The model takes a couple of parameters: `block₀` denotes the genesis block,
 `cert₀` is certificate for the first voting round referencing the genesis block.
 In addition there are the following relations abstracting the lotteries (slot
 leadership and voting committee membership) and the cryptographic signatures
+
   * `IsCommitteeMember`
   * `IsVoteSignature`
   * `IsSlotLeader`
   * `IsBlockSignature`
+
 The parameters for the Peras protocol and hash functions are defined as instance
 arguments of the module.
 ```agda
