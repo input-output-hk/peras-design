@@ -46,18 +46,22 @@ open Party
 
 # Small-step semantics
 
-The small-step semantics define the possible evolution of the global state of the system
-under the Peras protocol modelling honest and adversarial parties. The number of parties
-is fixed during the execution of the protocol.
+The small-step semantics of the **Peras** protocol define the evolution of the
+global state of the system modelling *honest* and *adversarial* parties. The
+number of parties is fixed during the execution of the protocol. In addition the
+model is parameterized by the lotteries (for slot leadership and voting
+committee membership) as well as the type of the block tree. Furthermore
+adversarial parties share adversarial state, which is generic state.
 
 Reference:
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
-## Messages
+#### Messages
 
-Messages for sending and receiving blocks and votes - certificates are not diffused explicitly
-in the protocol with the exception of bootstraping the system.
+Messages for sending and receiving blocks and votes. In the `Peras` protocol
+certificates are not diffused explicitly with the exception of bootstraping the
+system.
 ```agda
 data Message : Set where
   BlockMsg : Block → Message
@@ -77,14 +81,14 @@ Message-injective′ : ∀ {b₁ b₂}
 Message-injective′ = contraposition Message-injective
 ```
 -->
-Messages can be delayed by an adversary. Delay is either *0*, for not delayed or *1* when
-delayed to the next slot.
-
+Messages can be delayed by an adversary. Delay is either
+  * *0* for not delayed
+  * *1* when delayed to the next slot.
 ```agda
 Delay = Fin 2
 ```
-Messages are put into an envelope which is assigned to a given party and is defined with
-a delay.
+Messages are put into an envelope and assigned to a party. The message can be
+delayed.
 ```agda
 record Envelope : Set where
   constructor ⦅_,_,_,_⦆
@@ -131,9 +135,12 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
 -->
 
-`block₀` denotes the genesis block, `cert₀` is certificate for the first voting
-round referencing the genesis block. Both are module parameters together with
-the relations
+### Parameters
+
+The model takes a couple of parameters: `block₀` denotes the genesis block,
+`cert₀` is certificate for the first voting round referencing the genesis block.
+In addition there are the following relations abstracting the lotteries (slot
+leadership and voting committee membership) and the cryptographic signatures
   * `IsCommitteeMember`
   * `IsVoteSignature`
   * `IsSlotLeader`
@@ -170,7 +177,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
   latestCert = argmax roundNumber cert₀
 ```
 
-## BlockTree
+#### Block-tree
 
 A block-tree is defined by properties - an implementation of the block-tree
 has to fulfil all the properties mentioned below:
@@ -278,7 +285,7 @@ The block tree type is defined as follows:
 
   open TreeType
 ```
-## Local state
+### Local state
 The local state is the state of a single party and consists of the block-tree of the
 party.
 ```agda
@@ -297,7 +304,7 @@ party.
   ⟪⟫-injective refl = refl
 ```
 -->
-# Parameterized module
+### Parameterized module
 
   * blockTree
   * slot leader predicate
@@ -340,7 +347,11 @@ are delegated to the block tree.
         → ⟪ t ⟫ [ BlockMsg b ]→
           ⟪ extendTree blockTree t b ⟫
 ```
-#### When does a party vote in a round?
+### Vote in round
+
+When does a party vote in a round? The protocol expects regular voting, i.e. if
+in the previous round a quorum has been achieved or that voting resumes after a
+cool-down phase.
 ```agda
     data VoteInRound : Stateˡ → RoundNumber → Set where
 
@@ -365,7 +376,7 @@ are delegated to the block tree.
           -----------------------------------
         → VoteInRound ⟪ t ⟫ (MkRoundNumber r)
 ```
-## Global state
+### Global state
 
 ```agda
     record Stateᵍ : Set where
@@ -416,7 +427,7 @@ Ticking the global clock
       }
       where open Stateᵍ
 ```
-## Receive
+## Fetching
 
 A party receives messages from the global state by fetching messages assigned to the party,
 updating the local block tree and putting the local state back into the global state.
@@ -464,7 +475,7 @@ An adversarial party might delay a message
           , as′
           ⟧
 ```
-## Vote creation
+## Voting
 
 A party can cast a vote for a block, if
   * the current slot is the first slot in a voting round
@@ -500,7 +511,7 @@ is added to be consumed immediately.
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and delay the message
 
-## Create
+## Block creation
 
 A party can create a new block by adding it to the local block tree and gossiping the
 block creation messages to the other parties. Block creation is possible, if
