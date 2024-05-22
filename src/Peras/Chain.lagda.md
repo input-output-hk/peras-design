@@ -176,7 +176,7 @@ module _ ⦃ _ : Hashable Block ⦄
 <!--
 ```agda
   instance
-    nonZero : NonZero T -- TODO: why is this needed..?
+    nonZero : NonZero U -- TODO: why is this needed..?
     nonZero = T-nonZero
 ```
 -->
@@ -193,11 +193,11 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 ```agda
   StartOfRound : SlotNumber → RoundNumber → Set
-  StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * T
+  StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * U
 ```
 ```agda
-  v-round : SlotNumber → ⦃ _ : NonZero T ⦄ → RoundNumber
-  v-round (MkSlotNumber s) = MkRoundNumber (s / T)
+  v-round : SlotNumber → ⦃ _ : NonZero U ⦄ → RoundNumber
+  v-round (MkSlotNumber s) = MkRoundNumber (s / U)
 ```
 ### Chain weight
 

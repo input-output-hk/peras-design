@@ -1538,8 +1538,12 @@ d_voting_250 v0 =
                             MAlonzo.Code.Peras.QQCD.State.du_bindState_114
                             ( coe
                                 MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                ( \v5 v6 ->
-                                    coe MAlonzo.Code.Peras.QQCD.Node.Model.du_currentRound_74 v6
+                                ( coe
+                                    ( \v5 v6 ->
+                                        coe
+                                          MAlonzo.Code.Peras.QQCD.Node.Model.du_currentRound_74
+                                          (coe v6)
+                                    )
                                 )
                             )
                             ( coe
@@ -1569,10 +1573,12 @@ d_voting_250 v0 =
                                                               )
                                                               ( coe
                                                                   MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                  ( \v8 v9 ->
-                                                                      coe
-                                                                        MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
-                                                                        v9
+                                                                  ( coe
+                                                                      ( \v8 v9 ->
+                                                                          coe
+                                                                            MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
+                                                                            (coe v9)
+                                                                      )
                                                                   )
                                                               )
                                                               (coe du_oneRoundOld_258 (coe v5))
@@ -1593,19 +1599,23 @@ d_voting_250 v0 =
                                                                             (d_extends_202 (coe v4))
                                                                             ( coe
                                                                                 MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                                ( \v9 v10 ->
-                                                                                    coe
-                                                                                      MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
-                                                                                      v10
+                                                                                ( coe
+                                                                                    ( \v9 v10 ->
+                                                                                        coe
+                                                                                          MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
+                                                                                          (coe v10)
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )
                                                                         ( coe
                                                                             MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                            ( \v9 v10 ->
-                                                                                coe
-                                                                                  MAlonzo.Code.Peras.QQCD.Node.Model.du_chains_86
-                                                                                  v10
+                                                                            ( coe
+                                                                                ( \v9 v10 ->
+                                                                                    coe
+                                                                                      MAlonzo.Code.Peras.QQCD.Node.Model.du_chains_86
+                                                                                      (coe v10)
+                                                                                )
                                                                             )
                                                                         )
                                                                     )
@@ -1620,10 +1630,12 @@ d_voting_250 v0 =
                                                                                   )
                                                                                   ( coe
                                                                                       MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                                      ( \v10 v11 ->
-                                                                                          coe
-                                                                                            MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
-                                                                                            v11
+                                                                                      ( coe
+                                                                                          ( \v10 v11 ->
+                                                                                              coe
+                                                                                                MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertSeen_104
+                                                                                                (coe v11)
+                                                                                          )
                                                                                       )
                                                                                   )
                                                                                   ( coe
@@ -1643,10 +1655,14 @@ d_voting_250 v0 =
                                                                                             )
                                                                                             ( coe
                                                                                                 MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                                                ( \v11 v12 ->
-                                                                                                    coe
-                                                                                                      MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertOnChain_110
-                                                                                                      v12
+                                                                                                ( coe
+                                                                                                    ( \v11 v12 ->
+                                                                                                        coe
+                                                                                                          MAlonzo.Code.Peras.QQCD.Node.Model.du_latestCertOnChain_110
+                                                                                                          ( coe
+                                                                                                              v12
+                                                                                                          )
+                                                                                                    )
                                                                                                 )
                                                                                             )
                                                                                             ( coe
@@ -1703,11 +1719,15 @@ d_voting_250 v0 =
                                                                                                                         )
                                                                                                                         ( coe
                                                                                                                             MAlonzo.Code.Peras.QQCD.State.du_use_260
-                                                                                                                            ( \v13
-                                                                                                                               v14 ->
-                                                                                                                                  coe
-                                                                                                                                    MAlonzo.Code.Peras.QQCD.Node.Model.du_creatorId_62
-                                                                                                                                    v14
+                                                                                                                            ( coe
+                                                                                                                                ( \v13
+                                                                                                                                   v14 ->
+                                                                                                                                      coe
+                                                                                                                                        MAlonzo.Code.Peras.QQCD.Node.Model.du_creatorId_62
+                                                                                                                                        ( coe
+                                                                                                                                            v14
+                                                                                                                                        )
+                                                                                                                                )
                                                                                                                             )
                                                                                                                         )
                                                                                                                     )
@@ -1735,13 +1755,19 @@ d_voting_250 v0 =
                                                                                                                              v15 ->
                                                                                                                                 coe
                                                                                                                                   MAlonzo.Code.Peras.QQCD.Node.Model.du_votes_92
-                                                                                                                                  v15
+                                                                                                                                  ( coe
+                                                                                                                                      v15
+                                                                                                                                  )
                                                                                                                           )
-                                                                                                                          ( coe
-                                                                                                                              MAlonzo.Code.Agda.Builtin.List.C__'8759'__22
-                                                                                                                              ( coe
-                                                                                                                                  v13
-                                                                                                                              )
+                                                                                                                          ( \v14 ->
+                                                                                                                              coe
+                                                                                                                                MAlonzo.Code.Agda.Builtin.List.C__'8759'__22
+                                                                                                                                ( coe
+                                                                                                                                    v13
+                                                                                                                                )
+                                                                                                                                ( coe
+                                                                                                                                    v14
+                                                                                                                                )
                                                                                                                           )
                                                                                                                       )
                                                                                                                       ( coe

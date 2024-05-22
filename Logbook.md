@@ -1,3 +1,137 @@
+## 2024-05-22
+
+### Prototype Architecture
+
+Trying to figure out what the high-level architecture of a prototype could look like:
+
+![[High-level Architecture of Peras](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589768585230&cot=14)](docs/diagrams/peras-architecture.png)
+
+### 1-1 w/ James
+
+Some ideas we discussed with James related to the work we are doing in Innovation Streams with Formal methods:
+
+* Write a relatively detailed experience report on the various FM projects that have been carried on at IOG/Cardano, emphaisizing how they were built, why they were built, how they are used (or not):
+  * Plutus
+  * Conway Ledger
+  * Gödel project (counter-example)
+  * Peras
+  * Leios
+  * ??? (Plutus-ha ?)
+* This paper would be both shared publicly with the community and published at [Funarch](https://icfp24.sigplan.org/home/funarch-2024) workshop
+* We should also highlight the "FM engineering gaps" that could be the focus of internal development efforts (eg. tooling, IDEs, documentation, patterns...)
+* I believe there's an appetite to know more about these methods and Agda language, we could run an "Agda Coding Dojo" on a weekly or bi-weekly basis, publicly on discord, in order to share with the wider community how these tools could be put to use
+  * This could also be useful to educate more people at least in being able to read and understand the general ideas behind those tools
+* We also briefly discussed other tools like Model Checking (close to conformance testing we are trying to build for Peras) and Lean
+
+## 2024-05-21
+
+### Meeting w/ Quviq
+
+Next steps:
+1. Share the full paper
+2. Define the property we want to test
+3. Tour of Agda code to know where to plug-in
+4. Sketch the testing model together
+
+### Clarifying Agda/Haskell interactions
+
+The following picture attempts to clarify the relationship between Agda and Haskell as it's been explored recently:
+
+![[Agda-Haskell Interactions](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589706996014&cot=14)](docs/diagrams/agda-haskell-interactions.jpg)
+
+* Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than Agda2hs and Haskell's `Prelude` obviously
+* Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (Eg. numbers, lists, tuples, etc.)
+* The Agda code separates `Types` from `Impl`ementation in order to ease generation
+* `Types` are generated using agda2hs to provide unmangled names and simple structures on the Haskell side
+* `Impl` is generate usign GHC to enable full use of stdlib stuff, with toplevel _interface_ functions generated with unmangled names
+* `Types` are also taken into account when compiling using GHC but they are only "virtual", eg. the compiler makes the GHC-generated code depend on the agda2hs generated types
+* Hand-written Haskell code can call unmangled types and functions
+
+### Chain weight in block headers
+
+Just like the Praos header being signed increases the confidence a node has in the validity of the length claim and thus allows a node to select chain (and pass to downstream peers) before downloading all its block bodies, we could add the weight of the chain to the header as a simple 64 bits field thus making it possible to select chain without having to verify immediately the certificates which would be provided with the bodies.
+
+```
+header =
+  [ header_body
+  , body_signature : $kes_signature
+  ]
+
+header_body =
+  [ block_number     : uint
+  , slot             : uint
+  , weight           : uint
+  , prev_hash        : $hash32 / null
+  , issuer_vkey      : $vkey
+  , vrf_vkey         : $vrf_vkey
+  , vrf_result       : $vrf_cert ; replaces nonce_vrf and leader_vrf
+  , block_body_size  : uint
+  , block_body_hash  : $hash32 ; merkle triple root
+  , operational_cert
+  , [ protocol_version ]
+  ]
+```
+
+This would prevent any risk of compromising block diffusion time, while at the same time avoiding or at least significantly reducing DoS or similar attacks because of unverified or unverifiable chain selection based on weight.
+
+## 2024-05-20
+
+### Dynamic QuickCheck for new Agda+Haskell workflow
+
+The new tests [`Peras.ChainWeightSpec`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-quickcheck/test/peras/ChainWeightSpec.hs#L1) check both (1) that the implementation being tested matches the output of the specification and (2) that an Agda property [`Peras.SmallStep.Experiment.propNeverShortens`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment.lagda.md#L1) holds.
+
+Overall findings from the Agda+Haskell experiment are the following:
+
+1. It is feasible to use non-`agda2hs` properties in Haskell tests by carefully use of Agda pragmas to generate `MAlonzo` and `agda2hs` code. The approach avoids ever referencing mangled names, but it does require some indirection and separation of interface vs implementation.
+2. The situation would be far simplier if one could use a pure Agda state-machine testing framework instead of having to export code to Haskell and then test there.
+3. The `StateModel` and `RunModel` of `quickcheck-dynamic` seem a little out of sync with this use case where the model and its properties are known to be correct because of Agda proofs and only the implementation is being tested.
+
+## 2024-05-17
+
+### Formal specification
+
+Changed the reflexive transitive closure of the small-step semantics to a List-like syntax similar to what has been proposed in `test-demo`. This allows to express execution steps in a concise way and could be used as DSL for specifying test-cases and attack-scenarios. An example of the new syntax is shown below:
+
+```agda
+      _ : initialState ↝⋆ finalState
+      _ =    NextSlot empty  -- slot 1
+          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
+          ↣ Deliver (honest refl (here refl) BlockReceived)
+          ↣ NextSlot empty  -- slot 2
+          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Deliver (honest refl (here refl) VoteReceived)
+          ↣ NextSlot empty  -- slot 3
+          ↣ ∎
+```
+
+The example above shows only the execution path and all the details are omitted. See [`Peras.SmallStep.Execution`](https://github.com/input-output-hk/peras-design/blob/30c0d9a493dec46d6b34dad821924d063b3657b9/src/Peras/SmallStep/Execution.lagda.md#L1) for the full example.
+
+### Proof of principle for calling unmangled Agda code from Haskell
+
+The module [`Peras.ChainWeight`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-quickcheck/src/Peras/ChainWeight.hs#L1) demonstrates how Agda code that uses the standard library (not `agda2hs`) can be called from a Haskell function via stable, unmangled names (types and functions) generated by `agda` and `agda2hs`. The basic recipe is as follows:
+
+1.  The data types used by Haskell clients must be created use `Haskell.Prelude` and be created by `agda2hs` via the `{-# COMPILE AGDA2HS ... #-}` pragma.
+    - Types involving natural numbers must be hand-coded using `{-# FOREIGN AGDA2HS ... #-}` because they compile to `Integer` in `MAlonzo` but to `Natural` in `agda2hs`.
+    - Fields may not contain identifiers that violate Haskell naming requirements.
+2.  Those types are used as the concrete implementation in the very module where they are defined via the `{-# COMPILE GHC ... = data ... #-}` pragma.
+3.  Functions that are called by Haskell are annotated with the `{-# COMPILE GHC ... as ... #-}` pragma.
+    - Every argument must be of a type that was generated with `{-# COMPILE AGDA2HS #-}` or is a basic numeric type or unit.
+    - Functions cannot have arguments using natural numbers, tuples, `Maybe` etc.
+    - Functions may contain identifiers that violate Haskell naming requirements.
+4.  The `agda --compile --ghc-dont-call-ghc --no-main` command generates mangled Haskell under `MAlonzo.Code.Peras`, except that is uses the unmangled types in `Peras` and has unmangled function names.
+
+[`Peras.ChainWeight`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-quickcheck/src/Peras/ChainWeight.hs#L1) uses both unmangled types and unmangled functions:
+
+- The Agda [`Peras.SmallStep.Experiment.Types`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment/Types.lagda.md#L1) contains a `NodeState` types that becomes normal Haskell in [`Peras.SmallStep.Experiment.Types`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-hs/src/Peras/SmallStep/Experiment/Types.hs#L1). It also contains `NodeTransition` consisting of the output and the new state: normally one would just use a tuple for this, but a data type had to be created because tuples in `MAlonzo` not tuples in the Haskell prelude.
+- The Haskell [`MAlonzo.Code.Peras.SmallStep.Experiment.Types`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-hs/src/MAlonzo/Code/Peras/SmallStep/Experiment/Types.hs#L1) references that generated type via a pattern synonym.
+- The Agda [`Peras.SmallStep.Experiment.Impl`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment/Impl.lagda.md#L1) contains the function needed by the Haskell, but it uses identifiers that are not legal for Haskell. Thus, we could not use `{-# COMPILE AGDA2HS ... as ... #-}` to access it from Haskell.
+- Instead, we'll use the mangled names in [`MAlonzo.Code.Peras.SmallStep.Experiment.Impl`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-hs/src/MAlonzo/Code/Peras/SmallStep/Experiment/Impl.hs#L1) by importing them into the Agda [`Peras.SmallStep.Experiment`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment.lagda.md#L1) and then accessing that from Haskell as [`Peras.SmallStep.Experiment`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-hs/src/Peras/SmallStep/Experiment.hs#L1).
+
+Thus, two types of indirection are needed to avoid dealing with unmangled names:
+
+1. Use `agda2hs` to generate Haskell-friendly types that are used as the concrete implementation in Agda.
+2. Separate the implementation, which typically is not friendly to Haskell, from the function exported via `agda2hs`.
+
 ## 2024-05-16
 
 ### Design of voting layer
