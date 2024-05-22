@@ -88,6 +88,8 @@ Message-injective′ = contraposition Message-injective
 Messages can be delayed by an adversary. Delay is either
   * *0* for not delayed
   * *1* when delayed to the next slot.
+
+TODO: Rethink network delay model
 ```agda
 Delay = Fin 2
 ```
@@ -191,7 +193,10 @@ has to fulfil all the properties mentioned below:
 
     field
 ```
-Properties that must hold with respect to blocks and votes
+Properties that must hold with respect to blocks and votes.
+
+TODO: Use the properties (A1) - (A9) of the block-tree with certificates instead
+as proposed in the paper.
 
 ```agda
       instantiated :
@@ -276,20 +281,19 @@ The block tree type is defined as follows:
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
 ```
--->
-### Parameterized module
+### Additional parameters
 
-  * blockTree
-  * slot leader predicate
-  * voting committee membership predicate
-  * tx selection
-  * The list of parties
+In addition to the parameters already introduced above we introduce the
+following parameters
+
+  * The type of the block-tree
   * AdversarialState₀ is the initial adversarial state
+  * Tx selection function per party and slot number
+  * The list of parties
+
 ```agda
-  module _ {tT : Set}
-           {blockTree : TreeType tT}
-           {AdversarialState : Set}
-           {adversarialState₀ : AdversarialState}
+  module _ {tT : Set} {blockTree : TreeType tT}
+           {AdversarialState : Set} {adversarialState₀ : AdversarialState}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties}
 
@@ -297,10 +301,9 @@ The block tree type is defined as follows:
 
     open TreeType blockTree
 ```
-### State update
+#### Block-tree update
 
-Updating the local state upon receiving a message: Votes and blocks received as messages
-are delegated to the block tree.
+Updating the block-tree upon receiving a message for vote and block messages.
 
 ```agda
     data _[_]→_ : tT → Message → tT → Set where
@@ -313,7 +316,7 @@ are delegated to the block tree.
           --------------------------------
         → t [ BlockMsg b ]→ extendTree t b
 ```
-### Vote in round
+#### Vote in round
 
 When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
@@ -342,7 +345,9 @@ cool-down phase.
           ---------------------------------
         → VoteInRound t (MkRoundNumber r)
 ```
-### Global state
+### State
+
+The small-step semantics rely on a global state.
 
 ```agda
     record State : Set where
@@ -395,13 +400,15 @@ Ticking the global clock
 ```
 ## Fetching
 
-A party receives messages from the global state by fetching messages assigned to the party,
-updating the local block tree and putting the local state back into the global state.
+A party receives messages from the global state by fetching messages assigned to
+the party, updating the local block tree and putting the local state back into
+the global state.
 
 ```agda
     data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → State → Message → State → Set where
 ```
-An honest party consumes a message from the global message buffer and updates the local state
+An honest party consumes a message from the global message buffer and updates
+the local state
 ```agda
       honest : ∀ {p} {tₚ tₚ′} {m} {c s ms hs as}
         → lookup s p ≡ just tₚ
@@ -475,22 +482,24 @@ is added to be consumed immediately.
         → Honest {p} ⊢
             M ⇉ (VoteMsg v , zero , p , tₚ ↑ M)
 ```
-Rather than creating a delayed vote, an adversary can honestly create it and delay the message
+Rather than creating a delayed vote, an adversary can honestly create it and
+delay the message.
 
 ## Block creation
 
-A party can create a new block by adding it to the local block tree and gossiping the
-block creation messages to the other parties. Block creation is possible, if
+A party can create a new block by adding it to the local block tree and
+gossiping the block creation messages to the other parties. Block creation is
+possible, if
   * the block signature is correct
   * the party is the slot leader
 
-Block creation updates the party's local state and for all other parties a message
-is added to be consumed immediately.
+Block creation updates the party's local state and for all other parties a
+message is added to be consumed immediately.
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Set where
 ```
-During regular execution of the protocol, i.e. not in cool-down phase, no certificate
-reference is included in the block.
+During regular execution of the protocol, i.e. not in cool-down phase, no
+certificate reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
@@ -551,7 +560,8 @@ During a cool-down phase, the block includes a certificate reference.
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , tₚ ↑ M)
 ```
-Rather than creating a delayed block, an adversary can honestly create it and delay the message
+Rather than creating a delayed block, an adversary can honestly create it and
+delay the message.
 
 ## Small-step semantics
 
@@ -743,8 +753,9 @@ When the current state is collision free, previous states were so too
 
 ## Forging free predicate
 
-Signatures are not modelled explicitly. Instead we assume that the adversary cannot send any
-block with the `creatorId` of an honest party that is not already in the block history.
+Signatures are not modelled explicitly. Instead we assume that the adversary
+cannot send any block with the `creatorId` of an honest party that is not
+already in the block history.
 
 ```agda
     data ForgingFree (N : State) : Set where
