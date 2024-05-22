@@ -1,5 +1,11 @@
 ## 2024-05-22
 
+### Prototype Architecture
+
+Trying to figure out what the high-level architecture of a prototype could look like:
+
+![[High-level Architecture of Peras](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589768585230&cot=14)](docs/diagrams/peras-architecture.png)
+
 ### 1-1 w/ James
 
 Some ideas we discussed with James related to the work we are doing in Innovation Streams with Formal methods:

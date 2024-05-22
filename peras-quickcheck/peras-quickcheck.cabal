@@ -65,7 +65,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.ChainWeight
+    exposed-modules: Peras.Abstract.Protocol.Types
+                     Peras.ChainWeight
                      Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary
                      Peras.QCD.Node.Conformance
@@ -99,7 +100,8 @@ library
                       quickcheck-dynamic,
                       quickcheck-instances,
                       random,
-                      text
+                      text,
+                      time
 
     -- Directories containing source files.
     hs-source-dirs:   src
