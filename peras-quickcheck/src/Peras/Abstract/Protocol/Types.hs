@@ -21,6 +21,8 @@ data PerasParams = PerasParams
   -- ^ Length of chain-ignorance period.
   , perasK :: Natural
   -- ^ Length of cool-down period.
+  , perasL :: Natural
+  -- ^ Minimum age for voted block.
   , perasΔ :: Natural
   -- ^ Delivery guarantee for diffusion.
   }
@@ -47,13 +49,13 @@ initialState =
     , certStar = genesisCert
     }
 
-type Fetching m = TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m ()
+type Fetching m = PerasParams -> TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m ()
 
-type BlockCreation m = TVar PerasState -> SlotNumber -> m ()
+type BlockCreation m = PerasParams -> TVar PerasState -> SlotNumber -> m ()
 
-type Voting m = TVar PerasState -> RoundNumber -> Preagreement m -> m ()
+type Voting m = PerasParams -> TVar PerasState -> RoundNumber -> Preagreement m -> m ()
 
-type Preagreement m = TVar PerasState -> RoundNumber -> m (Maybe (Block, VotingWeight))
+type Preagreement m = PerasParams -> TVar PerasState -> RoundNumber -> m (Maybe (Block, VotingWeight))
 
 type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (Either CryptoError Block)
 

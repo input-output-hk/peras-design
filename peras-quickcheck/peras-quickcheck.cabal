@@ -66,6 +66,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules: Peras.Abstract.Protocol.Crypto
+                     Peras.Abstract.Protocol.Preagreement
                      Peras.Abstract.Protocol.Types
                      Peras.ChainWeight
                      Peras.QCD.Node.API
