@@ -410,10 +410,10 @@ the global state.
 An honest party consumes a message from the global message buffer and updates
 the local state
 ```agda
-      honest : ∀ {p} {tₚ tₚ′} {m} {c s ms hs as}
-        → lookup s p ≡ just tₚ
+      honest : ∀ {p} {t t′} {m} {c s ms hs as}
+        → lookup s p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
-        → tₚ [ m ]→ tₚ′
+        → t [ m ]→ t′
           ----------------------------------------
         → Honest {p} ⊢
           ⟦ c
@@ -423,7 +423,7 @@ the local state
           , as
           ⟧ [ m ]⇀
           ⟦ c
-          , insert p tₚ′ s
+          , insert p t′ s
           , ms ─ m∈ms
           , hs
           , as
@@ -442,7 +442,7 @@ An adversarial party might delay a message
           , as
           ⟧ [ m ]⇀
           ⟦ c
-          , s -- TODO: insert p tₚ s
+          , s -- TODO: insert p t s
           , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
           , hs
           , as′
@@ -470,7 +470,6 @@ is added to be consumed immediately.
                     ; blockHash = hash $ tipBest (clock earlierBy L) t
                     ; signature = sig
                     }
-              tₚ = addVote t v
           in
           vote ≡ v
         → lookup stateMap p ≡ just t
@@ -478,9 +477,9 @@ is added to be consumed immediately.
         → StartOfRound clock r
         → IsCommitteeMember p r prf
         → VoteInRound t r
-          -------------------------------------
+          ----------------------------------------------
         → Honest {p} ⊢
-            M ⇉ (VoteMsg v , zero , p , tₚ ↑ M)
+            M ⇉ (VoteMsg v , zero , p , addVote t v ↑ M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -516,7 +515,6 @@ certificate reference is included in the block.
                                }
                     ; signature = sig
                     }
-              tₚ = extendTree t b
           in
           block ≡ b
         → lookup stateMap p ≡ just t
@@ -524,7 +522,7 @@ certificate reference is included in the block.
         → IsSlotLeader p clock prf
           --------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , tₚ ↑ M)
+            M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
 During a cool-down phase, the block includes a certificate reference.
 ```agda
@@ -544,7 +542,6 @@ During a cool-down phase, the block includes a certificate reference.
                                }
                     ; signature = sig
                     }
-              tₚ = extendTree t b
               cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
               cert′ = latestCertSeen t
               cts = certs t
@@ -556,9 +553,9 @@ During a cool-down phase, the block includes a certificate reference.
         → ¬ Any (λ { c → (roundNumber c) + 2 ≡ r }) cts -- (a)
         → r ≤ A + (roundNumber cert′)                   -- (b)
         → (roundNumber cert′) > (roundNumber cert⋆)     -- (c)
-          --------------------------------------
+          -----------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , tₚ ↑ M)
+            M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
 delay the message.
