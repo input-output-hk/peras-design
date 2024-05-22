@@ -5,17 +5,21 @@ module Peras.Block where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false)
-open import Data.List using (List; null)
+open import Data.List using (List; null; head; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.Maybe using (Maybe; maybe′)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Unit using (⊤)
+open import Function using (_∘_)
 open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 open import Relation.Nullary using (yes; no; ¬_)
+
+open import Data.Nat.Properties using (≤-totalOrder)
+open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
 import Relation.Binary.PropositionalEquality as Equ
 open Equ using (_≡_; _≢_)
@@ -143,6 +147,12 @@ record Certificate where
   roundNumber = getRoundNumber round
   
 open Certificate public
+
+findCert : RoundNumber → List Certificate → Maybe Certificate
+findCert r = head ∘ filter ((_≟-RoundNumber r) ∘ round)
+
+latestCert : Certificate → List Certificate → Certificate
+latestCert = argmax roundNumber
 
 record Block where
   constructor MkBlock
