@@ -65,7 +65,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.Abstract.Protocol.Types
+    exposed-modules: Peras.Abstract.Protocol.Crypto
+                     Peras.Abstract.Protocol.Types
                      Peras.ChainWeight
                      Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary

@@ -8,7 +8,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
-import Peras.Crypto (Hash (MkHash), LeadershipProof)
+import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
@@ -55,15 +55,25 @@ type Voting m = TVar PerasState -> RoundNumber -> Preagreement m -> m ()
 
 type Preagreement m = TVar PerasState -> RoundNumber -> m (Maybe (Block, VotingWeight))
 
-type CreateSignedBlock m = SlotNumber -> Party -> Hash Block -> Maybe Certificate -> LeadershipProof -> Payload -> m Block
+type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (Either CryptoError Block)
 
-type CreateSignedCertificate m = RoundNumber -> Set Vote -> m Certificate
+type CreateSignedCertificate m = Party -> RoundNumber -> Set Vote -> m (Either CryptoError Certificate)
 
-type CreateSignedVote m = RoundNumber -> Party -> Hash Block -> LeadershipProof -> VotingWeight -> m Vote
+type CreateSignedVote m = Party -> RoundNumber -> Hash Block -> MembershipProof -> VotingWeight -> m (Either CryptoError Vote)
+
+type CreateLeadershipProof m = SlotNumber -> Set Party -> m (Either CryptoError LeadershipProof)
+
+type CreateMembershipProof m = RoundNumber -> Set Party -> m (Either CryptoError MembershipProof)
 
 type VotingWeight = Natural
 
 type Payload = [Tx]
+
+data CryptoError
+  = BlockCreationFailed String
+  | CertificationCreationFailed String
+  | VoteCreationFailed String
+  deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber
 systemStart = 0
