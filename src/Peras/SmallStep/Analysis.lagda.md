@@ -35,7 +35,7 @@ module _ ⦃ _ : Params ⦄ where
 <!--
 ```agda
   instance
-    nZ : NonZero T -- TODO: why is this needed..?
+    nZ : NonZero U -- TODO: why is this needed..?
     nZ = T-nonZero
 ```
 -->
@@ -112,8 +112,8 @@ Reflexive, transitive closure of the small step relation
 ```
 ## Execution
 ```agda
-  rnd : ℕ → ⦃ _ : NonZero T ⦄ → ℕ
-  rnd s = s / T
+  rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
+  rnd s = s / U
 ```
 ```agda
   Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
