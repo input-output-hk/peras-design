@@ -20,7 +20,6 @@ open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
-open TreeType
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
 
@@ -65,6 +64,8 @@ module _ {block₀}
            (txSelection : SlotNumber → PartyId → List Tx)
            where
 
+    open TreeType blockTree
+
     private
 ```
 This is a very simple example of the execution of the protocol in the small-step semantics. There are only 2 parties and both parties are honest. The first party is the slot leader in the first slot and creates a block. The block is then delivered to the second party. The second party receives the block and the protocol moves to the next slot.
@@ -83,10 +84,7 @@ Initial state
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
-          initialMap = fromList (
-              (p₁ , tree₀ blockTree)
-            ∷ (p₂ , tree₀ blockTree)
-            ∷ [])
+          initialMap = fromList ((p₁ , tree₀) ∷ (p₂ , tree₀) ∷ [])
 ```
 ```agda
       postulate
@@ -97,7 +95,7 @@ Initial state
       b = record
             { slotNumber = MkSlotNumber 1
             ; creatorId = p₁
-            ; parentBlock = hash $ tipBest blockTree (MkSlotNumber 1) (tree₀ blockTree) -- TODO: hash $ tip block₀
+            ; parentBlock = hash $ tipBest (MkSlotNumber 1) tree₀ -- TODO: hash $ tip block₀
             ; certificate = nothing
             ; leadershipProof = prf
             ; bodyHash = blockHash
@@ -119,7 +117,7 @@ Initial state
             { votingRound = MkRoundNumber 1
             ; creatorId = p₁
             ; proofM = prf'
-            ; blockHash = hash $ tipBest blockTree (MkSlotNumber 1) (extendTree blockTree (tree₀ blockTree) b) -- TODO: hash $ tip b
+            ; blockHash = hash $ tipBest (MkSlotNumber 1) (extendTree tree₀ b) -- TODO: hash $ tip b
             ; signature = sig'
             }
 ```
@@ -129,8 +127,8 @@ Final state after the execution of all the steps
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , VoteMsg v ∷ BlockMsg b ∷ [] , adversarialState₀ ⟧
         where
           finalMap = fromList (
-              (p₁ , addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v)
-            ∷ (p₂ , addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v)
+              (p₁ , addVote (extendTree tree₀ b) v)
+            ∷ (p₂ , addVote (extendTree tree₀ b) v)
             ∷ [])
 ```
 ```agda
@@ -151,11 +149,11 @@ Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
 
-      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen blockTree (extendTree blockTree t b) ≡ latestCertSeen blockTree t
-      latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs (is-TreeType blockTree) t b
+      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (extendTree t b) ≡ latestCertSeen t
+      latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
 
-      latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
-      latestCert≡cert₀' rewrite instantiated-certs (is-TreeType blockTree) = refl
+      latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
+      latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
 ```
 Execution trace of the protocol
 ```agda
@@ -172,14 +170,14 @@ Execution trace of the protocol
 Trace dependent properties
 ```agda
           where
-            latestCert≡cert₀ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
+            latestCert≡cert₀ : latestCertSeen (extendTree tree₀ b) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
 
-            vr-1a : 1 ≡ roundNumber (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b)) + 1
+            vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ b)) + 1
             vr-1a rewrite latestCert≡cert₀ = refl
 
-            vr-1b : (latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b))
-              PointsInto (bestChain blockTree (MkSlotNumber 2) (extendTree blockTree (tree₀ blockTree) b))
+            vr-1b : (latestCertSeen (extendTree tree₀ b))
+              PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ b))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-              valid (is-TreeType blockTree) (extendTree blockTree (tree₀ blockTree) b) (MkSlotNumber 2)
+              valid is-TreeType (extendTree tree₀ b) (MkSlotNumber 2)
 ```
