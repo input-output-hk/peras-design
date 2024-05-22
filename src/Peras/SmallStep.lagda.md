@@ -11,7 +11,6 @@ open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
-open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
@@ -24,8 +23,6 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (⌊_⌋; ¬?)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
-
-open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
 open import Peras.Block
 open import Peras.Chain
@@ -145,7 +142,8 @@ leadership and voting committee membership) and the cryptographic signatures
   * `IsVoteSignature`
   * `IsSlotLeader`
   * `IsBlockSignature`
-
+The parameters for the Peras protocol and hash functions are defined as instance
+arguments of the module.
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
          {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
@@ -157,26 +155,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
          ⦃ _ : Params ⦄
          where
 ```
-  Bringing the hash function into scope
-
-```agda
-  open Hashable ⦃...⦄
-```
   The block tree, resp. the validity of the chain is defined with respect of the
   parameters.
-
 ```agda
+  open Hashable ⦃...⦄
   open Params ⦃...⦄
 ```
-```agda
-  getCert : RoundNumber → List Certificate → Maybe Certificate
-  getCert r = head ∘ filter ((_≟-RoundNumber r) ∘ round)
-```
-```agda
-  latestCert : List Certificate → Certificate
-  latestCert = argmax roundNumber cert₀
-```
-
 #### Block-tree
 
 A block-tree is defined by properties - an implementation of the block-tree
@@ -247,11 +231,11 @@ Properties that must hold with respect to blocks and votes
 
       non-quorum : ∀ (t : tT) (r : RoundNumber)
         → length (votes t) < τ
-        → getCert r (certs t) ≡ nothing
+        → findCert r (certs t) ≡ nothing
 
       quorum : ∀ (t : tT) (r : RoundNumber) (c : Certificate)
         → length (votes t) ≥ τ
-        → getCert r (certs t) ≡ just c
+        → findCert r (certs t) ≡ just c
 
 ```
 In addition to blocks the block-tree manages votes and certificates as well.
@@ -278,10 +262,10 @@ The block tree type is defined as follows:
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
     latestCertOnChain : SlotNumber → T → Certificate
-    latestCertOnChain s = latestCert ∘ catMaybes ∘ map certificate ∘ bestChain s
+    latestCertOnChain s = latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ bestChain s
 
     latestCertSeen : T → Certificate
-    latestCertSeen = latestCert ∘ certs
+    latestCertSeen = latestCert cert₀ ∘ certs
 
   open TreeType
 ```
@@ -587,7 +571,7 @@ During a cool-down phase, the block includes a certificate reference.
 ```
 Rather than creating a delayed block, an adversary can honestly create it and delay the message
 
-# Small-step semantics
+## Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
 
@@ -621,7 +605,7 @@ The small-step semantics describe the evolution of the global state.
         → M ↝ tick M
 ```
 
-## Reflexive, transitive closure
+### Reflexive, transitive closure
 
 ```agda
     infix  2 _↝⋆_
@@ -653,7 +637,7 @@ The small-step semantics describe the evolution of the global state.
 ```
 -->
 
-# Collision free predicate
+## Collision free predicate
 
 <!--
 ```agda
@@ -738,7 +722,7 @@ that there are no hash collisions during the execution of the protocol.
 ```
 -->
 
-## Properties
+### Properties
 
 When the current state is collision free, the pervious state was so too
 
@@ -775,7 +759,7 @@ When the current state is collision free, previous states were so too
 ```
 -->
 
-# Forging free predicate
+## Forging free predicate
 
 Signatures are not modelled explicitly. Instead we assume that the adversary cannot send any
 block with the `creatorId` of an honest party that is not already in the block history.
