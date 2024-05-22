@@ -1,3 +1,22 @@
+## 2024-05-22
+
+### 1-1 w/ James
+
+Some ideas we discussed with James related to the work we are doing in Innovation Streams with Formal methods:
+
+* Write a relatively detailed experience report on the various FM projects that have been carried on at IOG/Cardano, emphaisizing how they were built, why they were built, how they are used (or not):
+  * Plutus
+  * Conway Ledger
+  * Gödel project (counter-example)
+  * Peras
+  * Leios
+  * ??? (Plutus-ha ?)
+* This paper would be both shared publicly with the community and published at [Funarch](https://icfp24.sigplan.org/home/funarch-2024) workshop
+* We should also highlight the "FM engineering gaps" that could be the focus of internal development efforts (eg. tooling, IDEs, documentation, patterns...)
+* I believe there's an appetite to know more about these methods and Agda language, we could run an "Agda Coding Dojo" on a weekly or bi-weekly basis, publicly on discord, in order to share with the wider community how these tools could be put to use
+  * This could also be useful to educate more people at least in being able to read and understand the general ideas behind those tools
+* We also briefly discussed other tools like Model Checking (close to conformance testing we are trying to build for Peras) and Lean
+
 ## 2024-05-21
 
 ### Meeting w/ Quviq
