@@ -76,8 +76,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (p₁ , Honest) ∷ (p₂ , Honest) ∷ []
 
-      LocalState′ = Stateˡ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
-      GlobalState = Stateᵍ {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {A} {blockTree} {AdversarialState} {adversarialState₀} {txSelection} {parties}
 ```
 Initial state
 ```agda
@@ -85,8 +84,8 @@ Initial state
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
           initialMap = fromList (
-              (p₁ , ⟪ tree₀ blockTree ⟫)
-            ∷ (p₂ , ⟪ tree₀ blockTree ⟫)
+              (p₁ , tree₀ blockTree)
+            ∷ (p₂ , tree₀ blockTree)
             ∷ [])
 ```
 ```agda
@@ -130,8 +129,8 @@ Final state after the execution of all the steps
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , VoteMsg v ∷ BlockMsg b ∷ [] , adversarialState₀ ⟧
         where
           finalMap = fromList (
-              (p₁ , ⟪ addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v ⟫)
-            ∷ (p₂ , ⟪ addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v ⟫)
+              (p₁ , addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v)
+            ∷ (p₂ , addVote blockTree (extendTree blockTree (tree₀ blockTree) b) v)
             ∷ [])
 ```
 ```agda
@@ -153,9 +152,10 @@ Based on properties of the blocktree we can show the following
       open IsTreeType
 
       latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen blockTree (extendTree blockTree t b) ≡ latestCertSeen blockTree t
-      latestCert-extendTree≡latestCert {t} {b} =
-        cong (latestCert {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature}) $
-        extendable-certs (is-TreeType blockTree) t b
+      latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs (is-TreeType blockTree) t b
+
+      latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
+      latestCert≡cert₀' rewrite instantiated-certs (is-TreeType blockTree) = refl
 ```
 Execution trace of the protocol
 ```agda
@@ -172,9 +172,6 @@ Execution trace of the protocol
 Trace dependent properties
 ```agda
           where
-            latestCert≡cert₀' : latestCertSeen blockTree (tree₀ blockTree) ≡ cert₀
-            latestCert≡cert₀' rewrite (instantiated-certs (is-TreeType blockTree)) = refl
-
             latestCert≡cert₀ : latestCertSeen blockTree (extendTree blockTree (tree₀ blockTree) b) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
 
