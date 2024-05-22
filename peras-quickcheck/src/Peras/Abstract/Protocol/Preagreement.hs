@@ -17,7 +17,7 @@ preagreement :: MonadIO m => Preagreement m
 preagreement PerasParams{..} stateVar round =
   do
     PerasState{..} <- liftIO $ readTVarIO stateVar
-    let oldEnough MkBlock{slotNumber} = getSlotNumber slotNumber + fromIntegral perasL <= getRoundNumber round * fromIntegral perasU
+    let oldEnough MkBlock{slotNumber} = getSlotNumber slotNumber + perasL <= getRoundNumber round * perasU
     pure $
       case dropWhile oldEnough chainPref of
         [block] -> Just (block, 1) -- FIXME: Compute correct weight based on stake distribution.

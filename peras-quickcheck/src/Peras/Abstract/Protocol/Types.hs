@@ -13,17 +13,17 @@ import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
 data PerasParams = PerasParams
-  { perasU :: Natural
+  { perasU :: Integer
   -- ^ Round length.
-  , perasA :: Natural
+  , perasA :: Integer
   -- ^ Certificate expiration age.
-  , perasR :: Natural
+  , perasR :: Integer
   -- ^ Length of chain-ignorance period.
-  , perasK :: Natural
+  , perasK :: Integer
   -- ^ Length of cool-down period.
-  , perasL :: Natural
+  , perasL :: Integer
   -- ^ Minimum age for voted block.
-  , perasΔ :: Natural
+  , perasΔ :: Integer
   -- ^ Delivery guarantee for diffusion.
   }
   deriving (Eq, Generic, Show)
@@ -51,11 +51,15 @@ initialState =
 
 type Fetching m = PerasParams -> TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m ()
 
-type BlockCreation m = PerasParams -> TVar PerasState -> SlotNumber -> m ()
+type BlockCreation m = PerasParams -> TVar PerasState -> SlotNumber -> DiffuseBlock m -> m ()
 
-type Voting m = PerasParams -> TVar PerasState -> RoundNumber -> Preagreement m -> m ()
+type Voting m = PerasParams -> TVar PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m ()
 
 type Preagreement m = PerasParams -> TVar PerasState -> RoundNumber -> m (Maybe (Block, VotingWeight))
+
+type DiffuseBlock m = Block -> m ()
+
+type DiffuseVote m = Vote -> m ()
 
 type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (Either CryptoError Block)
 
