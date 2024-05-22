@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.Abstract.Protocol.Crypto (
@@ -13,8 +14,9 @@ module Peras.Abstract.Protocol.Crypto (
   createMembershipProof,
 ) where
 
+import Control.Monad.Except (throwError)
 import Data.Foldable (toList)
-import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, CryptoError (..))
+import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..))
 import Peras.Block (Block (..), Certificate (..), Party (..))
 import Peras.Chain (Vote (..))
 import Peras.Crypto (LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
@@ -31,12 +33,12 @@ createSignedBlock MkParty{pid = creatorId} slotNumber parentBlock certificate le
   signature = sign (creatorId, slotNumber, parentBlock, certificate, leadershipProof, bodyHash)
 
 createSignedCertificate :: Applicative m => CreateSignedCertificate m
-createSignedCertificate _ round votes =
+createSignedCertificate _ votes =
   pure $
-    case toList $ blockHash `S.map` votes of
-      [blockRef] -> pure MkCertificate{..}
-      [] -> Left $ CertificationCreationFailed "Cannot create a certificate from no votes."
-      _ -> Left $ CertificationCreationFailed "Cannot create a certificate from votes for different blocks."
+    case toList $ S.map (\MkVote{votingRound, blockHash} -> (votingRound, blockHash)) votes of
+      [(round, blockRef)] -> pure MkCertificate{..}
+      [] -> throwError $ CertificationCreationFailed "Cannot create a certificate from no votes."
+      _ -> throwError $ CertificationCreationFailed "Cannot create a certificate from votes for different blocks."
 
 createSignedVote :: Applicative m => CreateSignedVote m
 createSignedVote MkParty{pid = creatorId} votingRound blockHash proofM votes =
