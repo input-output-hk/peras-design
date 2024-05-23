@@ -1,11 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Peras.Abstract.Protocol.Diffusion (
-  DiffuseBlock,
-  diffuseBlock,
-  DiffuseVote,
-  diffuseVote,
-) where
+module Peras.Abstract.Protocol.Diffusion where
 
 import Data.Set (Set)
 import GHC.Generics (Generic)
@@ -21,6 +16,9 @@ data Diffuser = MkDiffuser
   , pendingVotes :: Set Vote
   }
   deriving (Eq, Generic, Show)
+
+defaultDiffuser :: Diffuser
+defaultDiffuser = MkDiffuser{pendingBlocks = mempty, pendingVotes = mempty}
 
 diffuseBlock :: MonadSTM m => TVar m Diffuser -> DiffuseBlock m
 diffuseBlock diffuserVar block =

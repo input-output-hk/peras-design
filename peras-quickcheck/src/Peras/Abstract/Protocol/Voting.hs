@@ -25,19 +25,18 @@ voting params party perasState roundNumber preagreement diffuseVote = runExceptT
     (Just (block, stake)) -> do
       -- If party P is (voting) committee member in a round r,
       if isCommitteeMember party roundNumber
-        then pure ()
-        else do
-          proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
+        then do
           -- then create a vote v = (r, P, h, π, σ), where
           -- h is the hash of B,
           -- π is the slot-leadership proof,
+          proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
           -- and σ is a signature on the rest of v.
           vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
           -- Add v to V and diffuse it.
           lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
           ExceptT $ diffuseVote vote
-          pure ()
+        else pure ()
 
 isCommitteeMember :: Party -> RoundNumber -> Bool
-isCommitteeMember MkParty{pkey = MkVerificationKey bytes} roundNumber =
-  bytes `modulo` fromIntegral roundNumber == 0
+isCommitteeMember MkParty{pid} roundNumber =
+  pid == fromIntegral roundNumber

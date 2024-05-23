@@ -15,23 +15,38 @@ import Peras.Orphans ()
 
 data PerasParams = MkPerasParams
   { perasU :: Integer
-  -- ^ Round length.
+  -- ^ Round length, in slots
   , perasA :: Integer
-  -- ^ Certificate expiration age.
+  -- ^ Certificate expiration age, in slots
   , perasR :: Integer
-  -- ^ Length of chain-ignorance period.
+  -- ^ Length of chain-ignorance period, in rounds
   , perasK :: Integer
-  -- ^ Length of cool-down period.
+  -- ^ Length of cool-down period, in slots
   , perasL :: Integer
-  -- ^ Minimum age for voted block.
+  -- ^ Minimum age for voted block, in slots
   , perasτ :: Integer
-  -- ^ Quorum size.
+  -- ^ Quorum size, as a percentage of total expected votes
   , perasB :: Integer
-  -- ^ Certificate boost.
+  -- ^ Certificate boost, in blocks
   , perasΔ :: Integer
-  -- ^ Delivery guarantee for diffusion.
+  -- ^ Delivery guarantee for diffusion, in slots
   }
   deriving (Eq, Generic, Show)
+
+-- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
+-- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
+defaultParams :: PerasParams
+defaultParams =
+  MkPerasParams
+    { perasU = 20
+    , perasA = 2160
+    , perasR = 100
+    , perasK = 2160
+    , perasL = 100
+    , perasτ = 75
+    , perasB = 100
+    , perasΔ = 5
+    }
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
 data PerasState = MkPerasState
@@ -44,8 +59,8 @@ data PerasState = MkPerasState
   }
   deriving (Eq, Generic, Show)
 
-initialState :: PerasState
-initialState =
+initialPerasState :: PerasState
+initialPerasState =
   MkPerasState
     { chainPref = genesisChain
     , chains = singleton genesisChain
