@@ -696,17 +696,17 @@ that there are no hash collisions during the execution of the protocol.
 When the current state is collision free, the pervious state was so too
 
 ```agda
-    ↝-collision-free : ∀ {N₁ N₂ : State}
-      → N₁ ↝ N₂
-      → CollisionFree N₂
+    ↝-collision-free :
+        M ↝ N
+      → CollisionFree N
         ----------------
-      → CollisionFree N₁
+      → CollisionFree M
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
-    ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
-    ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
+    ↝-collision-free (CastVote x) cf-N = []⇉-collision-free cf-N x
+    ↝-collision-free (CreateBlock x) cf-N =  []↷-collision-free cf-N x
     ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
 ```
 -->
@@ -714,17 +714,17 @@ When the current state is collision free, the pervious state was so too
 When the current state is collision free, previous states were so too
 
 ```agda
-    ↝⋆-collision-free : ∀ {N₁ N₂ : State}
-      → N₁ ↝⋆ N₂
-      → CollisionFree N₂
+    ↝⋆-collision-free :
+        M ↝⋆ N
+      → CollisionFree N
         ----------------
-      → CollisionFree N₁
+      → CollisionFree M
 ```
 <!--
 ```agda
     ↝⋆-collision-free ([]′) N = N
-    ↝⋆-collision-free (N₁↝N₂ ∷′ N₂↝⋆N₃) N₃ =
-      ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+    ↝⋆-collision-free (M↝N ∷′ N↝⋆O) O =
+      ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
 ```
 -->
 
