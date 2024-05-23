@@ -73,7 +73,7 @@ initialPerasState =
 
 type Fetching m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> Set Chain -> Set Vote -> m (Either PerasError ())
 
-type BlockCreation m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> DiffuseBlock m -> m (Either PerasError ())
+type BlockCreation m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> [Tx] -> DiffuseBlock m -> m (Either PerasError ())
 
 type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
 
