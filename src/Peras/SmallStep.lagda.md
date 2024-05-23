@@ -89,7 +89,7 @@ Messages can be delayed by an adversary. Delay is either
   * *0* for not delayed
   * *1* when delayed to the next slot.
 
-TODO: Rethink network delay model
+**TODO**: Rethink network delay model
 ```agda
 Delay = Fin 2
 ```
@@ -146,24 +146,17 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 The model takes a couple of parameters: `block₀` denotes the genesis block,
 `cert₀` is certificate for the first voting round referencing the genesis block.
 In addition there are the following relations abstracting the lotteries (slot
-leadership and voting committee membership) and the cryptographic signatures
-
-  * `IsCommitteeMember`
-  * `IsVoteSignature`
-  * `IsSlotLeader`
-  * `IsBlockSignature`
-
+leadership and voting committee membership) and the cryptographic signatures.
 The parameters for the Peras protocol and hash functions are defined as instance
 arguments of the module.
+
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
-         {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
-         {IsVoteSignature : Vote → Signature → Set}
-         {IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set}
-         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Postulates ⦄
+
          where
 ```
   The block tree, resp. the validity of the chain is defined with respect of the
@@ -171,6 +164,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
   open Hashable ⦃...⦄
   open Params ⦃...⦄
+  open Postulates ⦃...⦄
 ```
 #### Block-tree
 
@@ -195,7 +189,7 @@ has to fulfil all the properties mentioned below:
 ```
 Properties that must hold with respect to blocks and votes.
 
-TODO: Use the properties (A1) - (A9) of the block-tree with certificates instead
+**TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
 as proposed in the paper.
 
 ```agda
@@ -215,13 +209,13 @@ as proposed in the paper.
         → allBlocks (addVote t v) ≐ allBlocks t
 
       valid : ∀ (t : T) (sl : SlotNumber)
-        → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
+        → ValidChain {block₀} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : SlotNumber)
         → let b = bestChain sl t
               cts = certs t
           in
-          ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
+          ValidChain {block₀} c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
@@ -229,7 +223,7 @@ as proposed in the paper.
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
       valid-votes : ∀ (t : T)
-        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t)
+        → All ValidVote (votes t)
 
       unique-votes : ∀ (t : T) (v : Vote)
         → let vs = votes t
@@ -376,27 +370,41 @@ The global state consists of the following fields:
 ```agda
         adversarialState : S
 ```
-Progress
+#### Progress
+
+Rather that keeping track of progress, we introduce a predicate stating that all
+messages that are not delayed have been delivered. This is a precondition that
+must hold before transitioning to the next slot.
 ```agda
     Delivered : State → Set
     Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open State
 ```
-Updating global state
-```agda
-    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
-    m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
-      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) (filter (¬? ∘ (p ≟_) ∘ proj₁) parties) ++ ms , m ∷ hs , as ⟧
-```
-Ticking the global clock
+Ticking the global clock increments the slot number and decrements the delay of
+all the messages in the message buffer.
 ```agda
     tick : State → State
-    tick M =
-      record M {
-        clock = next (clock M) ;
-        messages = map (λ where
-          e → record e { delay = decr (delay e) }) (messages M)
-      }
-      where open State
+    tick M = let open State M in
+      record M
+        { clock = next clock
+        ; messages =
+            map (λ where e → record e { delay = decr (delay e) })
+              messages
+        }
+```
+Updating the global state inserting the updated block-tree for a given party,
+adding messages to the message buffer for the other parties and appending the
+history.
+```agda
+    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
+    m , d , p , l ↑ M = let open State M in
+      record M
+        { stateMap = insert p l stateMap
+        ; messages =
+            map (uncurry ⦅_,_, m , d ⦆)
+              (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
+            ++ messages
+        ; history = m ∷ history
+        }
 ```
 ## Fetching
 
@@ -410,43 +418,29 @@ the global state.
 An honest party consumes a message from the global message buffer and updates
 the local state
 ```agda
-      honest : ∀ {p} {t t′} {m} {c s ms hs as}
-        → lookup s p ≡ just t
-        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ ms)
+      honest : ∀ {p} {t t′} {m} {N}
+        → let open State N in
+          lookup stateMap p ≡ just t
+        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
-          ----------------------------------------
+          ------------------------------------------------
         → Honest {p} ⊢
-          ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ m ]⇀
-          ⟦ c
-          , insert p t′ s
-          , ms ─ m∈ms
-          , hs
-          , as
-          ⟧
+          N [ m ]⇀ record N
+            { stateMap = insert p t′ stateMap
+            ; messages = messages ─ m∈ms
+            }
 ```
 An adversarial party might delay a message
 ```agda
-      corrupt : ∀ {p c s ms hs as as′} {m}
-        → (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms)
-          -----------------------------------------
+      corrupt : ∀ {p} {as} {m} {N}
+        → let open State N in
+          (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ messages)
+          -------------------------------------------------
         → Corrupt {p} ⊢
-          ⟦ c
-          , s
-          , ms
-          , hs
-          , as
-          ⟧ [ m ]⇀
-          ⟦ c
-          , s -- TODO: insert p t s
-          , m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
-          , hs
-          , as′
-          ⟧
+          N [ m ]⇀ record N
+            { messages = m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
+            ; adversarialState = as
+            }
 ```
 ## Voting
 
@@ -502,15 +496,17 @@ certificate reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
-              txs = txSelection clock p
               b = record
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tipBest clock t
                     ; certificate = nothing
                     ; leadershipProof = prf
-                    ; bodyHash = blockHash
-                        record { blockHash = hash txs
+                    ; bodyHash =
+                        let txs = txSelection clock p
+                        in blockHash
+                             record
+                               { blockHash = hash txs
                                ; payload = txs
                                }
                     ; signature = sig
@@ -528,32 +524,33 @@ During a cool-down phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
-              r = getRoundNumber (v-round clock)
-              txs = txSelection clock p
               b = record
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tipBest clock t
                     ; certificate = nothing -- TODO: add certificate
                     ; leadershipProof = prf
-                    ; bodyHash = blockHash
-                        record { blockHash = hash txs
+                    ; bodyHash =
+                        let txs = txSelection clock p
+                        in blockHash
+                             record
+                               { blockHash = hash txs
                                ; payload = txs
                                }
                     ; signature = sig
                     }
-              cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
+              cert⋆ = latestCertOnChain clock t
               cert′ = latestCertSeen t
-              cts = certs t
+              r = getRoundNumber (v-round clock)
           in
           block ≡ b
         → lookup stateMap p ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ Any (λ { c → (roundNumber c) + 2 ≡ r }) cts -- (a)
-        → r ≤ A + (roundNumber cert′)                   -- (b)
-        → (roundNumber cert′) > (roundNumber cert⋆)     -- (c)
-          ----------------------------------------------------
+        → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t) -- (a)
+        → r ≤ A + roundNumber cert′                         -- (b)
+        → roundNumber cert′ > roundNumber cert⋆             -- (c)
+          --------------------------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
@@ -716,17 +713,17 @@ that there are no hash collisions during the execution of the protocol.
 When the current state is collision free, the pervious state was so too
 
 ```agda
-    ↝-collision-free : ∀ {N₁ N₂ : State}
-      → N₁ ↝ N₂
-      → CollisionFree N₂
+    ↝-collision-free :
+        M ↝ N
+      → CollisionFree N
         ----------------
-      → CollisionFree N₁
+      → CollisionFree M
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver x) cf-N₂ = []⇀-collision-free cf-N₂ x
-    ↝-collision-free (CastVote x) cf-N₂ = []⇉-collision-free cf-N₂ x
-    ↝-collision-free (CreateBlock x) cf-N₂ =  []↷-collision-free cf-N₂ x
+    ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
+    ↝-collision-free (CastVote x) cf-N = []⇉-collision-free cf-N x
+    ↝-collision-free (CreateBlock x) cf-N =  []↷-collision-free cf-N x
     ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
 ```
 -->
@@ -734,17 +731,17 @@ When the current state is collision free, the pervious state was so too
 When the current state is collision free, previous states were so too
 
 ```agda
-    ↝⋆-collision-free : ∀ {N₁ N₂ : State}
-      → N₁ ↝⋆ N₂
-      → CollisionFree N₂
+    ↝⋆-collision-free :
+        M ↝⋆ N
+      → CollisionFree N
         ----------------
-      → CollisionFree N₁
+      → CollisionFree M
 ```
 <!--
 ```agda
     ↝⋆-collision-free ([]′) N = N
-    ↝⋆-collision-free (N₁↝N₂ ∷′ N₂↝⋆N₃) N₃ =
-      ↝-collision-free N₁↝N₂ (↝⋆-collision-free N₂↝⋆N₃ N₃)
+    ↝⋆-collision-free (M↝N ∷′ N↝⋆O) O =
+      ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
 ```
 -->
 
