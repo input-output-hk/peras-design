@@ -70,6 +70,7 @@ library
                      Peras.Abstract.Protocol.Fetching
                      Peras.Abstract.Protocol.Preagreement
                      Peras.Abstract.Protocol.Types
+                     Peras.Abstract.Protocol.Voting
                      Peras.ChainWeight
                      Peras.QCD.Node.API
                      Peras.QCD.Node.Arbitrary
