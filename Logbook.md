@@ -1,4 +1,25 @@
+## 2024-05-23
+
+### Ledger specification
+
+Going quickly through the Conway spec paper: https://drops.dagstuhl.de/storage/01oasics/oasics-vol118-fmbc2024/OASIcs.FMBC.2024.2/OASIcs.FMBC.2024.2.pdf
+Seems like the approach is very consistent with what have been trying to do in Peras:
+
+* Define underlying fundamental structures over which the Agda specification is parameterised (in this case, sets)
+* Define a declarative transition system along with various properties
+* Turn the declarative TS into a computational TS, providing functions to actually produce new state from old state and transition
+* Use the reference implementation for conformance testing
+
 ## 2024-05-22
+
+### Peras Weekly
+
+* Discussion w/ SC on Preagreement: Do not take into account for now, can use the `L` cutoff window
+  * BA will require 2 rounds of exchange with a cumulative 2/3 chance of another 2 rounds  before reaching agreement on a block or a vote on ⊥
+* Goals for this week:
+  * Define and sketch property for conformance testing (work w/ Quviq)
+  * "Naive" Prototype for latest version of protocol (without taking into account preagreement)
+* Dates and location for meeting confirmed => need to move forward as David is on a sick leave
 
 ### Prototype implementation
 
