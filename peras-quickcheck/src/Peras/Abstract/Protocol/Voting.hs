@@ -20,7 +20,7 @@ import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
 
 voting :: MonadSTM m => Voting m
-voting params@MkPerasParams{perasR} party perasState roundNumber preagreement diffuseVote = runExceptT $ do
+voting params@MkPerasParams{perasR, perasK} party perasState roundNumber preagreement diffuseVote = runExceptT $ do
   MkPerasState{..} <- lift $ readTVarIO perasState
   -- Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot rU + T .
   ExceptT (preagreement params party perasState roundNumber) >>= \case
@@ -29,29 +29,34 @@ voting params@MkPerasParams{perasR} party perasState roundNumber preagreement di
       -- If party P is (voting) committee member in a round r,
       if isCommitteeMember party roundNumber
         then do
-          -- (VR-1A) round(cert') = r − 1 and cert was received at least ∆ before the end of round r − 1,
-          if (round certPrime /= roundNumber - 1)
-            ||
-            -- (VR-1B) B extends the block certified by cert'
-            -- TODO: check extension longer than 1 block
-            (parentBlock block /= blockRef certPrime)
-            then throwError $ NoVoting
-            else -- (VR-2A) r ≥ round(cert ) + R
+          let vr1a = checkVr1a certPrime roundNumber -- TODO: Check timestamp.
+              vr1b = checkVr1b certPrime block -- TODO: Check extension.
+              vr2a = checkVr2a perasR certPrime roundNumber
+              vr2b = checkVr2b perasK certStar roundNumber
+          when (vr1a && vr1b || vr2a && vr2b) $
+            do
+              proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
+              -- and σ is a signature on the rest of v.
+              vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
+              -- Add v to V and diffuse it.
+              lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
+              ExceptT $ diffuseVote vote
+        else -- then create a vote v = (r, P, h, π, σ), where
+        -- h is the hash of B,
+        -- π is the slot-leadership proof,
+          pure ()
 
-              if (round certStar + fromIntegral perasR > roundNumber)
-                then throwError $ NoVoting
-                else pure ()
+-- (VR-1A) round(cert') = r − 1 and cert was received at least ∆ before the end of round r − 1,
+checkVr1a certPrime roundNumber = round certPrime + 1 == roundNumber
 
-          -- then create a vote v = (r, P, h, π, σ), where
-          -- h is the hash of B,
-          -- π is the slot-leadership proof,
-          proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
-          -- and σ is a signature on the rest of v.
-          vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
-          -- Add v to V and diffuse it.
-          lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
-          ExceptT $ diffuseVote vote
-        else pure ()
+-- (VR-1B) B extends the block certified by cert'
+checkVr1b certPrime block = (parentBlock block == blockRef certPrime)
+
+checkVr2a perasR certPrime roundNumber = round certPrime + fromIntegral perasR <= roundNumber
+
+checkVr2b k certStar roundNumber =
+  fromIntegral (roundNumber - round certStar) `mod` k == 0
+    && roundNumber > round certStar
 
 isCommitteeMember :: Party -> RoundNumber -> Bool
 isCommitteeMember MkParty{pid} roundNumber =
