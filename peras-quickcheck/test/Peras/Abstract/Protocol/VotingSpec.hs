@@ -10,22 +10,47 @@ import Peras.Arbitraries (generateWith)
 import Peras.Block (Party (MkParty))
 import Peras.Numbering (RoundNumber)
 import Test.Hspec (Spec, it, shouldReturn, shouldSatisfy)
-import Test.QuickCheck (arbitrary, generate)
+import Test.QuickCheck (arbitrary)
 
 spec :: Spec
-spec =
+spec = do
+  let params = defaultParams
+      roundNumber = 43
+      preagreement _ _ _ _ = pure $ Right $ Just (arbitrary `generateWith` 12, 1)
+
   it "votes on preagreement's block given party is committee member" $ do
-    block <- generate arbitrary
-    let params = defaultParams
-        roundNumber = 43
-        party = committeeMemberFor roundNumber
-        preagreement _ _ _ _ = pure $ Right $ Just (block, 1)
     perasState <- newTVarIO initialPerasState
     diffuser <- newTVarIO defaultDiffuser
 
-    voting params party perasState roundNumber preagreement (diffuseVote diffuser) >>= (`shouldSatisfy` isRight)
+    voting
+      params
+      (committeeMemberFor roundNumber)
+      perasState
+      roundNumber
+      preagreement
+      (diffuseVote diffuser)
+      >>= (`shouldSatisfy` isRight)
 
     (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
+
+  it "does not vote given party is not committee member" $ do
+    perasState <- newTVarIO initialPerasState
+    diffuser <- newTVarIO defaultDiffuser
+
+    voting
+      params
+      (notCommitteeMemberFor roundNumber)
+      perasState
+      roundNumber
+      preagreement
+      (diffuseVote diffuser)
+      >>= (`shouldSatisfy` isRight)
+
+    (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+
+notCommitteeMemberFor :: RoundNumber -> Party
+notCommitteeMemberFor roundNumber =
+  committeeMemberFor (roundNumber + 1)
 
 committeeMemberFor :: RoundNumber -> Party
 committeeMemberFor roundNumber =
