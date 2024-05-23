@@ -80,7 +80,8 @@ library
                      Peras.QCD.Node.Impl.Perfect
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:
+                     Peras.Abstract.Protocol.BytesModulo
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
