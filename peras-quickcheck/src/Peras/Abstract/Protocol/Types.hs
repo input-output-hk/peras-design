@@ -2,7 +2,7 @@
 
 module Peras.Abstract.Protocol.Types where
 
-import Control.Concurrent.STM.TVar (TVar)
+import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
 import GHC.Generics (Generic)
@@ -55,13 +55,13 @@ initialState =
     , certStar = genesisCert
     }
 
-type Fetching m = PerasParams -> Party -> TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m (Either PerasError ())
+type Fetching m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> Set Chain -> Set Vote -> m (Either PerasError ())
 
-type BlockCreation m = PerasParams -> Party -> TVar PerasState -> SlotNumber -> DiffuseBlock m -> m (Either PerasError ())
+type BlockCreation m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> DiffuseBlock m -> m (Either PerasError ())
 
-type Voting m = PerasParams -> Party -> TVar PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
+type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
 
-type Preagreement m = PerasParams -> Party -> TVar PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
+type Preagreement m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
 
 type DiffuseBlock m = Block -> m (PerasResult ())
 

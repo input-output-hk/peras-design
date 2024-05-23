@@ -8,9 +8,6 @@ module Peras.Abstract.Protocol.Fetching (
   fetching,
 ) where
 
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (modifyTVar', readTVar)
-import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (groupBy, maximumBy, sortBy)
@@ -23,12 +20,13 @@ import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (hash)
 import Prelude hiding (round)
 
+import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVar)
 import Data.Map as Map (fromList, keys, keysSet, notMember, union)
 import Data.Set as Set (fromList, intersection, map, size, union)
 
-fetching :: MonadIO m => Fetching m
+fetching :: MonadSTM m => Fetching m
 fetching MkPerasParams{..} party stateVar slot newChains newVotes =
-  liftIO . atomically $ -- FIXME: Do we want fetching to be an atomic operation?
+  atomically $ -- FIXME: Do we want fetching to be an atomic operation?
     do
       MkPerasState{..} <- readTVar stateVar
       let chains' = chains `Set.union` newChains
