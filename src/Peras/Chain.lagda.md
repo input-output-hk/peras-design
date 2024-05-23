@@ -97,11 +97,20 @@ isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
 -}
 ```
 -->
-
 ```agda
-module _ {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
-         {IsVoteSignature : Vote → Signature → Set}
+record Postulates : Set₁ where
+  field
+    IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set
+    IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set
+    IsBlockSignature : Block → Signature → Set
+    IsVoteSignature : Vote → Signature → Set
+```
+```agda
+module _ ⦃ _ : Postulates ⦄
+
          where
+
+  open Postulates ⦃...⦄
 
   ValidVote : Vote → Set
   ValidVote v =
@@ -222,12 +231,13 @@ open import Data.List.Membership.Propositional using (_∈_)
 -->
 ```agda
 module _ {block₀ : Block}
-         {IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set}
-         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Postulates ⦄
+
          where
 
   open Hashable ⦃...⦄
+  open Postulates ⦃...⦄
 ```
 ```agda
   data ValidChain : Chain → Set where

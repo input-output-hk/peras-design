@@ -146,17 +146,7 @@ P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 The model takes a couple of parameters: `block₀` denotes the genesis block,
 `cert₀` is certificate for the first voting round referencing the genesis block.
 In addition there are the following relations abstracting the lotteries (slot
-leadership and voting committee membership) and the cryptographic signatures
-
-```agda
-record Postulates : Set₁ where
-  field
-    IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set
-    IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set
-    IsBlockSignature : Block → Signature → Set
-    IsVoteSignature : Vote → Signature → Set
-```
-
+leadership and voting committee membership) and the cryptographic signatures.
 The parameters for the Peras protocol and hash functions are defined as instance
 arguments of the module.
 
@@ -219,13 +209,13 @@ as proposed in the paper.
         → allBlocks (addVote t v) ≐ allBlocks t
 
       valid : ∀ (t : T) (sl : SlotNumber)
-        → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} (bestChain sl t)
+        → ValidChain {block₀} (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : SlotNumber)
         → let b = bestChain sl t
               cts = certs t
           in
-          ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c
+          ValidChain {block₀} c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
@@ -233,7 +223,7 @@ as proposed in the paper.
         → bestChain sl t ⊆ allBlocksUpTo sl t
 
       valid-votes : ∀ (t : T)
-        → All (ValidVote {IsCommitteeMember} {IsVoteSignature}) (votes t)
+        → All ValidVote (votes t)
 
       unique-votes : ∀ (t : T) (v : Vote)
         → let vs = votes t

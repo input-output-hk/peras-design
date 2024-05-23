@@ -137,7 +137,7 @@ Final state after the execution of all the steps
 ```
 Properties of cert₀
 ```agda
-      cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} {IsSlotLeader} {IsBlockSignature} c → cert₀ PointsInto c
+      cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} c → cert₀ PointsInto c
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _ ∷ _)} (Cons _ _ _ v) = there (cert₀PointsIntoValidChain v)
 ```
