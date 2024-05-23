@@ -2,6 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Peras.Abstract.Protocol.Preagreement (
+  Preagreement,
   preagreement,
 ) where
 
@@ -14,9 +15,9 @@ import Prelude hiding (round)
 
 -- | FIXME: This is a placeholder for the real preagreement algorithm.
 preagreement :: MonadIO m => Preagreement m
-preagreement PerasParams{..} _party stateVar round =
+preagreement MkPerasParams{..} _party stateVar round =
   do
-    PerasState{..} <- liftIO $ readTVarIO stateVar
+    MkPerasState{..} <- liftIO $ readTVarIO stateVar
     let oldEnough MkBlock{slotNumber} = getSlotNumber slotNumber + perasL <= getRoundNumber round * perasU
     pure . pure $
       case dropWhile oldEnough chainPref of

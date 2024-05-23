@@ -3,7 +3,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Peras.Abstract.Protocol.Fetching where
+module Peras.Abstract.Protocol.Fetching (
+  Fetching,
+  fetching,
+) where
 
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TVar (modifyTVar', readTVar)
@@ -24,10 +27,10 @@ import Data.Map as Map (fromList, keys, keysSet, notMember, union)
 import Data.Set as Set (fromList, intersection, map, size, union)
 
 fetching :: MonadIO m => Fetching m
-fetching PerasParams{..} party stateVar slot newChains newVotes =
+fetching MkPerasParams{..} party stateVar slot newChains newVotes =
   liftIO . atomically $ -- FIXME: Do we want fetching to be an atomic operation?
     do
-      PerasState{..} <- readTVar stateVar
+      MkPerasState{..} <- readTVar stateVar
       let chains' = chains `Set.union` newChains
           votes' = votes `Set.union` newVotes
           certsReceived =

@@ -13,7 +13,7 @@ import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
-data PerasParams = PerasParams
+data PerasParams = MkPerasParams
   { perasU :: Integer
   -- ^ Round length.
   , perasA :: Integer
@@ -34,7 +34,7 @@ data PerasParams = PerasParams
   deriving (Eq, Generic, Show)
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
-data PerasState = PerasState
+data PerasState = MkPerasState
   { chainPref :: Chain
   , chains :: Set Chain
   , votes :: Set Vote
@@ -46,7 +46,7 @@ data PerasState = PerasState
 
 initialState :: PerasState
 initialState =
-  PerasState
+  MkPerasState
     { chainPref = genesisChain
     , chains = singleton genesisChain
     , votes = mempty
