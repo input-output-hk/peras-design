@@ -65,7 +65,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules: Peras.Abstract.Protocol.Crypto
+    exposed-modules: Peras.Abstract.Protocol.BlockCreation
+                     Peras.Abstract.Protocol.Crypto
                      Peras.Abstract.Protocol.Diffusion
                      Peras.Abstract.Protocol.Fetching
                      Peras.Abstract.Protocol.Preagreement
@@ -126,6 +127,7 @@ test-suite peras-quickcheck-test
     -- Modules included in this executable, other than Main.
     other-modules: Peras.ChainWeightSpec
                    Peras.ConformanceSpec
+                   Peras.Abstract.Protocol.BlockCreationSpec
                    Peras.Abstract.Protocol.VotingSpec
 
     -- The interface type and version of the test suite.

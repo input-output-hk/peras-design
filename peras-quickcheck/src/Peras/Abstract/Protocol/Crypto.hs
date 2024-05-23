@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -8,7 +9,7 @@ import Data.Foldable (toList)
 import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..), VotingWeight)
 import Peras.Block (Block (..), Certificate (..), Party (..))
 import Peras.Chain (Vote (..))
-import Peras.Crypto (LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
+import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
 import Prelude hiding (round)
 
 import Data.ByteString (ByteString)
@@ -46,3 +47,6 @@ createLeadershipProof = curry $ pure . pure . MkLeadershipProof . Serialize.enco
 
 createMembershipProof :: Applicative m => CreateMembershipProof m
 createMembershipProof = curry $ pure . pure . MkMembershipProof . Serialize.encode . H.hash
+
+instance Hashable [()] where
+  hash _ = MkHash mempty
