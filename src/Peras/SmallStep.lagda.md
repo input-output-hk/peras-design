@@ -370,27 +370,40 @@ The global state consists of the following fields:
 ```agda
         adversarialState : S
 ```
-Progress
+#### Progress
+
+Rather that keeping track of progress, we introduce a predicate stating that all
+messages that are not delayed have been delivered. This is a precondition that
+must hold before transitioning to the next slot.
 ```agda
     Delivered : State → Set
     Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open State
 ```
-Updating global state
-```agda
-    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
-    m , d , p , l ↑ ⟦ c , s , ms , hs , as ⟧ =
-      ⟦ c , insert p l s , map (uncurry ⦅_,_, m , d ⦆) (filter (¬? ∘ (p ≟_) ∘ proj₁) parties) ++ ms , m ∷ hs , as ⟧
-```
-Ticking the global clock
+Ticking the global clock increments the slot number and decrements the delay of
+all the messages in the message buffer.
 ```agda
     tick : State → State
-    tick M =
+    tick M = let open State M in
       record M {
-        clock = next (clock M) ;
-        messages = map (λ where
-          e → record e { delay = decr (delay e) }) (messages M)
+        clock = next clock ;
+        messages = map (λ where e → record e { delay = decr (delay e) })
+                     messages
       }
-      where open State
+```
+Updating the global state inserting the updated block-tree for a given party,
+adding messages to the message buffer for the other parties and appending the
+history.
+```agda
+    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
+    m , d , p , l ↑ M = let open State M in
+      record M
+        { stateMap = insert p l stateMap
+        ; messages =
+            map (uncurry ⦅_,_, m , d ⦆)
+              (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
+            ++ messages
+        ; history = m ∷ history
+        }
 ```
 ## Fetching
 
