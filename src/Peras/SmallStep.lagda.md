@@ -148,22 +148,25 @@ The model takes a couple of parameters: `block₀` denotes the genesis block,
 In addition there are the following relations abstracting the lotteries (slot
 leadership and voting committee membership) and the cryptographic signatures
 
-  * `IsCommitteeMember`
-  * `IsVoteSignature`
-  * `IsSlotLeader`
-  * `IsBlockSignature`
+```agda
+record Postulates : Set₁ where
+  field
+    IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set
+    IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set
+    IsBlockSignature : Block → Signature → Set
+    IsVoteSignature : Vote → Signature → Set
+```
 
 The parameters for the Peras protocol and hash functions are defined as instance
 arguments of the module.
+
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
-         {IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set}
-         {IsVoteSignature : Vote → Signature → Set}
-         {IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set}
-         {IsBlockSignature : Block → Signature → Set}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Postulates ⦄
+
          where
 ```
   The block tree, resp. the validity of the chain is defined with respect of the
@@ -171,6 +174,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
   open Hashable ⦃...⦄
   open Params ⦃...⦄
+  open Postulates ⦃...⦄
 ```
 #### Block-tree
 

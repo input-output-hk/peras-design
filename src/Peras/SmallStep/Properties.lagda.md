@@ -64,17 +64,16 @@ The goal is to show *safety* and *liveness* for the protocol.
 
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
-         (IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set)
-         (IsVoteSignature : Vote → Signature → Set)
-         (IsSlotLeader : PartyId → SlotNumber → LeadershipProof → Set)
-         (IsBlockSignature : Block → Signature → Set)
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Postulates ⦄
+
          where
 
   open Hashable ⦃...⦄
   open Params ⦃...⦄
+  open Postulates ⦃...⦄
 
   module _ {T : Set} (blockTree : TreeType T)
            {S : Set} (adversarialState₀ : S)
@@ -87,7 +86,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     open TreeType blockTree
 
-    GlobalState = State {block₀} {cert₀} {IsCommitteeMember} {IsVoteSignature} {IsSlotLeader} {IsBlockSignature} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+    GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
     states₀ : Map T
     states₀ = foldr (λ where (p , _) m → insert p tree₀ m ) empty parties
