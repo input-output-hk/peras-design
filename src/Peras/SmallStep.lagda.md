@@ -4,13 +4,13 @@ module Peras.SmallStep where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false; _∧_; not)
+open import Data.Bool using (Bool; true; false; _∧_; _∨_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
-open import Data.Maybe using (Maybe; just; nothing; Is-just)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
+open import Data.Maybe using (Maybe; just; nothing; is-just)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
@@ -236,13 +236,6 @@ as proposed in the paper.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
-
-      quorum : ∀ (t : T) (r : RoundNumber) (b : Block)
-        → let h = hash b
-          in
-          length (filter (_≟-RoundNumber r ∘ votingRound)
-            (filter (_≟-BlockHash h ∘ blockHash) (votes t))) ≥ τ
-          ⊎ Is-just (findCert r (filter (_≟-BlockHash h ∘ blockRef) (certs t)))
 ```
 In addition to blocks the block-tree manages votes and certificates as well.
 The block tree type is defined as follows:
@@ -272,6 +265,17 @@ The block tree type is defined as follows:
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
+
+    votes′ : T → RoundNumber → Block → List Vote
+    votes′ t r b =
+      filter (_≟-RoundNumber r ∘ votingRound)
+        $ filter (_≟-BlockHash (hash b) ∘ blockHash) (votes t)
+
+    certs′ : T → RoundNumber → Block → List Certificate
+    certs′ t r b = filter (_≟-BlockHash (hash b) ∘ blockRef) (certs t)
+
+    quorum : T → RoundNumber → Block → Bool
+    quorum t r b = ⌊ length (votes′ t r b) ≥? τ ⌋ ∨ is-just (findCert r (certs′ t r b))
 ```
 ### Additional parameters
 
