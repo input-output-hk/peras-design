@@ -4,14 +4,17 @@
 
 module Peras.Abstract.Protocol.Voting where
 
+import Prelude hiding (round)
+
 import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
-import Control.Monad.Except (ExceptT (..), runExceptT)
+import Control.Monad (when)
+import Control.Monad.Except (ExceptT (..), runExceptT, throwError)
 import Control.Monad.Trans (lift)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.BytesModulo (modulo)
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote)
-import Peras.Abstract.Protocol.Types (PerasState (..), Voting)
-import Peras.Block (Party (..))
+import Peras.Abstract.Protocol.Types (NoVotingReason (LastSeenCertNotFromPreviousRound), PerasError (..), PerasState (..), Voting)
+import Peras.Block (Certificate (..), Party (..))
 import Peras.Crypto (Hashable (..), VerificationKey (MkVerificationKey))
 import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
@@ -26,6 +29,11 @@ voting params party perasState roundNumber preagreement diffuseVote = runExceptT
       -- If party P is (voting) committee member in a round r,
       if isCommitteeMember party roundNumber
         then do
+          -- (VR-1A) round(cert') = r − 1 and cert was received at least ∆ before the end of round r − 1,
+          when (round certPrime /= roundNumber - 1) $
+            throwError $
+              NoVoting $
+                LastSeenCertNotFromPreviousRound certPrime roundNumber
           -- then create a vote v = (r, P, h, π, σ), where
           -- h is the hash of B,
           -- π is the slot-leadership proof,

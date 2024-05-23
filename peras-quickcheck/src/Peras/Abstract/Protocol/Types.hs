@@ -103,6 +103,10 @@ data PerasError
   | BlockCreationFailed String
   | CertificationCreationFailed String
   | VoteCreationFailed String
+  | NoVoting NoVotingReason
+  deriving (Eq, Generic, Ord, Show)
+
+data NoVotingReason = LastSeenCertNotFromPreviousRound Certificate RoundNumber
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber
