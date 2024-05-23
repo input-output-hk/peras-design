@@ -1,5 +1,16 @@
 ## 2024-05-22
 
+### Prototype implementation
+
+We paired on defining interfaces for the Peras protocol. The design emphasizes interfaces (types and functions) that correspond closely to the algorithm described in Figure 2 of the draft paper. We opted for this approach in constrast to a more sophisticated implementation.
+
+So far the following modules have been provisionally implemented:
+
+- Fetching
+- A placeholder for preagreement
+- Diffusion
+- Cryptographic placeholders
+
 ### Prototype Architecture
 
 Trying to figure out what the high-level architecture of a prototype could look like:
