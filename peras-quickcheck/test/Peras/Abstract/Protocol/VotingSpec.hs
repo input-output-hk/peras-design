@@ -6,19 +6,20 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Data.Either (isRight)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Diffusion (defaultDiffuser, diffuseVote, pendingVotes)
-import Peras.Abstract.Protocol.Types (NoVotingReason (..), PerasError (..), PerasState (..), defaultParams, initialPerasState)
+import Peras.Abstract.Protocol.Types (PerasError (..), PerasParams (..), PerasState (..), defaultParams, initialPerasState)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..), Party (MkParty))
 import Peras.Crypto (hash)
-import Test.Hspec (Spec, it, shouldReturn, shouldSatisfy)
+import Test.Hspec (Spec, describe, it, shouldReturn, shouldSatisfy)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
 
 spec :: Spec
 spec = do
   let params = defaultParams
-      roundNumber = 43
+      MkPerasParams{perasR} = params
+      roundNumber = 430
       someChain = arbitrary `generateWith` 42
       someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}
       someBlock = (arbitrary `generateWith` 12){parentBlock = blockRef someCertificate}
@@ -61,36 +62,55 @@ spec = do
 
     (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
 
-  it "does not vote if last seen certificate is older than previous round" $ do
-    let certPrime = someCertificate{round = roundNumber - 2}
-        lastSeenCertificateOlderThanPreviousRound = initialPerasState{certPrime}
-    perasState <- newTVarIO lastSeenCertificateOlderThanPreviousRound
-    diffuser <- newTVarIO defaultDiffuser
+  describe "VR1-A" $
+    it "does not vote if last seen certificate is older than previous round" $ do
+      let certPrime = someCertificate{round = roundNumber - 2}
+          lastSeenCertificateOlderThanPreviousRound = initialPerasState{certPrime}
+      perasState <- newTVarIO lastSeenCertificateOlderThanPreviousRound
+      diffuser <- newTVarIO defaultDiffuser
 
-    voting
-      params
-      committeeMember
-      perasState
-      roundNumber
-      preagreement
-      (diffuseVote diffuser)
-      `shouldReturn` Left (NoVoting $ LastSeenCertNotFromPreviousRound certPrime roundNumber)
+      voting
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreement
+        (diffuseVote diffuser)
+        `shouldReturn` Left NoVoting
 
-    (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+      (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
 
-  it "does not vote if block does not extend immediately last seen certificate" $ do
-    let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
-        preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
-    perasState <- newTVarIO steadyState
-    diffuser <- newTVarIO defaultDiffuser
+  describe "VR1-B" $
+    it "does not vote if block does not extend immediately last seen certificate" $ do
+      let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
+          preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
+      perasState <- newTVarIO steadyState
+      diffuser <- newTVarIO defaultDiffuser
 
-    voting
-      params
-      committeeMember
-      perasState
-      roundNumber
-      preagreementSelectsFork
-      (diffuseVote diffuser)
-      `shouldReturn` Left (NoVoting $ BlockDoesNotExtendLastSeenCert blockOnFork someCertificate)
+      voting
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreementSelectsFork
+        (diffuseVote diffuser)
+        `shouldReturn` Left NoVoting
 
-    (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+      (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+
+  describe "VR2-A" $
+    it "votes on preagreement's block given last seen certificate is older than cooldown period" $ do
+      let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}}
+      perasState <- newTVarIO cooldownState
+      diffuser <- newTVarIO defaultDiffuser
+
+      voting
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreement
+        (diffuseVote diffuser)
+        >>= (`shouldSatisfy` isRight)
+
+      (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1

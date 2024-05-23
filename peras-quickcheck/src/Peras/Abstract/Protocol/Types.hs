@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
 
@@ -103,12 +104,7 @@ data PerasError
   | BlockCreationFailed String
   | CertificationCreationFailed String
   | VoteCreationFailed String
-  | NoVoting NoVotingReason
-  deriving (Eq, Generic, Ord, Show)
-
-data NoVotingReason
-  = LastSeenCertNotFromPreviousRound Certificate RoundNumber
-  | BlockDoesNotExtendLastSeenCert Block Certificate
+  | NoVoting
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber
