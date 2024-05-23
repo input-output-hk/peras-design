@@ -384,12 +384,12 @@ all the messages in the message buffer.
 ```agda
     tick : State → State
     tick M = let open State M in
-      record M {
-        clock = next clock ;
-        messages =
-          map (λ where e → record e { delay = decr (delay e) })
-            messages
-      }
+      record M
+        { clock = next clock
+        ; messages =
+            map (λ where e → record e { delay = decr (delay e) })
+              messages
+        }
 ```
 Updating the global state inserting the updated block-tree for a given party,
 adding messages to the message buffer for the other parties and appending the
