@@ -46,7 +46,7 @@ fetching MkPerasParams{..} party stateVar slot newChains newVotes =
             do
               let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
                   -- FIXME: Figure 2 of the protocol does not specify which
-                  -- chain is preferred when there is a tie for weighiest
+                  -- chain is preferred when there is a tie for heaviest
                   -- chain.
                   chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
                   certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'

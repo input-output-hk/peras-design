@@ -13,8 +13,8 @@ import Control.Monad.Trans (lift)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.BytesModulo (modulo)
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote)
-import Peras.Abstract.Protocol.Types (NoVotingReason (LastSeenCertNotFromPreviousRound), PerasError (..), PerasState (..), Voting)
-import Peras.Block (Certificate (..), Party (..))
+import Peras.Abstract.Protocol.Types (NoVotingReason (BlockDoesNotExtendLastSeenCert, LastSeenCertNotFromPreviousRound), PerasError (..), PerasState (..), Voting)
+import Peras.Block (Block (..), Certificate (..), Party (..))
 import Peras.Crypto (Hashable (..), VerificationKey (MkVerificationKey))
 import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
@@ -34,6 +34,12 @@ voting params party perasState roundNumber preagreement diffuseVote = runExceptT
             throwError $
               NoVoting $
                 LastSeenCertNotFromPreviousRound certPrime roundNumber
+          -- (VR-1B) B extends the block certified by cert'
+          -- TODO: check extension longer than 1 block
+          when (parentBlock block /= blockRef certPrime) $
+            throwError $
+              NoVoting $
+                BlockDoesNotExtendLastSeenCert block certPrime
           -- then create a vote v = (r, P, h, π, σ), where
           -- h is the hash of B,
           -- π is the slot-leadership proof,

@@ -106,7 +106,9 @@ data PerasError
   | NoVoting NoVotingReason
   deriving (Eq, Generic, Ord, Show)
 
-data NoVotingReason = LastSeenCertNotFromPreviousRound Certificate RoundNumber
+data NoVotingReason
+  = LastSeenCertNotFromPreviousRound Certificate RoundNumber
+  | BlockDoesNotExtendLastSeenCert Block Certificate
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber

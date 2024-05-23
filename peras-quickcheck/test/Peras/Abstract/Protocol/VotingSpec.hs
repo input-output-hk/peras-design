@@ -9,7 +9,8 @@ import Peras.Abstract.Protocol.Diffusion (defaultDiffuser, diffuseVote, pendingV
 import Peras.Abstract.Protocol.Types (NoVotingReason (..), PerasError (..), PerasState (..), defaultParams, initialPerasState)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
-import Peras.Block (Certificate (..), Party (MkParty))
+import Peras.Block (Block (..), Certificate (..), Party (MkParty))
+import Peras.Crypto (hash)
 import Test.Hspec (Spec, it, shouldReturn, shouldSatisfy)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
@@ -18,11 +19,17 @@ spec :: Spec
 spec = do
   let params = defaultParams
       roundNumber = 43
-      someCertificate = arbitrary `generateWith` 42
-      preagreement _ _ _ _ = pure $ Right $ Just (arbitrary `generateWith` 12, 1)
+      someChain = arbitrary `generateWith` 42
+      someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}
+      someBlock = (arbitrary `generateWith` 12){parentBlock = blockRef someCertificate}
+      preagreement _ _ _ _ = pure $ Right $ Just (someBlock, 1)
       committeeMember = MkParty (fromIntegral roundNumber) (arbitrary `generateWith` 42)
       nonCommitteeMember = MkParty (fromIntegral roundNumber + 1) (arbitrary `generateWith` 42)
-      steadyState = initialPerasState{certPrime = someCertificate{round = roundNumber - 1}}
+      steadyState =
+        initialPerasState
+          { chainPref = someChain
+          , certPrime = someCertificate
+          }
 
   it "votes on preagreement's block given party is committee member" $ do
     perasState <- newTVarIO steadyState
@@ -40,7 +47,7 @@ spec = do
     (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
 
   it "does not vote given party is not committee member" $ do
-    perasState <- newTVarIO initialPerasState
+    perasState <- newTVarIO steadyState
     diffuser <- newTVarIO defaultDiffuser
 
     voting
@@ -68,5 +75,22 @@ spec = do
       preagreement
       (diffuseVote diffuser)
       `shouldReturn` Left (NoVoting $ LastSeenCertNotFromPreviousRound certPrime roundNumber)
+
+    (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+
+  it "does not vote if block does not extend immediately last seen certificate" $ do
+    let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
+        preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
+    perasState <- newTVarIO steadyState
+    diffuser <- newTVarIO defaultDiffuser
+
+    voting
+      params
+      committeeMember
+      perasState
+      roundNumber
+      preagreementSelectsFork
+      (diffuseVote diffuser)
+      `shouldReturn` Left (NoVoting $ BlockDoesNotExtendLastSeenCert blockOnFork someCertificate)
 
     (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
