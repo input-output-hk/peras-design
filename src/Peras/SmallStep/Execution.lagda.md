@@ -129,6 +129,8 @@ Final state after the execution of all the steps
       finalState : GlobalState
       finalState = ⟦ MkSlotNumber 6 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
+          -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
+          -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
           finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           finalTree = addVote (extendTree tree₀ block₁) vote₁
           finalMap = fromList ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
@@ -152,25 +154,29 @@ Based on properties of the blocktree we can show the following
 Execution trace of the protocol
 ```agda
       module _
-        (isSlotLeader₁ : IsSlotLeader party₁ (MkSlotNumber 1) (createLeadershipProof (MkSlotNumber 1) party₁))
-        (isBlockSignature₁ : IsBlockSignature block₁ (createBlockSignature (creatorId block₁)))
-        (isCommitteeMember₁ : IsCommitteeMember party₁ (MkRoundNumber 1) (createMembershipProof (MkRoundNumber 1) party₁))
-        (isVoteSignature₁ : IsVoteSignature vote₁ (createVoteSignature (creatorId vote₁)))
---        (isSlotLeader₃ : IsSlotLeader party₂ (MkSlotNumber 3) (createLeadershipProof (MkSlotNumber 3) party₂))
---        (isBlockSignature₃ : IsBlockSignature block₃ (createBlockSignature (creatorId block₃)))
+        (isSlotLeader : ∀ {p} {s} → IsSlotLeader p s (createLeadershipProof s p))
+        (isBlockSignature : ∀ {b} → IsBlockSignature b (createBlockSignature (creatorId b)))
+        (isCommitteeMember : ∀ {p} {s} → IsCommitteeMember p s (createMembershipProof s p))
+        (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
 
         _ : initialState ↝⋆ finalState
         _ =  NextSlot empty  -- slot 1
-          ↣ CreateBlock (honest refl refl isBlockSignature₁ isSlotLeader₁)
+          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ↣ Deliver (honest refl (here refl) BlockReceived)
           ↣ NextSlot empty  -- slot 2
-          ↣ CastVote (honest refl refl isVoteSignature₁ refl isCommitteeMember₁ (Regular vr-1a vr-1b))
+          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Deliver (honest refl (here refl) VoteReceived)
           ↣ NextSlot empty  -- slot 3
---          ↣ CreateBlock (honest refl refl isBlockSignature₃ isSlotLeader₃)
+--          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
 --          ↣ Deliver (honest refl (here refl) BlockReceived)
+--
+-- Checking Peras.SmallStep.Execution (/build/zz1xvsqhxyydv60s1wr35yx8wpib5h1x-source/src/Peras/SmallStep/Execution.lagda.md).
+-- agda: Heap exhausted;
+-- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
+-- agda: Use `+RTS -M<size>' to increase it.
+--
           ↣ NextSlot empty  -- slot 4
           ↣ NextSlot empty  -- slot 5
           ↣ NextSlot empty  -- slot 6
