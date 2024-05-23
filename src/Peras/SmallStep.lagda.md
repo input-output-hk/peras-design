@@ -89,7 +89,7 @@ Messages can be delayed by an adversary. Delay is either
   * *0* for not delayed
   * *1* when delayed to the next slot.
 
-TODO: Rethink network delay model
+**TODO**: Rethink network delay model
 ```agda
 Delay = Fin 2
 ```
@@ -189,7 +189,7 @@ has to fulfil all the properties mentioned below:
 ```
 Properties that must hold with respect to blocks and votes.
 
-TODO: Use the properties (A1) - (A9) of the block-tree with certificates instead
+**TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
 as proposed in the paper.
 
 ```agda
@@ -496,15 +496,17 @@ certificate reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
-              txs = txSelection clock p
               b = record
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tipBest clock t
                     ; certificate = nothing
                     ; leadershipProof = prf
-                    ; bodyHash = blockHash
-                        record { blockHash = hash txs
+                    ; bodyHash =
+                        let txs = txSelection clock p
+                        in blockHash
+                             record
+                               { blockHash = hash txs
                                ; payload = txs
                                }
                     ; signature = sig
@@ -522,32 +524,33 @@ During a cool-down phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
-              r = getRoundNumber (v-round clock)
-              txs = txSelection clock p
               b = record
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tipBest clock t
                     ; certificate = nothing -- TODO: add certificate
                     ; leadershipProof = prf
-                    ; bodyHash = blockHash
-                        record { blockHash = hash txs
+                    ; bodyHash =
+                        let txs = txSelection clock p
+                        in blockHash
+                             record
+                               { blockHash = hash txs
                                ; payload = txs
                                }
                     ; signature = sig
                     }
-              cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
+              cert⋆ = latestCertOnChain clock t
               cert′ = latestCertSeen t
-              cts = certs t
+              r = getRoundNumber (v-round clock)
           in
           block ≡ b
         → lookup stateMap p ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ Any (λ { c → (roundNumber c) + 2 ≡ r }) cts -- (a)
-        → r ≤ A + (roundNumber cert′)                   -- (b)
-        → (roundNumber cert′) > (roundNumber cert⋆)     -- (c)
-          ----------------------------------------------------
+        → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t) -- (a)
+        → r ≤ A + roundNumber cert′                         -- (b)
+        → roundNumber cert′ > roundNumber cert⋆             -- (c)
+          --------------------------------------------------------
         → Honest {p} ⊢
             M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
 ```
