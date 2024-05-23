@@ -1,23 +1,22 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.Abstract.Protocol.Crypto where
 
+import Prelude hiding (round)
+
 import Control.Monad.Except (throwError)
 import Data.Foldable (toList)
-import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..), VotingWeight)
+import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..))
 import Peras.Block (Block (..), Certificate (..), Party (..))
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
-import Prelude hiding (round)
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Serialize as Serialize (encode)
 import qualified Data.Set as S (map)
-import System.Random (mkStdGen, uniformR)
 
 createSignedBlock :: Applicative m => CreateSignedBlock m
 createSignedBlock MkParty{pid = creatorId} slotNumber parentBlock certificate leadershipProof bodyHash =
