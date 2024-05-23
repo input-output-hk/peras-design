@@ -386,8 +386,9 @@ all the messages in the message buffer.
     tick M = let open State M in
       record M {
         clock = next clock ;
-        messages = map (λ where e → record e { delay = decr (delay e) })
-                     messages
+        messages =
+          map (λ where e → record e { delay = decr (delay e) })
+            messages
       }
 ```
 Updating the global state inserting the updated block-tree for a given party,
