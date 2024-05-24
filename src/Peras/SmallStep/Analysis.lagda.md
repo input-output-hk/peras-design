@@ -7,7 +7,7 @@ open import Data.Bool using (Bool; true; false)
 open import Data.Maybe.Properties using (≡-dec)
 open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; zero; suc; NonZero; _/_)
 
-open import Data.Product using (_×_; _,_; ∃-syntax)
+open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Vec using (Vec; _∷ʳ_; []; _++_; replicate)
 open import Data.List using (List; any; map; length)
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
@@ -28,7 +28,7 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
-open import Data.Tree.AVL.Map PartyIdO using (Map; lookup; insert; empty)
+open import Data.Tree.AVL.Map PartyIdO using (Map; lookup; insert; empty; toList)
 ```
 -->
 ## Protocol Analysis
@@ -81,9 +81,14 @@ for a given block-tree.
       let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
       in 0 <ᵇ length (votes′ t r b)
 ```
-Assign a letter for a voting round for a given block-tree
+Assign a letter for a voting round for a list of block-trees:
+
+  * 1 : if at least one party saw a round-i block certificate before the end of round i
+  * ? : else if at least one party voted in round i
+  * 0 : otherwise
+
 ```agda
-    σᵢ : ∀ (i : RoundNumber) → List T → Σ
+    σᵢ : RoundNumber → List T → Σ
     σᵢ i ts
       with any (hasQuorum i) ts
       with any (hasVotes i) ts
@@ -91,9 +96,15 @@ Assign a letter for a voting round for a given block-tree
     ... | false | true  = ？
     ... | false | false = 🄀
 ```
+Building up the voting string from all the parties block-trees
 ```agda
-    postulate
-      build-σ : ∀ {n} → Map T → VotingString n
+    build-σ : ∀ (n : ℕ) → Map T → VotingString n
+    build-σ n s = go n
+      where
+        ts = map proj₂ (toList s)
+        go : ∀ n → VotingString n
+        go 0 = []
+        go (suc n) = go n ∷ʳ σᵢ (MkRoundNumber n) ts
 ```
 ### Voting string analysis
 ```agda
@@ -176,9 +187,9 @@ Reflexive, transitive closure of the small step relation
       GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
       postulate
-        theorem-2 : ∀ {M N : GlobalState}
+        theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
-          → build-σ {m} (stateMap M) ⟶⋆ build-σ {n} (stateMap N)
+          → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
 
 ```
 ## Execution
