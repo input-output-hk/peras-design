@@ -275,7 +275,7 @@ The block tree type is defined as follows:
     certs′ t r b = filter (_≟-BlockHash (hash b) ∘ blockRef) (certs t)
 
     quorum : T → RoundNumber → Block → Bool
-    quorum t r b = ⌊ length (votes′ t r b) ≥? τ ⌋ ∨ is-just (findCert r (certs′ t r b))
+    quorum t r b = (τ ≤ᵇ length (votes′ t r b)) ∨ is-just (findCert r (certs′ t r b))
 ```
 ### Additional parameters
 
