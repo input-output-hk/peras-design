@@ -5,7 +5,8 @@ module Peras.SmallStep.Analysis where
 ```agda
 open import Data.Bool using (Bool; true; false)
 open import Data.Maybe.Properties using (≡-dec)
-open import Data.Nat using (ℕ; _+_; _*_; _>?_; _≤_; zero; suc; NonZero; _/_)
+open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; zero; suc; NonZero; _/_)
+
 open import Data.Product using (_×_; _,_; ∃-syntax)
 open import Data.Vec using (Vec; _∷ʳ_; []; _++_; replicate)
 open import Data.List using (List; any; map; length)
@@ -62,18 +63,23 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
     open TreeType blockTree
 ```
+The function indicates whether there has been a quorum of votes in a voting
+round for a given block-tree.
 ```agda
     hasQuorum : RoundNumber → T → Bool
     hasQuorum r t =
       let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
       in quorum t r b
 ```
+The function indicates whether there a vote has been seen in a voting round
+for a given block-tree.
 ```agda
     hasVotes : RoundNumber → T → Bool
     hasVotes r t =
       let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
-      in ⌊ length (votes′ t r b) >? 0 ⌋
+      in 0 <ᵇ length (votes′ t r b)
 ```
+Assign a letter for a voting round for a given block-tree
 ```agda
     σᵢ : ∀ (i : RoundNumber) → List T → Σ
     σᵢ i ts
@@ -83,7 +89,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ... | false | true  = ？
     ... | false | false = 🄀
 ```
-#### Soundness
+### Voting string analysis
 ```agda
     variable
       m n o : ℕ
