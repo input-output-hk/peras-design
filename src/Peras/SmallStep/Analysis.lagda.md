@@ -27,6 +27,8 @@ open import Peras.Crypto
 open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
+
+open import Data.Tree.AVL.Map PartyIdO using (Map; lookup; insert; empty)
 ```
 -->
 ## Protocol Analysis
@@ -88,6 +90,10 @@ Assign a letter for a voting round for a given block-tree
     ... | true  | _     = ⒈
     ... | false | true  = ？
     ... | false | false = 🄀
+```
+```agda
+    postulate
+      build-σ : ∀ {n} → Map T → VotingString n
 ```
 ### Voting string analysis
 ```agda
@@ -158,6 +164,23 @@ Reflexive, transitive closure of the small step relation
       [] : σ ⟶⋆ σ
       _∷_ : σ ⟶ σ′ → σ′ ⟶⋆ σ″ → σ ⟶⋆ σ″
 ```
+### Theorem: The voting string in any execution is valid
+```agda
+    module _ {parties : Parties}
+             {S : Set} (adversarialState₀ : S)
+             (txSelection : SlotNumber → PartyId → List Tx)
+             where
+
+      open State
+
+      GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+
+      postulate
+        theorem-2 : ∀ {M N : GlobalState}
+          → M ↝⋆ N
+          → build-σ {m} (stateMap M) ⟶⋆ build-σ {n} (stateMap N)
+
+```
 ## Execution
 ```agda
     rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
@@ -167,9 +190,6 @@ Reflexive, transitive closure of the small step relation
     Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
     Execution m n refl = LeaderString m × VotingString n
 ```
-## Theorem: The voting string in any execution is valid
-
-
 ## Blocktree with certificates
 ```agda
     data Edge : Block → Block → Set where
