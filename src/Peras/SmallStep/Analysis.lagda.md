@@ -190,13 +190,8 @@ Reflexive, transitive closure of the small step relation
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
-
 ```
 ## Execution
-```agda
-    rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
-    rnd s = s / U
-```
 ```agda
     Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
     Execution m n refl = LeaderString m × VotingString n
