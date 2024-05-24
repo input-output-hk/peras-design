@@ -3,13 +3,12 @@ module Peras.SmallStep.Analysis where
 ```
 <!--
 ```agda
-open import Data.Bool as B using (if_then_else_; Bool; true; false)
-open import Data.Maybe
+open import Data.Bool using (Bool; true; false)
 open import Data.Maybe.Properties using (≡-dec)
-open import Data.Nat
+open import Data.Nat using (ℕ; _+_; _*_; _>?_; _≤_; zero; suc; NonZero; _/_)
 open import Data.Product using (_×_; _,_; ∃-syntax)
-open import Data.Vec
-open import Data.List as L using (List)
+open import Data.Vec using (Vec; _∷ʳ_; []; _++_; replicate)
+open import Data.List using (List; any; map; length)
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 
@@ -48,7 +47,7 @@ VotingString = Vec Σ
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
          ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (L.List Tx) ⦄
+         ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          ⦃ _ : Postulates ⦄
 
@@ -64,8 +63,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     open TreeType blockTree
 ```
 ```agda
-    isQuorum : RoundNumber → T → Bool
-    isQuorum r t =
+    hasQuorum : RoundNumber → T → Bool
+    hasQuorum r t =
       let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
       in quorum t r b
 ```
@@ -73,16 +72,16 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     hasVotes : RoundNumber → T → Bool
     hasVotes r t =
       let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
-      in ⌊ L.length (votes′ t r b) >? 0 ⌋
+      in ⌊ length (votes′ t r b) >? 0 ⌋
 ```
 ```agda
-    σᵢ : ∀ (i : RoundNumber) → L.List T → Σ
+    σᵢ : ∀ (i : RoundNumber) → List T → Σ
     σᵢ i ts
-      with any? (B._≟ true) (L.map (isQuorum i) ts)
-      with any? (B._≟ true) (L.map (hasVotes i) ts)
-    ... | yes p | _     = ⒈
-    ... | no _  | yes p = ？
-    ... | no _  | no _  = 🄀
+      with any (hasQuorum i) ts
+      with any (hasVotes i) ts
+    ... | true  | _     = ⒈
+    ... | false | true  = ？
+    ... | false | false = 🄀
 ```
 #### Soundness
 ```agda
