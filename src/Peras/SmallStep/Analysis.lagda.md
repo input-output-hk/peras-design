@@ -3,14 +3,28 @@ module Peras.SmallStep.Analysis where
 ```
 <!--
 ```agda
+open import Data.Bool as B using (if_then_else_; Bool; true; false)
+open import Data.Maybe
+open import Data.Maybe.Properties using (≡-dec)
 open import Data.Nat
-open import Data.Product using (_×_)
+open import Data.Product as P using (_×_)
 open import Data.Vec
+open import Data.List as L using ()
+open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
+open import Function using (_$_; case_of_)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl)
 
+open import Relation.Nullary using (yes; no; ¬_)
+open import Relation.Nullary.Decidable using (⌊_⌋)
+
+open import Peras.Block
+open import Peras.Chain
+open import Peras.Crypto
 open import Peras.Params
+open import Peras.SmallStep
+open import Peras.Numbering
 ```
 -->
 ## Protocol Analysis
@@ -24,6 +38,45 @@ data Σ : Set where
   ⒈ : Σ
   ？ : Σ
   🄀 : Σ
+```
+```agda
+module _ {block₀ : Block} {cert₀ : Certificate}
+         ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable (L.List Tx) ⦄
+         ⦃ _ : Params ⦄
+         ⦃ _ : Postulates ⦄
+
+         where
+
+  open Params ⦃...⦄
+  open Postulates ⦃...⦄
+  open Hashable ⦃...⦄
+
+  module _ {T : Set} (blockTree : TreeType {block₀} {cert₀} T)
+           where
+
+      open TreeType blockTree
+```
+```agda
+      isQuorum : RoundNumber → T → Bool
+      isQuorum r t =
+        let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
+        in quorum t r b
+```
+```agda
+      hasVotes : RoundNumber → T → Bool
+      hasVotes r t =
+        let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
+        in ⌊ L.length (votes′ t r b) >? 0 ⌋
+```
+```agda
+      σᵢ : ∀ (i : RoundNumber) → L.List T → Σ
+      σᵢ i ts
+        with any? (B._≟ true) (L.map (isQuorum i) ts)
+        with any? (B._≟ true) (L.map (hasVotes i) ts)
+      ... | yes p | _     = ⒈
+      ... | no _  | yes p = ？
+      ... | no _  | no _  = 🄀
 ```
 ```agda
 VotingString = Vec Σ
@@ -116,12 +169,11 @@ Reflexive, transitive closure of the small step relation
   rnd s = s / U
 ```
 ```agda
-  Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
-  Execution m n refl = LeaderString m × VotingString n
+--  Execution : (m : ℕ) → (n : ℕ) → n ≡ rnd m → Set
+--  Execution m n refl = LeaderString m × VotingString n
 ```
 ## Theorem: The voting string in any execution is valid
 
-TODO
 
 ## Blocktree with certificates
 ```agda
