@@ -69,6 +69,7 @@ library
                      Peras.Abstract.Protocol.Crypto
                      Peras.Abstract.Protocol.Diffusion
                      Peras.Abstract.Protocol.Fetching
+                     Peras.Abstract.Protocol.Network
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Preagreement
                      Peras.Abstract.Protocol.Types
