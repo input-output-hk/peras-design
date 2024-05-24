@@ -10,11 +10,10 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans (lift)
-import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote)
+import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
 import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), Voting)
-import Peras.Block (Block (..), Certificate (..), Party (..))
+import Peras.Block (Block (..), Certificate (..))
 import Peras.Crypto (Hashable (..))
-import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
 
 import qualified Data.Set as Set (insert, singleton)
@@ -49,7 +48,3 @@ voting params@MkPerasParams{perasR, perasK} party perasState roundNumber preagre
               -- Add v to V and diffuse it.
               lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
               ExceptT $ diffuseVote vote
-
-isCommitteeMember :: Party -> RoundNumber -> Bool
-isCommitteeMember MkParty{pid} roundNumber =
-  pid == fromIntegral roundNumber

@@ -10,12 +10,13 @@ import Prelude hiding (round)
 import Control.Monad.Except (throwError)
 import Data.Foldable (toList)
 import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..))
-import Peras.Block (Block (..), Certificate (..), Party (..))
+import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
-import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature))
+import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
+import Peras.Numbering
 
 import qualified Data.Hashable as H (Hashable (..))
-import qualified Data.Serialize as Serialize (encode)
+import qualified Data.Serialize as Serialize (decode, encode)
 import qualified Data.Set as S (map)
 
 createSignedBlock :: Applicative m => CreateSignedBlock m
@@ -49,3 +50,24 @@ createMembershipProof = curry $ pure . pure . MkMembershipProof . Serialize.enco
 
 instance Hashable [()] where
   hash _ = MkHash mempty
+
+-- FIXME: Replace with proper leadership and membership proofs.
+
+mkParty :: PartyId -> [SlotNumber] -> [RoundNumber] -> Party
+mkParty ident leadershipSlots membershipRounds =
+  MkParty ident . MkVerificationKey $
+    Serialize.encode (getSlotNumber <$> leadershipSlots, getRoundNumber <$> membershipRounds)
+
+isSlotLeader :: Party -> SlotNumber -> Bool
+isSlotLeader MkParty{pkey = MkVerificationKey key} s =
+  either
+    (const False)
+    ((getSlotNumber s `elem`) . fst)
+    (Serialize.decode key :: Either String ([Integer], [Integer]))
+
+isCommitteeMember :: Party -> RoundNumber -> Bool
+isCommitteeMember MkParty{pkey = MkVerificationKey key} r =
+  either
+    (const False)
+    ((getRoundNumber r `elem`) . snd)
+    (Serialize.decode key :: Either String ([Integer], [Integer]))

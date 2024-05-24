@@ -4,15 +4,15 @@ module Peras.Abstract.Protocol.VotingSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
-import Data.Either (isRight)
 import qualified Data.Set as Set
+import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (defaultDiffuser, diffuseVote, pendingVotes)
-import Peras.Abstract.Protocol.Types (PerasError (..), PerasParams (..), PerasState (..), defaultParams, initialPerasState)
+import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), defaultParams, initialPerasState)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
-import Peras.Block (Block (..), Certificate (..), Party (MkParty))
+import Peras.Block (Block (..), Certificate (..))
 import Peras.Crypto (hash)
-import Test.Hspec (Spec, describe, it, shouldReturn, shouldSatisfy)
+import Test.Hspec (Spec, describe, it, shouldReturn)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
 
@@ -25,8 +25,8 @@ spec = do
       someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}
       someBlock = (arbitrary `generateWith` 12){parentBlock = blockRef someCertificate}
       preagreement _ _ _ _ = pure $ Right $ Just (someBlock, 1)
-      committeeMember = MkParty (fromIntegral roundNumber) (arbitrary `generateWith` 42)
-      nonCommitteeMember = MkParty (fromIntegral roundNumber + 1) (arbitrary `generateWith` 42)
+      committeeMember = mkParty (arbitrary `generateWith` 42) [] [roundNumber]
+      nonCommitteeMember = mkParty (arbitrary `generateWith` 42) [] []
       steadyState =
         initialPerasState
           { chainPref = someChain
@@ -45,7 +45,6 @@ spec = do
         roundNumber
         preagreement
         (diffuseVote diffuser)
-    --    >>= (`shouldSatisfy` isRight)
 
     (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
 
@@ -61,7 +60,6 @@ spec = do
         roundNumber
         preagreement
         (diffuseVote diffuser)
-    --    >>= (`shouldSatisfy` isRight)
 
     (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
 
@@ -117,7 +115,6 @@ spec = do
           roundNumber
           preagreement
           (diffuseVote diffuser)
-      --      >>= (`shouldSatisfy` isRight)
 
       (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
   describe "VR2-B" $
@@ -138,6 +135,5 @@ spec = do
           roundNumber
           preagreement
           (diffuseVote diffuser)
-      --      >>= (`shouldSatisfy` isRight)
 
       (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1

@@ -25,11 +25,10 @@ data NodeState m = MkNodeState
   , diffuserVar :: TVar m Diffuser
   }
 
-initialNodeState :: MonadSTM m => Party -> m (NodeState m)
-initialNodeState self =
+initialNodeState :: MonadSTM m => Party -> SlotNumber -> m (NodeState m)
+initialNodeState self clock =
   do
-    let clock = systemStart
-        protocol = defaultParams
+    let protocol = defaultParams
     stateVar <- newTVarIO initialPerasState
     diffuserVar <- newTVarIO defaultDiffuser
     pure MkNodeState{..}

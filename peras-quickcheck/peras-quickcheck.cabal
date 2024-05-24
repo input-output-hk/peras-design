@@ -129,6 +129,7 @@ test-suite peras-quickcheck-test
     other-modules: Peras.ChainWeightSpec
                    Peras.ConformanceSpec
                    Peras.Abstract.Protocol.BlockCreationSpec
+                   Peras.Abstract.Protocol.NodeSpec
                    Peras.Abstract.Protocol.VotingSpec
 
     -- The interface type and version of the test suite.
@@ -147,6 +148,7 @@ test-suite peras-quickcheck-test
                   , QuickCheck
                   , QuickCheck
                   , bytestring
+                  , cereal
                   , containers
                   , contra-tracer
                   , data-default
