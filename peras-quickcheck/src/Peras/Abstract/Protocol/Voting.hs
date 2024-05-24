@@ -24,7 +24,7 @@ voting params@MkPerasParams{perasR, perasK} party perasState roundNumber preagre
   -- Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot rU + T .
   ExceptT (preagreement params party perasState roundNumber) >>= \case
     Nothing -> pure ()
-    (Just (block, stake)) ->
+    Just (block, stake) ->
       -- If party P is (voting) committee member in a round r,
       when (isCommitteeMember party roundNumber) $
         let
