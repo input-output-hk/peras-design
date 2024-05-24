@@ -7,7 +7,7 @@ open import Data.Bool as B using (if_then_else_; Bool; true; false)
 open import Data.Maybe
 open import Data.Maybe.Properties using (≡-dec)
 open import Data.Nat
-open import Data.Product as P using (_×_)
+open import Data.Product using (_×_; _,_; ∃-syntax)
 open import Data.Vec
 open import Data.List as L using (List)
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
@@ -44,6 +44,7 @@ data Σ : Set where
 ```agda
 VotingString = Vec Σ
 ```
+#### Semantics
 ```agda
 module _ {block₀ : Block} {cert₀ : Certificate}
          ⦃ _ : Hashable Block ⦄
@@ -83,13 +84,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     ... | no _  | yes p = ？
     ... | no _  | no _  = 🄀
 ```
-<!--
-```agda
-    instance
-      nZ : NonZero U -- TODO: why is this needed..?
-      nZ = T-nonZero
-```
--->
+#### Soundness
 ```agda
     variable
       m n o : ℕ
@@ -98,68 +93,65 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       σ′ : VotingString (suc n)
       σ″ : VotingString o
 
-    module _ where
-      open import Data.Vec renaming (_∷ʳ_ to _,_)
+    infix 3 _⟶_
 
-      infix 3 _⟶_
+    data _⟶_ : VotingString n → VotingString (suc n) → Set where
 
-      data _⟶_ : VotingString n → VotingString (suc n) → Set where
+      HS-I    : [] ⟶ [] ∷ʳ ⒈
+      HS-II-? : σ ∷ʳ ⒈ ⟶ σ ∷ʳ ⒈ ∷ʳ ？
+      HS-II-1 : σ ∷ʳ ⒈ ⟶ σ ∷ʳ ⒈ ∷ʳ ⒈
+      HS-III  : σ ∷ʳ ？ ⟶ σ ∷ʳ ？ ∷ʳ 🄀
 
-        HS-I    : [] ⟶ [] , ⒈
-        HS-II-? : σ , ⒈ ⟶ σ , ⒈ , ？
-        HS-II-1 : σ , ⒈ ⟶ σ , ⒈ , ⒈
-        HS-III  : σ , ？ ⟶ σ , ？ , 🄀
+      HS-IV : ∀ {n} {σ : VotingString n}
+        → 1 ≤ L
+        → L ≤ K
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ 🄀
 
-        HS-IV : ∀ {n} {σ : VotingString n}
-          → 1 ≤ L
-          → L ≤ K
-          → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-            ((σ , ⒈ , ？) ++ replicate L 🄀) , 🄀
+      HS-V-?₁ : ∀ {n} {σ : VotingString n}
+        → L + 1 ≡ K
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
 
-        HS-V-?₁ : ∀ {n} {σ : VotingString n}
-          → L + 1 ≡ K
-          → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-            ((σ , ⒈ , ？) ++ replicate L 🄀) , ？
+      HS-V-?₂ : ∀ {n} {σ : VotingString n}
+        → L + 2 ≡ K
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
 
-        HS-V-?₂ : ∀ {n} {σ : VotingString n}
-          → L + 2 ≡ K
-          → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-            ((σ , ⒈ , ？) ++ replicate L 🄀) , ？
+      HS-V-1₁ : ∀ {n} {σ : VotingString n}
+        → L + 1 ≡ K
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
 
-        HS-V-1₁ : ∀ {n} {σ : VotingString n}
-          → L + 1 ≡ K
-          → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-            ((σ , ⒈ , ？) ++ replicate L 🄀) , ⒈
+      HS-V-1₂ : ∀ {n} {σ : VotingString n}
+        → L + 2 ≡ K
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
 
-        HS-V-1₂ : ∀ {n} {σ : VotingString n}
-          → L + 2 ≡ K
-          → ((σ , ⒈ , ？) ++ replicate L 🄀) ⟶
-            ((σ , ⒈ , ？) ++ replicate L 🄀) , ⒈
+      HS-VI : ∀ {n} {σ : VotingString n}
+        → 1 ≤ L
+        → L ≤ K
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ 🄀
 
-        HS-VI : ∀ {n} {σ : VotingString n}
-          → 1 ≤ L
-          → L ≤ K
-          → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
-            ((σ , 🄀 , ？) ++ replicate L 🄀) , 🄀
+      HS-VII-? : ∀ {n} {σ : VotingString n}
+        → L + 1 ≡ K
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
 
-        HS-VII-? : ∀ {n} {σ : VotingString n}
-          → L + 1 ≡ K
-          → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
-            ((σ , 🄀 , ？) ++ replicate L 🄀) , ？
-
-        HS-VII-1 : ∀ {n} {σ : VotingString n}
-          → L + 1 ≡ K
-          → ((σ , 🄀 , ？) ++ replicate L 🄀) ⟶
-            ((σ , 🄀 , ？) ++ replicate L 🄀) , ⒈
+      HS-VII-1 : ∀ {n} {σ : VotingString n}
+        → L + 1 ≡ K
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
+          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
 ```
 Reflexive, transitive closure of the small step relation
 ```agda
-      infix  2 _⟶⋆_
+    infix  2 _⟶⋆_
 ```
 ```agda
-      data _⟶⋆_ : VotingString m → VotingString n → Set where
-        [] : σ ⟶⋆ σ
-        _∷_ : σ ⟶ σ′ → σ′ ⟶⋆ σ″ → σ ⟶⋆ σ″
+    data _⟶⋆_ : VotingString m → VotingString n → Set where
+      [] : σ ⟶⋆ σ
+      _∷_ : σ ⟶ σ′ → σ′ ⟶⋆ σ″ → σ ⟶⋆ σ″
 ```
 ## Execution
 ```agda
@@ -175,8 +167,6 @@ Reflexive, transitive closure of the small step relation
 
 ## Blocktree with certificates
 ```agda
-    open import Data.Product using (_,_; ∃-syntax)
-
     data Edge : Block → Block → Set where
 
       Parent : ∀ {b b′}
