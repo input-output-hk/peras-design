@@ -59,15 +59,21 @@ mkParty ident leadershipSlots membershipRounds =
     Serialize.encode (getSlotNumber <$> leadershipSlots, getRoundNumber <$> membershipRounds)
 
 isSlotLeader :: Party -> SlotNumber -> Bool
-isSlotLeader MkParty{pkey = MkVerificationKey key} s =
+isSlotLeader MkParty{pkey = MkVerificationKey key} (MkSlotNumber s) =
   either
     (const False)
-    ((getSlotNumber s `elem`) . fst)
+    (slotIsLeader . fst)
     (Serialize.decode key :: Either String ([Integer], [Integer]))
+ where
+  slotIsLeader :: [Integer] -> Bool
+  slotIsLeader = any ((== 0) . (s `mod`))
 
 isCommitteeMember :: Party -> RoundNumber -> Bool
-isCommitteeMember MkParty{pkey = MkVerificationKey key} r =
+isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
   either
     (const False)
-    ((getRoundNumber r `elem`) . snd)
+    (roundIsCommitteeMember . snd)
     (Serialize.decode key :: Either String ([Integer], [Integer]))
+ where
+  roundIsCommitteeMember :: [Integer] -> Bool
+  roundIsCommitteeMember = any ((== 0) . (r `mod`))
