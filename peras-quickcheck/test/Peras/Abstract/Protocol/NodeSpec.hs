@@ -1,21 +1,23 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Peras.Abstract.Protocol.NodeSpec where
 
 import Prelude hiding (round)
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), atomically, writeTVar)
-import Control.Monad.State (MonadIO (liftIO), execStateT)
+import Control.Monad.State (runStateT)
+import Data.Function (on)
+import Data.List (isSuffixOf, maximumBy)
+import Data.Maybe (mapMaybe)
 import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Node (NodeState (stateVar), initialNodeState, tick)
+import Peras.Abstract.Protocol.Node (NodeState (..), initialNodeState, tick)
 import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), defaultParams, initialPerasState)
 import Peras.Arbitraries (generateWith)
-import Peras.Block (Certificate (..))
+import Peras.Block (Block (certificate), Certificate (..))
 import Peras.Crypto (hash)
-import Test.Hspec (Spec, it, shouldBe)
+import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.QuickCheck (arbitrary)
 
-import qualified Data.Set as Set (size)
+import qualified Data.Map as Map (singleton)
+import qualified Data.Set as Set (difference, fromList, size)
 
 spec :: Spec
 spec = do
@@ -27,60 +29,84 @@ spec = do
       payload = arbitrary `generateWith` 42
       boring = mkParty (arbitrary `generateWith` 42) [] []
       leaderOnly = mkParty (arbitrary `generateWith` 42) [slotNumber] []
-      voterOnly = mkParty (arbitrary `generateWith` 42) [] [roundNumber]
-      leaderAndVoter = mkParty (arbitrary `generateWith` 42) [slotNumber] [roundNumber]
+      --    voterOnly = mkParty (arbitrary `generateWith` 42) [] [roundNumber]
+      --    leaderAndVoter = mkParty (arbitrary `generateWith` 42) [slotNumber] [roundNumber]
       steadyState =
         initialPerasState
           { chainPref = someChain
-          , certPrime = someCertificate
+          , chains = Set.fromList [[], someChain]
+          , certs = Map.singleton someCertificate (slotNumber - 10)
+          , certPrime = maximumBy (on compare round) $ someCertificate : mapMaybe certificate someChain
+          , certStar = maximumBy (on compare round) $ mapMaybe certificate someChain
           }
-  it "Tick without slot leadership or committee membership" $ do
-    nodeState <- initialNodeState boring (slotNumber - 1)
-    liftIO . atomically $ writeTVar (stateVar nodeState) steadyState
-    nodeState' <- liftIO $ execStateT (tick payload) nodeState
-    perasState <- readTVarIO $ stateVar nodeState
-    perasState' <- readTVarIO $ stateVar nodeState'
-    chainPref perasState' `shouldBe` chainPref perasState
-    chains perasState' `shouldBe` chains perasState
-    votes perasState' `shouldBe` votes perasState
-    certs perasState' `shouldBe` certs perasState
-    certPrime perasState' `shouldBe` certPrime perasState
-    certStar perasState' `shouldBe` certStar perasState
 
-  it "Tick with slot leadership but no committee membership" $ do
-    nodeState <- initialNodeState leaderOnly (slotNumber - 1)
-    liftIO . atomically $ writeTVar (stateVar nodeState) steadyState
-    nodeState' <- liftIO $ execStateT (tick payload) nodeState
-    perasState <- readTVarIO $ stateVar nodeState
-    perasState' <- readTVarIO $ stateVar nodeState'
-    chainPref perasState' `shouldBe` chainPref perasState
-    Set.size (chains perasState') `shouldBe` Set.size (chains perasState) + 1
-    votes perasState' `shouldBe` votes perasState
-    certs perasState' `shouldBe` certs perasState
-    certPrime perasState' `shouldBe` certPrime perasState
-    certStar perasState' `shouldBe` certStar perasState
+  let check party properties =
+        do
+          nodeState <- runIO $ initialNodeState party (slotNumber - 1)
+          runIO . atomically $ writeTVar (stateVar nodeState) steadyState
+          perasState <- runIO . readTVarIO $ stateVar nodeState
+          (result, nodeState') <- runIO $ runStateT (tick payload) nodeState
+          perasState' <- runIO . readTVarIO $ stateVar nodeState'
+          it "Should not return an error." $ result `shouldBe` pure ()
+          mapM_ (flip ($ perasState') perasState) properties
 
-  it "Tick without slot leadership but with committee membership" $ do
-    nodeState <- initialNodeState voterOnly (slotNumber - 1)
-    liftIO . atomically $ writeTVar (stateVar nodeState) steadyState
-    nodeState' <- liftIO $ execStateT (tick payload) nodeState
-    perasState <- readTVarIO $ stateVar nodeState
-    perasState' <- readTVarIO $ stateVar nodeState'
-    chainPref perasState' `shouldBe` chainPref perasState
-    chains perasState' `shouldBe` chains perasState
-    Set.size (votes perasState') `shouldBe` Set.size (votes perasState) + 1
-    certs perasState' `shouldBe` certs perasState
-    certPrime perasState' `shouldBe` certPrime perasState
-    certStar perasState' `shouldBe` certStar perasState
+  let unchanged msg f = (it msg .) . on shouldBe f
+      chainPrefUnchanged = unchanged "Preferred chain should not change." chainPref
+      chainsUnchanged = unchanged "Chain set should not change." chains
+      votesUnchanged = unchanged "Vote set should not change." votes
+      certsUnchanged = unchanged "Certificate set should not change." certs
+      certPrimeUnchanged = unchanged "Prime certificate should not change." certPrime
+      certStarUnchanged = unchanged "Star certificate should not change." certStar
+      oneMore msg f s' s = it msg $ (Set.size $ f s' `Set.difference` f s) `shouldBe` 1
+      oneMoreChain = oneMore "Chain set should increase by one." chains
+      --    oneMoreVote = oneMore "Vote set should increase by one." votes
+      extendsOneBlock s' s = do
+        it "Preferred chain should extend previous preferred chain." $
+          (chainPref s `isSuffixOf` chainPref s') `shouldBe` True
+        it "Preferred chain should increase by one block." $
+          length (chainPref s') `shouldBe` length (chainPref s) + 1
 
-  it "Tick with slot leadership and committee membership" $ do
-    nodeState <- initialNodeState leaderAndVoter (slotNumber - 1)
-    liftIO . atomically $ writeTVar (stateVar nodeState) steadyState
-    nodeState' <- liftIO $ execStateT (tick payload) nodeState
-    perasState <- readTVarIO $ stateVar nodeState
-    perasState' <- readTVarIO $ stateVar nodeState'
-    chainPref perasState' `shouldBe` chainPref perasState
-    (Set.size $ chains perasState', Set.size $ votes perasState') `shouldBe` (Set.size (chains perasState) + 1, Set.size (votes perasState) + 1)
-    certs perasState' `shouldBe` certs perasState
-    certPrime perasState' `shouldBe` certPrime perasState
-    certStar perasState' `shouldBe` certStar perasState
+  describe "Tick without slot leadership or committee membership" $
+    check
+      boring
+      [ chainPrefUnchanged
+      , chainsUnchanged
+      , votesUnchanged
+      , certsUnchanged
+      , certPrimeUnchanged
+      , certStarUnchanged
+      ]
+
+  describe "Tick with slot leadership but no committee membership" $
+    check
+      leaderOnly
+      [ extendsOneBlock
+      , oneMoreChain
+      , votesUnchanged
+      , certsUnchanged
+      , certPrimeUnchanged
+      , certStarUnchanged
+      ]
+
+-- FIXME: We need more sophisticated arbitraries for testing voting.
+{-
+  describe "Tick without slot leadership but with committee membership" $ do
+    check voterOnly
+      [ chainPrefUnchanged
+      , chainsUnchanged
+      , oneMoreVote
+      , certsUnchanged
+      , certPrimeUnchanged
+      , certStarUnchanged
+      ]
+
+  describe "Tick with slot leadership and committee membership" $ do
+    check leaderAndVoter
+      [ extendsOneBlock
+      , oneMoreChain
+      , oneMoreVote
+      , certsUnchanged
+      , certPrimeUnchanged
+      , certStarUnchanged
+      ]
+-}

@@ -147,15 +147,14 @@ test-suite peras-quickcheck-test
                                               base ^>=4.18.1.0
                   , MonadRandom
                   , QuickCheck
-                  , QuickCheck
                   , bytestring
                   , cereal
                   , containers
                   , contra-tracer
                   , data-default
                   , hspec
+                  , hspec-expectations
                   , io-classes
-                  , io-sim
                   , io-sim
                   , lens
                   , mtl
