@@ -4,12 +4,16 @@ module Peras.SmallStep.Analysis where
 <!--
 ```agda
 open import Data.Bool using (Bool; true; false)
+open import Data.Empty using (⊥-elim)
+
+open import Data.Maybe using (just; nothing; Is-just; is-just)
 open import Data.Maybe.Properties using (≡-dec)
-open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; zero; suc; NonZero; _/_)
+open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zero; suc; NonZero; _/_)
 
 open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
 open import Data.Vec using (Vec; _∷ʳ_; []; _++_; replicate)
-open import Data.List using (List; any; map; length)
+open import Data.List as L using (List; any; map; length; foldr)
+
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 
@@ -18,8 +22,8 @@ open import Function using (_$_; case_of_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl)
 
-open import Relation.Nullary using (yes; no; ¬_)
-open import Relation.Nullary.Decidable using (⌊_⌋)
+open import Relation.Nullary using (yes; no; ¬_; Dec)
+open import Relation.Nullary.Decidable using (⌊_⌋; _⊎-dec_; toWitness)
 
 open import Peras.Block
 open import Peras.Chain
@@ -68,18 +72,28 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 The function indicates whether there has been a quorum of votes in a voting
 round for a given block-tree.
 ```agda
-    hasQuorum : RoundNumber → T → Bool
+    hasQuorum : RoundNumber → T → Set
     hasQuorum r t =
-      let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
-      in quorum t r b
+      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
+      in Any (quorum t r) pref
+
+    hasQuorum? : (r : RoundNumber) → (t : T) → Dec (hasQuorum r t)
+    hasQuorum? r t =
+      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
+      in any? (quorum? t r) pref
 ```
 The function indicates whether there a vote has been seen in a voting round
 for a given block-tree.
 ```agda
-    hasVotes : RoundNumber → T → Bool
+    hasVotes : RoundNumber → T → Set
     hasVotes r t =
-      let b = tipBest (MkSlotNumber $ getRoundNumber r * U) t
-      in 0 <ᵇ length (votes′ t r b)
+      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
+      in Any (λ { b → length (votes′ t r b) > 0}) pref
+
+    hasVotes? : (r : RoundNumber) → (t : T) → Dec (hasVotes r t)
+    hasVotes? r t =
+      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
+      in any? (λ {b → length (votes′ t r b) >? 0}) pref
 ```
 Assign a letter for a voting round for a list of block-trees:
 
@@ -90,21 +104,20 @@ Assign a letter for a voting round for a list of block-trees:
 ```agda
     σᵢ : RoundNumber → List T → Σ
     σᵢ i ts
-      with any (hasQuorum i) ts
-      with any (hasVotes i) ts
-    ... | true  | _     = ⒈
-    ... | false | true  = ？
-    ... | false | false = 🄀
+      with any? (hasQuorum? i) ts
+      with any? (hasVotes? i) ts
+    ... | yes _ | _     = ⒈
+    ... | no _  | yes _ = ？
+    ... | no _  | no _  = 🄀
 ```
 Building up the voting string from all the parties block-trees
 ```agda
-    build-σ : ∀ (n : ℕ) → Map T → VotingString n
-    build-σ n s = go n
-      where
-        ts = map proj₂ (toList s)
-        go : ∀ n → VotingString n
-        go 0 = []
-        go (suc n) = go n ∷ʳ σᵢ (MkRoundNumber n) ts
+    build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
+    build-σ′ 0 _ = []
+    build-σ′ (suc n) ts = build-σ′ n ts ∷ʳ σᵢ (MkRoundNumber n) ts
+
+    build-σ : ∀ (n : ℕ) → Map T → Vec Σ n
+    build-σ n s = build-σ′ n (map proj₂ (toList s))
 ```
 ### Voting string analysis
 ```agda
@@ -186,10 +199,41 @@ Reflexive, transitive closure of the small step relation
 
       GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
+      states₀ : Map T
+      states₀ = foldr (λ where (p , _) m → insert p tree₀ m) empty parties
+
+      N₀ : GlobalState
+      N₀ = ⟦ MkSlotNumber 0
+           , states₀
+           , L.[]
+           , L.[]
+           , adversarialState₀
+           ⟧
+
+{-
+      startsWith-1 : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
+      startsWith-1 {ts}
+        with any? (hasQuorum? (MkRoundNumber 0)) ts
+        with any? (hasVotes? (MkRoundNumber 0)) ts
+      ... | yes p | _ = refl
+      ... | no q | yes p = {!!}
+      ... | no q | no p = {!!}
+
+      theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
+        → N₀ ↝⋆ N
+        → [] ⟶⋆ build-σ (suc n) (stateMap N)
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = HS-I ∷ []
+      theorem-2′ {N} {suc n} s =
+        let xx = theorem-2′ {N} {n} s
+        in {!!} ∷ {!!}
+-}
+
+{-
       postulate
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
+-}
 ```
 ## Execution
 ```agda

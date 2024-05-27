@@ -8,8 +8,8 @@ open import Data.Bool using (Bool; true; false; _∧_; _∨_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
-open import Data.Maybe using (Maybe; just; nothing; is-just)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; any?)
+open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
@@ -20,8 +20,8 @@ open import Function using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
-open import Relation.Nullary using (yes; no; ¬_)
-open import Relation.Nullary.Decidable using (⌊_⌋; ¬?)
+open import Relation.Nullary using (yes; no; ¬_; Dec)
+open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
 open import Peras.Block
@@ -267,15 +267,19 @@ The block tree type is defined as follows:
     latestCertSeen = latestCert cert₀ ∘ certs
 
     votes′ : T → RoundNumber → Block → List Vote
-    votes′ t r b =
-      filter (_≟-RoundNumber r ∘ votingRound)
-        $ filter (_≟-BlockHash (hash b) ∘ blockHash) (votes t)
+    votes′ t (MkRoundNumber r) b = filter (λ {v → (getRoundNumber (votingRound v) ≟ r) ×-dec (blockHash v ≟-BlockHash hash b)}) (votes t)
 
-    certs′ : T → RoundNumber → Block → List Certificate
-    certs′ t r b = filter (_≟-BlockHash (hash b) ∘ blockRef) (certs t)
+    hasCert : T → RoundNumber → Block → Set
+    hasCert t (MkRoundNumber r) b = Any (λ {c → (getRoundNumber (round c) ≡ r) × (blockRef c ≡ hash b) }) (certs t)
 
-    quorum : T → RoundNumber → Block → Bool
-    quorum t r b = ⌊ length (votes′ t r b) ≥? τ ⌋ ∨ is-just (findCert r (certs′ t r b))
+    hasCert? : (t : T) → (r : RoundNumber) → (b : Block) → Dec (hasCert t r b)
+    hasCert? t (MkRoundNumber r) b = any? (λ {c → (getRoundNumber (round c) ≟ r) ×-dec (blockRef c ≟-BlockHash hash b) }) (certs t)
+
+    quorum : T → RoundNumber → Block → Set
+    quorum t r b = length (votes′ t r b) ≥ τ ⊎ hasCert t r b
+
+    quorum? : (t : T) → (r : RoundNumber) → (b : Block) → Dec (quorum t r b)
+    quorum? t r b = length (votes′ t r b) ≥? τ ⊎-dec hasCert? t r b
 ```
 ### Additional parameters
 

@@ -50,11 +50,6 @@ instance
 
 {-# COMPILE AGDA2HS iHashEq #-}
 
-{-
-postulate
-  _≟-Hash_ : DecidableEquality Hash
--}
-
 record Hashable (a : Set) : Set where
   field hash : a → Hash a
 
