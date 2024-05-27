@@ -20,7 +20,7 @@ import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (hash)
 import Prelude hiding (round)
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVar, readTVarIO)
+import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVarIO)
 import Control.Monad (when)
 import Control.Tracer (Tracer, traceWith)
 import Data.Map as Map (fromList, keys, keysSet, notMember, union)
@@ -43,40 +43,38 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
     >>= \case
       -- FIXME: Simplify by lifting into `MonadError`.
       Left e -> pure $ Left e
-      Right certsCreated ->
-        do
-          let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
-              -- FIXME: Figure 2 of the protocol does not specify which
-              -- chain is preferred when there is a tie for heaviest
-              -- chain.
-              certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
+      Right certsCreated -> do
+        let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
+            -- FIXME: Figure 2 of the protocol does not specify which
+            -- chain is preferred when there is a tie for heaviest
+            -- chain.
+            certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
 
-          -- 5. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
-          let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
-          when (chainPref' /= chainPref) $
-            traceWith tracer $
-              NewChainPref chainPref'
+        -- 5. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
+        let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
+        when (chainPref' /= chainPref) $
+          traceWith tracer $
+            NewChainPref chainPref'
 
-          -- 6. Set cert to the certificate with the highest round number on Cpref.
-          -- FIXME: Figure 2 of the protocol states "Set cert* to the
-          -- certificate with the highest round number on C_pref".
-          -- There might be two alternative interpretations of
-          -- "on C_pref":
-          -- a) The certificates actually included in blocks of C_pref.
-          -- b) Any certificate that references a block in C_pref.
-          -- (Recall that certificates are not unconditionally
-          -- included in blocks.) Here we adopt the first
-          -- interpretation.
-          let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
-          fmap pure . atomically . modifyTVar' stateVar $ \state ->
-            state
-              { chainPref = chainPref'
-              , chains = chains'
-              , votes = votes'
-              , certs = certs'
-              , certPrime = certPrime'
-              , certStar = certStar'
-              }
+        -- 6. Set cert to the certificate with the highest round number on Cpref.
+        --
+        -- FIXME: There might be two alternative interpretations of
+        -- "on C_pref":
+        -- a) The certificates actually included in blocks of C_pref.
+        -- b) Any certificate that references a block in C_pref.
+        -- (Recall that certificates are not unconditionally
+        -- included in blocks.) Here we adopt the first
+        -- interpretation.
+        let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
+        fmap pure . atomically . modifyTVar' stateVar $ \state ->
+          state
+            { chainPref = chainPref'
+            , chains = chains'
+            , votes = votes'
+            , certs = certs'
+            , certPrime = certPrime'
+            , certStar = certStar'
+            }
 
 chainWeight :: Integer -> Set Certificate -> Chain -> Integer
 chainWeight boost certs blocks =

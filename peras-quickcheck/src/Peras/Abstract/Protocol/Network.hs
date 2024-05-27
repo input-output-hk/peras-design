@@ -6,7 +6,7 @@
 module Peras.Abstract.Protocol.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (modifyTVar'), atomically, readTVarIO)
-import Control.Monad.Class.MonadTimer (MonadDelay, threadDelay)
+import Control.Monad.Class.MonadTimer (MonadDelay)
 import Control.Monad.State (execStateT, gets)
 import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer)
@@ -25,8 +25,6 @@ runNetwork tracer scenario = do
   initial <- initialNodeState voteEvery10Rounds 1
   execStateT (loop 0) initial >>= \MkNodeState{stateVar} -> readTVarIO stateVar
  where
-  slotDuration = 1000000
-
   loop slot = do
     -- 1. feed the diffuser with incoming chains and votes
     MkDiffuser{pendingChains = newChains, pendingVotes = newVotes} <- lift $ scenario slot
@@ -44,5 +42,4 @@ runNetwork tracer scenario = do
     -- 2. Tick the node.
     void $ tick tracer []
     -- 3. drain diffuser from possible votes and blocks emitted by the node.
-    lift $ threadDelay slotDuration
     loop (slot + 1)
