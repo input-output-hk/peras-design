@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
 
-import Control.Concurrent.STM.TVar (TVar)
+import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
 import GHC.Generics (Generic)
@@ -15,23 +16,38 @@ import Peras.Orphans ()
 
 data PerasParams = MkPerasParams
   { perasU :: Integer
-  -- ^ Round length.
+  -- ^ Round length, in slots
   , perasA :: Integer
-  -- ^ Certificate expiration age.
+  -- ^ Certificate expiration age, in slots
   , perasR :: Integer
-  -- ^ Length of chain-ignorance period.
+  -- ^ Length of chain-ignorance period, in rounds
   , perasK :: Integer
-  -- ^ Length of cool-down period.
+  -- ^ Length of cool-down period, in slots
   , perasL :: Integer
-  -- ^ Minimum age for voted block.
+  -- ^ Minimum age for voted block, in slots
   , perasτ :: Integer
-  -- ^ Quorum size.
+  -- ^ Quorum size, as a percentage of total expected votes
   , perasB :: Integer
-  -- ^ Certificate boost.
+  -- ^ Certificate boost, in blocks
   , perasΔ :: Integer
-  -- ^ Delivery guarantee for diffusion.
+  -- ^ Delivery guarantee for diffusion, in slots
   }
   deriving (Eq, Generic, Show)
+
+-- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
+-- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
+defaultParams :: PerasParams
+defaultParams =
+  MkPerasParams
+    { perasU = 20
+    , perasA = 2160
+    , perasR = 100
+    , perasK = 100
+    , perasL = 30
+    , perasτ = 75
+    , perasB = 100
+    , perasΔ = 5
+    }
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
 data PerasState = MkPerasState
@@ -44,8 +60,8 @@ data PerasState = MkPerasState
   }
   deriving (Eq, Generic, Show)
 
-initialState :: PerasState
-initialState =
+initialPerasState :: PerasState
+initialPerasState =
   MkPerasState
     { chainPref = genesisChain
     , chains = singleton genesisChain
@@ -55,15 +71,15 @@ initialState =
     , certStar = genesisCert
     }
 
-type Fetching m = PerasParams -> Party -> TVar PerasState -> SlotNumber -> Set Chain -> Set Vote -> m (Either PerasError ())
+type Fetching m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> Set Chain -> Set Vote -> m (Either PerasError ())
 
-type BlockCreation m = PerasParams -> Party -> TVar PerasState -> SlotNumber -> DiffuseBlock m -> m (Either PerasError ())
+type BlockCreation m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> [Tx] -> DiffuseChain m -> m (Either PerasError ())
 
-type Voting m = PerasParams -> Party -> TVar PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
+type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
 
-type Preagreement m = PerasParams -> Party -> TVar PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
+type Preagreement m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
 
-type DiffuseBlock m = Block -> m (PerasResult ())
+type DiffuseChain m = Chain -> m (PerasResult ())
 
 type DiffuseVote m = Vote -> m (PerasResult ())
 
@@ -88,6 +104,7 @@ data PerasError
   | BlockCreationFailed String
   | CertificationCreationFailed String
   | VoteCreationFailed String
+  | NoVoting
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber

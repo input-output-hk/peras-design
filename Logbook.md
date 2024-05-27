@@ -10,6 +10,27 @@ Seems like the approach is very consistent with what have been trying to do in P
 * Turn the declarative TS into a computational TS, providing functions to actually produce new state from old state and transition
 * Use the reference implementation for conformance testing
 
+WASM specification paper: https://www.cl.cam.ac.uk/~caw77/papers/mechanising-and-verifying-the-webassembly-specification.pdf which formalises the language in Isabelle
+
+### Peras v2 Prototype
+
+* The strategy is to follow as closely as possible the procedure's definition from fig.2 in the paper, writing unit/property tests along the way to help progress
+* Started working on `Voting` module from fig. 2 in the paper, then I realised that we are using IO instead of `io-classes` so converted the code to the latter which will make testing easier.
+  * I wonder if we should not make everything pure, then tie the various parts together with monadic "node", which leads me to think we should actually write that cdoe in Agda and generate the Haskell part.
+* Got confused on the committee membership selection process, I tried to reuse preexisting code from peras-iosim but of course it's based on different structure and does not fit in new version of protocol
+* **NOTE**: Using type aliases for type signatures of functions is not convenient for navigation: it adds one level of indirection when searching, one step to go to the function's definition and then another step to go to the type definition
+* Getting a strange result in the test: Whatever the value of the party id and round are, the test passes but it's not supposed to!
+  * I can see the `diffuseVote` function is called even though the `isMembership` should return false :thinking:
+  * Made some progress on voting after wasting 20 minutes staring at the code before realising I had inverted and `if/then/else` condition.
+* Working on the voting conditions, trying to find the most expressive approach, ontroducing detailed "errors" to represent the various circumstances in which a node would not vote
+    * Struggling to structure the boolean expression for voting, a disjunction of conjunctions.
+    * I would like to keep them explicitly in the code as they are written in the paper, and `<|>` seemed promising but it's not working of course: `PerasError` is not a `Monoid` and why would it be one?
+    * We want to know why a node does not vote, if only to ensure we are properly testing our "reference" implementaiton
+* Not sure if our current representation of `Chain` is the best one: A list of arbitrary blocks is not a chain, we should guarantee they are linked. Not sure why we chose that representation, perhaps because it's easier to work with in Agda? But I don't think we use that in Agda...
+  * We should make our `PerasState` abstract (eg. typeclass  or record of functions) and instantiate it as needed with different concrete implementation while keeping an "higher level view", eg. how it's described in the paper.
+  * Header/Body split logic does not need to percolate upstream, and we can diffuse certificates instead of single votes while retaining the protocol's view that we propagate chains and single votes
+* What about concurrency and deadlocks in the algorithm? Should we need a proof that it's deadlock-free. Crypto proofs don't prove it's deadlock free => safety gap, potential DoS?
+
 ## 2024-05-22
 
 ### Peras Weekly

@@ -1,42 +1,35 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Peras.Abstract.Protocol.Diffusion (
-  DiffuseBlock,
-  diffuseBlock,
-  DiffuseVote,
-  diffuseVote,
-) where
+module Peras.Abstract.Protocol.Diffusion where
 
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (TVar, modifyTVar')
-import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Types (DiffuseBlock, DiffuseVote)
-import Peras.Block (Block)
-import Peras.Chain (Vote)
+import Peras.Abstract.Protocol.Types (DiffuseChain, DiffuseVote)
+import Peras.Chain (Chain, Vote)
 
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar')
 import qualified Data.Set as Set (insert)
 
 data Diffuser = MkDiffuser
-  { pendingBlocks :: Set Block
+  { pendingChains :: Set Chain
   , pendingVotes :: Set Vote
   }
   deriving (Eq, Generic, Show)
 
-diffuseBlock :: MonadIO m => TVar Diffuser -> DiffuseBlock m
-diffuseBlock diffuserVar block =
+defaultDiffuser :: Diffuser
+defaultDiffuser = MkDiffuser{pendingChains = mempty, pendingVotes = mempty}
+
+diffuseChain :: MonadSTM m => TVar m Diffuser -> DiffuseChain m
+diffuseChain diffuserVar chain =
   fmap pure
-    . liftIO
     . atomically
     . modifyTVar' diffuserVar
     $ \diffuser ->
-      diffuser{pendingBlocks = Set.insert block $ pendingBlocks diffuser}
+      diffuser{pendingChains = Set.insert chain $ pendingChains diffuser}
 
-diffuseVote :: MonadIO m => TVar Diffuser -> DiffuseVote m
+diffuseVote :: MonadSTM m => TVar m Diffuser -> DiffuseVote m
 diffuseVote diffuserVar vote =
   fmap pure
-    . liftIO
     . atomically
     . modifyTVar' diffuserVar
     $ \diffuser ->

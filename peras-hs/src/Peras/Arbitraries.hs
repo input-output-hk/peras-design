@@ -22,8 +22,15 @@ import Peras.Message (Message, NodeId (..))
 import Peras.Numbering (RoundNumber (..), SlotNumber (..))
 import Peras.Orphans ()
 import Test.QuickCheck (Arbitrary (..), Gen, vectorOf)
+import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances.Natural ()
 import Test.QuickCheck.Instances.Time ()
+import Test.QuickCheck.Random (mkQCGen)
+
+-- | Utility function for pure arbitrary values.
+generateWith :: Gen a -> Int -> a
+generateWith (MkGen runGen) seed =
+  runGen (mkQCGen seed) 30
 
 instance Arbitrary NodeId where
   arbitrary =
