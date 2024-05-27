@@ -9,10 +9,9 @@ import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (lift)
 import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createSignedBlock, isSlotLeader)
-import Peras.Abstract.Protocol.Types (BlockCreation, PerasParams (..), PerasState (..), genesisHash)
-import Peras.Block (Block, Certificate (round))
-import Peras.Chain (Chain)
-import Peras.Crypto (Hash, Hashable (hash))
+import Peras.Abstract.Protocol.Types (BlockCreation, PerasParams (..), PerasState (..), hashTip)
+import Peras.Block (Certificate (round))
+import Peras.Crypto (Hashable (hash))
 import Peras.Orphans ()
 
 import qualified Data.Map as Map (keys)
@@ -38,7 +37,3 @@ blockCreation MkPerasParams{..} party stateVar s payload diffuseChain =
         let chain' = block : chainPref
         lift . atomically $ modifyTVar stateVar $ \state -> state{chainPref = chain', chains = Set.insert chain' chains}
         ExceptT $ diffuseChain chain'
-
-hashTip :: Chain -> Hash Block
-hashTip [] = genesisHash
-hashTip (block : _) = hash block

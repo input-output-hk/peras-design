@@ -11,7 +11,7 @@ import Data.Either (partitionEithers)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
-import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, inRound, mkParentBlock, perasL, perasU)
+import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, hashTip, inRound, perasL, perasU)
 import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
@@ -29,7 +29,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber = do
     | anotherParty `isSlotLeader` slotNumber = do
         newChain <- atomically $ do
           currentChain :: Chain <- readTVar chain
-          let parentBlock = mkParentBlock currentChain
+          let parentBlock = hashTip currentChain
               bodyHash = hash mempty
           leadershipProof <-
             either (error . show) id

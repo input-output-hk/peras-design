@@ -117,13 +117,12 @@ genesisHash = MkHash mempty
 genesisChain :: Chain
 genesisChain = mempty
 
+hashTip :: Chain -> Hash Block
+hashTip [] = genesisHash
+hashTip (block : _) = hash block
+
 genesisCert :: Certificate
 genesisCert = MkCertificate 0 genesisHash
-
-mkParentBlock :: Chain -> Hash Block
-mkParentBlock = \case
-  [] -> genesisHash
-  (b : _) -> hash b
 
 newRound :: Integral a => a -> PerasParams -> Bool
 newRound s params = fromIntegral s `mod` perasU params == 0
