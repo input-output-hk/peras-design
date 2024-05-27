@@ -72,6 +72,7 @@ library
                      Peras.Abstract.Protocol.Network
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Preagreement
+                     Peras.Abstract.Protocol.Trace
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Voting
                      Peras.ChainWeight
@@ -98,6 +99,7 @@ library
                       bytestring,
                       cereal,
                       containers,
+                      contra-tracer,
                       data-default,
                       hashable,
                       io-classes,
@@ -132,8 +134,12 @@ executable  peras
     -- The entrypoint to the test suite.
     main-is:          peras.hs
 
-    build-depends:    base ^>=4.18.1.0
+    build-depends:    aeson
+                    , base ^>=4.18.1.0
+                    , bytestring
+                    , contra-tracer
                     , peras-quickcheck
+                    , text
 
 
 test-suite peras-quickcheck-test
@@ -160,9 +166,10 @@ test-suite peras-quickcheck-test
     main-is:          Main.hs
 
     -- Test dependencies.
-    build-depends:  base ^>=4.18.1.0
-                  , MonadRandom
+    build-depends:  MonadRandom
                   , QuickCheck
+                  , aeson
+                  , base ^>=4.18.1.0
                   , bytestring
                   , cereal
                   , containers

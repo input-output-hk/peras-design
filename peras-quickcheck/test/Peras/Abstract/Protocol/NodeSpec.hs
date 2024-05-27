@@ -16,6 +16,7 @@ import Peras.Crypto (hash)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.QuickCheck (arbitrary)
 
+import Control.Tracer (nullTracer)
 import qualified Data.Map as Map (singleton)
 import qualified Data.Set as Set (difference, fromList, size)
 
@@ -45,7 +46,7 @@ spec = do
           nodeState <- runIO $ initialNodeState party (slotNumber - 1)
           runIO . atomically $ writeTVar (stateVar nodeState) steadyState
           perasState <- runIO . readTVarIO $ stateVar nodeState
-          (result, nodeState') <- runIO $ runStateT (tick payload) nodeState
+          (result, nodeState') <- runIO $ runStateT (tick nullTracer payload) nodeState
           perasState' <- runIO . readTVarIO $ stateVar nodeState'
           it "Should not return an error." $ result `shouldBe` pure ()
           mapM_ (flip ($ perasState') perasState) properties

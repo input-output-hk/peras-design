@@ -8,11 +8,13 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, gets, lift, modify')
+import Control.Tracer (Tracer, traceWith)
 import Data.Set (Set)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser, diffuseChain, diffuseVote)
 import Peras.Abstract.Protocol.Fetching (fetching)
 import Peras.Abstract.Protocol.Preagreement (preagreement)
+import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasU), PerasResult, PerasState, defaultParams, initialPerasState)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
@@ -35,14 +37,15 @@ initialNodeState self clock =
     diffuserVar <- newTVarIO defaultDiffuser
     pure MkNodeState{..}
 
-tick :: MonadSTM m => Payload -> StateT (NodeState m) m (PerasResult ())
-tick payload = do
+tick :: MonadSTM m => Tracer m PerasLog -> Payload -> StateT (NodeState m) m (PerasResult ())
+tick tracer payload = do
   params <- gets protocol
   party <- gets self
   state <- gets stateVar
   diffuser <- gets diffuserVar
   -- 1. Increment clock.
   s <- gets $ (1 +) . clock
+  lift $ traceWith tracer $ Tick s
   modify' $ \node -> node{clock = s}
   let r = fromIntegral $ fromIntegral s `div` perasU params
       newRound = fromIntegral s `mod` perasU params == 0
