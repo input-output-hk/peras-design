@@ -11,7 +11,7 @@ open import Data.Maybe.Properties using (≡-dec)
 open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zero; suc; NonZero; _/_)
 
 open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
-open import Data.Vec using (Vec; _∷ʳ_; []; _++_; replicate)
+open import Data.Vec as V using (Vec; _∷ʳ_; []; _++_; replicate)
 open import Data.List as L using (List; any; map; length; foldr)
 
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
@@ -104,54 +104,46 @@ Building up the voting string from all the parties block-trees
 
     infix 3 _⟶_
 
-    data _⟶_ : VotingString n → VotingString (suc n) → Set where
+    data _⟶_ : VotingString n → Σ → Set where
 
-      HS-I    : [] ⟶ [] ∷ʳ ⒈
-      HS-II-? : σ ∷ʳ ⒈ ⟶ σ ∷ʳ ⒈ ∷ʳ ？
-      HS-II-1 : σ ∷ʳ ⒈ ⟶ σ ∷ʳ ⒈ ∷ʳ ⒈
-      HS-III  : σ ∷ʳ ？ ⟶ σ ∷ʳ ？ ∷ʳ 🄀
+      HS-I    : [] ⟶ ⒈
+      HS-II-? : σ ∷ʳ ⒈ ⟶ ？
+      HS-II-1 : σ ∷ʳ ⒈ ⟶ ⒈
+      HS-III  : σ ∷ʳ ？ ⟶ 🄀
 
       HS-IV : ∀ {n} {σ : VotingString n}
         → 1 ≤ L
         → L ≤ K
-        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ 🄀
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶ 🄀
 
       HS-V-?₁ : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
-        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶ ？
 
       HS-V-?₂ : ∀ {n} {σ : VotingString n}
         → L + 2 ≡ K
-        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶ ？
 
       HS-V-1₁ : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
-        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 
       HS-V-1₂ : ∀ {n} {σ : VotingString n}
         → L + 2 ≡ K
-        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
+        → ((σ ∷ʳ ⒈ ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 
       HS-VI : ∀ {n} {σ : VotingString n}
         → 1 ≤ L
         → L ≤ K
-        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ 🄀
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ 🄀
 
       HS-VII-? : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
-        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ？
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ？
 
       HS-VII-1 : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
-        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶
-          ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ∷ʳ ⒈
+        → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 ```
 Reflexive, transitive closure of the small step relation
 ```agda
@@ -160,7 +152,7 @@ Reflexive, transitive closure of the small step relation
 ```agda
     data _⟶⋆_ : VotingString m → VotingString n → Set where
       [] : σ ⟶⋆ σ
-      _∷_ : σ″ ⟶⋆ σ → σ ⟶ σ′ → σ″ ⟶⋆ σ′
+      _∷_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (σ″ ∷ʳ i)
 ```
 ### Theorem: The voting string in any execution is valid
 ```agda
@@ -200,7 +192,9 @@ Reflexive, transitive closure of the small step relation
         → N₀ ↝⋆ N
         → [] ⟶⋆ build-σ (suc n) (stateMap N)
       theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = [] ∷ HS-I
-      theorem-2′ {N} {suc n} s = theorem-2′ {N} {n} s ∷ {!!}
+      theorem-2′ {N} {suc n} s
+        with theorem-2′ {N} {n} s
+      ... | xs = {!!}
 -}
 
       postulate
