@@ -186,7 +186,7 @@ Reflexive, transitive closure of the small step relation
 ```agda
     data _⟶⋆_ : VotingString m → VotingString n → Set where
       [] : σ ⟶⋆ σ
-      _∷_ : σ ⟶ σ′ → σ′ ⟶⋆ σ″ → σ ⟶⋆ σ″
+      _∷_ : σ″ ⟶⋆ σ → σ ⟶ σ′ → σ″ ⟶⋆ σ′
 ```
 ### Theorem: The voting string in any execution is valid
 ```agda
@@ -215,25 +215,21 @@ Reflexive, transitive closure of the small step relation
       startsWith-1 {ts}
         with any? (hasQuorum? (MkRoundNumber 0)) ts
         with any? (hasVotes? (MkRoundNumber 0)) ts
-      ... | yes p | _ = refl
+      ... | yes _ | _ = refl
       ... | no q | yes p = {!!}
       ... | no q | no p = {!!}
 
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
         → [] ⟶⋆ build-σ (suc n) (stateMap N)
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = HS-I ∷ []
-      theorem-2′ {N} {suc n} s =
-        let xx = theorem-2′ {N} {n} s
-        in {!!} ∷ {!!}
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = [] ∷ HS-I
+      theorem-2′ {N} {suc n} s = theorem-2′ {N} {n} s ∷ {!!}
 -}
 
-{-
       postulate
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
--}
 ```
 ## Execution
 ```agda
