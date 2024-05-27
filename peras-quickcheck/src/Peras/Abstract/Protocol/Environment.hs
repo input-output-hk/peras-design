@@ -1,13 +1,17 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Abstract.Protocol.Environment where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVar, writeTVar)
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVar, readTVarIO, writeTVar)
+import Control.Monad (forM)
+import Control.Monad.Except (ExceptT (..), runExceptT)
+import Data.Either (partitionEithers)
 import qualified Data.Set as Set
-import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createSignedBlock, isSlotLeader, mkParty)
+import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
-import Peras.Abstract.Protocol.Types (genesisChain, mkParentBlock)
-import Peras.Block (Party)
+import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, inRound, mkParentBlock, perasL, perasU)
+import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
 import Peras.Numbering (SlotNumber)
@@ -16,8 +20,8 @@ anotherParty :: Party
 anotherParty = mkParty 43 [20] []
 
 -- | Describes the "Happy Path" scenario where there's a steady flow of blocks and votes forming a quorum.
-simpleScenario :: MonadSTM m => TVar m Chain -> SlotNumber -> m Diffuser
-simpleScenario chain slotNumber = do
+simpleScenario :: MonadSTM m => TVar m Chain -> PerasParams -> SlotNumber -> m Diffuser
+simpleScenario chain params slotNumber = do
   generateVotes >>= generateNewChain
  where
   generateNewChain diffuser
@@ -38,9 +42,34 @@ simpleScenario chain slotNumber = do
         pure $ diffuser{pendingChains = Set.singleton newChain}
     | otherwise = pure diffuser
 
-  generateVotes = pure defaultDiffuser
+  -- generate 10 votes every slot in a round
+  generateVotes = do
+    let round = inRound (fromIntegral slotNumber) params
+        slotInRound = fromIntegral slotNumber `mod` perasU params
+    blockToVoteFor <- blockBefore (perasL params) (fromIntegral round * perasU params) <$> readTVarIO chain
+    case blockToVoteFor of
+      Nothing -> pure defaultDiffuser
+      Just block -> do
+        let blockHash = hash block
+        (_, votes) <-
+          partitionEithers
+            <$> forM
+              [slotInRound * 10 .. (slotInRound + 1) * 10 - 1]
+              ( \pid -> runExceptT $ do
+                  let party = mkParty pid [] []
+                  proof <- ExceptT $ createMembershipProof round (Set.singleton party)
+                  ExceptT $ createSignedVote party round blockHash proof 1
+              )
+        pure defaultDiffuser{pendingVotes = Set.fromList votes}
+
+blockBefore :: Integer -> Integer -> Chain -> Maybe Block
+blockBefore cutoff slot = \case
+  [] -> Nothing
+  (b : bs)
+    | fromIntegral (slotNumber b) + cutoff < slot -> Just b
+    | otherwise -> blockBefore cutoff slot bs
 
 mkSimpleScenario :: MonadSTM m => m (SlotNumber -> m Diffuser)
 mkSimpleScenario = do
   chain <- newTVarIO genesisChain
-  pure $ simpleScenario chain
+  pure $ simpleScenario chain defaultParams

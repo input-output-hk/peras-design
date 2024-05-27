@@ -22,11 +22,12 @@ import Peras.Numbering (SlotNumber)
 runNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
 runNetwork tracer scenario = do
   let voteEvery10Rounds = mkParty 42 [] [10]
-  initial <- initialNodeState voteEvery10Rounds 1
-  execStateT (loop 0) initial >>= \MkNodeState{stateVar} -> readTVarIO stateVar
+  initial <- initialNodeState voteEvery10Rounds 0
+  execStateT loop initial >>= \MkNodeState{stateVar} -> readTVarIO stateVar
  where
-  loop slot = do
+  loop = do
     -- 1. feed the diffuser with incoming chains and votes
+    slot <- gets clock
     MkDiffuser{pendingChains = newChains, pendingVotes = newVotes} <- lift $ scenario slot
     diffuser <- gets diffuserVar
     lift $
@@ -42,4 +43,4 @@ runNetwork tracer scenario = do
     -- 2. Tick the node.
     void $ tick tracer []
     -- 3. drain diffuser from possible votes and blocks emitted by the node.
-    loop (slot + 1)
+    loop

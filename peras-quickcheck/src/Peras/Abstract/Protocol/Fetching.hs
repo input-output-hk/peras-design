@@ -8,73 +8,87 @@ module Peras.Abstract.Protocol.Fetching (
   fetching,
 ) where
 
+import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVarIO)
+import Control.Monad (unless, when)
+import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (groupBy, maximumBy, sortBy)
+import Data.Map as Map (fromList, keys, keysSet, notMember, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
+import Data.Set as Set (fromList, intersection, map, size, union)
 import Peras.Abstract.Protocol.Crypto (createSignedCertificate)
+import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (Fetching, PerasParams (..), PerasState (..), genesisCert)
 import Peras.Block (Block (certificate), Certificate (..))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (hash)
 import Prelude hiding (round)
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVarIO)
-import Control.Monad (when)
-import Control.Tracer (Tracer, traceWith)
-import Data.Map as Map (fromList, keys, keysSet, notMember, union)
-import Data.Set as Set (fromList, intersection, map, size, union)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-
 fetching :: MonadSTM m => Tracer m PerasLog -> Fetching m
 fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
   MkPerasState{..} <- readTVarIO stateVar
+  -- 1. Fetch new chains Cnew and votes Vnew.
+  traceWith tracer (NewChainAndVotes newChains newVotes)
+
+  -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
   let chains' = chains `Set.union` newChains
-      votes' = votes `Set.union` newVotes
       certsReceived =
-        filter (`Map.notMember` certs)
+        fmap (,slot)
+          . filter (`Map.notMember` certs)
           . mapMaybe certificate
           . concat
           $ toList newChains
-      certs'' = certs `Map.union` Map.fromList ((,slot) <$> certsReceived)
+      certs'' = certs `Map.union` Map.fromList certsReceived
+
+  unless (null certsReceived) $ traceWith tracer (NewCertificatesReceived certsReceived)
+
+  -- 3. Add Vnew to V and turn any new quorum in V into a certificate cert
+  let votes' = votes `Set.union` newVotes
       newQuora = findNewQuora (fromIntegral perasτ) (Map.keysSet certs'') votes' :: [Set Vote]
-  fmap sequence (mapM (createSignedCertificate party) newQuora)
-    >>= \case
-      -- FIXME: Simplify by lifting into `MonadError`.
-      Left e -> pure $ Left e
-      Right certsCreated -> do
-        let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
-            -- FIXME: Figure 2 of the protocol does not specify which
-            -- chain is preferred when there is a tie for heaviest
-            -- chain.
-            certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
+  newCertificatesFromQuorum <- fmap sequence (mapM (createSignedCertificate party) newQuora)
 
-        -- 5. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
-        let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
-        when (chainPref' /= chainPref) $
-          traceWith tracer $
-            NewChainPref chainPref'
+  case newCertificatesFromQuorum of
+    -- FIXME: Simplify by lifting into `MonadError`.
+    Left e -> pure $ Left e
+    Right certsCreated -> do
+      let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
+      unless (null certsCreated) $ traceWith tracer (NewCertificatesFromQuorum certsCreated)
 
-        -- 6. Set cert to the certificate with the highest round number on Cpref.
-        --
-        -- FIXME: There might be two alternative interpretations of
-        -- "on C_pref":
-        -- a) The certificates actually included in blocks of C_pref.
-        -- b) Any certificate that references a block in C_pref.
-        -- (Recall that certificates are not unconditionally
-        -- included in blocks.) Here we adopt the first
-        -- interpretation.
-        let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
-        fmap pure . atomically . modifyTVar' stateVar $ \state ->
-          state
-            { chainPref = chainPref'
-            , chains = chains'
-            , votes = votes'
-            , certs = certs'
-            , certPrime = certPrime'
-            , certStar = certStar'
-            }
+      -- 4. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
+      let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
+      when (chainPref' /= chainPref) $ traceWith tracer $ NewChainPref chainPref'
+
+      -- 5. Set cert' to the certificate with the highest round number on Cpref.
+      --
+      -- FIXME: Figure 2 of the protocol does not specify which
+      -- chain is preferred when there is a tie for heaviest
+      -- chain.
+      let certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
+      when (certPrime' /= certPrime) $ traceWith tracer $ NewCertPrime certPrime'
+
+      -- 6. Set cert* to the certificate with the highest round number on Cpref.
+      --
+      -- FIXME: There might be two alternative interpretations of
+      -- "on C_pref":
+      -- a) The certificates actually included in blocks of C_pref.
+      -- b) Any certificate that references a block in C_pref.
+      -- (Recall that certificates are not unconditionally
+      -- included in blocks.) Here we adopt the first
+      -- interpretation.
+      let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
+      when (certStar' /= certStar) $ traceWith tracer $ NewCertStar certStar'
+
+      fmap pure . atomically . modifyTVar' stateVar $ \state ->
+        state
+          { chainPref = chainPref'
+          , chains = chains'
+          , votes = votes'
+          , certs = certs'
+          , certPrime = certPrime'
+          , certStar = certStar'
+          }
 
 chainWeight :: Integer -> Set Certificate -> Chain -> Integer
 chainWeight boost certs blocks =

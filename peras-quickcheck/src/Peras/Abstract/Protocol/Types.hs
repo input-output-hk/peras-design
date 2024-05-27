@@ -12,7 +12,7 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
-import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Numbering (RoundNumber (MkRoundNumber), SlotNumber)
 import Peras.Orphans ()
 
 data PerasParams = MkPerasParams
@@ -124,3 +124,9 @@ mkParentBlock :: Chain -> Hash Block
 mkParentBlock = \case
   [] -> genesisHash
   (b : _) -> hash b
+
+newRound :: Integral a => a -> PerasParams -> Bool
+newRound s params = fromIntegral s `mod` perasU params == 0
+
+inRound :: Integral a => a -> PerasParams -> RoundNumber
+inRound s params = MkRoundNumber $ fromIntegral s `div` perasU params

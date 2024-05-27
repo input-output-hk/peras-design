@@ -16,7 +16,7 @@ import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser, diffus
 import Peras.Abstract.Protocol.Fetching (fetching)
 import Peras.Abstract.Protocol.Preagreement (preagreement)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasU), PerasResult, PerasState, defaultParams, initialPerasState)
+import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasU), PerasResult, PerasState, defaultParams, inRound, initialPerasState, newRound)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)
@@ -46,10 +46,10 @@ tick tracer payload = do
   diffuser <- gets diffuserVar
   -- 1. Increment clock.
   s <- gets $ (1 +) . clock
-  lift $ traceWith tracer $ Tick s
   modify' $ \node -> node{clock = s}
-  let r = fromIntegral $ fromIntegral s `div` perasU params
-      newRound = fromIntegral s `mod` perasU params == 0
+  let r = inRound s params
+  lift $ traceWith tracer $ Tick s r
+
   -- 2. Get votes and chains from the network.
   (newChains, newVotes) <- lift (fetchNewChainsAndVotes diffuser)
   runExceptT $ do
@@ -58,7 +58,7 @@ tick tracer payload = do
     -- 4. Invoke block creation if leader.
     ExceptT $ lift $ blockCreation params party state s payload (diffuseChain diffuser)
     -- 5. Invoke voting if committee member.
-    when newRound $
+    when (newRound s params) $
       ExceptT $
         lift $
           voting params party state r preagreement (diffuseVote diffuser)
@@ -69,5 +69,4 @@ tick tracer payload = do
       result <- (pendingChains &&& pendingVotes) <$> readTVar diffuser
       modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
       pure result
-    traceWith tracer (uncurry NewChainAndVotes result)
     pure result
