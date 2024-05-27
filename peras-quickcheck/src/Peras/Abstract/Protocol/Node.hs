@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Abstract.Protocol.Node where
 
@@ -37,7 +38,7 @@ initialNodeState self clock =
     diffuserVar <- newTVarIO defaultDiffuser
     pure MkNodeState{..}
 
-tick :: MonadSTM m => Tracer m PerasLog -> Payload -> StateT (NodeState m) m (PerasResult ())
+tick :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (NodeState m) m (PerasResult ())
 tick tracer payload = do
   params <- gets protocol
   party <- gets self
@@ -61,9 +62,12 @@ tick tracer payload = do
       ExceptT $
         lift $
           voting params party state r preagreement (diffuseVote diffuser)
-
-fetchNewChainsAndVotes :: MonadSTM m => TVar m Diffuser -> m (Set Chain, Set Vote)
-fetchNewChainsAndVotes diffuser = atomically $ do
-  result <- (pendingChains &&& pendingVotes) <$> readTVar diffuser
-  modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
-  pure result
+ where
+  fetchNewChainsAndVotes :: TVar m Diffuser -> m (Set Chain, Set Vote)
+  fetchNewChainsAndVotes diffuser = do
+    result <- atomically $ do
+      result <- (pendingChains &&& pendingVotes) <$> readTVar diffuser
+      modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
+      pure result
+    traceWith tracer (uncurry NewChainAndVotes result)
+    pure result

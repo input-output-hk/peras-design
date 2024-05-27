@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
@@ -10,7 +11,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
-import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof)
+import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
@@ -118,3 +119,8 @@ genesisChain = mempty
 
 genesisCert :: Certificate
 genesisCert = MkCertificate 0 genesisHash
+
+mkParentBlock :: Chain -> Hash Block
+mkParentBlock = \case
+  [] -> genesisHash
+  (b : _) -> hash b

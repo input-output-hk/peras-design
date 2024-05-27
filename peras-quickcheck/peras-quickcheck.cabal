@@ -68,6 +68,7 @@ library
     exposed-modules: Peras.Abstract.Protocol.BlockCreation
                      Peras.Abstract.Protocol.Crypto
                      Peras.Abstract.Protocol.Diffusion
+                     Peras.Abstract.Protocol.Environment
                      Peras.Abstract.Protocol.Fetching
                      Peras.Abstract.Protocol.Network
                      Peras.Abstract.Protocol.Node
