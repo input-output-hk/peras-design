@@ -119,6 +119,23 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+executable  peras
+    -- Import common warning flags.
+    import:           warnings
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+    -- The entrypoint to the test suite.
+    main-is:          peras.hs
+
+    build-depends:    base ^>=4.18.1.0
+                    , peras-quickcheck
+
+
 test-suite peras-quickcheck-test
     -- Import common warning flags.
     import:           warnings
@@ -143,8 +160,7 @@ test-suite peras-quickcheck-test
     main-is:          Main.hs
 
     -- Test dependencies.
-    build-depends:
-                                              base ^>=4.18.1.0
+    build-depends:  base ^>=4.18.1.0
                   , MonadRandom
                   , QuickCheck
                   , bytestring
