@@ -54,7 +54,7 @@ tick tracer payload = do
   (newChains, newVotes) <- lift (fetchNewChainsAndVotes diffuser)
   runExceptT $ do
     -- 3. Invoke fetching.
-    ExceptT $ lift $ fetching params party state s newChains newVotes
+    ExceptT $ lift $ fetching tracer params party state s newChains newVotes
     -- 4. Invoke block creation if leader.
     ExceptT $ lift $ blockCreation params party state s payload (diffuseChain diffuser)
     -- 5. Invoke voting if committee member.

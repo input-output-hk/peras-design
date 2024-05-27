@@ -18,6 +18,7 @@ import Peras.Orphans ()
 data PerasLog
   = Tick SlotNumber
   | NewChainAndVotes {newChains :: Set Chain, newVotes :: Set Vote}
+  | NewChainPref {newChainPref :: Chain}
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON)
 
