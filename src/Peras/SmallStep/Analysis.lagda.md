@@ -17,7 +17,7 @@ open import Data.List as L using (List; any; map; length; foldr)
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 
-open import Function using (_$_; case_of_)
+open import Function using (_$_; case_of_; _∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl)
@@ -69,32 +69,6 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
     open TreeType blockTree
 ```
-The function indicates whether there has been a quorum of votes in a voting
-round for a given block-tree.
-```agda
-    hasQuorum : RoundNumber → T → Set
-    hasQuorum r t =
-      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
-      in Any (quorum t r) pref
-
-    hasQuorum? : (r : RoundNumber) → (t : T) → Dec (hasQuorum r t)
-    hasQuorum? r t =
-      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
-      in any? (quorum? t r) pref
-```
-The function indicates whether there a vote has been seen in a voting round
-for a given block-tree.
-```agda
-    hasVotes : RoundNumber → T → Set
-    hasVotes r t =
-      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
-      in Any (λ { b → length (votes′ t r b) > 0}) pref
-
-    hasVotes? : (r : RoundNumber) → (t : T) → Dec (hasVotes r t)
-    hasVotes? r t =
-      let pref = bestChain (MkSlotNumber $ getRoundNumber r * U) t
-      in any? (λ {b → length (votes′ t r b) >? 0}) pref
-```
 Assign a letter for a voting round for a list of block-trees:
 
   * 1 : if at least one party saw a round-i block certificate before the end of round i
@@ -104,8 +78,8 @@ Assign a letter for a voting round for a list of block-trees:
 ```agda
     σᵢ : RoundNumber → List T → Σ
     σᵢ i ts
-      with any? (hasQuorum? i) ts
-      with any? (hasVotes? i) ts
+      with any? (hasCert? i) ts
+      with any? (hasVote? i) ts
     ... | yes _ | _     = ⒈
     ... | no _  | yes _ = ？
     ... | no _  | no _  = 🄀
@@ -196,6 +170,7 @@ Reflexive, transitive closure of the small step relation
              where
 
       open State
+      open IsTreeType
 
       GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
@@ -210,15 +185,17 @@ Reflexive, transitive closure of the small step relation
            , adversarialState₀
            ⟧
 
-{-
+      postulate
+        genesis-cert′ : ∀ {t} → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)
+        genesis-cert : ∀ {ts} → Any (λ t → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)) ts
+
       startsWith-1 : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
       startsWith-1 {ts}
-        with any? (hasQuorum? (MkRoundNumber 0)) ts
-        with any? (hasVotes? (MkRoundNumber 0)) ts
-      ... | yes _ | _ = refl
-      ... | no q | yes p = {!!}
-      ... | no q | no p = {!!}
+        with any? (hasCert? (MkRoundNumber 0)) ts
+      ... | yes _ = refl
+      ... | no p  = ⊥-elim (p genesis-cert)
 
+{-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
         → [] ⟶⋆ build-σ (suc n) (stateMap N)

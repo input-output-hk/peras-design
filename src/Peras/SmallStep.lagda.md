@@ -199,6 +199,12 @@ as proposed in the paper.
       instantiated-certs :
         certs tree₀ ≡ cert₀ ∷ []
 
+      genesis-block-slotnumber :
+        getSlotNumber (slotNumber block₀) ≡ 0
+
+      genesis-cert-roundnumber :
+        getRoundNumber (round cert₀) ≡ 0
+
       extendable : ∀ (t : T) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
@@ -236,6 +242,13 @@ as proposed in the paper.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
+
+      quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
+        → length (filter (λ {v →
+                    (getRoundNumber (votingRound v) ≟ r)
+              ×-dec (blockHash v ≟-BlockHash hash b)}
+            ) (votes t)) ≥ τ
+        → Any (λ {c → (getRoundNumber (round c) ≡ r) × (blockRef c ≡ hash b) }) (certs t)
 ```
 In addition to blocks the block-tree manages votes and certificates as well.
 The block tree type is defined as follows:
@@ -266,20 +279,17 @@ The block tree type is defined as follows:
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
 
-    votes′ : T → RoundNumber → Block → List Vote
-    votes′ t (MkRoundNumber r) b = filter (λ {v → (getRoundNumber (votingRound v) ≟ r) ×-dec (blockHash v ≟-BlockHash hash b)}) (votes t)
+    hasCert : RoundNumber → T → Set
+    hasCert (MkRoundNumber r) t = Any ((r ≡_) ∘ getRoundNumber ∘ round) (certs t)
 
-    hasCert : T → RoundNumber → Block → Set
-    hasCert t (MkRoundNumber r) b = Any (λ {c → (getRoundNumber (round c) ≡ r) × (blockRef c ≡ hash b) }) (certs t)
+    hasCert? : (r : RoundNumber) (t : T) → Dec (hasCert r t)
+    hasCert? (MkRoundNumber r) t = any? ((r ≟_) ∘ getRoundNumber ∘ round) (certs t)
 
-    hasCert? : (t : T) → (r : RoundNumber) → (b : Block) → Dec (hasCert t r b)
-    hasCert? t (MkRoundNumber r) b = any? (λ {c → (getRoundNumber (round c) ≟ r) ×-dec (blockRef c ≟-BlockHash hash b) }) (certs t)
+    hasVote : RoundNumber → T → Set
+    hasVote (MkRoundNumber r) t = Any ((r ≡_) ∘ getRoundNumber ∘ votingRound) (votes t)
 
-    quorum : T → RoundNumber → Block → Set
-    quorum t r b = length (votes′ t r b) ≥ τ ⊎ hasCert t r b
-
-    quorum? : (t : T) → (r : RoundNumber) → (b : Block) → Dec (quorum t r b)
-    quorum? t r b = length (votes′ t r b) ≥? τ ⊎-dec hasCert? t r b
+    hasVote? : (r : RoundNumber) (t : T) → Dec (hasVote r t)
+    hasVote? (MkRoundNumber r) t = any? ((r ≟_) ∘ getRoundNumber ∘ votingRound) (votes t)
 ```
 ### Additional parameters
 
