@@ -1,3 +1,27 @@
+## 2024-05-27
+
+### Haskell Prototype
+
+* Added executable which can be run as `cabal run peras`, with everything currently hardcoded (eg. no parameters).
+* The executable runs a single node in an infinite loop, simulating the `Environment` through some scenario.
+  * Current scenario is very simple: Input a new chain every 20 slots, and 10 votes for the block at cutoff window distance $L$ from start of the round every slot within a given round
+* Sprinkled `Tracer` calls at every step relevant for the protocol, outputting JSON formatted log entries on standard out.
+  * I was able to verify that certificate creation, quorum gathering, and voting logic work (eg. a trace is emitted as expected)
+* Tried to simplify logs too
+
+```
+{"round":98,"slot":1961,"tag":"Tick"}
+{"chains":[{"bodyHash":"","certificate":null,"creatorId":43,"leadershipProof":"864cceeef469dcfd","parentBlock":"065f88496d4fc64d","signature":"d265acba13971427","slotNumber":1960}],"tag":"NewChainAndVotes","votes":[{"blockHash":"5b798fcb7fc22d8b","creatorId":0},{"blockHash":"5b798fcb7fc22d8b","creatorId":1},{"blockHash":"5b798fcb7fc22d8b","creatorId":2},{"blockHash":"5b798fcb7fc22d8b","creatorId":3},{"blockHash":"5b798fcb7fc22d8b","creatorId":4},{"blockHash":"5b798fcb7fc22d8b","creatorId":5},{"blockHash":"5b798fcb7fc22d8b","creatorId":6},{"blockHash":"5b798fcb7fc22d8b","creatorId":7},{"blockHash":"5b798fcb7fc22d8b","creatorId":8},{"blockHash":"5b798fcb7fc22d8b","creatorId":9}]}
+{"chain":{"bodyHash":"","certificate":null,"creatorId":43,"leadershipProof":"864cceeef469dcfd","parentBlock":"065f88496d4fc64d","signature":"d265acba13971427","slotNumber":1960},"tag":"NewChainPref"}
+{"round":98,"slot":1962,"tag":"Tick"}
+...
+{"chains":[],"tag":"NewChainAndVotes","votes":[{"blockHash":"5b798fcb7fc22d8b","creatorId":70},{"blockHash":"5b798fcb7fc22d8b","creatorId":71},{"blockHash":"5b798fcb7fc22d8b","creatorId":72},{"blockHash":"5b798fcb7fc22d8b","creatorId":73},{"blockHash":"5b798fcb7fc22d8b","creatorId":74},{"blockHash":"5b798fcb7fc22d8b","creatorId":75},{"blockHash":"5b798fcb7fc22d8b","creatorId":76},{"blockHash":"5b798fcb7fc22d8b","creatorId":77},{"blockHash":"5b798fcb7fc22d8b","creatorId":78},{"blockHash":"5b798fcb7fc22d8b","creatorId":79}]}
+{"quorums":[{"blockRef":"5b798fcb7fc22d8b","round":98}],"tag":"NewCertificatesFromQuorum"}
+{"certificate":{"blockRef":"5b798fcb7fc22d8b","round":98},"tag":"NewCertPrime"}
+...
+{"tag":"CastVote","vote":{"blockHash":"d265acba13971427","creatorId":42,"proofM":"f68b0b711289e4b0","signature":"a7f7fb277efb6148","votingRound":100}}
+```
+
 ## 2024-05-23
 
 ### Ledger specification
