@@ -5,7 +5,7 @@
 -- | Simulate the network environment for a single node.
 module Peras.Abstract.Protocol.Network where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (modifyTVar'), atomically, readTVarIO)
+import Control.Concurrent.Class.MonadSTM (MonadSTM (modifyTVar'), atomically, readTVarIO, writeTVar)
 import Control.Monad.Class.MonadTimer (MonadDelay)
 import Control.Monad.State (execStateT, gets)
 import Control.Monad.Trans (lift)
@@ -13,7 +13,7 @@ import Control.Tracer (Tracer)
 import Data.Functor (void)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser (..))
+import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
 import Peras.Abstract.Protocol.Node (NodeState (..), initialNodeState, stateVar, tick)
 import Peras.Abstract.Protocol.Trace (PerasLog)
 import Peras.Abstract.Protocol.Types (PerasState)
@@ -28,19 +28,18 @@ runNetwork tracer scenario = do
   loop = do
     -- 1. feed the diffuser with incoming chains and votes
     slot <- gets clock
-    MkDiffuser{pendingChains = newChains, pendingVotes = newVotes} <- lift $ scenario slot
     diffuser <- gets diffuserVar
-    lift $
-      atomically $
-        modifyTVar'
-          diffuser
-          ( \MkDiffuser{pendingChains, pendingVotes} ->
-              MkDiffuser
-                { pendingChains = pendingChains `Set.union` newChains
-                , pendingVotes = pendingVotes `Set.union` newVotes
-                }
-          )
-    -- 2. Tick the node.
+    updateIncomingFromScenario diffuser slot
+    -- 2. Tick the node triggering fetching, block creation, and voting processes
     void $ tick tracer []
     -- 3. drain diffuser from possible votes and blocks emitted by the node.
+    lift $ atomically $ writeTVar diffuser defaultDiffuser
     loop
+
+  updateIncomingFromScenario diffuser slot = lift $ do
+    MkDiffuser{pendingChains = newChains, pendingVotes = newVotes} <- scenario slot
+    atomically $ modifyTVar' diffuser $ \pending ->
+      pending
+        { pendingChains = Set.union newChains $ pendingChains pending
+        , pendingVotes = Set.union newVotes $ pendingVotes pending
+        }

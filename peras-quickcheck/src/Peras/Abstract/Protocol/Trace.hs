@@ -24,6 +24,7 @@ data PerasLog
   | NewCertificatesFromQuorum {newQuorums :: [Certificate]}
   | NewCertPrime {newCertPrime :: Certificate}
   | NewCertStar {newCertStar :: Certificate}
+  | CastVote {vote :: Vote}
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON)
 

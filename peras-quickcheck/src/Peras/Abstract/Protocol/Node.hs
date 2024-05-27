@@ -16,7 +16,16 @@ import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser, diffus
 import Peras.Abstract.Protocol.Fetching (fetching)
 import Peras.Abstract.Protocol.Preagreement (preagreement)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasU), PerasResult, PerasState, defaultParams, inRound, initialPerasState, newRound)
+import Peras.Abstract.Protocol.Types (
+  Payload,
+  PerasParams,
+  PerasResult,
+  PerasState,
+  defaultParams,
+  inRound,
+  initialPerasState,
+  newRound,
+ )
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)
@@ -61,12 +70,11 @@ tick tracer payload = do
     when (newRound s params) $
       ExceptT $
         lift $
-          voting params party state r preagreement (diffuseVote diffuser)
+          voting tracer params party state r preagreement (diffuseVote diffuser)
  where
   fetchNewChainsAndVotes :: TVar m Diffuser -> m (Set Chain, Set Vote)
-  fetchNewChainsAndVotes diffuser = do
-    result <- atomically $ do
+  fetchNewChainsAndVotes diffuser =
+    atomically $ do
       result <- (pendingChains &&& pendingVotes) <$> readTVar diffuser
       modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
       pure result
-    pure result

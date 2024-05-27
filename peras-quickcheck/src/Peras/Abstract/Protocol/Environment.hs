@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Abstract.Protocol.Environment where
@@ -21,7 +22,7 @@ anotherParty = mkParty 43 [20] []
 
 -- | Describes the "Happy Path" scenario where there's a steady flow of blocks and votes forming a quorum.
 simpleScenario :: MonadSTM m => TVar m Chain -> PerasParams -> SlotNumber -> m Diffuser
-simpleScenario chain params slotNumber = do
+simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber = do
   generateVotes >>= generateNewChain
  where
   generateNewChain diffuser
@@ -45,8 +46,8 @@ simpleScenario chain params slotNumber = do
   -- generate 10 votes every slot in a round
   generateVotes = do
     let round = inRound (fromIntegral slotNumber) params
-        slotInRound = fromIntegral slotNumber `mod` perasU params
-    blockToVoteFor <- blockBefore (perasL params) (fromIntegral round * perasU params) <$> readTVarIO chain
+        slotInRound = fromIntegral slotNumber `mod` perasU
+    blockToVoteFor <- blockBefore perasL (fromIntegral round * perasU) <$> readTVarIO chain
     case blockToVoteFor of
       Nothing -> pure defaultDiffuser
       Just block -> do
