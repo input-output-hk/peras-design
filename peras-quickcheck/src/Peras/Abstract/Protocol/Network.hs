@@ -1,26 +1,29 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Simulate the network environment for a single node.
 module Peras.Abstract.Protocol.Network where
 
 import Control.Arrow ((&&&))
-import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, readTVarIO, writeTVar)
+import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
 import Control.Monad (forM)
 import Control.Monad.Class.MonadTimer (MonadDelay)
 import Control.Monad.State (StateT, execStateT, gets, modify')
 import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
+import Data.Foldable (toList)
 import Data.Functor (void)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
 import Peras.Abstract.Protocol.Node (NodeState (MkNodeState, clock, diffuserVar, stateVar), initialNodeState, tick, tickNode)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (Payload, PerasParams, PerasResult, PerasState, inRound)
+import Peras.Abstract.Protocol.Types (Payload, PerasParams, PerasResult, PerasState, defaultParams, inRound, initialPerasState)
 import Peras.Block (Party)
 import Peras.Numbering (SlotNumber)
 
@@ -55,6 +58,14 @@ data Network m = MkNetwork
   , stateVars :: Map Party (TVar m PerasState)
   , netDiffuserVar :: TVar m Diffuser
   }
+
+initialNetwork :: MonadSTM m => Set Party -> SlotNumber -> m (Network m)
+initialNetwork parties netClock =
+  do
+    let protocol = defaultParams
+    stateVars <- Map.fromList <$> mapM ((<$> newTVarIO initialPerasState) . (,)) (toList parties)
+    netDiffuserVar <- newTVarIO defaultDiffuser
+    pure MkNetwork{..}
 
 tickNetwork :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (Network m) m (PerasResult ())
 tickNetwork tracer payload = do
