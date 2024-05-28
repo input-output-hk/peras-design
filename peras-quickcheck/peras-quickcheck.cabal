@@ -75,6 +75,7 @@ library
                      Peras.Abstract.Protocol.Preagreement
                      Peras.Abstract.Protocol.Trace
                      Peras.Abstract.Protocol.Types
+                     Peras.Abstract.Protocol.Visualizer
                      Peras.Abstract.Protocol.Voting
                      Peras.ChainWeight
                      Peras.QCD.Node.API
@@ -105,6 +106,7 @@ library
                       hashable,
                       io-classes,
                       io-sim,
+                      language-dot,
                       lens,
                       mtl,
                       peras-hs,

@@ -31,6 +31,7 @@ data PerasLog
   | NewCertPrime {party :: PartyId, newCertPrime :: Certificate}
   | NewCertStar {party :: PartyId, newCertStar :: Certificate}
   | CastVote {party :: PartyId, vote :: Vote}
+  | VotingLogic {party :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
   | PreagreementBlock {party :: PartyId, block :: Block, weight :: VotingWeight}
   | PreagreementNone {party :: PartyId}
   deriving stock (Show, Eq, Generic)
@@ -55,6 +56,7 @@ instance ToJSON PerasLog where
     NewCertPrime p c -> object ["tag" .= ("NewCertPrime" :: Text), "party" .= p, "certificate" .= c]
     NewCertStar p c -> object ["tag" .= ("NewCertStar" :: Text), "party" .= p, "certificate" .= c]
     CastVote p v -> object ["tag" .= ("CastVote" :: Text), "party" .= p, "vote" .= v]
+    VotingLogic p v1a v1b v2a v2b -> object ["tag" .= ("VotingLogic" :: Text), "party" .= p, "v1a" .= v1a, "v1b" .= v1b, "v2a" .= v2a, "v2b" .= v2b]
     PreagreementBlock p b w -> object ["tag" .= ("PreagreementBlock" :: Text), "party" .= p, "block" .= b, "weight" .= w]
     PreagreementNone p -> object ["tag" .= ("PreagreementNone" :: Text), "party" .= p]
 
