@@ -15,6 +15,7 @@ import Data.Text (Text)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LE
 import GHC.Generics (Generic)
+import Peras.Abstract.Protocol.Types (VotingWeight)
 import Peras.Block (Block, Certificate, PartyId)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Crypto (Hash)
@@ -23,13 +24,15 @@ import Peras.Orphans ()
 
 data PerasLog
   = Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
-  | NewChainAndVotes {newChains :: Set Chain, newVotes :: Set Vote}
-  | NewChainPref {newChainPref :: Chain}
-  | NewCertificatesReceived {newCertificates :: [(Certificate, SlotNumber)]}
-  | NewCertificatesFromQuorum {newQuorums :: [Certificate]}
-  | NewCertPrime {newCertPrime :: Certificate}
-  | NewCertStar {newCertStar :: Certificate}
-  | CastVote {vote :: Vote}
+  | NewChainAndVotes {party :: PartyId, newChains :: Set Chain, newVotes :: Set Vote}
+  | NewChainPref {party :: PartyId, newChainPref :: Chain}
+  | NewCertificatesReceived {party :: PartyId, newCertificates :: [(Certificate, SlotNumber)]}
+  | NewCertificatesFromQuorum {party :: PartyId, newQuorums :: [Certificate]}
+  | NewCertPrime {party :: PartyId, newCertPrime :: Certificate}
+  | NewCertStar {party :: PartyId, newCertStar :: Certificate}
+  | CastVote {party :: PartyId, vote :: Vote}
+  | PreagreementBlock {party :: PartyId, block :: Block, weight :: VotingWeight}
+  | PreagreementNone {party :: PartyId}
   deriving stock (Show, Eq, Generic)
 
 data VoteLog = MkVoteLog
@@ -45,13 +48,15 @@ fromVote MkVote{creatorId = cid, blockHash = h} = MkVoteLog{creatorId = cid, blo
 instance ToJSON PerasLog where
   toJSON = \case
     Tick s r -> A.object ["tag" .= ("Tick" :: Text), "slot" .= s, "round" .= r]
-    NewChainAndVotes cs vs -> object ["tag" .= ("NewChainAndVotes" :: Text), "chains" .= (head <$> toList cs), "votes" .= fmap fromVote (toList vs)]
-    NewChainPref c -> object ["tag" .= ("NewChainPref" :: Text), "chain" .= head c]
-    NewCertificatesReceived cs -> object ["tag" .= ("NewCertificatesReceived" :: Text), "certificates" .= cs]
-    NewCertificatesFromQuorum qs -> object ["tag" .= ("NewCertificatesFromQuorum" :: Text), "quorums" .= qs]
-    NewCertPrime c -> object ["tag" .= ("NewCertPrime" :: Text), "certificate" .= c]
-    NewCertStar c -> object ["tag" .= ("NewCertStar" :: Text), "certificate" .= c]
-    CastVote v -> object ["tag" .= ("CastVote" :: Text), "vote" .= v]
+    NewChainAndVotes p cs vs -> object ["tag" .= ("NewChainAndVotes" :: Text), "party" .= p, "chains" .= (head <$> toList cs), "votes" .= fmap fromVote (toList vs)]
+    NewChainPref p c -> object ["tag" .= ("NewChainPref" :: Text), "party" .= p, "chain" .= head c]
+    NewCertificatesReceived p cs -> object ["tag" .= ("NewCertificatesReceived" :: Text), "party" .= p, "certificates" .= cs]
+    NewCertificatesFromQuorum p qs -> object ["tag" .= ("NewCertificatesFromQuorum" :: Text), "party" .= p, "quorums" .= qs]
+    NewCertPrime p c -> object ["tag" .= ("NewCertPrime" :: Text), "party" .= p, "certificate" .= c]
+    NewCertStar p c -> object ["tag" .= ("NewCertStar" :: Text), "party" .= p, "certificate" .= c]
+    CastVote p v -> object ["tag" .= ("CastVote" :: Text), "party" .= p, "vote" .= v]
+    PreagreementBlock p b w -> object ["tag" .= ("PreagreementBlock" :: Text), "party" .= p, "block" .= b, "weight" .= w]
+    PreagreementNone p -> object ["tag" .= ("PreagreementNone" :: Text), "party" .= p]
 
 perasTracer :: Tracer IO PerasLog
 perasTracer = contramap (LT.unpack . LE.decodeUtf8 . A.encode) stdoutTracer

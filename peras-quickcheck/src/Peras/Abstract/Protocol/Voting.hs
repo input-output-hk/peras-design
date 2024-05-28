@@ -11,16 +11,26 @@ import Control.Monad (when)
 import Control.Monad.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans (lift)
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), Voting)
-import Peras.Block (Block (..), Certificate (..))
+import Peras.Abstract.Protocol.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement)
+import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Crypto (Hashable (..))
+import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
 
 import Control.Tracer (Tracer, traceWith)
 import qualified Data.Set as Set (insert, singleton)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 
-voting :: MonadSTM m => Tracer m PerasLog -> Voting m
+voting ::
+  MonadSTM m =>
+  Tracer m PerasLog ->
+  PerasParams ->
+  Party ->
+  TVar m PerasState ->
+  RoundNumber ->
+  Preagreement m ->
+  DiffuseVote m ->
+  m (PerasResult ())
 voting tracer params@MkPerasParams{perasR, perasK} party perasState roundNumber preagreement diffuseVote = runExceptT $ do
   MkPerasState{..} <- lift $ readTVarIO perasState
   -- Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot rU + T .
@@ -50,4 +60,4 @@ voting tracer params@MkPerasParams{perasR, perasK} party perasState roundNumber 
               -- Add v to V and diffuse it.
               lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
               ExceptT $ diffuseVote vote
-              lift $ traceWith tracer $ CastVote vote
+              lift $ traceWith tracer $ CastVote (pid party) vote

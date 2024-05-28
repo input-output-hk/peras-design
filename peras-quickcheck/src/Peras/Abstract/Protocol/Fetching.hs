@@ -3,11 +3,10 @@
 {-# LANGUAGE TupleSections #-}
 
 module Peras.Abstract.Protocol.Fetching (
-  Fetching,
   fetching,
 ) where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM, atomically, modifyTVar', readTVarIO)
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar', readTVarIO)
 import Control.Monad (unless, when)
 import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
@@ -19,17 +18,27 @@ import Data.Set (Set)
 import Data.Set as Set (fromList, intersection, map, size, union)
 import Peras.Abstract.Protocol.Crypto (createSignedCertificate)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (Fetching, PerasParams (..), PerasState (..), genesisCert)
-import Peras.Block (Block (certificate), Certificate (..))
+import Peras.Abstract.Protocol.Types (PerasParams (..), PerasResult, PerasState (..), genesisCert)
+import Peras.Block (Block (certificate), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (hash)
+import Peras.Numbering (SlotNumber)
 import Prelude hiding (round)
 
-fetching :: MonadSTM m => Tracer m PerasLog -> Fetching m
+fetching ::
+  MonadSTM m =>
+  Tracer m PerasLog ->
+  PerasParams ->
+  Party ->
+  TVar m PerasState ->
+  SlotNumber ->
+  Set Chain ->
+  Set Vote ->
+  m (PerasResult ())
 fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
   MkPerasState{..} <- readTVarIO stateVar
   -- 1. Fetch new chains Cnew and votes Vnew.
-  traceWith tracer (NewChainAndVotes newChains newVotes)
+  traceWith tracer $ NewChainAndVotes (pid party) newChains newVotes
 
   -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
   let chains' = chains `Set.union` newChains
@@ -41,7 +50,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
           $ toList newChains
       certs'' = certs `Map.union` Map.fromList certsReceived
 
-  unless (null certsReceived) $ traceWith tracer (NewCertificatesReceived certsReceived)
+  unless (null certsReceived) $ traceWith tracer (NewCertificatesReceived (pid party) certsReceived)
 
   -- 3. Add Vnew to V and turn any new quorum in V into a certificate cert
   let votes' = votes `Set.union` newVotes
@@ -53,11 +62,11 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
     Left e -> pure $ Left e
     Right certsCreated -> do
       let certs' = certs'' `Map.union` Map.fromList ((,slot) <$> (certsCreated :: [Certificate]))
-      unless (null certsCreated) $ traceWith tracer (NewCertificatesFromQuorum certsCreated)
+      unless (null certsCreated) $ traceWith tracer (NewCertificatesFromQuorum (pid party) certsCreated)
 
       -- 4. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
       let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
-      when (chainPref' /= chainPref) $ traceWith tracer $ NewChainPref chainPref'
+      when (chainPref' /= chainPref) $ traceWith tracer $ NewChainPref (pid party) chainPref'
 
       -- 5. Set cert' to the certificate with the highest round number on Cpref.
       --
@@ -65,7 +74,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
       -- chain is preferred when there is a tie for heaviest
       -- chain.
       let certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
-      when (certPrime' /= certPrime) $ traceWith tracer $ NewCertPrime certPrime'
+      when (certPrime' /= certPrime) $ traceWith tracer $ NewCertPrime (pid party) certPrime'
 
       -- 6. Set cert* to the certificate with the highest round number on Cpref.
       --
@@ -77,7 +86,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes = do
       -- included in blocks.) Here we adopt the first
       -- interpretation.
       let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
-      when (certStar' /= certStar) $ traceWith tracer $ NewCertStar certStar'
+      when (certStar' /= certStar) $ traceWith tracer $ NewCertStar (pid party) certStar'
 
       fmap pure . atomically . modifyTVar' stateVar $ \state ->
         state

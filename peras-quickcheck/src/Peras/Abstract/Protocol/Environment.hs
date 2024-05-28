@@ -19,7 +19,7 @@ import Peras.Numbering (SlotNumber)
 import Prelude hiding (round)
 
 anotherParty :: Party
-anotherParty = mkParty 43 [20] []
+anotherParty = mkParty 43 [20, 40 .. 1000] []
 
 -- | Describes the "Happy Path" scenario where there's a steady flow of blocks and votes forming a quorum.
 simpleScenario :: MonadSTM m => TVar m Chain -> PerasParams -> SlotNumber -> m Diffuser

@@ -90,7 +90,7 @@ isSlotLeader MkParty{pkey = MkVerificationKey key} (MkSlotNumber s) =
     (Serialize.decode key :: Either String ([Integer], [Integer]))
  where
   slotIsLeader :: [Integer] -> Bool
-  slotIsLeader = any ((== 0) . (s `mod`))
+  slotIsLeader = elem s
 
 isCommitteeMember :: Party -> RoundNumber -> Bool
 isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
@@ -100,4 +100,4 @@ isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
     (Serialize.decode key :: Either String ([Integer], [Integer]))
  where
   roundIsCommitteeMember :: [Integer] -> Bool
-  roundIsCommitteeMember = any ((== 0) . (r `mod`))
+  roundIsCommitteeMember = elem r
