@@ -150,8 +150,8 @@ Building up the voting string from all the parties block-trees
 
       Empty : IsValid []
 
-      Append : ∀ {m} {v}
-        → (σ : VotingString m)
+      Append : ∀ {m} {v} {σ : VotingString m}
+        → IsValid σ
         → (σ ⟶ v)
         → IsValid (σ ∷ʳ v)
 ```
