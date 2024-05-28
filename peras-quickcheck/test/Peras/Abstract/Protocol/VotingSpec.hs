@@ -4,6 +4,7 @@ module Peras.Abstract.Protocol.VotingSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
+import Control.Tracer (nullTracer)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (defaultDiffuser, diffuseVote, pendingVotes)
@@ -39,6 +40,7 @@ spec = do
 
     void $
       voting
+        nullTracer
         params
         committeeMember
         perasState
@@ -54,6 +56,7 @@ spec = do
 
     void $
       voting
+        nullTracer
         params
         nonCommitteeMember
         perasState
@@ -72,6 +75,7 @@ spec = do
 
       void $
         voting
+          nullTracer
           params
           committeeMember
           perasState
@@ -91,6 +95,7 @@ spec = do
 
       void $
         voting
+          nullTracer
           params
           committeeMember
           perasState
@@ -109,6 +114,7 @@ spec = do
 
       void $
         voting
+          nullTracer
           params
           committeeMember
           perasState
@@ -129,6 +135,7 @@ spec = do
 
       void $
         voting
+          nullTracer
           params
           committeeMember
           perasState

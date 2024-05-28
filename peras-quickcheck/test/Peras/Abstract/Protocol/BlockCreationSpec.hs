@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Peras.Abstract.Protocol.BlockCreationSpec where
 
 import Prelude hiding (round)
