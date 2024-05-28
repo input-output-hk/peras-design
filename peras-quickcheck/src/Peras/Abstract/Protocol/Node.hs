@@ -60,7 +60,7 @@ tick tracer payload = do
   lift $ traceWith tracer $ Tick s r
   -- Retrieve chains and votes to be diffused.
   (newChains, newVotes) <- lift $ (pendingChains &&& pendingVotes) <$> readTVarIO diffuser
-  lift . atomically . modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
+  lift . atomically . modifyTVar' diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
   -- Operate node.
   lift $ tickNode tracer params party state s r payload newChains newVotes diffuser
 

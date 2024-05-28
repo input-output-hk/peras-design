@@ -5,18 +5,23 @@
 -- | Simulate the network environment for a single node.
 module Peras.Abstract.Protocol.Network where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (modifyTVar'), atomically, readTVarIO, writeTVar)
+import Control.Arrow ((&&&))
+import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, readTVarIO, writeTVar)
+import Control.Monad (forM)
 import Control.Monad.Class.MonadTimer (MonadDelay)
-import Control.Monad.State (execStateT, gets)
+import Control.Monad.State (StateT, execStateT, gets, modify')
 import Control.Monad.Trans (lift)
-import Control.Tracer (Tracer)
+import Control.Tracer (Tracer, traceWith)
 import Data.Functor (void)
+import Data.Map (Map)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
-import Peras.Abstract.Protocol.Node (NodeState (..), initialNodeState, stateVar, tick)
-import Peras.Abstract.Protocol.Trace (PerasLog)
-import Peras.Abstract.Protocol.Types (PerasState)
+import Peras.Abstract.Protocol.Node (NodeState (MkNodeState, clock, diffuserVar, stateVar), initialNodeState, tick, tickNode)
+import Peras.Abstract.Protocol.Trace (PerasLog (..))
+import Peras.Abstract.Protocol.Types (Payload, PerasParams, PerasResult, PerasState, inRound)
+import Peras.Block (Party)
 import Peras.Numbering (SlotNumber)
 
 runNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
@@ -43,3 +48,27 @@ runNetwork tracer scenario = do
         { pendingChains = Set.union newChains $ pendingChains pending
         , pendingVotes = Set.union newVotes $ pendingVotes pending
         }
+
+data Network m = MkNetwork
+  { netClock :: SlotNumber
+  , protocol :: PerasParams
+  , stateVars :: Map Party (TVar m PerasState)
+  , netDiffuserVar :: TVar m Diffuser
+  }
+
+tickNetwork :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (Network m) m (PerasResult ())
+tickNetwork tracer payload = do
+  params <- gets protocol
+  states <- gets stateVars
+  diffuser <- gets netDiffuserVar
+  -- Increment clock.
+  s <- gets $ (1 +) . netClock
+  modify' $ \net -> net{netClock = s}
+  let r = inRound s params
+  lift $ traceWith tracer $ Tick s r
+  -- Retrieve chains and votes to be diffused.
+  (newChains, newVotes) <- lift $ (pendingChains &&& pendingVotes) <$> readTVarIO diffuser
+  lift . atomically . modifyTVar' diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
+  -- Operate nodes.
+  fmap sequence_ . forM (Map.toList states) $ \(party, state) ->
+    lift $ tickNode tracer params party state s r payload newChains newVotes diffuser
