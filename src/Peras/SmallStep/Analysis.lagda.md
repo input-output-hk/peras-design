@@ -145,14 +145,15 @@ Building up the voting string from all the parties block-trees
         → L + 1 ≡ K
         → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 ```
-Reflexive, transitive closure of the small step relation
 ```agda
-    infix  2 _⟶⋆_
-```
-```agda
-    data _⟶⋆_ : VotingString m → VotingString n → Set where
-      [] : σ ⟶⋆ σ
-      _∷_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (σ″ ∷ʳ i)
+    data IsValid : ∀ {n} → VotingString n → Set where
+
+      Empty : IsValid []
+
+      Append : ∀ {m} {v}
+        → (σ : VotingString m)
+        → (σ ⟶ v)
+        → IsValid (σ ∷ʳ v)
 ```
 ### Theorem: The voting string in any execution is valid
 ```agda
@@ -190,8 +191,8 @@ Reflexive, transitive closure of the small step relation
 {-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
-        → [] ⟶⋆ build-σ (suc n) (stateMap N)
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = [] ∷ HS-I
+        → IsValid (build-σ (suc n) (stateMap N))
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = {!!} -- [] ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
       ... | xs = {!!}
@@ -200,7 +201,8 @@ Reflexive, transitive closure of the small step relation
       postulate
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
-          → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
+          → IsValid (build-σ m (stateMap M))
+          → IsValid (build-σ n (stateMap N))
 ```
 ## Execution
 ```agda
