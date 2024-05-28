@@ -7,9 +7,9 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Environment (mkSimpleScenario)
-import Peras.Abstract.Protocol.Network (initialNetwork, runNetwork, tickNetwork)
+import Peras.Abstract.Protocol.Network (initialNetwork, protocol, runNetwork, tickNetwork)
 import Peras.Abstract.Protocol.Trace (perasTracer)
-import Peras.Abstract.Protocol.Types (systemStart)
+import Peras.Abstract.Protocol.Types (PerasParams (..), systemStart)
 import Peras.Abstract.Protocol.Visualizer (makeVisTracer, visualize, writeGraph)
 import System.Environment (getArgs)
 
@@ -36,7 +36,23 @@ multinodeMain =
           , mkParty 3 [5, 15, 42, 56, 71, 82, 124] [3, 4, 5, 6]
           , mkParty 4 [8, 15, 21, 38, 50, 65, 127] [1, 5]
           ]
-    net <- initialNetwork parties systemStart
+    net <-
+      ( \p ->
+          p
+            { protocol =
+                MkPerasParams
+                  { perasU = 20
+                  , perasA = 2160
+                  , perasR = 2
+                  , perasK = 3
+                  , perasL = 15
+                  , perasτ = 2
+                  , perasB = 100
+                  , perasΔ = 5
+                  }
+            }
+        )
+        <$> initialNetwork parties systemStart
     void $ runStateT (replicateM 130 $ tickNetwork tracer mempty) net
     events <- reader
     mapM_ (LBS8.putStrLn . A.encode) events

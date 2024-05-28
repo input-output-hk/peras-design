@@ -4,6 +4,7 @@ import Prelude hiding (round)
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
+import Control.Tracer (nullTracer)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser (pendingChains), defaultDiffuser, diffuseChain)
@@ -35,6 +36,7 @@ spec = do
     diffuser <- newTVarIO defaultDiffuser
     void $
       blockCreation
+        nullTracer
         params
         slotLeader
         perasState

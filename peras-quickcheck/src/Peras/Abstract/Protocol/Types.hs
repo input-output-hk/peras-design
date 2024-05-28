@@ -41,10 +41,10 @@ defaultParams =
   MkPerasParams
     { perasU = 20
     , perasA = 2160
-    , perasR = 2
-    , perasK = 3
-    , perasL = 15
-    , perasτ = 2
+    , perasR = 100
+    , perasK = 100
+    , perasL = 30
+    , perasτ = 75
     , perasB = 100
     , perasΔ = 5
     }

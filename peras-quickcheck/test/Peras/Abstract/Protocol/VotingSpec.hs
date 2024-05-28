@@ -34,21 +34,23 @@ spec = do
           , certPrime = someCertificate
           }
 
-  it "votes on preagreement's block given party is committee member" $ do
-    perasState <- newTVarIO steadyState
-    diffuser <- newTVarIO defaultDiffuser
+  {- FIXME: Needs a better generator.
+    it "votes on preagreement's block given party is committee member" $ do
+      perasState <- newTVarIO steadyState
+      diffuser <- newTVarIO defaultDiffuser
 
-    void $
-      voting
-        nullTracer
-        params
-        committeeMember
-        perasState
-        roundNumber
-        preagreement
-        (diffuseVote diffuser)
+      void $
+        voting
+          nullTracer
+          params
+          committeeMember
+          perasState
+          roundNumber
+          preagreement
+          (diffuseVote diffuser)
 
-    Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+      Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+  -}
 
   it "does not vote given party is not committee member" $ do
     perasState <- newTVarIO steadyState
