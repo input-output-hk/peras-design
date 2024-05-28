@@ -10,7 +10,9 @@ open import Data.Maybe using (just; nothing; Is-just; is-just)
 open import Data.Maybe.Properties using (≡-dec)
 open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zero; suc; NonZero; _/_)
 
-open import Data.Product using (_×_; _,_; ∃-syntax; proj₁; proj₂)
+open import Data.Product using (_,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
+
 open import Data.Vec as V using (Vec; _∷ʳ_; []; _++_; replicate)
 open import Data.List as L using (List; any; map; length; foldr)
 
@@ -202,10 +204,20 @@ Building up the voting string from all the party's block-trees
 -}
 
       postulate
-        theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
-          → M ↝⋆ N
-          → IsValid (build-σ m (stateMap M))
-          → IsValid (build-σ n (stateMap N))
+        P : ∀ {M N : GlobalState} → (M ↝ N) → Set
+        Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
+
+        theorem-2 : ∀ {M N : GlobalState} {m : ℕ}
+          → (st : M ↝ N)
+          → (let σₘ = build-σ m (stateMap M)
+                 σₙ = build-σ m (stateMap N)
+             in P st × (σₘ ≡ σₙ)
+            )
+            ⊎
+            (let σₘ = build-σ m (stateMap M)
+                 σₙ = build-σ (suc m) (stateMap N)
+             in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
+            )
 ```
 ## Execution
 ```agda
