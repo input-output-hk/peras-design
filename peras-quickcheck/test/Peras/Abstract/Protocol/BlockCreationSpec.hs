@@ -41,5 +41,5 @@ spec = do
         slotNumber
         mempty
         (diffuseChain diffuser)
-    (Set.size . pendingChains <$> readTVarIO diffuser) `shouldReturn` 1
-    (length . chainPref <$> readTVarIO perasState) `shouldReturn` (length someChain + 1)
+    Set.size . pendingChains <$> readTVarIO diffuser `shouldReturn` 1
+    length . chainPref <$> readTVarIO perasState `shouldReturn` length someChain + 1

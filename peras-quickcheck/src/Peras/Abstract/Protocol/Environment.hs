@@ -16,13 +16,14 @@ import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
 import Peras.Numbering (SlotNumber)
+import Prelude hiding (round)
 
 anotherParty :: Party
 anotherParty = mkParty 43 [20] []
 
 -- | Describes the "Happy Path" scenario where there's a steady flow of blocks and votes forming a quorum.
 simpleScenario :: MonadSTM m => TVar m Chain -> PerasParams -> SlotNumber -> m Diffuser
-simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber = do
+simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
   generateVotes >>= generateNewChain
  where
   generateNewChain diffuser
@@ -45,7 +46,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber = do
 
   -- generate 10 votes every slot in a round
   generateVotes = do
-    let round = inRound (fromIntegral slotNumber) params
+    let round = inRound (fromIntegral slotNumber :: Integer) params
         slotInRound = fromIntegral slotNumber `mod` perasU
     blockToVoteFor <- blockBefore perasL (fromIntegral round * perasU) <$> readTVarIO chain
     case blockToVoteFor of

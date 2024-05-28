@@ -48,7 +48,7 @@ spec = do
         preagreement
         (diffuseVote diffuser)
 
-    (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
+    Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
   it "does not vote given party is not committee member" $ do
     perasState <- newTVarIO steadyState
@@ -64,7 +64,7 @@ spec = do
         preagreement
         (diffuseVote diffuser)
 
-    (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+    pendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
   describe "VR1-A" $
     it "does not vote if last seen certificate is older than previous round" $ do
@@ -84,7 +84,7 @@ spec = do
           (diffuseVote diffuser)
       --      `shouldReturn` Left NoVoting
 
-      (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+      pendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
   describe "VR1-B" $
     it "does not vote if block does not extend immediately last seen certificate" $ do
@@ -104,7 +104,7 @@ spec = do
           (diffuseVote diffuser)
       --     `shouldReturn` Left NoVoting
 
-      (pendingVotes <$> readTVarIO diffuser) `shouldReturn` mempty
+      pendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
   describe "VR2-A" $
     it "votes on preagreement's block given last seen certificate is older than cooldown period" $ do
@@ -122,7 +122,7 @@ spec = do
           preagreement
           (diffuseVote diffuser)
 
-      (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
+      Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1
   describe "VR2-B" $
     it "Cooldown periods have ended." $ do
       let cooldownState =
@@ -143,4 +143,4 @@ spec = do
           preagreement
           (diffuseVote diffuser)
 
-      (Set.size . pendingVotes <$> readTVarIO diffuser) `shouldReturn` 1
+      Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1

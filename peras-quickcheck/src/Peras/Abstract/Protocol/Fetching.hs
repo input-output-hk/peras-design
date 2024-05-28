@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
@@ -111,4 +110,4 @@ findNewQuora quorum priorCerts votes =
         toList votes
     votesGrouped = groupBy sameVoting $ sortBy orderVoting notAlreadyCertified
    in
-    fmap Set.fromList $ filter ((>= quorum) . length) votesGrouped
+    Set.fromList <$> filter ((>= quorum) . length) votesGrouped

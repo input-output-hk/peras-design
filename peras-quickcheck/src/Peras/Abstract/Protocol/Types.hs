@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
