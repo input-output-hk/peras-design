@@ -84,14 +84,17 @@ Assign a letter for a voting round for a list of block-trees:
     ... | no _  | yes _ = ？
     ... | no _  | no _  = 🄀
 ```
-Building up the voting string from all the parties block-trees
+Building up the voting string from all the party's block-trees
 ```agda
-    build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
-    build-σ′ 0 _ = []
-    build-σ′ (suc n) ts = build-σ′ n ts ∷ʳ σᵢ (MkRoundNumber n) ts
+    treeList : Map T → List T
+    treeList = map proj₂ ∘ toList
 
     build-σ : ∀ (n : ℕ) → Map T → Vec Σ n
-    build-σ n s = build-σ′ n (map proj₂ (toList s))
+    build-σ n = build-σ′ n ∘ treeList
+      where
+        build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
+        build-σ′ 0 _ = []
+        build-σ′ (suc n) ts = build-σ′ n ts ∷ʳ σᵢ (MkRoundNumber n) ts
 ```
 ### Voting string analysis
 ```agda
@@ -191,11 +194,11 @@ Building up the voting string from all the parties block-trees
 {-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
-        → IsValid (build-σ (suc n) (stateMap N))
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = ϵ ∷ HS-I
+        → IsValid {suc n} (build-σ (suc n) (stateMap N))
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (stateMap N)} = ϵ ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
-      ... | xs = {!!}
+      ... | x = x ∷ {!!} -- TODO: pattern match on x
 -}
 
       postulate
