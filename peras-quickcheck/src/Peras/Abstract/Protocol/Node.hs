@@ -29,7 +29,7 @@ import Peras.Abstract.Protocol.Types (
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)
-import Peras.Numbering (SlotNumber)
+import Peras.Numbering (RoundNumber, SlotNumber)
 
 data NodeState m = MkNodeState
   { self :: Party
@@ -53,28 +53,39 @@ tick tracer payload = do
   party <- gets self
   state <- gets stateVar
   diffuser <- gets diffuserVar
-  -- 1. Increment clock.
+  -- Increment clock.
   s <- gets $ (1 +) . clock
   modify' $ \node -> node{clock = s}
   let r = inRound s params
   lift $ traceWith tracer $ Tick s r
+  -- Retrieve chains and votes to be diffused.
+  (newChains, newVotes) <- lift $ (pendingChains &&& pendingVotes) <$> readTVarIO diffuser
+  lift . atomically . modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
+  -- Operate node.
+  lift $ tickNode tracer params party state s r payload newChains newVotes diffuser
 
-  -- 2. Get votes and chains from the network.
-  (newChains, newVotes) <- lift (fetchNewChainsAndVotes diffuser)
+tickNode ::
+  forall m.
+  MonadSTM m =>
+  Tracer m PerasLog ->
+  PerasParams ->
+  Party ->
+  TVar m PerasState ->
+  SlotNumber ->
+  RoundNumber ->
+  Payload ->
+  Set Chain ->
+  Set Vote ->
+  TVar m Diffuser ->
+  m (PerasResult ())
+tickNode tracer params party state s r payload newChains newVotes diffuser = do
+  -- 1. Get votes and chains from the network.
   runExceptT $ do
-    -- 3. Invoke fetching.
-    ExceptT $ lift $ fetching tracer params party state s newChains newVotes
-    -- 4. Invoke block creation if leader.
-    ExceptT $ lift $ blockCreation params party state s payload (diffuseChain diffuser)
-    -- 5. Invoke voting if committee member.
+    -- 2. Invoke fetching.
+    ExceptT $ fetching tracer params party state s newChains newVotes
+    -- 3. Invoke block creation if leader.
+    ExceptT $ blockCreation params party state s payload (diffuseChain diffuser)
+    -- 4. Invoke voting if committee member.
     when (newRound s params) $
       ExceptT $
-        lift $
-          voting tracer params party state r preagreement (diffuseVote diffuser)
- where
-  fetchNewChainsAndVotes :: TVar m Diffuser -> m (Set Chain, Set Vote)
-  fetchNewChainsAndVotes diffuser =
-    atomically $ do
-      result <- (pendingChains &&& pendingVotes) <$> readTVar diffuser
-      modifyTVar diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
-      pure result
+        voting tracer params party state r preagreement (diffuseVote diffuser)
