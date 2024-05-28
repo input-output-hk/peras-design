@@ -148,9 +148,9 @@ Building up the voting string from all the parties block-trees
 ```agda
     data IsValid : ∀ {n} → VotingString n → Set where
 
-      Empty : IsValid []
+      ϵ : IsValid []
 
-      Append : ∀ {m} {v} {σ : VotingString m}
+      _∷_ : ∀ {m} {v} {σ : VotingString m}
         → IsValid σ
         → (σ ⟶ v)
         → IsValid (σ ∷ʳ v)
@@ -192,7 +192,7 @@ Building up the voting string from all the parties block-trees
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
         → IsValid (build-σ (suc n) (stateMap N))
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = {!!} -- [] ∷ HS-I
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {L.map proj₂ (toList (stateMap N))} = ϵ ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
       ... | xs = {!!}
