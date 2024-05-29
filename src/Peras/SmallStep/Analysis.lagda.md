@@ -211,6 +211,8 @@ Building up the voting string from all the party's block-trees
       ... | xs = {!!}
 -}
       postulate
+        -- FIXME: build-σ could be `replicate n 1`
+        -- small-steps need to be taken into account
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
@@ -232,32 +234,30 @@ Building up the voting string from all the party's block-trees
       open import Data.List.Relation.Unary.All as All using ()
 
       postulate
+        P : ∀ {M N : GlobalState} → (M ↝ N) → Set
+        Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
+
         theorem-3 : ∀ {M N : GlobalState} {m n : ℕ}
-          → M ↝ N
+          → (st : M ↝ N)
           → (MkRoundNumber m) ≡ v-round (clock M)
           → (MkRoundNumber n) ≡ v-round (clock N)
           → n ≡ suc m
           → let σₘ = build-σ m (stateMap M)
                 σₙ = build-σ (suc m) (stateMap N)
-            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
+            in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
 
-{-
-      postulate
-        P : ∀ {M N : GlobalState} → (M ↝ N) → Set
-        Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
-
-        theorem-2 : ∀ {M N : GlobalState} {m : ℕ}
+        theorem-4 : ∀ {M N : GlobalState} {m : ℕ}
           → (st : M ↝ N)
           → (let σₘ = build-σ m (stateMap M)
                  σₙ = build-σ m (stateMap N)
-             in P st × (σₘ ≡ σₙ)
+             in P st × (σₘ ≡ σₙ) -- FIXME: σₘ ≡ σₙ does not have to hold
+                                 -- that last element in the vector can change
             )
             ⊎
             (let σₘ = build-σ m (stateMap M)
                  σₙ = build-σ (suc m) (stateMap N)
              in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
             )
--}
 ```
 ## Execution
 ```agda
