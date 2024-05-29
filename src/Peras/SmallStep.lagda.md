@@ -399,13 +399,21 @@ must hold before transitioning to the next slot.
 ```agda
     LastSlotInRound : State → Set
     LastSlotInRound M =
-      suc (getRoundNumber (v-round (clock M))) ≡ getRoundNumber (v-round (next (clock M)))
-      where open State
+      suc (getRoundNumber (v-round clock)) ≡ getRoundNumber (v-round (next clock))
+      where open State M
 ```
 ```agda
     NextSlotInSameRound : State → Set
-    NextSlotInSameRound M = v-round (clock M) ≡ v-round (next (clock M))
-      where open State
+    NextSlotInSameRound M = v-round clock ≡ v-round (next clock)
+      where open State M
+```
+```agda
+    RequiredVotes : State → Set
+    RequiredVotes M =
+      let r = v-round clock
+       in Mapₚ.Any (flip VoteInRound r ∘ proj₂) blockTrees
+        → Mapₚ.Any (hasVote r ∘ proj₂) blockTrees
+      where open State M
 ```
 Ticking the global clock increments the slot number and decrements the delay of
 all the messages in the message buffer.
@@ -622,12 +630,8 @@ The small-step semantics describe the evolution of the global state.
       NextSlotNewRound :
           Delivered M
         → LastSlotInRound M
-        → let open State M
-              r = v-round clock
-           in Mapₚ.Any
-            (λ {(_ , t) → hasVote r t × VoteInRound t r
-               }) blockTrees
-          ----------------------------------------------
+        → RequiredVotes M
+          ---------------
         → M ↝ tick M
 ```
 
