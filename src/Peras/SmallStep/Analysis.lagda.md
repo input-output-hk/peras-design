@@ -22,7 +22,7 @@ open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Function using (_$_; case_of_; _∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_; refl; cong)
+open Eq using (_≡_; _≢_; refl; cong; sym)
 
 open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; _⊎-dec_; toWitness)
@@ -201,11 +201,25 @@ Building up the voting string from all the party's block-trees
       ... | yes _ = refl
       ... | no p  = ⊥-elim (p genesis-cert)
 
+      HS-II-rule : ∀ {i} {ts}
+        → σᵢ (MkRoundNumber i) ts ≡ ⒈
+        →   σᵢ (MkRoundNumber (suc i)) ts ≡ ⒈
+          ⊎ σᵢ (MkRoundNumber (suc i)) ts ≡ ？
+      HS-II-rule {i} {ts} x
+        with any? (hasCert? (MkRoundNumber (suc i))) ts
+        with any? (hasVote? (MkRoundNumber (suc i))) ts
+      ... | yes _ | _     = inj₁ refl
+      ... | no _  | yes _ = inj₂ refl
+      ... | no p | no q = {!!} -- FIXME: the protocol expects that voting continues
+                               -- after a successful voting round.
+                               -- Probably we need to re-think the formalisation of
+                               -- honest/dis-honest behavior...
+
 {-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
-        → [] ⟶⋆ build-σ (suc n) (stateMap N)
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (stateMap N)} = [] ∷ HS-I
+        → [] ⟶⋆ build-σ (suc n) (blockTrees N)
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (blockTrees N)} = [] ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
       ... | xs = {!!}
@@ -215,7 +229,7 @@ Building up the voting string from all the party's block-trees
         -- small-steps need to be taken into account
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
-          → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
+          → build-σ m (blockTrees M) ⟶⋆ build-σ n (blockTrees N)
 
       lemma-length-σ′ : ∀ {tₘ tₙ} {m n : ℕ}
           → m ≡ n
@@ -226,10 +240,10 @@ Building up the voting string from all the party's block-trees
 
       lemma-length-σ : ∀ {M N : GlobalState}
           → v-round (clock M) ≡ v-round (clock N)
-          → let σₘ = build-σ (getRoundNumber (v-round (clock M))) (stateMap M)
-                σₙ = build-σ (getRoundNumber (v-round (clock N))) (stateMap N)
+          → let σₘ = build-σ (getRoundNumber (v-round (clock M))) (blockTrees M)
+                σₙ = build-σ (getRoundNumber (v-round (clock N))) (blockTrees N)
              in V.length σₘ ≡ V.length σₙ
-      lemma-length-σ {M} {N} x = lemma-length-σ′ {stateMap M} {stateMap N} (cong getRoundNumber x)
+      lemma-length-σ {M} {N} x = lemma-length-σ′ {blockTrees M} {blockTrees N} (cong getRoundNumber x)
 
       open import Data.List.Relation.Unary.All as All using ()
 
@@ -242,20 +256,20 @@ Building up the voting string from all the party's block-trees
           → (MkRoundNumber m) ≡ v-round (clock M)
           → (MkRoundNumber n) ≡ v-round (clock N)
           → n ≡ suc m
-          → let σₘ = build-σ m (stateMap M)
-                σₙ = build-σ (suc m) (stateMap N)
+          → let σₘ = build-σ m (blockTrees M)
+                σₙ = build-σ (suc m) (blockTrees N)
             in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
 
         theorem-4 : ∀ {M N : GlobalState} {m : ℕ}
           → (st : M ↝ N)
-          → (let σₘ = build-σ m (stateMap M)
-                 σₙ = build-σ m (stateMap N)
+          → (let σₘ = build-σ m (blockTrees M)
+                 σₙ = build-σ m (blockTrees N)
              in P st × (σₘ ≡ σₙ) -- FIXME: σₘ ≡ σₙ does not have to hold
                                  -- that last element in the vector can change
             )
             ⊎
-            (let σₘ = build-σ m (stateMap M)
-                 σₙ = build-σ (suc m) (stateMap N)
+            (let σₘ = build-σ m (blockTrees M)
+                 σₙ = build-σ (suc m) (blockTrees N)
              in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
             )
 ```

@@ -372,7 +372,7 @@ The global state consists of the following fields:
 ```
 * Map with local state per party
 ```agda
-        stateMap : Map T
+        blockTrees : Map T
 ```
 * All the messages that have been sent but not yet been delivered
 ```agda
@@ -414,7 +414,7 @@ history.
     _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ↑ M = let open State M in
       record M
-        { stateMap = insert p l stateMap
+        { blockTrees = insert p l blockTrees
         ; messages =
             map (uncurry ⦅_,_, m , d ⦆)
               (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
@@ -436,13 +436,13 @@ the local state
 ```agda
       honest : ∀ {p} {t t′} {m} {N}
         → let open State N in
-          lookup stateMap p ≡ just t
+          lookup blockTrees p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
           ------------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N
-            { stateMap = insert p t′ stateMap
+            { blockTrees = insert p t′ blockTrees
             ; messages = messages ─ m∈ms
             }
 ```
@@ -482,7 +482,7 @@ is added to be consumed immediately.
                     }
           in
           vote ≡ v
-        → lookup stateMap p ≡ just t
+        → lookup blockTrees p ≡ just t
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
@@ -529,7 +529,7 @@ certificate reference is included in the block.
                     }
           in
           block ≡ b
-        → lookup stateMap p ≡ just t
+        → lookup blockTrees p ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
           --------------------------------------------------
@@ -560,7 +560,7 @@ During a cool-down phase, the block includes a certificate reference.
               r = getRoundNumber (v-round clock)
           in
           block ≡ b
-        → lookup stateMap p ≡ just t
+        → lookup blockTrees p ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
         → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t) -- (a)
