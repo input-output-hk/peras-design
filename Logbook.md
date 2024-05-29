@@ -1,3 +1,42 @@
+## 2024-05-29
+
+### Discussion items for next steps
+
+Several significant items need discussion among the prototyping team, as they have the potential to delay or block progress.
+
+- [ ] *Prototype review and testing:* Since, for the time being, we'll be relying on the Haskell prototype for the conformance tests . . .
+    - [ ] Should we do a line-by-line code review to ensure it matches Figure 2 of the draft paper?
+    - [ ] Should we prioritize creating the `quickcheck-dynamic` actions for simulation?
+        - [ ] The actions can be used as a DSL for defining single- and multi-node honest and adversarial scenarios.
+        - [ ] They would also test that implementations have the same observable effects as the reference implementation.
+    - [ ] Aside from the `quickcheck-dynamic` model-based testing, should we also create a full suite of unit tests that focus on edge cases for the protocol?
+        - [ ] Should these be backported to Agda?
+        - [ ] Or should they be written in Agda and ported to Haskell?
+- [ ] *Equivocation:* The draft paper says little about how to handle equivocation.
+    - [ ] Should we leave the prototype without any equivocation checks, since the paper's Figure 2 does not have any?
+    - [ ] Or should we add a universal rule that the first chain or vote received always supercedes any subsequent equivocated ones?
+- [ ] *Leadership and membership schedules in the prototype:* It is still a bit awkward in the prototype to set predetermined schedules for slot leadership and voting committee membership.
+    - [ ] Embedding the leadership/membership in the `Party` type is not practical for long or ad-hoc scenarios.
+    - [ ] Could the leadership/membership be expressed via a DSL like in the Agda `Peras.SmallStep.Execution`?
+    - [ ] Should externally generated leadership/membership proofs simply be handing to the `blockCreation`/`voting` functions?
+- [ ] *Vote weights:* A party may have multiple votes because they can win the stake lottery several times in the same round. Shall we coordinate soon on including this in the Agda `Vote` type and in the Haskell prototype?
+- [ ] *Preagreement:* When should we tackle coding preagreement in the prototype and conformance tests? The preagreement process might result in significant message traffic and delays, so we cannot just ignore it.
+- [ ] *Pseudo-code vs Agda in CIP:* Do we now have sufficient stakeholder feedback to settle on how to present the Peras protocol in the CIP?
+- [ ] *Diffusion:* The prototype's current diffusion schema is lossless and has a fixed delay for delivering messages.
+    - [ ] What variants on a fixed delay should we implement?
+    - [ ] 
+- [ ] *Visualization:* We're reaching the limits of convenient usage of GraphViz for visualizing the chain evolution. Should we develop a lightweight web-based visualizer for the `PerasLog` output? If so, should it be based on a standard JavaScript library or done via SVG in WASM Rust?
+- [ ] *Stakeholder-facing software:* What software will we develop and deploy for stakeholders to experiment with the protocol?
+- [ ] *Cryptography implementations:* The conformance tests will need implementations of signatures, hashes, proofs, and certificates. What is the priority for implementing these?
+
+### Haskell prototype
+
+* The Haskell prototype now fully implements (aside from preagreement) the May version of the Peras protocol. The implementation has been cleaned up and more thoroughly documented.
+* Its tracing facility is used to generate GraphViz diagrams of the blockchain, votes, and certificates.
+* It can be run in multi-node mode.
+* Logging has been expaned to include initialization, preagreement, and the internal logic of voting and block creation.
+* The diffusion capabilities have been revised to allow for chains and votes to be delayed before delivery. This makes it possible to do "worst-case" network scenarios where every message is delayed by delta.
+
 ## 2024-05-27
 
 ### Haskell Prototype
