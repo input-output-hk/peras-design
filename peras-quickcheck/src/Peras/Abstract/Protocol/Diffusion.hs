@@ -2,13 +2,12 @@
 
 module Peras.Abstract.Protocol.Diffusion where
 
+import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar')
 import Data.Set (Set)
+import qualified Data.Set as Set (insert)
 import GHC.Generics (Generic)
 import Peras.Abstract.Protocol.Types (DiffuseChain, DiffuseVote)
 import Peras.Chain (Chain, Vote)
-
-import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar')
-import qualified Data.Set as Set (insert)
 
 data Diffuser = MkDiffuser
   { pendingChains :: Set Chain

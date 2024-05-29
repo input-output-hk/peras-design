@@ -21,7 +21,6 @@ import Peras.Abstract.Protocol.Types (
   PerasParams,
   PerasResult,
   PerasState,
-  defaultParams,
   inRound,
   initialPerasState,
   newRound,

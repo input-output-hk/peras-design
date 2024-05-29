@@ -5,14 +5,13 @@ module Peras.Abstract.Protocol.Preagreement (
   preagreement,
 ) where
 
-import Prelude hiding (round)
-
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, readTVarIO)
 import Control.Tracer (Tracer, traceWith)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (PerasParams (..), PerasResult, PerasState (..), VotingWeight)
 import Peras.Block (Block (MkBlock, slotNumber), Party (pid))
-import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber))
+import Peras.Numbering (RoundNumber)
+import Prelude hiding (round)
 
 -- | FIXME: This is a placeholder for the real preagreement algorithm.
 preagreement ::
@@ -26,11 +25,14 @@ preagreement ::
 preagreement tracer MkPerasParams{..} party stateVar round =
   do
     MkPerasState{..} <- readTVarIO stateVar
-    let tooNew MkBlock{slotNumber} = getSlotNumber slotNumber + perasL >= getRoundNumber round * perasU
+    -- Let B be the youngest block at least L slots old on Cpref.
+    let tooNew MkBlock{slotNumber} = fromIntegral slotNumber + perasL > fromIntegral round * perasU
     case dropWhile tooNew chainPref of
       block : _ -> do
-        traceWith tracer $ PreagreementBlock (pid party) block 1
-        pure $ pure (Just (block, 1)) -- FIXME: Compute correct weight based on stake distribution.
+        -- FIXME: Compute correct weight based on stake distribution.
+        let votingWeight = 1
+        traceWith tracer $ PreagreementBlock (pid party) block votingWeight
+        pure $ pure (Just (block, votingWeight))
       _ -> do
         traceWith tracer $ PreagreementNone (pid party)
         pure $ pure Nothing

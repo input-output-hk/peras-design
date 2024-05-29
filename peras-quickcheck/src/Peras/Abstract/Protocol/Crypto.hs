@@ -9,16 +9,15 @@ import Prelude hiding (round)
 
 import Control.Monad.Except (throwError)
 import Data.Foldable (toList)
+import qualified Data.Hashable as H (Hashable (..))
+import qualified Data.Serialize as Serialize (decode, encode)
+import Data.Set (Set)
+import qualified Data.Set as S (map)
 import Peras.Abstract.Protocol.Types (Payload, PerasError (..), PerasResult, VotingWeight)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
 import Peras.Numbering
-
-import qualified Data.Hashable as H (Hashable (..))
-import qualified Data.Serialize as Serialize (decode, encode)
-import Data.Set (Set)
-import qualified Data.Set as S (map)
 
 createSignedBlock ::
   Applicative m =>
