@@ -37,22 +37,17 @@ multinodeMain =
           , mkParty 4 [8, 15, 21, 38, 50, 65, 127] [1, 5]
           ]
     net <-
-      ( \p ->
-          p
-            { protocol =
-                MkPerasParams
-                  { perasU = 20
-                  , perasA = 2160
-                  , perasR = 2
-                  , perasK = 3
-                  , perasL = 15
-                  , perasτ = 2
-                  , perasB = 100
-                  , perasΔ = 5
-                  }
-            }
-        )
-        <$> initialNetwork parties systemStart
+      initialNetwork tracer parties systemStart $
+        MkPerasParams
+          { perasU = 20
+          , perasA = 2160
+          , perasR = 2
+          , perasK = 3
+          , perasL = 15
+          , perasτ = 2
+          , perasB = 100
+          , perasΔ = 5
+          }
     void $ runStateT (replicateM 130 $ tickNetwork tracer mempty) net
     events <- reader
     mapM_ (LBS8.putStrLn . A.encode) events

@@ -1,9 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
 
 import Control.Concurrent.Class.MonadSTM (TVar)
+import qualified Data.Aeson as A
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
 import GHC.Generics (Generic)
@@ -33,6 +36,9 @@ data PerasParams = MkPerasParams
   -- ^ Delivery guarantee for diffusion, in slots
   }
   deriving (Eq, Generic, Show)
+
+instance A.ToJSON PerasParams where
+  toJSON MkPerasParams{..} = A.object ["U" A..= perasU, "A" A..= perasA, "R" A..= perasR, "K" A..= perasK, "L" A..= perasL, "τ" A..= perasτ, "B" A..= perasB, "Δ" A..= perasΔ]
 
 -- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
 -- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.

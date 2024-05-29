@@ -15,7 +15,7 @@ import Data.Text (Text)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LE
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Types (VotingWeight)
+import Peras.Abstract.Protocol.Types (PerasParams, VotingWeight)
 import Peras.Block (Block, Certificate, PartyId)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Crypto (Hash)
@@ -23,7 +23,8 @@ import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
 data PerasLog
-  = Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
+  = Protocol {parameters :: PerasParams}
+  | Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
   | NewChainAndVotes {party :: PartyId, newChains :: Set Chain, newVotes :: Set Vote}
   | NewChainPref {party :: PartyId, newChainPref :: Chain}
   | NewCertificatesReceived {party :: PartyId, newCertificates :: [(Certificate, SlotNumber)]}
@@ -49,6 +50,7 @@ fromVote MkVote{creatorId = cid, blockHash = h} = MkVoteLog{creatorId = cid, blo
 
 instance ToJSON PerasLog where
   toJSON = \case
+    Protocol p -> A.object ["tag" .= ("Protocol" :: Text), "parameters" .= p]
     Tick s r -> A.object ["tag" .= ("Tick" :: Text), "slot" .= s, "round" .= r]
     NewChainAndVotes p cs vs -> object ["tag" .= ("NewChainAndVotes" :: Text), "party" .= p, "chains" .= (head <$> toList cs), "votes" .= fmap fromVote (toList vs)]
     NewChainPref p c -> object ["tag" .= ("NewChainPref" :: Text), "party" .= p, "chain" .= head c]

@@ -43,7 +43,7 @@ spec = do
 
   let check party properties =
         do
-          nodeState <- runIO $ initialNodeState party (slotNumber - 1)
+          nodeState <- runIO $ initialNodeState nullTracer party (slotNumber - 1) defaultParams
           runIO . atomically $ writeTVar (stateVar nodeState) steadyState
           perasState <- runIO . readTVarIO $ stateVar nodeState
           (result, nodeState') <- runIO $ runStateT (tick nullTracer payload) nodeState

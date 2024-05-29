@@ -30,7 +30,7 @@ import Peras.Numbering (SlotNumber)
 runNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
 runNetwork tracer scenario = do
   let voteEvery10Rounds = mkParty 42 [] [10]
-  initial <- initialNodeState voteEvery10Rounds 0
+  initial <- initialNodeState tracer voteEvery10Rounds 0 defaultParams
   execStateT loop initial >>= \MkNodeState{stateVar} -> readTVarIO stateVar
  where
   loop = do
@@ -59,10 +59,10 @@ data Network m = MkNetwork
   , netDiffuserVar :: TVar m Diffuser
   }
 
-initialNetwork :: MonadSTM m => Set Party -> SlotNumber -> m (Network m)
-initialNetwork parties netClock =
+initialNetwork :: MonadSTM m => Tracer m PerasLog -> Set Party -> SlotNumber -> PerasParams -> m (Network m)
+initialNetwork tracer parties netClock protocol =
   do
-    let protocol = defaultParams
+    traceWith tracer $ Protocol protocol
     stateVars <- Map.fromList <$> mapM ((<$> newTVarIO initialPerasState) . (,)) (toList parties)
     netDiffuserVar <- newTVarIO defaultDiffuser
     pure MkNetwork{..}

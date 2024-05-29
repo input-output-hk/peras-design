@@ -39,10 +39,10 @@ data NodeState m = MkNodeState
   , diffuserVar :: TVar m Diffuser
   }
 
-initialNodeState :: MonadSTM m => Party -> SlotNumber -> m (NodeState m)
-initialNodeState self clock =
+initialNodeState :: MonadSTM m => Tracer m PerasLog -> Party -> SlotNumber -> PerasParams -> m (NodeState m)
+initialNodeState tracer self clock protocol =
   do
-    let protocol = defaultParams
+    traceWith tracer $ Protocol protocol
     stateVar <- newTVarIO initialPerasState
     diffuserVar <- newTVarIO defaultDiffuser
     pure MkNodeState{..}
