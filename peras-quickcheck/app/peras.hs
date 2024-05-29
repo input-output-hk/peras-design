@@ -7,7 +7,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Environment (mkSimpleScenario)
-import Peras.Abstract.Protocol.Network (initialNetwork, protocol, runNetwork, tickNetwork)
+import Peras.Abstract.Protocol.Network (initialNetwork, runNetwork, tickNetwork)
 import Peras.Abstract.Protocol.Trace (perasTracer)
 import Peras.Abstract.Protocol.Types (PerasParams (..), systemStart)
 import Peras.Abstract.Protocol.Visualizer (makeVisTracer, visualize, writeGraph)
@@ -46,7 +46,7 @@ multinodeMain =
           , perasL = 15
           , perasτ = 2
           , perasB = 100
-          , perasΔ = 5
+          , perasΔ = 2
           }
     void $ runStateT (replicateM 130 $ tickNetwork tracer mempty) net
     events <- reader

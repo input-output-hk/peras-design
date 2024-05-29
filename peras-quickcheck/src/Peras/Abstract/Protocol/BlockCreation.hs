@@ -57,4 +57,4 @@ blockCreation tracer MkPerasParams{..} party stateVar s payload diffuseChain =
         let chain' = block : chainPref
         lift . traceWith tracer $ NewChainPref (pid party) chain'
         lift . atomically $ modifyTVar stateVar $ \state -> state{chainPref = chain', chains = Set.insert chain' chains}
-        ExceptT $ diffuseChain chain'
+        ExceptT $ diffuseChain s chain'

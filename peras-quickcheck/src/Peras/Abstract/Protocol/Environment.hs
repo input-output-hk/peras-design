@@ -10,8 +10,8 @@ import Control.Monad.Except (ExceptT (..), runExceptT)
 import Data.Either (partitionEithers)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser)
-import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, hashTip, inRound, perasL, perasU)
+import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, insertChains, insertVotes)
+import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, hashTip, inRound, perasL, perasU, systemStart)
 import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
@@ -41,7 +41,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
           let newChain = block : currentChain
           writeTVar chain newChain
           pure newChain
-        pure $ diffuser{pendingChains = Set.singleton newChain}
+        pure $ insertChains systemStart (Set.singleton newChain) diffuser
     | otherwise = pure diffuser
 
   -- generate 10 votes every slot in a round
@@ -50,7 +50,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
         slotInRound = fromIntegral slotNumber `mod` perasU
     blockToVoteFor <- blockBefore perasL (fromIntegral round * perasU) <$> readTVarIO chain
     case blockToVoteFor of
-      Nothing -> pure defaultDiffuser
+      Nothing -> pure $ defaultDiffuser 0
       Just block -> do
         let blockHash = hash block
         (_, votes) <-
@@ -62,7 +62,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
                   proof <- ExceptT $ createMembershipProof round (Set.singleton party)
                   ExceptT $ createSignedVote party round blockHash proof 1
               )
-        pure defaultDiffuser{pendingVotes = Set.fromList votes}
+        pure $ insertVotes systemStart (Set.fromList votes) $ defaultDiffuser 0
 
 blockBefore :: Integer -> Integer -> Chain -> Maybe Block
 blockBefore cutoff slot = \case

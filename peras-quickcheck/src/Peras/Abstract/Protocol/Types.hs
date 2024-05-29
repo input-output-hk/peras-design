@@ -85,9 +85,9 @@ type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Prea
 
 type Preagreement m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
 
-type DiffuseChain m = Chain -> m (PerasResult ())
+type DiffuseChain m = SlotNumber -> Chain -> m (PerasResult ())
 
-type DiffuseVote m = Vote -> m (PerasResult ())
+type DiffuseVote m = SlotNumber -> Vote -> m (PerasResult ())
 
 type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (PerasResult Block)
 

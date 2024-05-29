@@ -4,7 +4,6 @@
 
 module Peras.Abstract.Protocol.Node where
 
-import Control.Arrow ((&&&))
 import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
@@ -12,13 +11,13 @@ import Control.Monad.State (StateT, gets, lift, modify')
 import Control.Tracer (Tracer, traceWith)
 import Data.Set (Set)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
-import Peras.Abstract.Protocol.Diffusion (Diffuser (..), defaultDiffuser, diffuseChain, diffuseVote)
+import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Abstract.Protocol.Fetching (fetching)
 import Peras.Abstract.Protocol.Preagreement (preagreement)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (
   Payload,
-  PerasParams,
+  PerasParams (perasΔ),
   PerasResult,
   PerasState,
   inRound,
@@ -43,7 +42,7 @@ initialNodeState tracer self clock protocol =
   do
     traceWith tracer $ Protocol protocol
     stateVar <- newTVarIO initialPerasState
-    diffuserVar <- newTVarIO defaultDiffuser
+    diffuserVar <- newTVarIO $ defaultDiffuser (perasΔ protocol)
     pure MkNodeState{..}
 
 tick :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (NodeState m) m (PerasResult ())
@@ -58,15 +57,15 @@ tick tracer payload = do
   let r = inRound s params
   lift $ traceWith tracer $ Tick s r
   -- Retrieve chains and votes to be diffused.
-  (newChains, newVotes) <- lift $ (pendingChains &&& pendingVotes) <$> readTVarIO diffuser
-  lift . atomically . modifyTVar' diffuser $ \d -> d{pendingChains = mempty, pendingVotes = mempty}
+  (newChains, newVotes) <- lift $ popChainsAndVotes diffuser s
   -- Operate node.
-  lift $ tickNode tracer params party state s r payload newChains newVotes diffuser
+  lift $ tickNode tracer diffuser params party state s r payload newChains newVotes
 
 tickNode ::
   forall m.
   MonadSTM m =>
   Tracer m PerasLog ->
+  TVar m Diffuser ->
   PerasParams ->
   Party ->
   TVar m PerasState ->
@@ -75,9 +74,8 @@ tickNode ::
   Payload ->
   Set Chain ->
   Set Vote ->
-  TVar m Diffuser ->
   m (PerasResult ())
-tickNode tracer params party state s r payload newChains newVotes diffuser =
+tickNode tracer diffuser params party state s r payload newChains newVotes =
   -- 1. Get votes and chains from the network.
   runExceptT $ do
     -- 2. Invoke fetching.

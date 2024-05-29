@@ -68,7 +68,7 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
               vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
               -- Add v to V and diffuse it.
               lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
-              ExceptT $ diffuseVote vote
+              ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU) vote
               lift $ traceWith tracer $ CastVote (pid party) vote
 
 -- Check whether a block extends the block certified in a certificate.

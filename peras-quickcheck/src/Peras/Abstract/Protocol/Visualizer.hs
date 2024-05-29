@@ -48,7 +48,7 @@ visualize events =
               <> show (getSlotNumber slotNumber)
               <> "|Creator "
               <> show creatorId
-              <> maybe "" (("|Certificate " <>) . show . getRoundNumber . round) certificate
+              <> maybe "" (("|<i>Certificate " <>) . (<> "</i>") . show . getRoundNumber . round) certificate
         ]
     mkBlockEdge MkBlock{Block.signature, parentBlock} =
       G.EdgeStatement
