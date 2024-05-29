@@ -333,7 +333,7 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 ```agda
-    data VoteInRound : T → RoundNumber → Set where
+    data VoteInRound : RoundNumber → T → Set where
 
       Regular : ∀ {r t} →
         let
@@ -343,7 +343,7 @@ cool-down phase.
           r ≡ (roundNumber cert′) + 1 -- VR-1A
         → cert′ PointsInto pref       -- VR-1B
           -------------------------------
-        → VoteInRound t (MkRoundNumber r)
+        → VoteInRound (MkRoundNumber r) t
 
       AfterCooldown : ∀ {r c t} →
         let
@@ -354,7 +354,7 @@ cool-down phase.
         → r ≥ (roundNumber cert′) + R       -- VR-2A
         → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
           ---------------------------------
-        → VoteInRound t (MkRoundNumber r)
+        → VoteInRound (MkRoundNumber r) t
 ```
 ### State
 
@@ -411,7 +411,7 @@ must hold before transitioning to the next slot.
     RequiredVotes : State → Set
     RequiredVotes M =
       let r = v-round clock
-       in Mapₚ.Any (flip VoteInRound r ∘ proj₂) blockTrees
+       in Mapₚ.Any (VoteInRound r ∘ proj₂) blockTrees
         → Mapₚ.Any (hasVote r ∘ proj₂) blockTrees
       where open State M
 ```
@@ -506,7 +506,7 @@ is added to be consumed immediately.
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound t r
+        → VoteInRound r t
           ----------------------------------------------
         → Honest {p} ⊢
             M ⇉ (VoteMsg v , zero , p , addVote t v ↑ M)
