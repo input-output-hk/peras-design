@@ -45,6 +45,7 @@ blockCreation tracer MkPerasParams{..} party stateVar s payload diffuseChain =
               if bc1a && bc1b && bc1c
                 then Just certPrime
                 else Nothing
+        lift . traceWith tracer $ ForgingLogic (pid party) bc1a bc1b bc1c
         block <- ExceptT $ createSignedBlock party s parent certificate lproof (hash payload)
         let chain' = block : chainPref
         lift . traceWith tracer $ NewChainPref (pid party) chain'

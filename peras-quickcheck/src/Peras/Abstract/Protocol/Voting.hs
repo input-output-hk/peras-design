@@ -20,6 +20,7 @@ import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
 import Control.Tracer (Tracer, traceWith)
+import qualified Data.Map as Map (lookup)
 import qualified Data.Set as Set (insert, singleton)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 
@@ -33,7 +34,7 @@ voting ::
   Preagreement m ->
   DiffuseVote m ->
   m (PerasResult ())
-voting tracer params@MkPerasParams{perasR, perasK} party perasState roundNumber preagreement diffuseVote = runExceptT $ do
+voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasState roundNumber preagreement diffuseVote = runExceptT $ do
   MkPerasState{..} <- lift $ readTVarIO perasState
   -- Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot rU + T .
   ExceptT (preagreement params party perasState roundNumber) >>= \case
@@ -43,10 +44,15 @@ voting tracer params@MkPerasParams{perasR, perasK} party perasState roundNumber 
       when (isCommitteeMember party roundNumber) $ do
         let
           -- (VR-1A) round(cert') = r − 1 and cert was received at least ∆ before the end of round r − 1,
-          vr1a = round certPrime + 1 == roundNumber -- TODO: Check timestamp.
+          oldEnough s = fromIntegral s + perasΔ < fromIntegral roundNumber * perasU
+          vr1a =
+            round certPrime + 1 == roundNumber
+              && maybe False oldEnough (Map.lookup certPrime certs)
           -- (VR-1B) B extends the block certified by cert'
           vr1b = extends block certPrime $ toList chains
+          -- (VR-2A) Round of cert' is beyond the ignorance period
           vr2a = round certPrime + fromIntegral perasR <= roundNumber
+          -- (VR-2B) Round of cert* is multiple of cooldown
           vr2b =
             roundNumber > round certStar
               && fromIntegral (roundNumber - round certStar) `mod` perasK == 0
