@@ -168,7 +168,7 @@ Execution trace of the protocol
         _ =  NextSlot empty refl -- slot 1
           ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlotNewRound empty refl (B.tree (C.here {!!})) -- slot 2
+          ↣ NextSlotNewRound empty refl (λ {x → B.tree (C.here {!!})}) -- slot 2
           ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Deliver (honest refl (here refl) VoteReceived)
           ↣ NextSlot empty refl -- slot 3
