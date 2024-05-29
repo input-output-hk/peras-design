@@ -7,7 +7,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Serialize (getWord64le, runGet)
 import Data.Word (Word64)
-import Debug.Trace (trace)
 import Peras.Orphans ()
 
 modulo :: ByteString -> Word64 -> Word64

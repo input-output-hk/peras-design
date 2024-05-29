@@ -68,14 +68,14 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
     -- FIXME: Figure 2 of the protocol does not specify which chain is preferred
     -- when there is a tie for heaviest chain.
     let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
-    when (chainPref' /= chainPref) . lift $ traceWith tracer $ NewChainPref (pid party) chainPref'
+    when (chainPref' /= chainPref) . lift $ traceWith tracer (NewChainPref (pid party) chainPref')
 
     -- 5. Set cert' to the certificate with the highest round number in Certs.
     --
     -- FIXME: If there are equivocations because of adversarial action, then there could be a tie
     -- for the certificate seen with the highest round.
     let certPrime' = maximumBy (compare `on` round) $ genesisCert : keys certs'
-    when (certPrime' /= certPrime) . lift $ traceWith tracer $ NewCertPrime (pid party) certPrime'
+    when (certPrime' /= certPrime) . lift $ traceWith tracer (NewCertPrime (pid party) certPrime')
 
     -- 6. Set cert* to the certificate with the highest round number on Cpref.
     --
@@ -85,7 +85,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
     -- (Recall that certificates are not unconditionally included in blocks.)
     -- Here we adopt the first interpretation.
     let certStar' = maximumBy (compare `on` round) $ genesisCert : mapMaybe certificate chainPref'
-    when (certStar' /= certStar) . lift $ traceWith tracer $ NewCertStar (pid party) certStar'
+    when (certStar' /= certStar) . lift $ traceWith tracer (NewCertStar (pid party) certStar')
 
     -- Update the variables in the state.
     lift . atomically . modifyTVar' stateVar $ \state ->
@@ -131,9 +131,7 @@ findNewQuora quorum priorCerts votes =
       filter (\vote -> not $ any (sameCertification vote) $ toList priorCerts) $
         toList votes
     -- Uncertified votes grouped by round and the block being voted for.
-    --
-    -- FIXME: We could use a map-reduce operation here.
-    votesGrouped = groupBy sameVoting $ sortBy orderVoting notAlreadyCertified
+    votesGrouped = groupBy sameVoting $ sortBy orderVoting notAlreadyCertified -- FIXME: We could use a map-reduce operation here.
    in
     -- Discard the sets of votes that are smaller than the quorum size.
     Set.fromList <$> filter ((>= quorum) . length) votesGrouped

@@ -77,7 +77,7 @@ tickNode ::
   Set Vote ->
   TVar m Diffuser ->
   m (PerasResult ())
-tickNode tracer params party state s r payload newChains newVotes diffuser = do
+tickNode tracer params party state s r payload newChains newVotes diffuser =
   -- 1. Get votes and chains from the network.
   runExceptT $ do
     -- 2. Invoke fetching.
