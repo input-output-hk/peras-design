@@ -354,6 +354,9 @@ cool-down phase.
         → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
           ---------------------------------
         → VoteInRound t (MkRoundNumber r)
+
+    postulate
+      VoteInRound? : ∀ (t : T) → (r : RoundNumber) → Dec (VoteInRound t r)
 ```
 ### State
 
@@ -603,7 +606,22 @@ The small-step semantics describe the evolution of the global state.
 
       NextSlot :
           Delivered M
+        → let open State M
+          in
+          v-round clock ≡ v-round (next clock)
           -----------
+        → M ↝ tick M
+
+      NextSlotNewRound :
+          Delivered M
+        → let open State M
+              r = v-round clock
+          in
+          suc (getRoundNumber r) ≡ getRoundNumber (v-round (next clock))
+        → Any (hasCert r) $                    -- TODO: use Any from Map?
+            filter (flip VoteInRound? r) $
+              map proj₂ (M.toList blockTrees)
+          -----------------------------------
         → M ↝ tick M
 ```
 
@@ -740,7 +758,8 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
     ↝-collision-free (CastVote x) cf-N = []⇉-collision-free cf-N x
     ↝-collision-free (CreateBlock x) cf-N =  []↷-collision-free cf-N x
-    ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
+    ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
+    ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
 ```
 -->
 

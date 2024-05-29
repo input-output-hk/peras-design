@@ -201,6 +201,7 @@ Building up the voting string from all the party's block-trees
       ... | yes _ = refl
       ... | no p  = ⊥-elim (p genesis-cert)
 
+{-
       HS-II-rule : ∀ {i} {ts}
         → σᵢ (MkRoundNumber i) ts ≡ ⒈
         →   σᵢ (MkRoundNumber (suc i)) ts ≡ ⒈
@@ -210,11 +211,22 @@ Building up the voting string from all the party's block-trees
         with any? (hasVote? (MkRoundNumber (suc i))) ts
       ... | yes _ | _     = inj₁ refl
       ... | no _  | yes _ = inj₂ refl
-      ... | no p | no q = {!!} -- FIXME: the protocol expects that voting continues
-                               -- after a successful voting round.
-                               -- Probably we need to re-think the formalisation of
-                               -- honest/dis-honest behavior...
-
+      ... | no p  | no q  = {!!} -- FIXME: the protocol expects that voting continues
+                                 -- after a successful voting round.
+                                 -- Probably we need to re-think the formalisation of
+                                 -- honest/dis-honest behavior...
+-}
+{-
+      HS-III-rule : ∀ {i} {ts}
+        → σᵢ (MkRoundNumber i) ts ≡ ？
+        → σᵢ (MkRoundNumber (suc i)) ts ≡ 🄀
+      HS-III-rule {i} {ts} x
+        with any? (hasCert? (MkRoundNumber (suc i))) ts
+        with any? (hasVote? (MkRoundNumber (suc i))) ts
+      ... | yes _ | _     = {!!}
+      ... | no _  | yes _ = {!!}
+      ... | no _  | no _  = refl
+-}
 {-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N

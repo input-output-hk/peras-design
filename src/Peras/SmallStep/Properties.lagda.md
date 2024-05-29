@@ -120,7 +120,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
-    clock-incr {M} (NextSlot _) = n≤1+n (clock' M)
+    clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
+    clock-incr {M} (NextSlotNewRound _ _ _) = n≤1+n (clock' M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
       → M ↝⋆ N
@@ -302,7 +303,11 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Delivered-N
 ```
 ```agda
-    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlot Delivered-M) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlot Delivered-M _) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+```
+```agda
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlotNewRound Delivered-M _ _) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
       contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
 ```
 ```agda
@@ -469,7 +474,12 @@ those messages adds the blocks into the local trees.
 ```
 #### NextSlot
 ```agda
-    knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ ((NextSlot _) ∷′ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
+    knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ ((NextSlot _ _) ∷′ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
+      let 1+c≤c = ≤-trans (≤-reflexive (cong (ℕ.suc ∘ getSlotNumber) (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
+          1+c≰c = 1+n≰n {clock' N₂}
+      in contradiction 1+c≤c 1+c≰c
+
+    knowledge-propagation {N₁} {N₂} _ _ p₁∈ps p₂∈ps _ ((NextSlotNewRound _ _ _) ∷′ N′↝⋆N₂) _ _ _ clock-N₁≡clock-N₂ _ =
       let 1+c≤c = ≤-trans (≤-reflexive (cong (ℕ.suc ∘ getSlotNumber) (sym clock-N₁≡clock-N₂))) (clock-incr⋆ N′↝⋆N₂)
           1+c≰c = 1+n≰n {clock' N₂}
       in contradiction 1+c≤c 1+c≰c
