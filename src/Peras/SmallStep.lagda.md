@@ -31,6 +31,7 @@ open import Peras.Numbering
 open import Peras.Params
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
+open import Data.Tree.AVL.Map.Relation.Unary.Any PartyIdO as Mapₚ using ()
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open Honesty public
@@ -354,9 +355,6 @@ cool-down phase.
         → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
           ---------------------------------
         → VoteInRound t (MkRoundNumber r)
-
-    postulate
-      VoteInRound? : ∀ (t : T) → (r : RoundNumber) → Dec (VoteInRound t r)
 ```
 ### State
 
@@ -618,10 +616,10 @@ The small-step semantics describe the evolution of the global state.
               r = v-round clock
           in
           suc (getRoundNumber r) ≡ getRoundNumber (v-round (next clock))
-        → Any (hasCert r) $                    -- TODO: use Any from Map?
-            filter (flip VoteInRound? r) $
-              map proj₂ (M.toList blockTrees)
-          -----------------------------------
+        → Mapₚ.Any
+            (λ { (_ , t) → hasVote r t × VoteInRound t r
+               }) blockTrees
+          ----------------------------------------------
         → M ↝ tick M
 ```
 

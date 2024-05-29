@@ -22,6 +22,9 @@ open import Peras.Params
 open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
 
 open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
+open import Data.Tree.AVL.Map.Relation.Unary.Any PartyIdO as Mapₚ using ()
+open import Data.Tree.AVL.Relation.Unary.Any PartyIdO as B using ()
+open import Data.Tree.AVL.Indexed.Relation.Unary.Any PartyIdO as C using ()
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -127,7 +130,7 @@ Initial state
 Final state after the execution of all the steps
 ```agda
       finalState : GlobalState
-      finalState = ⟦ MkSlotNumber 6 , finalMap , [] , finalMsg , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
@@ -160,15 +163,14 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
-{-
         _ : initialState ↝⋆ finalState
-        _ =  NextSlot empty  -- slot 1
+        _ =  NextSlot empty refl -- slot 1
           ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlot empty  -- slot 2
+          ↣ NextSlotNewRound empty refl (B.tree (C.here {!!})) -- slot 2
           ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Deliver (honest refl (here refl) VoteReceived)
-          ↣ NextSlot empty  -- slot 3
+          ↣ NextSlot empty refl -- slot 3
 --          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
 --          ↣ Deliver (honest refl (here refl) BlockReceived)
 --
@@ -177,15 +179,13 @@ Execution trace of the protocol
 -- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
 -- agda: Use `+RTS -M<size>' to increase it.
 --
-          ↣ NextSlot empty  -- slot 4
-          ↣ NextSlot empty  -- slot 5
-          ↣ NextSlot empty  -- slot 6
+--          ↣ NextSlotNewRound empty refl ?  -- slot 4
+--          ↣ NextSlot empty refl -- slot 5
+--          ↣ NextSlotNewRound empty refl ? -- slot 6
           ↣ ∎
--}
 ```
 Trace dependent properties
 ```agda
-{-
           where
             latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
@@ -197,5 +197,4 @@ Trace dependent properties
               PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
               valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
--}
 ```
