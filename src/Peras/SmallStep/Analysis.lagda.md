@@ -22,7 +22,7 @@ open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Function using (_$_; case_of_; _∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_; refl)
+open Eq using (_≡_; _≢_; refl; cong)
 
 open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; _⊎-dec_; toWitness)
@@ -151,6 +151,13 @@ Building up the voting string from all the party's block-trees
         → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 ```
 ```agda
+    infix  2 _⟶⋆_
+
+    data _⟶⋆_ : VotingString m → VotingString n → Set where
+      [] : σ ⟶⋆ σ
+      _∷_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (σ″ ∷ʳ i)
+
+{-
     data IsValid : ∀ {n} → VotingString n → Set where
 
       ϵ : IsValid []
@@ -159,6 +166,7 @@ Building up the voting string from all the party's block-trees
         → IsValid σ
         → (σ ⟶ v)
         → IsValid (σ ∷ʳ v)
+-}
 ```
 ### Theorem: The voting string in any execution is valid
 ```agda
@@ -196,13 +204,44 @@ Building up the voting string from all the party's block-trees
 {-
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
-        → IsValid {suc n} (build-σ (suc n) (stateMap N))
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (stateMap N)} = ϵ ∷ HS-I
+        → [] ⟶⋆ build-σ (suc n) (stateMap N)
+      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (stateMap N)} = [] ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
-      ... | x = x ∷ {!!} -- TODO: pattern match on x
+      ... | xs = {!!}
 -}
+      postulate
+        theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
+          → M ↝⋆ N
+          → build-σ m (stateMap M) ⟶⋆ build-σ n (stateMap N)
 
+      lemma-length-σ′ : ∀ {tₘ tₙ} {m n : ℕ}
+          → m ≡ n
+          → let σₘ = build-σ m tₘ
+                σₙ = build-σ n tₙ
+             in V.length σₘ ≡ V.length σₙ
+      lemma-length-σ′ refl = refl
+
+      lemma-length-σ : ∀ {M N : GlobalState}
+          → v-round (clock M) ≡ v-round (clock N)
+          → let σₘ = build-σ (getRoundNumber (v-round (clock M))) (stateMap M)
+                σₙ = build-σ (getRoundNumber (v-round (clock N))) (stateMap N)
+             in V.length σₘ ≡ V.length σₙ
+      lemma-length-σ {M} {N} x = lemma-length-σ′ {stateMap M} {stateMap N} (cong getRoundNumber x)
+
+      open import Data.List.Relation.Unary.All as All using ()
+
+      postulate
+        theorem-3 : ∀ {M N : GlobalState} {m n : ℕ}
+          → M ↝ N
+          → (MkRoundNumber m) ≡ v-round (clock M)
+          → (MkRoundNumber n) ≡ v-round (clock N)
+          → n ≡ suc m
+          → let σₘ = build-σ m (stateMap M)
+                σₙ = build-σ (suc m) (stateMap N)
+            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
+
+{-
       postulate
         P : ∀ {M N : GlobalState} → (M ↝ N) → Set
         Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
@@ -218,6 +257,7 @@ Building up the voting string from all the party's block-trees
                  σₙ = build-σ (suc m) (stateMap N)
              in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
             )
+-}
 ```
 ## Execution
 ```agda
