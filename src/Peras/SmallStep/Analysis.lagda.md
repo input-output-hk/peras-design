@@ -195,8 +195,8 @@ Building up the voting string from all the party's block-trees
         genesis-cert′ : ∀ {t} → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)
         genesis-cert : ∀ {ts} → Any (λ t → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)) ts
 
-      startsWith-1 : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
-      startsWith-1 {ts}
+      HS-I-rule : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
+      HS-I-rule {ts}
         with any? (hasCert? (MkRoundNumber 0)) ts
       ... | yes _ = refl
       ... | no p  = ⊥-elim (p genesis-cert)
@@ -219,7 +219,7 @@ Building up the voting string from all the party's block-trees
       theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
         → N₀ ↝⋆ N
         → [] ⟶⋆ build-σ (suc n) (blockTrees N)
-      theorem-2′ {N} {zero} s rewrite startsWith-1 {treeList (blockTrees N)} = [] ∷ HS-I
+      theorem-2′ {N} {zero} s rewrite HS-I-rule {treeList (blockTrees N)} = [] ∷ HS-I
       theorem-2′ {N} {suc n} s
         with theorem-2′ {N} {n} s
       ... | xs = {!!}
