@@ -30,7 +30,7 @@ jobs:
         nix build --show-trace .#peras
     - name: 🏗️ Build `peras-simulation`.
       run: |
-        nix build --show-trace .#peras-quickcheck-test
+        nix build --show-trace .#peras-simulation-test
   simulate-hs:
     name: Run simulations
     runs-on: self-hosted
@@ -49,7 +49,7 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🗳️ Simulate Peras
       run: |
-        nix run .#peras -- "multinode"
+        nix run .#peras-simulate -- "multinode"
   tests:
     if: true
     name: Run tests
@@ -72,7 +72,7 @@ jobs:
         nix run .#peras-hs-test
     - name: 🔬 Test with `peras-simulation-test`
       run: |
-        nix run .#peras-iosim-test
+        nix run .#peras-simulation-test
   test-demo:
     name: Test Demo
     runs-on: self-hosted
