@@ -7,7 +7,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Environment (mkSimpleScenario)
-import Peras.Abstract.Protocol.Network (initialNetwork, runNetwork, tickNetwork)
+import Peras.Abstract.Protocol.Network (initialNetwork, runNetwork, simulateNetwork)
 import Peras.Abstract.Protocol.Trace (perasTracer)
 import Peras.Abstract.Protocol.Types (PerasParams (..), systemStart)
 import Peras.Abstract.Protocol.Visualizer (makeVisTracer, visualize, writeGraph)
@@ -16,13 +16,13 @@ import System.Environment (getArgs)
 main :: IO ()
 main =
   getArgs >>= \case
-    [] -> simpleMain
-    ["simple"] -> simpleMain
+    [] -> singleMain
+    ["single"] -> singleMain
     ["multinode"] -> multinodeMain
-    _ -> putStrLn "USAGE: peras (simple | multinode)"
+    _ -> putStrLn "USAGE: peras (single | multinode)"
 
-simpleMain :: IO ()
-simpleMain = mkSimpleScenario >>= runNetwork perasTracer >>= print
+singleMain :: IO ()
+singleMain = mkSimpleScenario >>= simulateNetwork perasTracer >>= print
 
 multinodeMain :: IO ()
 multinodeMain =
@@ -48,7 +48,7 @@ multinodeMain =
           , perasB = 100
           , perasΔ = 2
           }
-    void $ runStateT (replicateM 130 $ tickNetwork tracer mempty) net
+    void $ runStateT (replicateM 130 $ runNetwork tracer mempty) net
     events <- reader
     mapM_ (LBS8.putStrLn . A.encode) events
     writeGraph "tmp.dot" $ visualize events

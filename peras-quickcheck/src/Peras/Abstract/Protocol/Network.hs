@@ -25,8 +25,8 @@ import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasΔ), PerasResul
 import Peras.Block (Party)
 import Peras.Numbering (SlotNumber)
 
-runNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
-runNetwork tracer scenario = do
+simulateNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
+simulateNetwork tracer scenario = do
   let voteEvery10Rounds = mkParty 42 [] [10]
   initial <- initialNodeState tracer voteEvery10Rounds 0 defaultParams
   execStateT loop initial >>= \MkNodeState{stateVar} -> readTVarIO stateVar
@@ -61,8 +61,8 @@ initialNetwork tracer parties netClock protocol =
     netDiffuserVar <- newTVarIO $ defaultDiffuser (perasΔ protocol)
     pure MkNetwork{..}
 
-tickNetwork :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (Network m) m (PerasResult ())
-tickNetwork tracer payload = do
+runNetwork :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (Network m) m (PerasResult ())
+runNetwork tracer payload = do
   params <- gets protocol
   states <- gets stateVars
   diffuser <- gets netDiffuserVar
