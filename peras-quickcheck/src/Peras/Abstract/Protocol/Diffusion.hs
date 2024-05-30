@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Peras.Abstract.Protocol.Diffusion (
   Diffuser,
@@ -35,7 +36,7 @@ data Diffuser = MkDiffuser
   deriving (Eq, Generic, Show)
 
 defaultDiffuser :: Integer -> Diffuser
-defaultDiffuser x = MkDiffuser{delay = x, pendingChains = mempty, pendingVotes = mempty}
+defaultDiffuser delay = MkDiffuser{delay, pendingChains = mempty, pendingVotes = mempty}
 
 mergeDiffusers :: Diffuser -> Diffuser -> Diffuser
 mergeDiffusers x y =

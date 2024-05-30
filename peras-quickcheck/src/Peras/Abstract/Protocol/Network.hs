@@ -25,6 +25,8 @@ import Peras.Abstract.Protocol.Types (Payload, PerasParams (perasΔ), PerasResul
 import Peras.Block (Party)
 import Peras.Numbering (SlotNumber)
 
+-- | Simulate a `Network` as the interaction of an `Environment` and a single `Node`.
+-- The given @scenario@ function is used to generate the incoming chains and votes for each slot.
 simulateNetwork :: forall m. (MonadSTM m, MonadDelay m) => Tracer m PerasLog -> (SlotNumber -> m Diffuser) -> m PerasState
 simulateNetwork tracer scenario = do
   let voteEvery10Rounds = mkParty 42 [] [10]
@@ -61,6 +63,7 @@ initialNetwork tracer parties netClock protocol =
     netDiffuserVar <- newTVarIO $ defaultDiffuser (perasΔ protocol)
     pure MkNetwork{..}
 
+-- | Run a `Network` comprised of multiple interacting nodes, with some `Payload`.
 runNetwork :: forall m. MonadSTM m => Tracer m PerasLog -> Payload -> StateT (Network m) m (PerasResult ())
 runNetwork tracer payload = do
   params <- gets protocol
