@@ -5,20 +5,12 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 
 const config: Config = {
-    title: 'My Site',
-    tagline: 'Dinosaurs are cool',
+    title: 'Ouroboros Peras',
+    tagline: 'Faster settlement on Cardano',
     favicon: 'img/favicon.ico',
 
-    // Set the production url of your site here
-    url: 'https://your-docusaurus-site.example.com',
-    // Set the /<baseUrl>/ pathname under which your site is served
-    // For GitHub pages deployment, it is often '/<projectName>/'
+    url: 'https://peras.cardano-scaling.org/',
     baseUrl: '/',
-
-    // GitHub pages deployment config.
-    // If you aren't using GitHub pages, you don't need these.
-    organizationName: 'facebook', // Usually your GitHub org/user name.
-    projectName: 'docusaurus', // Usually your repo name.
 
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'warn',
@@ -48,10 +40,16 @@ const config: Config = {
                     path: "weekly",
                     routeBasePath: "/weekly",
                     showReadingTime: true,
-                    // Please change this to your repo.
-                    // Remove this to remove the "edit this page" links.
-                    editUrl:
-                        'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+                    blogTitle: 'Peras R&D Updates',
+                    blogDescription: 'Regular updates from Peras R&D Team',
+                    postsPerPage: 5,
+                    blogSidebarTitle: 'Recent Posts',
+                    blogSidebarCount: 10,
+                    feedOptions: {
+                        type: 'all',
+                        title: 'Peras R&D Feed',
+                        description: 'Regular updates from Peras R&D Teams',
+                    },
                 },
                 theme: {
                     customCss: './src/css/custom.css',
@@ -72,10 +70,10 @@ const config: Config = {
         // Replace with your project's social card
         image: 'img/docusaurus-social-card.jpg',
         navbar: {
-            title: 'My Site',
+            title: 'Peras R&D',
             logo: {
                 alt: 'My Site Logo',
-                src: 'img/logo.svg',
+                src: 'img/pilcrow.jpeg',
             },
             items: [
                 {
@@ -86,7 +84,7 @@ const config: Config = {
                 },
                 { to: '/weekly', label: 'Updates', position: 'left' },
                 {
-                    href: 'https://github.com/facebook/docusaurus',
+                    href: 'https://github.com/input-output-hk/peras-design',
                     label: 'GitHub',
                     position: 'right',
                 },
@@ -108,16 +106,12 @@ const config: Config = {
                     title: 'Community',
                     items: [
                         {
-                            label: 'Stack Overflow',
-                            href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-                        },
-                        {
                             label: 'Discord',
-                            href: 'https://discordapp.com/invite/docusaurus',
+                            href: 'https://discord.gg/9EgySPJk',
                         },
                         {
-                            label: 'Twitter',
-                            href: 'https://twitter.com/docusaurus',
+                            label: 'GitHub Discussions',
+                            href: 'https://github.com/input-output-hk/mithril/discussions',
                         },
                     ],
                 },
@@ -130,12 +124,12 @@ const config: Config = {
                         },
                         {
                             label: 'GitHub',
-                            href: 'https://github.com/facebook/docusaurus',
+                            href: 'https://github.com/input-output-hk/peras-design',
                         },
                     ],
                 },
             ],
-            copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+            copyright: `Copyright © ${new Date().getFullYear()} <strong>Input Output Global</strong> <br/> <a href="https://static.iohk.io/terms/iog-privacy-policy.pdf" target="_blank" class="footer__link-item">Privacy Policy</a> | <a href="https://static.iohk.io/terms/iohktermsandconditions.pdf" target="_blank" class="footer__link-item">Terms & Conditions</a> <br/> <small>Built with Docusaurus</small>`,
         },
         prism: {
             theme: prismThemes.github,
