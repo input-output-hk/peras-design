@@ -9,23 +9,31 @@ import Prelude hiding (round)
 
 import Control.Monad.Except (throwError)
 import Data.Foldable (toList)
-import Peras.Abstract.Protocol.Types (CreateLeadershipProof, CreateMembershipProof, CreateSignedBlock, CreateSignedCertificate, CreateSignedVote, PerasError (..))
+import qualified Data.Hashable as H (Hashable (..))
+import qualified Data.Serialize as Serialize (decode, encode)
+import Data.Set (Set)
+import qualified Data.Set as S (map)
+import Peras.Abstract.Protocol.Types (Payload, PerasError (..), PerasResult, VotingWeight)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
 import Peras.Numbering
 
-import qualified Data.Hashable as H (Hashable (..))
-import qualified Data.Serialize as Serialize (decode, encode)
-import qualified Data.Set as S (map)
-
-createSignedBlock :: Applicative m => CreateSignedBlock m
+createSignedBlock ::
+  Applicative m =>
+  Party ->
+  SlotNumber ->
+  Hash Block ->
+  Maybe Certificate ->
+  LeadershipProof ->
+  Hash Payload ->
+  m (PerasResult Block)
 createSignedBlock MkParty{pid = creatorId} slotNumber parentBlock certificate leadershipProof bodyHash =
   pure . pure $ MkBlock{..}
  where
   signature = sign (creatorId, slotNumber, parentBlock, certificate, leadershipProof, bodyHash)
 
-createSignedCertificate :: Applicative m => CreateSignedCertificate m
+createSignedCertificate :: Applicative m => Party -> Set Vote -> m (PerasResult Certificate)
 createSignedCertificate _ votes =
   pure $
     case toList $ S.map (\MkVote{votingRound, blockHash} -> (votingRound, blockHash)) votes of
@@ -33,7 +41,14 @@ createSignedCertificate _ votes =
       [] -> throwError $ CertificationCreationFailed "Cannot create a certificate from no votes."
       _ -> throwError $ CertificationCreationFailed "Cannot create a certificate from votes for different blocks."
 
-createSignedVote :: Applicative m => CreateSignedVote m
+createSignedVote ::
+  Applicative m =>
+  Party ->
+  RoundNumber ->
+  Hash Block ->
+  MembershipProof ->
+  VotingWeight ->
+  m (PerasResult Vote)
 createSignedVote MkParty{pid = creatorId} votingRound blockHash proofM votes =
   pure . pure $ MkVote{..}
  where
@@ -42,10 +57,18 @@ createSignedVote MkParty{pid = creatorId} votingRound blockHash proofM votes =
 sign :: H.Hashable a => a -> Signature
 sign = MkSignature . Serialize.encode . H.hash
 
-createLeadershipProof :: Applicative m => CreateLeadershipProof m
+createLeadershipProof ::
+  Applicative m =>
+  SlotNumber ->
+  Set Party ->
+  m (PerasResult LeadershipProof)
 createLeadershipProof = curry $ pure . pure . MkLeadershipProof . Serialize.encode . H.hash
 
-createMembershipProof :: Applicative m => CreateMembershipProof m
+createMembershipProof ::
+  Applicative m =>
+  RoundNumber ->
+  Set Party ->
+  m (PerasResult MembershipProof)
 createMembershipProof = curry $ pure . pure . MkMembershipProof . Serialize.encode . H.hash
 
 instance Hashable [()] where
@@ -66,7 +89,7 @@ isSlotLeader MkParty{pkey = MkVerificationKey key} (MkSlotNumber s) =
     (Serialize.decode key :: Either String ([Integer], [Integer]))
  where
   slotIsLeader :: [Integer] -> Bool
-  slotIsLeader = any ((== 0) . (s `mod`))
+  slotIsLeader = elem s
 
 isCommitteeMember :: Party -> RoundNumber -> Bool
 isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
@@ -76,4 +99,4 @@ isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
     (Serialize.decode key :: Either String ([Integer], [Integer]))
  where
   roundIsCommitteeMember :: [Integer] -> Bool
-  roundIsCommitteeMember = any ((== 0) . (r `mod`))
+  roundIsCommitteeMember = elem r

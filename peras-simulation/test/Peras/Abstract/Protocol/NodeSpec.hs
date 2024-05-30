@@ -16,6 +16,7 @@ import Peras.Crypto (hash)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.QuickCheck (arbitrary)
 
+import Control.Tracer (nullTracer)
 import qualified Data.Map as Map (singleton)
 import qualified Data.Set as Set (difference, fromList, size)
 
@@ -42,10 +43,10 @@ spec = do
 
   let check party properties =
         do
-          nodeState <- runIO $ initialNodeState party (slotNumber - 1)
+          nodeState <- runIO $ initialNodeState nullTracer party (slotNumber - 1) defaultParams
           runIO . atomically $ writeTVar (stateVar nodeState) steadyState
           perasState <- runIO . readTVarIO $ stateVar nodeState
-          (result, nodeState') <- runIO $ runStateT (tick payload) nodeState
+          (result, nodeState') <- runIO $ runStateT (tick nullTracer payload) nodeState
           perasState' <- runIO . readTVarIO $ stateVar nodeState'
           it "Should not return an error." $ result `shouldBe` pure ()
           mapM_ (flip ($ perasState') perasState) properties
@@ -57,7 +58,7 @@ spec = do
       certsUnchanged = unchanged "Certificate set should not change." certs
       certPrimeUnchanged = unchanged "Prime certificate should not change." certPrime
       certStarUnchanged = unchanged "Star certificate should not change." certStar
-      oneMore msg f s' s = it msg $ (Set.size $ f s' `Set.difference` f s) `shouldBe` 1
+      oneMore msg f s' s = it msg $ Set.size (f s' `Set.difference` f s) `shouldBe` 1
       oneMoreChain = oneMore "Chain set should increase by one." chains
       --    oneMoreVote = oneMore "Vote set should increase by one." votes
       extendsOneBlock s' s = do

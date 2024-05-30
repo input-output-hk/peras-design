@@ -1,14 +1,13 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Peras.Abstract.Protocol.BlockCreationSpec where
 
 import Prelude hiding (round)
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
+import Control.Tracer (nullTracer)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
 import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser (pendingChains), defaultDiffuser, diffuseChain)
+import Peras.Abstract.Protocol.Diffusion (allPendingChains, defaultDiffuser, diffuseChain)
 import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), defaultParams, initialPerasState)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Certificate (..))
@@ -34,14 +33,16 @@ spec = do
 
   it "Create a block if we are leader" $ do
     perasState <- newTVarIO steadyState
-    diffuser <- newTVarIO defaultDiffuser
+    diffuser <- newTVarIO $ defaultDiffuser 0
     void $
       blockCreation
+        nullTracer
         params
         slotLeader
         perasState
         slotNumber
         mempty
         (diffuseChain diffuser)
-    (Set.size . pendingChains <$> readTVarIO diffuser) `shouldReturn` 1
-    (length . chainPref <$> readTVarIO perasState) `shouldReturn` (length someChain + 1)
+    print =<< readTVarIO diffuser
+    Set.size . allPendingChains <$> readTVarIO diffuser `shouldReturn` 1
+    length . chainPref <$> readTVarIO perasState `shouldReturn` length someChain + 1

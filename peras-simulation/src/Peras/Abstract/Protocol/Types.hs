@@ -1,17 +1,20 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
 module Peras.Abstract.Protocol.Types where
 
 import Control.Concurrent.Class.MonadSTM (TVar)
+import qualified Data.Aeson as A
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
-import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof)
-import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
+import Peras.Numbering (RoundNumber (MkRoundNumber), SlotNumber)
 import Peras.Orphans ()
 
 data PerasParams = MkPerasParams
@@ -33,6 +36,9 @@ data PerasParams = MkPerasParams
   -- ^ Delivery guarantee for diffusion, in slots
   }
   deriving (Eq, Generic, Show)
+
+instance A.ToJSON PerasParams where
+  toJSON MkPerasParams{..} = A.object ["U" A..= perasU, "A" A..= perasA, "R" A..= perasR, "K" A..= perasK, "L" A..= perasL, "τ" A..= perasτ, "B" A..= perasB, "Δ" A..= perasΔ]
 
 -- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
 -- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
@@ -79,9 +85,9 @@ type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Prea
 
 type Preagreement m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
 
-type DiffuseChain m = Chain -> m (PerasResult ())
+type DiffuseChain m = SlotNumber -> Chain -> m (PerasResult ())
 
-type DiffuseVote m = Vote -> m (PerasResult ())
+type DiffuseVote m = SlotNumber -> Vote -> m (PerasResult ())
 
 type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (PerasResult Block)
 
@@ -116,5 +122,15 @@ genesisHash = MkHash mempty
 genesisChain :: Chain
 genesisChain = mempty
 
+hashTip :: Chain -> Hash Block
+hashTip [] = genesisHash
+hashTip (block : _) = hash block
+
 genesisCert :: Certificate
 genesisCert = MkCertificate 0 genesisHash
+
+newRound :: Integral a => a -> PerasParams -> Bool
+newRound s params = fromIntegral s `mod` perasU params == 0
+
+inRound :: Integral a => a -> PerasParams -> RoundNumber
+inRound s params = MkRoundNumber $ fromIntegral s `div` perasU params
