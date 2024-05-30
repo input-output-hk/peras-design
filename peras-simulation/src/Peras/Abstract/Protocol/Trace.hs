@@ -36,6 +36,8 @@ data PerasLog
   | PreagreementNone {party :: PartyId}
   | ForgingLogic {party :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool}
   | VotingLogic {party :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
+  | DiffuseChain {party :: PartyId, chain :: Chain}
+  | DiffuseVote {party :: PartyId, vote :: Vote}
   deriving stock (Show, Eq, Generic)
 
 data VoteLog = MkVoteLog
@@ -63,6 +65,8 @@ instance ToJSON PerasLog where
     PreagreementNone p -> object ["tag" .= ("PreagreementNone" :: Text), "party" .= p]
     ForgingLogic p b1a b1b b1c -> object ["tag" .= ("ForgingLogic" :: Text), "party" .= p, "bc1a" .= b1a, "bc1b" .= b1b, "bc1c" .= b1c]
     VotingLogic p v1a v1b v2a v2b -> object ["tag" .= ("VotingLogic" :: Text), "party" .= p, "v1a" .= v1a, "v1b" .= v1b, "v2a" .= v2a, "v2b" .= v2b]
+    DiffuseChain p c -> object ["tag" .= ("DiffuseChain" :: Text), "party" .= p, "chain" .= c]
+    DiffuseVote p v -> object ["tage" .= ("DiffuseVote" :: Text), "party" .= p, "vote" .= v]
 
 perasTracer :: Tracer IO PerasLog
 perasTracer = contramap (LT.unpack . LE.decodeUtf8 . A.encode) stdoutTracer
