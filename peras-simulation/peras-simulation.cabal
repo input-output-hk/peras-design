@@ -116,7 +116,7 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
-executable  peras
+executable  peras-simulate
     -- Import common warning flags.
     import:           warnings
 
@@ -177,7 +177,6 @@ test-suite peras-simulation-test
                   , lens
                   , mtl
                   , peras-hs
-                  , peras-iosim
                   , peras-simulation
                   , quickcheck-dynamic
                   , si-timers
