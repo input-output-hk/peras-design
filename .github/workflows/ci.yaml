@@ -28,18 +28,9 @@ jobs:
     - name: 🏗️ Typecheck Agda
       run: |
         nix build --show-trace .#peras
-    - name: 🏗️ Build `peras-iosim`.
-      run: |
-        nix build --show-trace .#peras-iosim
-    - name: 🏗️ Build `peras-quickcheck`.
+    - name: 🏗️ Build `peras-simulation`.
       run: |
         nix build --show-trace .#peras-quickcheck-test
-    - name: 🏗️ Build `peras_rust`.
-      run: |
-        nix build --show-trace .#peras_rust
-    - name: 🏗️ Build `peras_topology`.
-      run: |
-        nix build --show-trace .#peras_topology
   simulate-hs:
     name: Run simulations
     runs-on: self-hosted
@@ -56,20 +47,9 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🔮 Simulate pseudo-Praos on a small network
+    - name: 🗳️ Simulate Peras
       run: |
-        nix run .#peras-iosim -- \
-          --parameter-file peras-iosim/small-network.yaml \
-          --protocol-file peras-iosim/pseudo-praos.yaml \
-          --trace-file "/dev/null" \
-          --result-file "/dev/null"
-    - name: 🗳️ Simulate pseudo-Peras on a small network
-      run: |
-        nix run .#peras-iosim -- \
-          --parameter-file peras-iosim/small-network.yaml \
-          --protocol-file peras-iosim/pseudo-peras.yaml \
-          --trace-file "/dev/null" \
-          --result-file "/dev/null"
+        nix run .#peras -- "multinode"
   tests:
     if: true
     name: Run tests
@@ -90,15 +70,9 @@ jobs:
     - name: 🔬 Test with `peras-hs-test`
       run: |
         nix run .#peras-hs-test
-    - name: 🔬 Test with `peras-iosim-test`
+    - name: 🔬 Test with `peras-simulation-test`
       run: |
         nix run .#peras-iosim-test
-    - name: 🔬 Test with `peras-quickcheck-test`
-      run: |
-        nix build .#peras_rust -o peras_rust
-        export DYLD_LIBRARY_PATH="$PWD/peras_rust/lib"
-        nix build .#peras-quickcheck-test
-        ./result/bin/peras-quickcheck-test
   test-demo:
     name: Test Demo
     runs-on: self-hosted

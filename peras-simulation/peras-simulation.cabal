@@ -177,7 +177,6 @@ test-suite peras-simulation-test
                   , lens
                   , mtl
                   , peras-hs
-                  , peras-iosim
                   , peras-simulation
                   , quickcheck-dynamic
                   , si-timers

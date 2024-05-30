@@ -1,7 +1,0 @@
-randomSeed: 17042
-peerCount: 100
-downstreamCount: 3
-totalStake: 50000
-maximumStake: 1000
-messageDelay: 0.35
-endSlot: 360
