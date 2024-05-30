@@ -14,10 +14,10 @@ import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (groupBy, maximumBy, sortBy)
-import Data.Map as Map (fromList, keys, keysSet, notMember, union)
+import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import Data.Set as Set (fromList, intersection, map, size, union)
+import Data.Set as Set (fromList, intersection, map, notMember, size, union)
 import Peras.Abstract.Protocol.Crypto (createSignedCertificate)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (PerasParams (..), PerasResult, PerasState (..), genesisCert)
@@ -47,12 +47,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
 
     -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
     let chains' = chains `Set.union` newChains
-        certsReceived =
-          fmap (,slot) -- Record when each certificate was first received.
-            . filter (`Map.notMember` certs) -- Ignore certificates already seen.
-            . mapMaybe certificate
-            . concat
-            $ toList newChains -- Extract the certificates from the new chains.
+        certsReceived = (,slot) <$> extractNewCertificates (Map.keysSet certs) newChains
         certsOldAndReceived = certs `Map.union` Map.fromList certsReceived
     unless (null certsReceived) . lift $ traceWith tracer (NewCertificatesReceived (pid party) certsReceived)
 
@@ -97,6 +92,14 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
         , certPrime = certPrime'
         , certStar = certStar'
         }
+
+-- Find the new certificates in a set of chains.
+extractNewCertificates :: Set Certificate -> Set Chain -> [Certificate]
+extractNewCertificates certs =
+  filter (`Set.notMember` certs) -- Ignore certificates already seen.
+    . mapMaybe certificate -- Extract all certificates
+    . concat
+    . toList -- Consider all of the blocks from all of the chains.
 
 -- Each party P assigns a certain weight to every chain C, based on C’s length
 -- and all certificates that vote for blocks in C that P has seen so far.

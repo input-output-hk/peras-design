@@ -45,7 +45,7 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
         when (isCommitteeMember party roundNumber) $ do
           let
             -- (VR-1A) round(cert') = r − 1 and cert' was received at least ∆ before the end of round r − 1, and
-            oldEnough s = fromIntegral s + perasΔ < fromIntegral roundNumber * perasU
+            oldEnough s = fromIntegral s + perasΔ <= fromIntegral (roundNumber - 1) * perasU + perasU - 1
             vr1a =
               round certPrime + 1 == roundNumber
                 && maybe False oldEnough (Map.lookup certPrime certs)
