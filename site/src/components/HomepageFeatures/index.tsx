@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
+import fast_slow from '/static/img/fast-slow.jpeg';
 
 type FeatureItem = {
     title: string;
@@ -61,7 +62,7 @@ export default function HomepageFeatures(): JSX.Element {
             <div className="container">
                 <div className="row">
                     <div className={clsx('col col--4 text--center')}>
-                        <img className={styles.featureSvg} src={ouroboros} />
+                        <img className={styles.featureSvg} src={fast_slow} />
                     </div>
                     <div className={clsx('col col--8 text--center')}>
                         <h3>Faster Settlement for Ouroboros</h3>

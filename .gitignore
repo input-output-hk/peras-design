@@ -15,3 +15,4 @@ src/MAlonzo/
 target/
 Cargo.lock
 node_modules/
+\#*
