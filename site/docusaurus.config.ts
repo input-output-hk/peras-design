@@ -98,7 +98,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Documents',
-                            to: '/docs/README',
+                            to: '/',
                         },
                     ],
                 },
