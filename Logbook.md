@@ -1,5 +1,47 @@
 ## 2024-05-29
 
+### Formal specification in Agda
+
+In the small-step semantics in order to ensure that all steps of the protocol are executed and missing-out voting is detected by the
+semantics, I split the `NextStep` constructor into two, differentiating if the step transitions also to a new voting round.
+In case of a new voting round, we require that votes for the current round are present, if the previous round was successful.
+This is required to correctly build up the voting string explained in the paper (see rule HS-II).
+
+```agda
+    data _↝_ : State → State → Set where
+
+      Deliver : ∀ {m}
+        → h ⊢ M [ m ]⇀ N
+          --------------
+        → M ↝ N
+
+      CastVote :
+          h ⊢ M ⇉ N
+          ---------
+        → M ↝ N
+
+      CreateBlock :
+          h ⊢ M ↷ N
+          ---------
+        → M ↝ N
+
+      NextSlot :
+          Delivered M
+        → NextSlotInSameRound M
+          ---------------------
+        → M ↝ tick M
+
+      NextSlotNewRound :
+          Delivered M
+        → LastSlotInRound M
+        → RequiredVotes M
+          ---------------
+        → M ↝ tick M
+```
+
+A similar issue with respect to block creation was pointed out last week when relying the test-spec to the formal specification. A similar
+condition as for voting needs to be added for block creation.
+
 ### Discussion items for next steps
 
 Several significant items need discussion among the prototyping team, as they have the potential to delay or block progress.
