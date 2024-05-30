@@ -18,6 +18,7 @@ packages:
   peras-hs
   peras-iosim
   peras-quickcheck
+  peras-simulation
   peras-delta-q
   test-demo
 
