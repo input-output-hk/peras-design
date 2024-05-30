@@ -57,14 +57,14 @@ condition as for voting needs to be added for block creation.
 
 Several significant items need discussion among the prototyping team, as they have the potential to delay or block progress.
 
-- [ ] *Prototype review and testing:* Since, for the time being, we'll be relying on the Haskell prototype for the conformance tests . . .
-    - [ ] Should we do a line-by-line code review to ensure it matches Figure 2 of the draft paper?
-    - [ ] Should we prioritize creating the `quickcheck-dynamic` actions for simulation?
-        - [ ] The actions can be used as a DSL for defining single- and multi-node honest and adversarial scenarios.
-        - [ ] They would also test that implementations have the same observable effects as the reference implementation.
-    - [ ] Aside from the `quickcheck-dynamic` model-based testing, should we also create a full suite of unit tests that focus on edge cases for the protocol?
-        - [ ] Should these be backported to Agda?
-        - [ ] Or should they be written in Agda and ported to Haskell?
+- [x] *Prototype review and testing:* Since, for the time being, we'll be relying on the Haskell prototype for the conformance tests . . .
+    - [x] Should we do a line-by-line code review to ensure it matches Figure 2 of the draft paper?
+    - [x] Should we prioritize creating the `quickcheck-dynamic` actions for simulation?
+        - [x] The actions can be used as a DSL for defining single- and multi-node honest and adversarial scenarios.
+        - [x] They would also test that implementations have the same observable effects as the reference implementation.
+    - [x] Aside from the `quickcheck-dynamic` model-based testing, should we also create a full suite of unit tests that focus on edge cases for the protocol?
+        - [x] Should these be backported to Agda?
+        - [x] Or should they be written in Agda and ported to Haskell?
 - [ ] *Equivocation:* The draft paper says little about how to handle equivocation.
     - [ ] Should we leave the prototype without any equivocation checks, since the paper's Figure 2 does not have any?
     - [ ] Or should we add a universal rule that the first chain or vote received always supercedes any subsequent equivocated ones?
@@ -77,8 +77,7 @@ Several significant items need discussion among the prototyping team, as they ha
 - [ ] *Pseudo-code vs Agda in CIP:* Do we now have sufficient stakeholder feedback to settle on how to present the Peras protocol in the CIP?
 - [ ] *Diffusion:* The prototype's current diffusion schema is lossless and has a fixed delay for delivering messages.
     - [ ] What variants on a fixed delay should we implement?
-    - [ ]
-- [ ] *Visualization:* We're reaching the limits of convenient usage of GraphViz for visualizing the chain evolution. Should we develop a lightweight web-based visualizer for the `PerasLog` output? If so, should it be based on a standard JavaScript library or done via SVG in WASM Rust?
+- [x] *Visualization:* We're reaching the limits of convenient usage of GraphViz for visualizing the chain evolution. Should we develop a lightweight web-based visualizer for the `PerasLog` output? If so, should it be based on a standard JavaScript library or done via SVG in WASM Rust?
 - [ ] *Stakeholder-facing software:* What software will we develop and deploy for stakeholders to experiment with the protocol?
 - [ ] *Cryptography implementations:* The conformance tests will need implementations of signatures, hashes, proofs, and certificates. What is the priority for implementing these?
 
