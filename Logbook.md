@@ -1,3 +1,14 @@
+## 2024-05-30
+
+### Haskell prototype
+
+* Did some minor renaming modification to clarify the 2 different running modes: As a single node against an (adversarial) environment, and as multiple nodes interacting
+  * The former is useful to more easily model complex and powerful adversaries that would control a significant fraction of the stake, at the cost of some complexity in the generation of chains and votes
+  * The latter is useful to understand and observe the behaviour of the protocol
+* Also moved this code to own `peras-simulation` package
+  * We should probably thrash `peras-iosim`?
+  * Not sure how to fix the underlying nix stuff, but at the time of this writing cache.iog.io yields [error 500](https://github.com/input-output-hk/peras-design/actions/runs/9298516175/job/25590566233#step:6:17) anyway so there's not much I can do at this stage
+
 ## 2024-05-29
 
 ### Formal specification in Agda
@@ -66,7 +77,7 @@ Several significant items need discussion among the prototyping team, as they ha
 - [ ] *Pseudo-code vs Agda in CIP:* Do we now have sufficient stakeholder feedback to settle on how to present the Peras protocol in the CIP?
 - [ ] *Diffusion:* The prototype's current diffusion schema is lossless and has a fixed delay for delivering messages.
     - [ ] What variants on a fixed delay should we implement?
-    - [ ] 
+    - [ ]
 - [ ] *Visualization:* We're reaching the limits of convenient usage of GraphViz for visualizing the chain evolution. Should we develop a lightweight web-based visualizer for the `PerasLog` output? If so, should it be based on a standard JavaScript library or done via SVG in WASM Rust?
 - [ ] *Stakeholder-facing software:* What software will we develop and deploy for stakeholders to experiment with the protocol?
 - [ ] *Cryptography implementations:* The conformance tests will need implementations of signatures, hashes, proofs, and certificates. What is the priority for implementing these?
