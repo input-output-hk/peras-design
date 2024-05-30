@@ -7,7 +7,7 @@ import rehypeKatex from 'rehype-katex';
 const config: Config = {
     title: 'Ouroboros Peras',
     tagline: 'Faster settlement on Cardano',
-    favicon: 'img/favicon.ico',
+    favicon: 'img/pilcrow.ico',
 
     url: 'https://peras.cardano-scaling.org/',
     baseUrl: '/',
@@ -111,7 +111,7 @@ const config: Config = {
                         },
                         {
                             label: 'GitHub Discussions',
-                            href: 'https://github.com/input-output-hk/mithril/discussions',
+                            href: 'https://github.com/input-output-hk/peras-design/discussions',
                         },
                     ],
                 },
