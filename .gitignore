@@ -14,3 +14,4 @@ src/MAlonzo/
 /cabal.project.local
 target/
 Cargo.lock
+node_modules/

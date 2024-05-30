@@ -264,9 +264,9 @@ While these numbers seem comforting and reasonably small to provide a very high 
 
 In the optimistic case, Peras is expected to provide the level of settlement Praos provides after $k$ blocks but after only about a few rounds of voting. With the following parameters:
 
-* Committee size $\cal{S}$ = 2000,
+* Committee size $S = 2000$,
 * Boost per certificate $B = k / 10 = 216$,
-* Quorum $\tau = 3\cal{S} / 4 = 1500$,
+* Quorum $\tau = 3, S / 4 = 1500$,
 * Round length $U = 10$ slots.
 
 we can expect a negligible ($< 10^{-60}$) probability of settlement failure after 10 rounds or 100 slots, which is less than 2 minutes. In other words, Peras improves settlement upper bound over Praos by a factor of 1000, in the _optimistic case_, e.g. outside of a _cool-down period_.
@@ -1010,7 +1010,7 @@ The simulation experiments below use slightly different versions of the ever-evo
 
 #### Block production
 
-The "block production" experiment laid the groundwork for testing simulated block-production rates using QuickCheck properties. Because the VRF determines which slots a node leads and forges a block, the production is sporadic and pseudo-random. Heretofore, the Peras simulation has used a simple probabilistic approximation to this process: a uniformly distributed random variable is selected and the node produces a block in the slot if that variable is less than the probability $p = 1 - (1 - f) ^ (s_\text{node} / s_\text{total})$, where $f is the active slot coefficient and $s_\text{node}$ and $s_\text{total}$ are the stake held by the node and the whole network, respectively.
+The "block production" experiment laid the groundwork for testing simulated block-production rates using QuickCheck properties. Because the VRF determines which slots a node leads and forges a block, the production is sporadic and pseudo-random. Heretofore, the Peras simulation has used a simple probabilistic approximation to this process: a uniformly distributed random variable is selected and the node produces a block in the slot if that variable is less than the probability $p = 1 - (1 - f) ^ (s_n / s_t)$, where $f is the active slot coefficient and $s_n$ and $s_t$ are the stake held by the node and the whole network, respectively.
 
 The experiment involved running 1000 simulations of two hours of block production for a node with $\alpha = 0.05$. The stake held by the node was randomly chosen in each of the simulations. The plot below shows the number of blocks produced as a function of the node's stake. The probability contours in the plot indicate the theoretical relationship. For example, the 99.9% quantile (indicated by 0.999 in the legend) is expected to have only 1/1000 of the observations below it; similarly, 90% of the observations should lie between the 5% and 95% contours. The distribution of the number of blocks produced in the experiment appears to obey the theoretical expectations.
 
@@ -1065,13 +1065,13 @@ A semi-realistic set of protocol parameters and network configuration was set fo
 Committee selection in the following simulation was set by limiting each node to a maximum of one vote. (However, the March version of the protocol clarifies that a node may have more than one vote.) The probability of becoming a member of the voting committee in a given round is
 
 $$
-P = 1 - (1 - p_\text{lottery})^s
+P = 1 - (1 - p_l)^s
 $$
 
 given
 
 $$
-p_\text{lottery} = (1 - 1 / c)^{(c / t)}
+p_l = (1 - 1 / c)^{(c / t)}
 $$
 
 where $s$ is the node's stake, $t$ is the total stake in the system, and $c$ is the mean committee size.
