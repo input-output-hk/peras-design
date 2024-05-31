@@ -1,15 +1,15 @@
 ---
 CIP: XXX
-Title: Peras - Faster Settlement on Cardano
-Category: Consensus
-Status: Proposed
-Authors:
+title: Peras - Faster Settlement on Cardano
+category: Consensus
+status: Proposed
+authors:
     - John Doe <john.doe@email.domain>
-Implementors: []
-Discussions:
+implementors: []
+discussions:
     - https://github.com/cardano-foundation/CIPs/pull/?
-Created: YYYY-MM-DD
-License: CC-BY-4.0
+created: YYYY-MM-DD
+license: CC-BY-4.0
 ---
 
 <!-- Existing categories:
