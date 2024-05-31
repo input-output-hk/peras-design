@@ -8,7 +8,7 @@ open import Data.Empty using (⊥-elim)
 
 open import Data.Maybe using (just; nothing; Is-just; is-just)
 open import Data.Maybe.Properties using (≡-dec)
-open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zero; suc; NonZero; _/_)
+open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zero; suc; NonZero; _/_; _≟_)
 
 open import Data.Product using (_,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
@@ -22,9 +22,9 @@ open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
 open import Function using (_$_; case_of_; _∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_; refl; cong; sym)
+open Eq using (_≡_; _≢_; refl; cong; sym; trans)
 
-open import Relation.Nullary using (yes; no; ¬_; Dec)
+open import Relation.Nullary using (yes; no; ¬_; Dec; contradiction)
 open import Relation.Nullary.Decidable using (⌊_⌋; _⊎-dec_; toWitness)
 
 open import Peras.Block
@@ -34,7 +34,8 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
-open import Data.Tree.AVL.Map PartyIdO using (Map; lookup; insert; empty; toList)
+open import Prelude.AssocList hiding (_∈_)
+open Decidable _≟_
 ```
 -->
 ## Protocol Analysis
@@ -88,11 +89,8 @@ Assign a letter for a voting round for a list of block-trees:
 ```
 Building up the voting string from all the party's block-trees
 ```agda
-    treeList : Map T → List T
-    treeList = map proj₂ ∘ toList
-
-    build-σ : ∀ (n : ℕ) → Map T → Vec Σ n
-    build-σ n = build-σ′ n ∘ treeList
+    build-σ : ∀ (n : ℕ) → AssocList PartyId T → Vec Σ n
+    build-σ n = build-σ′ n ∘ map proj₂
       where
         build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
         build-σ′ 0 _ = []
@@ -151,7 +149,7 @@ Building up the voting string from all the party's block-trees
         → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
 ```
 ```agda
-    infix  2 _⟶⋆_
+    infix 2 _⟶⋆_
 
     data _⟶⋆_ : VotingString m → VotingString n → Set where
       [] : σ ⟶⋆ σ
@@ -180,8 +178,8 @@ Building up the voting string from all the party's block-trees
 
       GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
-      states₀ : Map T
-      states₀ = foldr (λ where (p , _) m → insert p tree₀ m) empty parties
+      states₀ : AssocList PartyId T
+      states₀ = map (λ where (p , _) → (p , tree₀)) parties
 
       N₀ : GlobalState
       N₀ = ⟦ MkSlotNumber 0
@@ -192,8 +190,8 @@ Building up the voting string from all the party's block-trees
            ⟧
 
       postulate
-        genesis-cert′ : ∀ {t} → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)
-        genesis-cert : ∀ {ts} → Any (λ t → Any ((0 ≡_) ∘ getRoundNumber ∘ round) (certs t)) ts
+        genesis-cert′ : ∀ {t} → Any ((0 ≡_) ∘ roundNumber) (certs t)
+        genesis-cert : ∀ {ts} → Any (λ t → Any ((0 ≡_) ∘ roundNumber) (certs t)) ts
 
       HS-I-rule : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
       HS-I-rule {ts}
@@ -201,44 +199,7 @@ Building up the voting string from all the party's block-trees
       ... | yes _ = refl
       ... | no p  = ⊥-elim (p genesis-cert)
 
-{-
-      HS-II-rule : ∀ {i} {ts}
-        → σᵢ (MkRoundNumber i) ts ≡ ⒈
-        →   σᵢ (MkRoundNumber (suc i)) ts ≡ ⒈
-          ⊎ σᵢ (MkRoundNumber (suc i)) ts ≡ ？
-      HS-II-rule {i} {ts} x
-        with any? (hasCert? (MkRoundNumber (suc i))) ts
-        with any? (hasVote? (MkRoundNumber (suc i))) ts
-      ... | yes _ | _     = inj₁ refl
-      ... | no _  | yes _ = inj₂ refl
-      ... | no p  | no q  = {!!} -- FIXME: the protocol expects that voting continues
-                                 -- after a successful voting round.
-                                 -- Probably we need to re-think the formalisation of
-                                 -- honest/dis-honest behavior...
--}
-{-
-      HS-III-rule : ∀ {i} {ts}
-        → σᵢ (MkRoundNumber i) ts ≡ ？
-        → σᵢ (MkRoundNumber (suc i)) ts ≡ 🄀
-      HS-III-rule {i} {ts} x
-        with any? (hasCert? (MkRoundNumber (suc i))) ts
-        with any? (hasVote? (MkRoundNumber (suc i))) ts
-      ... | yes _ | _     = {!!}
-      ... | no _  | yes _ = {!!}
-      ... | no _  | no _  = refl
--}
-{-
-      theorem-2′ : ∀ {N : GlobalState} {n : ℕ}
-        → N₀ ↝⋆ N
-        → [] ⟶⋆ build-σ (suc n) (blockTrees N)
-      theorem-2′ {N} {zero} s rewrite HS-I-rule {treeList (blockTrees N)} = [] ∷ HS-I
-      theorem-2′ {N} {suc n} s
-        with theorem-2′ {N} {n} s
-      ... | xs = {!!}
--}
       postulate
-        -- FIXME: build-σ could be `replicate n 1`
-        -- small-steps need to be taken into account
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (blockTrees M) ⟶⋆ build-σ n (blockTrees N)
@@ -257,20 +218,32 @@ Building up the voting string from all the party's block-trees
              in V.length σₘ ≡ V.length σₙ
       lemma-length-σ {M} {N} x = lemma-length-σ′ {blockTrees M} {blockTrees N} (cong getRoundNumber x)
 
-      open import Data.List.Relation.Unary.All as All using ()
+      -- preconditions
+      -- * transition to new voting round
+      -- * required votes from the previous round
+      postulate
+        theorem-3 : ∀ {M N : GlobalState} {m}
+          → M ↝⋆ N
+          → rnd (getSlotNumber (clock M)) ≡ m
+          → rnd (getSlotNumber (clock N)) ≡ suc m
+          → RequiredVotes M
+          → RequiredVotes N
+          → let σₘ = build-σ m (blockTrees M)
+                σₙ = build-σ (suc m) (blockTrees N)
+            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
 
+{-
+      theorem-3 {M} {N} st refl x a b
+        with any? (hasCert? (v-round (clock M))) (map proj₂ $ blockTrees M)
+        with any? (hasCert? (v-round (clock N))) (map proj₂ $ blockTrees N)
+      ... | yes _ | yes _  = (⒈ , ({!HS-II-1!} , {!!}))
+      ... | _ | _ = {!!}
+-}
+
+{-
       postulate
         P : ∀ {M N : GlobalState} → (M ↝ N) → Set
         Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
-
-        theorem-3 : ∀ {M N : GlobalState} {m n : ℕ}
-          → (st : M ↝ N)
-          → (MkRoundNumber m) ≡ v-round (clock M)
-          → (MkRoundNumber n) ≡ v-round (clock N)
-          → n ≡ suc m
-          → let σₘ = build-σ m (blockTrees M)
-                σₙ = build-σ (suc m) (blockTrees N)
-            in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
 
         theorem-4 : ∀ {M N : GlobalState} {m : ℕ}
           → (st : M ↝ N)
@@ -284,6 +257,7 @@ Building up the voting string from all the party's block-trees
                  σₙ = build-σ (suc m) (blockTrees N)
              in Q st × ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
             )
+-}
 ```
 ## Execution
 ```agda

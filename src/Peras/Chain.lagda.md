@@ -53,6 +53,9 @@ record Vote : Set where
         blockHash   : Hash Block
         signature   : Signature
 
+  votingRound' : ℕ
+  votingRound' = getRoundNumber votingRound
+
 open Vote public
 
 instance
