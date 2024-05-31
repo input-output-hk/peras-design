@@ -82,7 +82,16 @@ const config: Config = {
                     position: 'left',
                     label: 'Documents',
                 },
-                { to: '/weekly', label: 'Updates', position: 'left' },
+                {
+                    to: 'pathname:///agda_html/Peras.Protocol.html',
+                    label: 'Formal Specification',
+                    position: 'left'
+                },
+                {
+                    to: '/weekly',
+                    label: 'Updates',
+                    position: 'left'
+                },
                 {
                     href: 'https://github.com/input-output-hk/peras-design',
                     label: 'GitHub',
