@@ -17,6 +17,38 @@
   * We should probably thrash `peras-iosim`?
   * Not sure how to fix the underlying nix stuff, but at the time of this writing cache.iog.io yields [error 500](https://github.com/input-output-hk/peras-design/actions/runs/9298516175/job/25590566233#step:6:17) anyway so there's not much I can do at this stage
 
+### Planning
+
+* Cleanup
+  * rm -fr peras-iosim
+  * rm -fr peras-quickcheck
+  * rm -fr peras-rust
+  * fix nix build
+  * move test-demo -> quickcheck-dynamic
+  * keep peras-delta-q & analytics
+  * skim through the Logbook to ensure everything can be published
+* Brian to take over weekly updates
+* popularisation of Peras?
+  * Interactive web site -> part of the job
+* tests
+  * Brian -> write unit tests to explore corner cases with an eye towards porting them Agda
+  * Quviq has started working on the formal spec <-> QCD bridge
+  * Yves doing liaison w/ Quviq => QCD bridge
+* Dealing w/ downloading & storage votes/certificates
+  * what happens when you sync up
+    * need full certificates history
+    * need certificates in blocks
+    * votes
+    * => make a proposal and see what comes out from the commu
+* people complaining about CIP not being accessible
+  * viz + formal spec + diagrams
+* equivocation?
+  * swithc in testing/prototype -> accept multiple votes / reject equivocated votes
+* what to do with ties in chains (eg. every slot you could change chain which is silly)?
+  * could just write a unit/qcd test for that?
+* preagreement
+  * need communication to agree not to vote
+
 ## 2024-05-29
 
 ### Formal specification in Agda
