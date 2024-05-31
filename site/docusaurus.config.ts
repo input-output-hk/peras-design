@@ -35,22 +35,23 @@ const config: Config = {
                     remarkPlugins: [remarkMath],
                     rehypePlugins: [rehypeKatex],
 
-                },
-                blog: {
-                    path: "weekly",
-                    routeBasePath: "/weekly",
-                    showReadingTime: true,
-                    blogTitle: 'Peras R&D Updates',
-                    blogDescription: 'Regular updates from Peras R&D Team',
-                    postsPerPage: 5,
-                    blogSidebarTitle: 'Recent Posts',
-                    blogSidebarCount: 10,
-                    feedOptions: {
-                        type: 'all',
-                        title: 'Peras R&D Feed',
-                        description: 'Regular updates from Peras R&D Teams',
-                    },
-                },
+                }// ,
+                // blog: {
+                //     path: "weekly",
+                //     routeBasePath: "/weekly",
+                //     showReadingTime: true,
+                //     blogTitle: 'Peras R&D Updates',
+                //     blogDescription: 'Regular updates from Peras R&D Team',
+                //     postsPerPage: 5,
+                //     blogSidebarTitle: 'Recent Posts',
+                //     blogSidebarCount: 10,
+                //     feedOptions: {
+                //         type: 'all',
+                //         title: 'Peras R&D Feed',
+                //         description: 'Regular updates from Peras R&D Teams',
+                //     },
+                // }
+                ,
                 theme: {
                     customCss: './src/css/custom.css',
                 },
@@ -77,18 +78,17 @@ const config: Config = {
             },
             items: [
                 {
-                    type: 'docSidebar',
-                    sidebarId: 'DocumentsSidebar',
                     position: 'left',
                     label: 'Documents',
+                    to: '/docs/intro',
                 },
                 {
-                    to: 'pathname:///agda_html/Peras.Protocol.html',
+                    to: '/docs/spec',
                     label: 'Formal Specification',
                     position: 'left'
                 },
                 {
-                    to: '/weekly',
+                    to: '/docs/update',
                     label: 'Updates',
                     position: 'left'
                 },
@@ -107,7 +107,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Documents',
-                            to: '/',
+                            to: '/docs/intro',
                         },
                     ],
                 },
@@ -129,7 +129,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Updates',
-                            to: '/weekly',
+                            to: '/docs/update',
                         },
                         {
                             label: 'GitHub',
@@ -137,6 +137,23 @@ const config: Config = {
                         },
                     ],
                 },
+          {
+            title: "Legal",
+            items: [
+              {
+                label: "Terms & Conditions",
+                to: "https://static.iohk.io/terms/iohktermsandconditions.pdf",
+              },
+              {
+                label: "Privacy Policy",
+                to: "https://static.iohk.io/terms/iog-privacy-policy.pdf",
+              },
+              {
+                label: "Contributors",
+                to: "https://github.com/input-output-hk/hydra/graphs/contributors",
+              },
+            ],
+          },
             ],
             copyright: `Copyright © ${new Date().getFullYear()} <strong>Input Output Global</strong> <br/> <a href="https://static.iohk.io/terms/iog-privacy-policy.pdf" target="_blank" class="footer__link-item">Privacy Policy</a> | <a href="https://static.iohk.io/terms/iohktermsandconditions.pdf" target="_blank" class="footer__link-item">Terms & Conditions</a> <br/> <small>Built with Docusaurus</small>`,
         },
