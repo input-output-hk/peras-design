@@ -1,3 +1,11 @@
+## 2024-05-31
+
+### Publishing Peras Website
+
+* Started work on a [docusaurus](https://docusaurus.io) based website for Peras that will be aimed at sharing the team's progress and findings, and various documents, specifications, and tools we produce.
+* Website is currently published at https://input-output-hk.github.io/peras-design but I plan to move it to peras.cardano-scaling.org
+* It currently hosts the technical report, an early version of the Agda specification, and some unfinished introduction text, so definitely room for improvements
+
 ## 2024-05-30
 
 ### Haskell prototype
