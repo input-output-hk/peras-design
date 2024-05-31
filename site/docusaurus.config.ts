@@ -9,8 +9,8 @@ const config: Config = {
     tagline: 'Faster settlement on Cardano',
     favicon: 'img/pilcrow.ico',
 
-    url: 'https://peras.cardano-scaling.org/',
-    baseUrl: '/',
+    url: 'https://input-output-hk.github.io/',
+    baseUrl: '/peras-design/',
 
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'warn',
