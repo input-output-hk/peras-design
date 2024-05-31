@@ -13,7 +13,7 @@ import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Serialize as Serialize (decode, encode)
 import Data.Set (Set)
 import qualified Data.Set as S (map)
-import Peras.Abstract.Protocol.Types (Payload, PerasError (..), PerasResult, VotingWeight)
+import Peras.Abstract.Protocol.Types (Payload, PerasError (..), PerasParams, PerasResult, VotingWeight, inRound, newRound)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
@@ -100,3 +100,15 @@ isCommitteeMember MkParty{pkey = MkVerificationKey key} (MkRoundNumber r) =
  where
   roundIsCommitteeMember :: [Integer] -> Bool
   roundIsCommitteeMember = elem r
+
+type IsSlotLeader = Bool
+
+mkSlotLeader :: Party -> SlotNumber -> IsSlotLeader -> Party
+mkSlotLeader MkParty{pid} slot isLeader =
+  mkParty pid (if isLeader then pure slot else mempty) mempty
+
+type IsCommitteeMember = Bool
+
+mkCommitteeMember :: Party -> PerasParams -> SlotNumber -> IsCommitteeMember -> Party
+mkCommitteeMember MkParty{pid} protocol slot isMember =
+  mkParty pid mempty (if newRound slot protocol && isMember then pure $ inRound slot protocol else mempty)

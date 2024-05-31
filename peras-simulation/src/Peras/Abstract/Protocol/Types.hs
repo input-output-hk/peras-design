@@ -111,6 +111,7 @@ data PerasError
   | CertificationCreationFailed String
   | VoteCreationFailed String
   | NoVoting
+  | MultipleItemsDiffused
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber
