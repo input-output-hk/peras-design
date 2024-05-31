@@ -10,7 +10,7 @@
 
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.24/dist/katex.min.css" integrity="sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM" crossorigin="anonymous"><link rel="stylesheet" href="/peras-design/assets/css/styles.8b81767d.css">
-<script src="/peras-design/assets/js/runtime~main.ca975ac3.js" defer="defer"></script>
+<script src="/peras-design/assets/js/runtime~main.07bd8bda.js" defer="defer"></script>
 <script src="/peras-design/assets/js/main.83e32cbc.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -55,105 +55,6 @@
 </li>
 <li>The protocol leaves room for a wide choice of options to design an implementation that should be considered and refined,</li>
 <li>There is a need for more theoretical research on ways to make cool-down less impactful.</li>
-</ul>
-<h1>Contents</h1>
-<ul>
-<li><a href="#previous-work">Previous work</a>
-<ul>
-<li><a href="#peras-workshop">Peras workshop</a>
-<ul>
-<li><a href="#questions-about-peras">Questions about Peras</a></li>
-<li><a href="#potential-experiments-for-peras">Potential experiments for Peras</a></li>
-<li><a href="#srl">SRL</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#protocol-specification">Protocol Specification</a>
-<ul>
-<li><a href="#overview">Overview</a>
-<ul>
-<li><a href="#certificates">Certificates</a></li>
-</ul>
-</li>
-<li><a href="#pseudo-code">Pseudo-code</a></li>
-<li><a href="#settlement-time">Settlement time</a>
-<ul>
-<li><a href="#settlement-bounds-for-peras">Settlement bounds for Peras</a></li>
-</ul>
-</li>
-<li><a href="#agda-specification">Agda Specification</a>
-<ul>
-<li><a href="#domain-model">Domain model</a></li>
-<li><a href="#small-step-semantics">Small-step semantics</a></li>
-<li><a href="#proofs">Proofs</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#network-performance-analysis">Network Performance Analysis</a>
-<ul>
-<li><a href="#certificates-in-block-header">Certificates in Block Header</a>
-<ul>
-<li><a href="#baseline---praos-%CE%B4q-modeling">Baseline - Praos ΔQ Modeling</a></li>
-<li><a href="#peras-%CE%B4q-model---blocks">Peras ΔQ Model - Blocks</a></li>
-<li><a href="#conclusion">Conclusion</a></li>
-</ul>
-</li>
-<li><a href="#votes--certificates-diffusion">Votes &amp; Certificates diffusion</a></li>
-<li><a href="#impact-on-user-experience">Impact on User Experience</a>
-<ul>
-<li><a href="#model">Model</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#property-based-testing-with-dynamic-quickcheck">Property-based testing with Dynamic QuickCheck</a>
-<ul>
-<li><a href="#praos-properties">Praos properties</a></li>
-<li><a href="#peras-properties">Peras properties</a></li>
-<li><a href="#relating-test-model-to-formal-model">Relating test model to formal model</a></li>
-</ul>
-</li>
-<li><a href="#simulations">Simulations</a>
-<ul>
-<li><a href="#haskell-based-simulation">Haskell-based simulation</a>
-<ul>
-<li><a href="#design">Design</a></li>
-<li><a href="#experiments">Experiments</a></li>
-</ul>
-</li>
-<li><a href="#rust-based-simulation">Rust-based simulation</a></li>
-<li><a href="#overall-findings-from-simulation-studies">Overall findings from simulation studies</a>
-<ul>
-<li><a href="#simulation-results">Simulation results</a></li>
-<li><a href="#simulation-experiments">Simulation experiments</a></li>
-<li><a href="#simulator-design">Simulator design</a></li>
-<li><a href="#integration-with-quickcheck-dynamic">Integration with QuickCheck Dynamic</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#integration-into-cardano-node">Integration into Cardano Node</a>
-<ul>
-<li><a href="#networking">Networking</a>
-<ul>
-<li><a href="#votes">Votes</a></li>
-<li><a href="#certificates-1">Certificates</a></li>
-</ul>
-</li>
-<li><a href="#consensus">Consensus</a></li>
-<li><a href="#resources">Resources</a></li>
-<li><a href="#implementation-path">Implementation path</a></li>
-</ul>
-</li>
-<li><a href="#conclusion-1">Conclusion</a>
-<ul>
-<li><a href="#recommendations">Recommendations</a></li>
-</ul>
-</li>
-<li><a href="#references">References</a></li>
-<li><a href="#endnotes">Endnotes</a></li>
 </ul>
 <h1>Previous work</h1>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="peras-workshop">Peras workshop<a href="#peras-workshop" class="hash-link" aria-label="Direct link to Peras workshop" title="Direct link to Peras workshop">​</a></h2>
