@@ -13,7 +13,7 @@ open import Data.Nat using (ℕ; _+_; _*_; _<ᵇ_; _≤_; _>_; _≥?_; _>?_; zer
 open import Data.Product using (_,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 
-open import Data.Vec as V using (Vec; _∷ʳ_; []; _++_; replicate)
+open import Data.Vec as V using (Vec; _∷_; []; _++_; replicate)
 open import Data.List as L using (List; any; map; length; foldr)
 
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
@@ -94,7 +94,7 @@ Building up the voting string from all the party's block-trees
       where
         build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
         build-σ′ 0 _ = []
-        build-σ′ (suc n) ts = build-σ′ n ts ∷ʳ σᵢ (MkRoundNumber n) ts
+        build-σ′ (suc n) ts = σᵢ (MkRoundNumber n) ts ∷ build-σ′ n ts
 ```
 ### Voting string analysis
 ```agda
@@ -110,10 +110,11 @@ Building up the voting string from all the party's block-trees
     data _⟶_ : VotingString n → Σ → Set where
 
       HS-I    : [] ⟶ ⒈
-      HS-II-? : σ ∷ʳ ⒈ ⟶ ？
-      HS-II-1 : σ ∷ʳ ⒈ ⟶ ⒈
-      HS-III  : σ ∷ʳ ？ ⟶ 🄀
+      HS-II-? : ⒈ ∷ σ ⟶ ？
+      HS-II-1 : ⒈ ∷ σ ⟶ ⒈
+      HS-III  : ？ ∷ σ ⟶ 🄀
 
+{-
       HS-IV : ∀ {n} {σ : VotingString n}
         → 1 ≤ L
         → L ≤ K
@@ -147,13 +148,14 @@ Building up the voting string from all the party's block-trees
       HS-VII-1 : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
         → ((σ ∷ʳ 🄀 ∷ʳ ？) ++ replicate L 🄀) ⟶ ⒈
+-}
 ```
 ```agda
     infix 2 _⟶⋆_
 
     data _⟶⋆_ : VotingString m → VotingString n → Set where
       [] : σ ⟶⋆ σ
-      _∷_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (σ″ ∷ʳ i)
+      _<>_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (i ∷ σ″)
 
 {-
     data IsValid : ∀ {n} → VotingString n → Set where
@@ -230,15 +232,9 @@ Building up the voting string from all the party's block-trees
           → RequiredVotes N
           → let σₘ = build-σ m (blockTrees M)
                 σₙ = build-σ (suc m) (blockTrees N)
-            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ σₘ ∷ʳ c)
-
-{-
-      theorem-3 {M} {N} st refl x a b
-        with any? (hasCert? (v-round (clock M))) (map proj₂ $ blockTrees M)
-        with any? (hasCert? (v-round (clock N))) (map proj₂ $ blockTrees N)
-      ... | yes _ | yes _  = (⒈ , ({!HS-II-1!} , {!!}))
-      ... | _ | _ = {!!}
--}
+            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
+--      theorem-3 {M} {N} {zero} st yy xx a b = ⒈ , (HS-I , {!!})
+--      theorem-3 {M} {N} {suc m} st yy xx a b = {!!}
 
 {-
       postulate

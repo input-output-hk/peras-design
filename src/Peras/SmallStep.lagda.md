@@ -381,6 +381,9 @@ The small-step semantics rely on a global state, which consists of the following
         messages : List Envelope
         history : List Message
         adversarialState : S
+
+      blockTrees' : List T
+      blockTrees' = map proj₂ blockTrees
 ```
 #### Progress
 
