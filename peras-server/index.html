@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Peras Simulator</title>
+    <link rel="stylesheet" href="peras.css" >
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="index.js"></script>
+  </head>
+  <body>
+    <div  style="width: 80%; margin: auto;">
+      <canvas id="throughput"></canvas>
+    </div>
+    <div>
+      <form id="parameters">
+        <label for="perasU">Round length (slots): </label>
+        <input type="number" id="perasU" value="12" />
+        <label for="perasDelta">Max. Diffusion delay (Δ): </label>
+        <input type="number" id="perasDelta" value="5" />
+      </form>
+    </div>
+  </body>
+</html>
