@@ -226,10 +226,10 @@ instance StateModel NodeModel where
         frequency
           [ (1, pure $ Some Tick)
           , (if fetched node then 0 else 1, fmap Some . Fetching <$> genChains <*> genVotes)
-          , (if forged node then 0 else 1, fmap Some . BlockCreation <$> arbitrary <*> arbitrary)
-          , (if voted node then 0 else 1, Some . Voting <$> arbitrary)
+          , (if forged node then 0 else 10, fmap Some . BlockCreation <$> arbitrary <*> arbitrary)
+          , (if voted node then 0 else 50, Some . Voting <$> arbitrary)
           ]
-      else pure . Some $ Initialize (mkParty 1 mempty mempty) systemStart defaultParams -- FIXME: Use arbitraries.
+      else pure . Some $ Initialize (mkParty 1 mempty mempty) (systemStart + 1) defaultParams -- FIXME: Use arbitraries.
    where
     genChains = Set.fromList <$> listOf genChain
     genChain =
@@ -239,7 +239,7 @@ instance StateModel NodeModel where
         let minSlot =
               case tip of
                 [] -> 1
-                MkBlock{slotNumber} : _ -> slotNumber + 1
+                MkBlock{slotNumber} : _ -> slotNumber
         fmap (: tip) $
           MkBlock
             <$> elements [minSlot .. clock]
@@ -254,7 +254,7 @@ instance StateModel NodeModel where
       | otherwise = pure mempty
     genVote =
       do
-        block <- elements =<< elements (toList chains)
+        block <- elements =<< elements (filter (not . null) $ toList chains)
         MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
       newRound clock protocol -- Voting is only allowed in the first slot of a round.
