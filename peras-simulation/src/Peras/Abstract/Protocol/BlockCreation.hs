@@ -11,7 +11,7 @@ import Control.Monad.State (lift)
 import Control.Tracer (Tracer, traceWith)
 import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createSignedBlock, isSlotLeader)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (DiffuseChain, PerasParams (..), PerasResult, PerasState (..), hashTip)
+import Peras.Abstract.Protocol.Types (DiffuseChain, PerasParams (..), PerasResult, PerasState (..), hashTip, inRound)
 import Peras.Block (Certificate (round), Party (pid), Tx)
 import Peras.Crypto (Hashable (hash))
 import Peras.Numbering (SlotNumber)
@@ -31,14 +31,14 @@ blockCreation ::
   [Tx] ->
   DiffuseChain m ->
   m (PerasResult ())
-blockCreation tracer MkPerasParams{..} party stateVar s payload diffuseChain =
+blockCreation tracer protocol@MkPerasParams{..} party stateVar s payload diffuseChain =
   runExceptT $
     when (isSlotLeader party s) $
       do
         MkPerasState{..} <- lift $ readTVarIO stateVar
         -- 1. Create a new block.
         lproof <- ExceptT $ createLeadershipProof s (Set.singleton party)
-        let r = fromIntegral $ fromIntegral s `div` perasU
+        let r = inRound s protocol
             parent = hashTip chainPref
             -- There is no round-(r-2) certificate in Certs, and
             bc1a = all ((/= r) . (2 +) . round) $ Map.keys certs

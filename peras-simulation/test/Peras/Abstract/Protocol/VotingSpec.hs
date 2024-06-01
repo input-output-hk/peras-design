@@ -13,7 +13,7 @@ import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..))
 import Peras.Crypto (hash)
-import Test.Hspec (Spec, describe, it, shouldReturn)
+import Test.Hspec (Spec, it, shouldReturn)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
 
@@ -68,81 +68,78 @@ spec = do
 
     allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
-  describe "VR1-A" $
-    it "does not vote if last seen certificate is older than previous round" $ do
-      let certPrime = someCertificate{round = roundNumber - 2}
-          lastSeenCertificateOlderThanPreviousRound = initialPerasState{certPrime}
-      perasState <- newTVarIO lastSeenCertificateOlderThanPreviousRound
-      diffuser <- newTVarIO $ defaultDiffuser 0
+  it "VR1-A - does not vote if last seen certificate is older than previous round" $ do
+    let certPrime = someCertificate{round = roundNumber - 2}
+        lastSeenCertificateOlderThanPreviousRound = initialPerasState{certPrime}
+    perasState <- newTVarIO lastSeenCertificateOlderThanPreviousRound
+    diffuser <- newTVarIO $ defaultDiffuser 0
 
-      void $
-        voting
-          nullTracer
-          params
-          committeeMember
-          perasState
-          roundNumber
-          preagreement
-          (diffuseVote diffuser)
-      --      `shouldReturn` Left NoVoting
+    void $
+      voting
+        nullTracer
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreement
+        (diffuseVote diffuser)
+    --      `shouldReturn` Left NoVoting
 
-      allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
+    allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
-  describe "VR1-B" $
-    it "does not vote if block does not extend immediately last seen certificate" $ do
-      let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
-          preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
-      perasState <- newTVarIO steadyState
-      diffuser <- newTVarIO $ defaultDiffuser 0
+  it "VR1-B - does not vote if block does not extend immediately last seen certificate" $ do
+    let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
+        preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
+    perasState <- newTVarIO steadyState
+    diffuser <- newTVarIO $ defaultDiffuser 0
 
-      void $
-        voting
-          nullTracer
-          params
-          committeeMember
-          perasState
-          roundNumber
-          preagreementSelectsFork
-          (diffuseVote diffuser)
-      --     `shouldReturn` Left NoVoting
+    void $
+      voting
+        nullTracer
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreementSelectsFork
+        (diffuseVote diffuser)
+    --     `shouldReturn` Left NoVoting
 
-      allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
+    allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
-  describe "VR2-A" $
-    it "votes on preagreement's block given last seen certificate is older than cooldown period" $ do
-      let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}, certStar = someCertificate{round = 430 - 2 * 100}}
-      perasState <- newTVarIO cooldownState
-      diffuser <- newTVarIO $ defaultDiffuser 0
+  it "VR2-A - votes on preagreement's block given last seen certificate is older than cooldown period" $ do
+    let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}, certStar = someCertificate{round = 430 - 2 * 100}}
+    perasState <- newTVarIO cooldownState
+    diffuser <- newTVarIO $ defaultDiffuser 0
 
-      void $
-        voting
-          nullTracer
-          params
-          committeeMember
-          perasState
-          roundNumber
-          preagreement
-          (diffuseVote diffuser)
+    void $
+      voting
+        nullTracer
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreement
+        (diffuseVote diffuser)
 
-      Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
-  describe "VR2-B" $
-    it "Cooldown periods have ended." $ do
-      let cooldownState =
-            steadyState
-              { certPrime = someCertificate{round = roundNumber - fromInteger perasR}
-              , certStar = someCertificate{round = 430 - 2 * 100}
-              }
-      perasState <- newTVarIO cooldownState
-      diffuser <- newTVarIO $ defaultDiffuser 0
+    Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
-      void $
-        voting
-          nullTracer
-          params
-          committeeMember
-          perasState
-          roundNumber
-          preagreement
-          (diffuseVote diffuser)
+  it "VR2-B - Cooldown periods have ended." $ do
+    let cooldownState =
+          steadyState
+            { certPrime = someCertificate{round = roundNumber - fromInteger perasR}
+            , certStar = someCertificate{round = 430 - 2 * 100}
+            }
+    perasState <- newTVarIO cooldownState
+    diffuser <- newTVarIO $ defaultDiffuser 0
 
-      Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+    void $
+      voting
+        nullTracer
+        params
+        committeeMember
+        perasState
+        roundNumber
+        preagreement
+        (diffuseVote diffuser)
+
+    Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1

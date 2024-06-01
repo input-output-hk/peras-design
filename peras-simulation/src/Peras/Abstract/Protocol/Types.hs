@@ -14,7 +14,7 @@ import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
-import Peras.Numbering (RoundNumber (MkRoundNumber), SlotNumber)
+import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 
 data PerasParams = MkPerasParams
@@ -111,6 +111,7 @@ data PerasError
   | CertificationCreationFailed String
   | VoteCreationFailed String
   | NoVoting
+  | MultipleItemsDiffused
   deriving (Eq, Generic, Ord, Show)
 
 systemStart :: SlotNumber
@@ -133,4 +134,4 @@ newRound :: Integral a => a -> PerasParams -> Bool
 newRound s params = fromIntegral s `mod` perasU params == 0
 
 inRound :: Integral a => a -> PerasParams -> RoundNumber
-inRound s params = MkRoundNumber $ fromIntegral s `div` perasU params
+inRound s params = fromIntegral $ fromIntegral s `div` perasU params

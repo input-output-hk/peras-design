@@ -46,7 +46,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
 
   -- generate 10 votes every slot in a round
   generateVotes = do
-    let round = inRound (fromIntegral slotNumber :: Integer) params
+    let round = inRound slotNumber params
         slotInRound = fromIntegral slotNumber `mod` perasU
     blockToVoteFor <- blockBefore perasL (fromIntegral round * perasU) <$> readTVarIO chain
     case blockToVoteFor of

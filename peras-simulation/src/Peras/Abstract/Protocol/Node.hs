@@ -8,9 +8,10 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, gets, lift, modify')
-import Control.Tracer (Tracer, traceWith)
+import Control.Tracer (Tracer, nullTracer, traceWith)
 import Data.Set (Set)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
+import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Abstract.Protocol.Fetching (fetching)
 import Peras.Abstract.Protocol.Preagreement (preagreement)
@@ -20,9 +21,11 @@ import Peras.Abstract.Protocol.Types (
   PerasParams (perasΔ),
   PerasResult,
   PerasState,
+  defaultParams,
   inRound,
   initialPerasState,
   newRound,
+  systemStart,
  )
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
@@ -36,6 +39,9 @@ data NodeState m = MkNodeState
   , stateVar :: TVar m PerasState
   , diffuserVar :: TVar m Diffuser
   }
+
+defaultNodeState :: MonadSTM m => m (NodeState m)
+defaultNodeState = initialNodeState nullTracer (mkParty 0 mempty mempty) systemStart defaultParams
 
 initialNodeState :: MonadSTM m => Tracer m PerasLog -> Party -> SlotNumber -> PerasParams -> m (NodeState m)
 initialNodeState tracer self clock protocol =

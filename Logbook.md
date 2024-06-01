@@ -1,5 +1,35 @@
 ## 2024-05-31
 
+## Dynamic QuickCheck for Haskell prototype
+
+The `Peras.Abstract.Protocol.Node.Model` module implements `quickcheck-dynamic` models for the Haskell prototype.
+
+- Presently, the prototype is used as the `StateModel`, but the code is organized so that we can drop in an Agda-generated model when that is ready.
+- Even prior to that, we can add dynamic logic properties to `Peras.Abstract.Protocol.Node.ModelSpec` to test whether the prototype exhibits the behavior outlined in the paper or in Agda. An example would be a liveness property.
+- We can also create additional state models for fetching, block-creation, and voting, and then test the prototype (as a run model) against those.
+- Thus, the conformance tests might end up including a general-purpose check of faithfulness to the spec and several focused models.
+
+Findings:
+
+1. The usage of `MonadSTM` significantly complicated the construction of the state and run models. It is a serious problem for `RunModel` because there exists no `MonadSTM Gen`, which is needed for the dynamic-logic tests, but implementing that instances would be laborious. (This is another facet of the earlier problems we had using random numbers in `MonadSTM`.)
+2. Similarly, we probably should define a newtype wrapping a monad transformer stack that has instances such as `MonadError PerasError` and `MonadState`. This would let us remove the `runExceptT` and `ExceptT` functions that are scattered throughout the model code.
+3. We could consider having the `Action`s return a `[PerasLog]`: on one hand that would provide deeper observability, but on the other hand the run model would be less of a black box.
+4. It is unclear how closely the Agda-generated code will align with the `Action`s in the node model. *We'll need closer coordination to align the Agda with the Haskell actions.*
+5. It would be possible to revive the Agda `Peras.QCD.Node.Conformance` executable specification and use that as the model for testing the prototype.
+
+In summary, we’ve considered and investigated three prominent approaches to link formal specification in Agda to dynamic property-based tests in Haskell.
+
+1. Relational spec → make it decidable → use that executable version for testing.
+    - Pro: yields an executable specification in Haskell.
+    - Con: requires decidable versions of each small step.
+2. Relational spec → formulate test properties → prove that test properties conform
+    - Pro: yields properties in Haskell
+    - Con: no executable specification in Haskell
+    - ***We are pursuing this now.***
+3. Relational spec + executable spec → prove their equivalence
+    - Pro: yields an executable specification in Haskell
+    - Con: consistency and completeness proofs may be difficult
+
 ### Publishing Peras Website
 
 * Started work on a [docusaurus](https://docusaurus.io) based website for Peras that will be aimed at sharing the team's progress and findings, and various documents, specifications, and tools we produce.
@@ -7,6 +37,15 @@
 * It currently hosts the technical report, an early version of the Agda specification, and some unfinished introduction text, so definitely room for improvements
 
 ## 2024-05-30
+
+### Removed obsolete code
+
+The following top-level folders have been removed:
+
+- `peras-iosim`
+- `peras-quickcheck`
+- `peras-rust`
+- `peras_topology`
 
 ### Haskell prototype
 
