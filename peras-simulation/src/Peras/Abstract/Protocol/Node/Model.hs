@@ -340,11 +340,13 @@ instance Monad m => RunModel NodeModel (RunMonad m) where
   perform _node action _context =
     case action of
       Initialize party start params ->
-        runExceptT $ do
-          modify' $ \node -> node{self = party, clock = start, protocol = params}
+        runExceptT $
+          modify' $
+            \node -> node{self = party, clock = start, protocol = params}
       Tick ->
-        runExceptT $ do
-          modify' $ \node -> node{clock = clock node + 1}
+        runExceptT $
+          modify' $
+            \node -> node{clock = clock node + 1}
       Fetching newChains newVotes ->
         runExceptT $ do
           MkNodeModel{..} <- get
