@@ -1,6 +1,23 @@
+## 2024-06-02
+
+### Restartable Peras simulations
+
+- The `SimConfig` type contains complete information for starting a simulation from an arbitrary state.
+    - Start and end times
+    - Protocol parameters   
+    - Which parties are slot leaders for particular rounds.
+    - Which parties are committee members for particular rounds.
+    - The initial `PerasState` for each party.
+    - What pending chains and votes will be diffused in future slots.
+- `peras-simulate` now outputs a `SimConfig` that can be edited and input into `peras-simulate` to continue the simulation.
+- `peras-visualize` converts simulation traces to GraphViz DOT files.
+    - Additional visualization and log-processing options can be added to this.
+    - The next option to be added will convert the log to CSV files.
+- The underlying simulation and visualization functions can easily be incorporated into `peras-server`.
+
 ## 2024-05-31
 
-## Dynamic QuickCheck for Haskell prototype
+### Dynamic QuickCheck for Haskell prototype
 
 The `Peras.Abstract.Protocol.Node.Model` module implements `quickcheck-dynamic` models for the Haskell prototype.
 
