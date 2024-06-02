@@ -28,7 +28,7 @@ multinodeMain inputFile outputFile logFile =
         Left e -> die $ show e
         Right output -> do
           whenJust outputFile $
-            flip Y.encodeFile output
+            flip A.encodeFile output
           whenJust logFile $
             \file -> do
               events <- reader
