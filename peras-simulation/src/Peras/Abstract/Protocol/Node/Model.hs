@@ -59,7 +59,6 @@ import Peras.Abstract.Protocol.Types (
   PerasError (MultipleItemsDiffused),
   PerasParams,
   PerasState (..),
-  defaultParams,
   hashTip,
   inRound,
   initialPerasState,
@@ -97,7 +96,7 @@ instance Default NodeModel where
     MkNodeModel
       { self = noParty
       , clock = systemStart
-      , protocol = defaultParams
+      , protocol = def
       , state = initialPerasState
       }
 
@@ -199,7 +198,7 @@ instance StateModel NodeModel where
     BlockCreation :: IsSlotLeader -> Payload -> Action NodeModel (Maybe Chain)
     Voting :: IsCommitteeMember -> Action NodeModel (Maybe Vote)
 
-  initialState = MkNodeModel{self = noParty, clock = systemStart, protocol = defaultParams, state = initialPerasState}
+  initialState = MkNodeModel{self = noParty, clock = systemStart, protocol = def, state = initialPerasState}
 
   nextState node action _var =
     case action of
@@ -229,7 +228,7 @@ instance StateModel NodeModel where
           , (if forged node then 0 else 10, fmap Some . BlockCreation <$> arbitrary <*> arbitrary)
           , (if voted node then 0 else 50, Some . Voting <$> arbitrary)
           ]
-      else pure . Some $ Initialize (mkParty 1 mempty mempty) (systemStart + 1) defaultParams -- FIXME: Use arbitraries.
+      else pure . Some $ Initialize (mkParty 1 mempty mempty) (systemStart + 1) def -- FIXME: Use arbitraries.
    where
     genChains = Set.fromList <$> listOf genChain
     genChain =

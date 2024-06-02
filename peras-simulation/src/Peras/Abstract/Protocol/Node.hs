@@ -9,6 +9,7 @@ import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, gets, lift, modify')
 import Control.Tracer (Tracer, nullTracer, traceWith)
+import Data.Default (def)
 import Data.Set (Set)
 import Peras.Abstract.Protocol.BlockCreation (blockCreation)
 import Peras.Abstract.Protocol.Crypto (mkParty)
@@ -21,7 +22,6 @@ import Peras.Abstract.Protocol.Types (
   PerasParams (perasΔ),
   PerasResult,
   PerasState,
-  defaultParams,
   inRound,
   initialPerasState,
   newRound,
@@ -41,7 +41,7 @@ data NodeState m = MkNodeState
   }
 
 defaultNodeState :: MonadSTM m => m (NodeState m)
-defaultNodeState = initialNodeState nullTracer (mkParty 0 mempty mempty) systemStart defaultParams
+defaultNodeState = initialNodeState nullTracer (mkParty 0 mempty mempty) systemStart def
 
 initialNodeState :: MonadSTM m => Tracer m PerasLog -> Party -> SlotNumber -> PerasParams -> m (NodeState m)
 initialNodeState tracer self clock protocol =

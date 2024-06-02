@@ -4,12 +4,13 @@ import Prelude hiding (round)
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), atomically, writeTVar)
 import Control.Monad.State (runStateT)
+import Data.Default (def)
 import Data.Function (on)
 import Data.List (isSuffixOf, maximumBy)
 import Data.Maybe (mapMaybe)
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Node (NodeState (..), initialNodeState, tick)
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), defaultParams, initialPerasState)
+import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), initialPerasState)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (certificate), Certificate (..))
 import Peras.Crypto (hash)
@@ -22,7 +23,7 @@ import qualified Data.Set as Set (difference, fromList, size)
 
 spec :: Spec
 spec = do
-  let params = defaultParams
+  let params = def
       roundNumber = 430
       slotNumber = fromIntegral $ fromIntegral roundNumber * perasU params
       someChain = arbitrary `generateWith` 42
@@ -43,7 +44,7 @@ spec = do
 
   let check party properties =
         do
-          nodeState <- runIO $ initialNodeState nullTracer party (slotNumber - 1) defaultParams
+          nodeState <- runIO $ initialNodeState nullTracer party (slotNumber - 1) def
           runIO . atomically $ writeTVar (stateVar nodeState) steadyState
           perasState <- runIO . readTVarIO $ stateVar nodeState
           (result, nodeState') <- runIO $ runStateT (tick nullTracer payload) nodeState

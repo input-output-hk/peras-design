@@ -7,11 +7,12 @@ module Peras.Abstract.Protocol.Environment where
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVar, readTVarIO, writeTVar)
 import Control.Monad (forM)
 import Control.Monad.Except (ExceptT (..), runExceptT)
+import Data.Default (def)
 import Data.Either (partitionEithers)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
 import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, insertChains, insertVotes)
-import Peras.Abstract.Protocol.Types (PerasParams (..), defaultParams, genesisChain, hashTip, inRound, perasL, perasU, systemStart)
+import Peras.Abstract.Protocol.Types (PerasParams (..), genesisChain, hashTip, inRound, perasL, perasU, systemStart)
 import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
@@ -74,4 +75,4 @@ blockBefore cutoff slot = \case
 mkSimpleScenario :: MonadSTM m => m (SlotNumber -> m Diffuser)
 mkSimpleScenario = do
   chain <- newTVarIO genesisChain
-  pure $ simpleScenario chain defaultParams
+  pure $ simpleScenario chain def

@@ -16,6 +16,8 @@ module Peras.Abstract.Protocol.Diffusion (
 
 import Control.Arrow ((&&&))
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar', readTVar)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.Map (Map)
@@ -34,6 +36,12 @@ data Diffuser = MkDiffuser
   , pendingVotes :: Map SlotNumber (Set Vote)
   }
   deriving (Eq, Generic, Show)
+
+instance FromJSON Diffuser
+instance ToJSON Diffuser
+
+instance Default Diffuser where
+  def = defaultDiffuser 0
 
 defaultDiffuser :: Integer -> Diffuser
 defaultDiffuser delay = MkDiffuser{delay, pendingChains = mempty, pendingVotes = mempty}

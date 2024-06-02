@@ -89,6 +89,8 @@ deriving stock instance Show Certificate
 instance H.Hashable Certificate
 instance FromJSON Certificate
 instance ToJSON Certificate
+instance FromJSONKey Certificate
+instance ToJSONKey Certificate
 
 deriving stock instance Ord Block
 deriving stock instance Read Block
