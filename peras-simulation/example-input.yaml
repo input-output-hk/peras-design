@@ -1,0 +1,125 @@
+diffuser:
+  delay: 0
+  pendingChains: {}
+  pendingVotes: {}
+finish: 130
+params:
+  A: 2160
+  B: 100
+  K: 3
+  L: 15
+  R: 2
+  U: 20
+  Δ: 2
+  τ: 2
+parties:
+  '1':
+    leadershipSlots:
+    - 2
+    - 10
+    - 25
+    - 33
+    - 39
+    - 56
+    - 71
+    - 96
+    - 101
+    - 108
+    - 109
+    - 115
+    membershipRounds:
+    - 1
+    - 2
+    - 6
+    perasState:
+      certPrime:
+        blockRef: ''
+        round: 0
+      certStar:
+        blockRef: ''
+        round: 0
+      certs: []
+      chainPref: []
+      chains:
+      - []
+      votes: []
+  '2':
+    leadershipSlots:
+    - 12
+    - 17
+    - 33
+    - 44
+    - 50
+    - 67
+    - 75
+    - 88
+    - 105
+    membershipRounds:
+    - 2
+    - 3
+    - 5
+    - 6
+    perasState:
+      certPrime:
+        blockRef: ''
+        round: 0
+      certStar:
+        blockRef: ''
+        round: 0
+      certs: []
+      chainPref: []
+      chains:
+      - []
+      votes: []
+  '3':
+    leadershipSlots:
+    - 5
+    - 15
+    - 42
+    - 56
+    - 71
+    - 82
+    - 124
+    membershipRounds:
+    - 3
+    - 4
+    - 5
+    - 6
+    perasState:
+      certPrime:
+        blockRef: ''
+        round: 0
+      certStar:
+        blockRef: ''
+        round: 0
+      certs: []
+      chainPref: []
+      chains:
+      - []
+      votes: []
+  '4':
+    leadershipSlots:
+    - 8
+    - 15
+    - 21
+    - 38
+    - 50
+    - 65
+    - 127
+    membershipRounds:
+    - 1
+    - 5
+    perasState:
+      certPrime:
+        blockRef: ''
+        round: 0
+      certStar:
+        blockRef: ''
+        round: 0
+      certs: []
+      chainPref: []
+      chains:
+      - []
+      votes: []
+payloads: {}
+start: 0
