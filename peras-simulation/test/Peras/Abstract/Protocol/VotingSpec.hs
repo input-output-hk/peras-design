@@ -5,10 +5,11 @@ module Peras.Abstract.Protocol.VotingSpec where
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
 import Control.Tracer (nullTracer)
+import Data.Default (def)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (mkParty)
 import Peras.Abstract.Protocol.Diffusion (allPendingVotes, defaultDiffuser, diffuseVote)
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), defaultParams, initialPerasState)
+import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), initialPerasState)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..))
@@ -19,7 +20,7 @@ import Prelude hiding (round)
 
 spec :: Spec
 spec = do
-  let params = defaultParams
+  let params = def
       MkPerasParams{perasR} = params
       roundNumber = 430
       someChain = arbitrary `generateWith` 42

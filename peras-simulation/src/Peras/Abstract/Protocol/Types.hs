@@ -6,7 +6,9 @@
 module Peras.Abstract.Protocol.Types where
 
 import Control.Concurrent.Class.MonadSTM (TVar)
+import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
+import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
 import GHC.Generics (Generic)
@@ -37,23 +39,46 @@ data PerasParams = MkPerasParams
   }
   deriving (Eq, Generic, Show)
 
-instance A.ToJSON PerasParams where
-  toJSON MkPerasParams{..} = A.object ["U" A..= perasU, "A" A..= perasA, "R" A..= perasR, "K" A..= perasK, "L" A..= perasL, "τ" A..= perasτ, "B" A..= perasB, "Δ" A..= perasΔ]
+instance FromJSON PerasParams where
+  parseJSON =
+    A.withObject "PerasParams" $ \o -> do
+      perasU <- o A..: "U"
+      perasA <- o A..: "A"
+      perasR <- o A..: "R"
+      perasK <- o A..: "K"
+      perasL <- o A..: "L"
+      perasτ <- o A..: "τ"
+      perasB <- o A..: "B"
+      perasΔ <- o A..: "Δ"
+      pure MkPerasParams{..}
+
+instance ToJSON PerasParams where
+  toJSON MkPerasParams{..} =
+    A.object
+      [ "U" A..= perasU
+      , "A" A..= perasA
+      , "R" A..= perasR
+      , "K" A..= perasK
+      , "L" A..= perasL
+      , "τ" A..= perasτ
+      , "B" A..= perasB
+      , "Δ" A..= perasΔ
+      ]
 
 -- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
 -- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
-defaultParams :: PerasParams
-defaultParams =
-  MkPerasParams
-    { perasU = 20
-    , perasA = 2160
-    , perasR = 100
-    , perasK = 100
-    , perasL = 30
-    , perasτ = 75
-    , perasB = 100
-    , perasΔ = 5
-    }
+instance Default PerasParams where
+  def =
+    MkPerasParams
+      { perasU = 20
+      , perasA = 2160
+      , perasR = 100
+      , perasK = 100
+      , perasL = 30
+      , perasτ = 75
+      , perasB = 100
+      , perasΔ = 5
+      }
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
 data PerasState = MkPerasState
@@ -65,6 +90,12 @@ data PerasState = MkPerasState
   , certStar :: Certificate
   }
   deriving (Eq, Generic, Show)
+
+instance FromJSON PerasState
+instance ToJSON PerasState
+
+instance Default PerasState where
+  def = initialPerasState
 
 initialPerasState :: PerasState
 initialPerasState =

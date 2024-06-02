@@ -49,7 +49,13 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🗳️ Simulate Peras
       run: |
-        nix run .#peras-simulate -- "multinode"
+        nix run .#peras-simulate -- \
+          --in-file peras-simulation/example-input.yaml \
+          --out-file peras-simulation/tmp-output.yaml \
+          --trace-file peras-simulation/tmp-trace.jsonarray
+        nix run .#peras-visualize -- \
+          --trace-file peras-simulation/tmp-trace.jsonarray \
+          --dot-file peras-simulation/tmp.dot
   tests:
     if: true
     name: Run tests
