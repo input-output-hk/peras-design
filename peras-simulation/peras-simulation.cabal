@@ -128,20 +128,38 @@ executable  peras-simulate
     hs-source-dirs:   app
 
     -- The entrypoint to the test suite.
-    main-is:          peras.hs
+    main-is:          Simulate.hs
 
     other-modules:    Paths_peras_simulation
 
     build-depends:    aeson
                     , base ^>=4.18.1.0
                     , bytestring
-                    , containers
-                    , contra-tracer
-                    , mtl
                     , optparse-applicative
                     , peras-simulation
-                    , text
                     , yaml
+
+
+executable  peras-visualize
+    -- Import common warning flags.
+    import:           warnings
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+    -- The entrypoint to the test suite.
+    main-is:          Visualize.hs
+
+    other-modules:    Paths_peras_simulation
+
+    build-depends:    aeson
+                    , base ^>=4.18.1.0
+                    , bytestring
+                    , optparse-applicative
+                    , peras-simulation
 
 
 test-suite peras-simulation-test
