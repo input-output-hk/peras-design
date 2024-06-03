@@ -71,6 +71,7 @@ library
                      Peras.Abstract.Protocol.Environment
                      Peras.Abstract.Protocol.Fetching
                      Peras.Abstract.Protocol.Network
+                     Peras.Abstract.Protocol.Network.Arbitrary
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Node.Model
                      Peras.Abstract.Protocol.Preagreement

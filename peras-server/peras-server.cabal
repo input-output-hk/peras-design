@@ -53,6 +53,7 @@ executable peras-server
                       base16-bytestring,
                       bytestring,
                       contra-tracer,
+                      data-default,
                       io-classes,
                       io-sim,
                       peras-server,

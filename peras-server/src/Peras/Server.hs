@@ -69,7 +69,7 @@ wsapp queue pending = do
 
 openUI :: IO ()
 openUI = do
-  let port = 8080
+  let port = 8080 :: Int
   shell "open" ["http://localhost:" <> show port]
  where
   shell cmd args = void $ spawnProcess cmd args
