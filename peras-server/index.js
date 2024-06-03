@@ -19,6 +19,21 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   });
 
+  const stop = document.getElementById('uiStop');
+  stop.addEventListener('click', () => {
+    req("/stop", "DELETE");
+  });
+
+  const pause = document.getElementById('uiPause');
+  pause.addEventListener('click', () => {
+    req("/pause", "PATCH");
+  });
+
+  const resume = document.getElementById('uiResume');
+  resume.addEventListener('click', () => {
+    req("/resume", "PATCH");
+  });
+
   // retrieve simulation data from server
   const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
   const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
@@ -188,6 +203,18 @@ async function postJSON(url, data) {
       body: JSON.stringify(data),
     });
 
+    const result = await response.json();
+    console.log("Success:", result);
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+async function req(url, method) {
+  try {
+    const response = await fetch(url, {
+      method: method
+    });
     const result = await response.json();
     console.log("Success:", result);
   } catch (error) {

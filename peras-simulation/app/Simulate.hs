@@ -2,8 +2,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
+import Control.Concurrent.Class.MonadSTM (newTVarIO)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS8
+import Data.Default (def)
 import Data.Version (showVersion)
 import Paths_peras_simulation (version)
 import Peras.Abstract.Protocol.Environment (mkSimpleScenario)
@@ -23,7 +25,8 @@ multinodeMain inputFile outputFile logFile =
   do
     input <- either (die . show) pure =<< Y.decodeFileEither inputFile
     (tracer, reader) <- makeVisTracer
-    simulate tracer input
+    controlVar <- newTVarIO def
+    simulate tracer controlVar input
       >>= \case
         Left e -> die $ show e
         Right output -> do

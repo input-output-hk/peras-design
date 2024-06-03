@@ -11,8 +11,9 @@
 module Peras.Abstract.Protocol.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Monad (forM, replicateM)
+import Control.Monad (forM)
 import Control.Monad.Class.MonadTimer (MonadDelay, threadDelay)
+import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, execStateT, gets, modify', runStateT)
 import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
@@ -126,8 +127,21 @@ instance Default SimConfig where
       , diffuser = def
       }
 
-simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> SimConfig -> m (PerasResult SimConfig)
-simulate tracer initial =
+data SimControl = MkSimControl
+  { delay :: Int
+  , stop :: Bool
+  , pause :: Bool
+  }
+  deriving (Eq, Generic, Show)
+
+instance A.FromJSON SimControl
+instance A.ToJSON SimControl
+
+instance Default SimControl where
+  def = MkSimControl 100_000 False False
+
+simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> TVar m SimControl -> SimConfig -> m (PerasResult SimConfig)
+simulate tracer controlVar initial =
   do
     let mkState partyId MkPartyConfig{..} =
           (mkParty partyId (toList leadershipSlots) (toList membershipRounds),)
@@ -137,14 +151,18 @@ simulate tracer initial =
         <$> (Map.fromList <$> mapM (uncurry mkState) (Map.toList $ parties initial))
         <*> newTVarIO (diffuser initial)
     traceWith tracer . Protocol $ params initial
-    (result, net') <-
-      flip runStateT net
-        . fmap sequence
-        . replicateM (fromIntegral $ finish initial - start initial)
-        $ do
-          payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
-          lift $ threadDelay 100_000
-          runNetwork tracer payload
+    let go count =
+          do
+            MkSimControl{delay, stop, pause} <- lift . lift $ readTVarIO controlVar
+            lift . lift $ threadDelay delay
+            case (stop || count <= 0, pause) of
+              (True, _) -> pure ()
+              (_, True) -> go count
+              (False, False) -> do
+                payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
+                ExceptT $ runNetwork tracer payload
+                go $ count - 1
+    (result, net') <- flip runStateT net . runExceptT . go $ finish initial - start initial
     case result of
       Left e -> pure $ Left e
       Right _ -> do

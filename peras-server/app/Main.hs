@@ -1,11 +1,12 @@
 module Main where
 
-import Control.Concurrent.Class.MonadSTM (TQueue, atomically, newTQueueIO, writeTQueue)
+import Control.Concurrent.Class.MonadSTM (TQueue, atomically, newTQueueIO, newTVarIO, writeTQueue)
 import Control.Monad.Class.MonadAsync (concurrently_)
 import Control.Monad.Class.MonadSTM (MonadSTM)
 import Control.Monad.Class.MonadSay (MonadSay, say)
 import Control.Tracer (Tracer (..), emit)
 import Data.Aeson (ToJSON, Value, encode, toJSON)
+import Data.Default (def)
 import Data.Text.Lazy (unpack)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Peras.Server (openUI, runServer)
@@ -22,5 +23,6 @@ mkTracer events =
 main :: IO ()
 main = do
   events <- newTQueueIO
-  runServer events
+  control <- newTVarIO def
+  runServer events control
     `concurrently_` openUI

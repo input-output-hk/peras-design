@@ -14,6 +14,7 @@ import Control.Concurrent.Class.MonadSTM (
  )
 import Control.Concurrent.Class.MonadSTM.TChan (TChan, dupTChan, readTChan)
 import Control.Concurrent.Class.MonadSTM.TQueue
+import Control.Concurrent.Class.MonadSTM.TVar (TVar, modifyTVar')
 import Control.Monad (forever)
 import Control.Monad.Class.MonadAsync (race_)
 import Control.Monad.IO.Class (liftIO)
@@ -29,17 +30,17 @@ import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.WebSockets as WS
-import Peras.Abstract.Protocol.Network (SimConfig (..), simulate)
+import Peras.Abstract.Protocol.Network (SimConfig (..), SimControl (pause, stop), simulate)
 import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
 import Peras.Abstract.Protocol.Types (PerasParams (..))
 import System.Process (spawnProcess)
 import qualified Web.Scotty as Sc
 
-runServer :: TQueue IO Value -> IO ()
-runServer queue = do
+runServer :: TQueue IO Value -> TVar IO SimControl -> IO ()
+runServer queue control = do
   let port = 8091
   let settings = Warp.setPort port Warp.defaultSettings
-  sapp <- scottyApp queue
+  sapp <- scottyApp queue control
   clientChannel <- newBroadcastTChanIO
   feedClient queue clientChannel
     `race_` Warp.runSettings
@@ -51,8 +52,8 @@ feedClient input output = forever $ do
   atomically $ do
     readTQueue input >>= writeTChan output
 
-scottyApp :: TQueue IO Value -> IO Wai.Application
-scottyApp queue =
+scottyApp :: TQueue IO Value -> TVar IO SimControl -> IO Wai.Application
+scottyApp queue control =
   Sc.scottyApp $ do
     Sc.middleware logStdoutDev
 
@@ -74,7 +75,13 @@ scottyApp queue =
           Nothing -> Sc.status status400
           Just req -> liftIO $ do
             simConfig <- simRequestToConfig req
-            void $ simulate (mkTracer queue) simConfig
+            void $ simulate (mkTracer queue) control simConfig
+
+    Sc.delete "/stop" $ liftIO $ atomically $ modifyTVar' control (\c -> c{stop = True})
+
+    Sc.patch "/pause" $ liftIO $ atomically $ modifyTVar' control (\c -> c{pause = True})
+
+    Sc.patch "/resume" $ liftIO $ atomically $ modifyTVar' control (\c -> c{pause = False})
 
 mkTracer :: (MonadSTM m, ToJSON a) => TQueue m Value -> Tracer m a
 mkTracer events =
