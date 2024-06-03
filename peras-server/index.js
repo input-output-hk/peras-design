@@ -6,16 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const simulate = document.getElementById('uiSimulate');
   simulate.addEventListener('click', () => {
     postJSON("/simulate", {
-        duration : parseInt(document.getElementById('uiDuration').value)
-      , parties : parseInt(document.getElementById('uiParties').value)
-      , u : parseInt(document.getElementById('uiU').value)
-      , a : parseInt(document.getElementById('uiA').value)
-      , r : parseInt(document.getElementById('uiR').value)
-      , k : parseInt(document.getElementById('uiK').value)
-      , l : parseInt(document.getElementById('uiL').value)
-      , b : parseInt(document.getElementById('uiB').value)
-      , delta : 0
-      , activeSlots : 0.1
+      duration: parseInt(document.getElementById('uiDuration').value)
+      , parties: parseInt(document.getElementById('uiParties').value)
+      , u: parseInt(document.getElementById('uiU').value)
+      , a: parseInt(document.getElementById('uiA').value)
+      , r: parseInt(document.getElementById('uiR').value)
+      , k: parseInt(document.getElementById('uiK').value)
+      , l: parseInt(document.getElementById('uiL').value)
+      , b: parseInt(document.getElementById('uiB').value)
+      , delta: 0
+      , activeSlots: 0.1
     })
   });
 
@@ -119,20 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "NewCertPrime":
         const certPrimeId = `prime:${msg.partyId}`;
-        if (network.body.data.nodes.get(msg.partyId) === null) {
-          const label = `${msg.partyId}`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
-        }
-        network.body.data.nodes.add({ font: { multi: 'html' }, id: certPrimeId, shape: 'box', color: '#8cc474', label: certPrimeId });
+        const certPrimeLabel = `round: <i>${msg.newCertPrime.round}</i>\nparty: <i>${msg.partyId}</i>`;
+        network.body.data.nodes.update({ font: { multi: 'html' }, id: certPrimeId, shape: 'box', color: '#8cc474', label: certPrimeLabel });
         network.body.data.edges.update({ id: certPrimeId, from: certPrimeId, to: msg.newCertPrime.blockRef });
         break;
       case "NewCertStar":
         const certStarId = `star:${msg.partyId}`;
-        if (network.body.data.nodes.get(msg.partyId) === null) {
-          const label = `${msg.partyId}`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
-        }
-        network.body.data.nodes.add({ font: { multi: 'html' }, id: certStarId, shape: 'box', color: '#b59543', label: certStarId });
+        const certStarLabel = `round: <i>${msg.newCertStar.round}</i>\nparty: <i>${msg.partyId}</i>`;
+        network.body.data.nodes.update({ font: { multi: 'html' }, id: certStarId, shape: 'box', color: '#b59543', label: certStarLabel });
         network.body.data.edges.update({ id: certStarId, from: certStarId, to: msg.newCertStar.blockRef });
         break;
       case "CastVote":
