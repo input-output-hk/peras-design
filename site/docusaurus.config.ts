@@ -68,8 +68,6 @@ const config: Config = {
         },
     ],
     themeConfig: {
-        // Replace with your project's social card
-        image: 'img/docusaurus-social-card.jpg',
         navbar: {
             title: 'Peras R&D',
             logo: {
@@ -137,23 +135,23 @@ const config: Config = {
                         },
                     ],
                 },
-          {
-            title: "Legal",
-            items: [
-              {
-                label: "Terms & Conditions",
-                to: "https://static.iohk.io/terms/iohktermsandconditions.pdf",
-              },
-              {
-                label: "Privacy Policy",
-                to: "https://static.iohk.io/terms/iog-privacy-policy.pdf",
-              },
-              {
-                label: "Contributors",
-                to: "https://github.com/input-output-hk/hydra/graphs/contributors",
-              },
-            ],
-          },
+                {
+                    title: "Legal",
+                    items: [
+                        {
+                            label: "Terms & Conditions",
+                            to: "https://static.iohk.io/terms/iohktermsandconditions.pdf",
+                        },
+                        {
+                            label: "Privacy Policy",
+                            to: "https://static.iohk.io/terms/iog-privacy-policy.pdf",
+                        },
+                        {
+                            label: "Contributors",
+                            to: "https://github.com/input-output-hk/hydra/graphs/contributors",
+                        },
+                    ],
+                },
             ],
             copyright: `Copyright © ${new Date().getFullYear()} <strong>Input Output Global</strong> <br/> <a href="https://static.iohk.io/terms/iog-privacy-policy.pdf" target="_blank" class="footer__link-item">Privacy Policy</a> | <a href="https://static.iohk.io/terms/iohktermsandconditions.pdf" target="_blank" class="footer__link-item">Terms & Conditions</a> <br/> <small>Built with Docusaurus</small>`,
         },
