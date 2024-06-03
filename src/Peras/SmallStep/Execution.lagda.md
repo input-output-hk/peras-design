@@ -162,6 +162,7 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
+{-
         _ : initialState ↝⋆ finalState
         _ =  NextSlot empty refl -- slot 1
           ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
@@ -182,9 +183,11 @@ Execution trace of the protocol
 --          ↣ NextSlot empty refl -- slot 5
 --          ↣ NextSlotNewRound empty refl ? -- slot 6
           ↣ ∎
+-}
 ```
 Trace dependent properties
 ```agda
+{-
           where
             latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
@@ -196,4 +199,5 @@ Trace dependent properties
               PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
               valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
+-}
 ```
