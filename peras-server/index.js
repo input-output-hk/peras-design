@@ -3,6 +3,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const slot = document.getElementById('slot');
   const roundNumber = document.getElementById('roundNumber');
 
+  const simulate = document.getElementById('uiSimulate');
+  simulate.addEventListener('click', () => {
+    postJSON("/simulate", {
+        duration : 240
+      , parties : 4
+      , u : 20
+      , a : 300
+      , r : 1
+      , k : 3
+      , l : 10
+      , b : 25
+      , delta : 0
+      , activeSlots : 0.1
+    })
+  });
+
   // retrieve simulation data from server
   const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
   const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);

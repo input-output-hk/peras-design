@@ -1,4 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Server where
@@ -13,14 +16,22 @@ import Control.Concurrent.Class.MonadSTM.TChan (TChan, dupTChan, readTChan)
 import Control.Concurrent.Class.MonadSTM.TQueue
 import Control.Monad (forever)
 import Control.Monad.Class.MonadAsync (race_)
-import Data.Aeson (Value, encode)
+import Control.Monad.IO.Class (liftIO)
+import Control.Tracer (Tracer (Tracer), emit)
+import Data.Aeson (FromJSON, ToJSON (toJSON), Value, decode, encode)
+import Data.Default (def)
 import Data.Functor (void)
 import Data.Text.Lazy.Encoding (decodeUtf8)
+import GHC.Generics (Generic)
+import Network.HTTP.Types (status400)
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.WebSockets as WS
+import Peras.Abstract.Protocol.Network (SimConfig (..), simulate)
+import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
+import Peras.Abstract.Protocol.Types (PerasParams (..))
 import System.Process (spawnProcess)
 import qualified Web.Scotty as Sc
 
@@ -28,7 +39,7 @@ runServer :: TQueue IO Value -> IO ()
 runServer queue = do
   let port = 8091
   let settings = Warp.setPort port Warp.defaultSettings
-  sapp <- scottyApp
+  sapp <- scottyApp queue
   clientChannel <- newBroadcastTChanIO
   feedClient queue clientChannel
     `race_` Warp.runSettings
@@ -40,8 +51,8 @@ feedClient input output = forever $ do
   atomically $ do
     readTQueue input >>= writeTChan output
 
-scottyApp :: IO Wai.Application
-scottyApp =
+scottyApp :: TQueue IO Value -> IO Wai.Application
+scottyApp queue =
   Sc.scottyApp $ do
     Sc.middleware logStdoutDev
 
@@ -57,6 +68,21 @@ scottyApp =
     Sc.get "/peras.css" $
       Sc.file "peras.css"
 
+    Sc.post "/simulate" $
+      decode <$> Sc.body
+        >>= \case
+          Nothing -> Sc.status status400
+          Just req -> liftIO $ do
+            simConfig <- simRequestToConfig req
+            void $ simulate (mkTracer queue) simConfig
+
+mkTracer :: (MonadSTM m, ToJSON a) => TQueue m Value -> Tracer m a
+mkTracer events =
+  Tracer $
+    emit
+      ( \a -> atomically . writeTQueue events . toJSON $ a
+      )
+
 wsapp :: TChan IO Value -> WS.ServerApp
 wsapp queue pending = do
   conn <- WS.acceptRequest pending
@@ -69,6 +95,31 @@ wsapp queue pending = do
 openUI :: IO ()
 openUI = do
   let port = 8091 :: Int
-  shell "open" ["http://localhost:" <> show port]
+  shell "xdg-open" ["http://localhost:" <> show port]
  where
   shell cmd args = void $ spawnProcess cmd args
+
+data SimulationRequest = SimulationRequest
+  { duration :: Integer
+  , parties :: Integer
+  , u :: Integer
+  , a :: Integer
+  , r :: Integer
+  , k :: Integer
+  , l :: Integer
+  , b :: Integer
+  , delta :: Integer
+  , activeSlots :: Double
+  }
+  deriving (Eq, Generic, Show)
+
+instance FromJSON SimulationRequest
+instance ToJSON SimulationRequest
+
+simRequestToConfig :: SimulationRequest -> IO SimConfig
+simRequestToConfig SimulationRequest{..} =
+  genSimConfigIO
+    def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasB = b, perasΔ = delta}
+    activeSlots
+    parties
+    (fromIntegral duration)
