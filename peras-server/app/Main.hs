@@ -27,9 +27,9 @@ main = do
   config <-
     genSimConfigIO
       def -- Default protocol parameters
-      0.1 -- 10% active slots
+      0.1 -- ten percent active slots
       4 -- Four parties
-      7200 -- Two simulated hours
+      1800 -- Simulate for thirty minutes
   events <- newTQueueIO
   simulate (mkTracer events) config
     `race_` runServer events

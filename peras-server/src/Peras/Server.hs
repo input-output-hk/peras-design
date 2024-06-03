@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -27,7 +26,7 @@ import qualified Web.Scotty as Sc
 
 runServer :: TQueue IO Value -> IO ()
 runServer queue = do
-  let port = 8080
+  let port = 8091
   let settings = Warp.setPort port Warp.defaultSettings
   sapp <- scottyApp
   clientChannel <- newBroadcastTChanIO
@@ -69,7 +68,7 @@ wsapp queue pending = do
 
 openUI :: IO ()
 openUI = do
-  let port = 8080 :: Int
+  let port = 8091 :: Int
   shell "open" ["http://localhost:" <> show port]
  where
   shell cmd args = void $ spawnProcess cmd args
