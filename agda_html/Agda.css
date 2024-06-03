@@ -39,3 +39,17 @@
 .Agda a { text-decoration: none }
 .Agda a[href]:hover { background-color: #B4EEB4 }
 .Agda [href].hover-highlight { background-color: #B4EEB4; }
+
+/* Custom styling. */
+
+body {
+  font-size: 16px;
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+pre {
+  background-color: #dcdcdc44;
+  padding: 1em;
+  overflow: auto;
+}
