@@ -62,7 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
           msg.newChains.forEach(chain => {
             const blockId = chain[0].signature;
             const parentId = chain[0].parentBlock;
-            network.body.data.nodes.add({ id: blockId, label: blockId });
+            const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${chain[0].slotNumber}</i>\ncreator: <i>${chain[0].creatorId}</i>`;
+            network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, shape: 'box', label });
             network.body.data.edges.add({ from: blockId, to: parentId });
           });
           network.redraw();
@@ -84,7 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("NewCertStar", msg.partyId, msg.newCertStar);
         break;
       case "CastVote":
-        console.log("CastVote", msg.partyId, msg.vote);
+        const blockId = msg.vote.blockHash;
+        const label = `round: <i>${msg.vote.votingRound}</i>\nvoter: <i>${msg.vote.creatorId}</i>`;
+        network.body.data.nodes.add({ font: { multi: 'html' }, id: msg.vote.signature, shape: 'ellipse', label });
+        network.body.data.edges.add({ from: msg.vote.signature, to: blockId });
         break;
       case "PreagreementBlock":
         console.log("PreagreementBlock", msg.partyId, msg.block, msg.weight);

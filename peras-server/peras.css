@@ -3,6 +3,7 @@ form input {
 }
 
 #chain {
-    width: 90vh;
+    border: 1px solid black;
+    width: 90vw;
     height: 90vh;
 }
