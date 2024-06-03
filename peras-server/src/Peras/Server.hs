@@ -74,14 +74,15 @@ scottyApp queue control =
         >>= \case
           Nothing -> Sc.status status400
           Just req -> liftIO $ do
+            atomically . modifyTVar' control $ \c -> c{stop = False, pause = False}
             simConfig <- simRequestToConfig req
             void $ simulate (mkTracer queue) control simConfig
 
-    Sc.delete "/stop" $ liftIO $ atomically $ modifyTVar' control (\c -> c{stop = True})
+    Sc.delete "/stop" $ liftIO $ atomically $ modifyTVar' control $ \c -> c{stop = True}
 
-    Sc.patch "/pause" $ liftIO $ atomically $ modifyTVar' control (\c -> c{pause = True})
+    Sc.patch "/pause" $ liftIO $ atomically $ modifyTVar' control $ \c -> c{pause = True}
 
-    Sc.patch "/resume" $ liftIO $ atomically $ modifyTVar' control (\c -> c{pause = False})
+    Sc.patch "/resume" $ liftIO $ atomically $ modifyTVar' control $ \c -> c{pause = False}
 
 mkTracer :: (MonadSTM m, ToJSON a) => TQueue m Value -> Tracer m a
 mkTracer events =
