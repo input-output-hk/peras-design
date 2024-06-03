@@ -23,14 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
     edges: {
       width: 2,
       color: '#000000',
+      arrows:
+        { to: { enabled: true, scaleFactor: 1, type: 'arrow' } },
     },
     layout: {
       hierarchical: {
-        direction: 'LR',
+        direction: 'RL',
       },
     },
   });
 
+
+  function createBlock(block) {
+    const blockId = block.signature;
+    const parentId = block.parentBlock;
+    const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
+    network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, shape: 'box', label });
+    network.body.data.edges.add({ from: blockId, to: parentId });
+  }
 
   // handle incoming traces from the server
   // | Protocol {parameters :: PerasParams}
@@ -44,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // | CastVote {partyId :: PartyId, vote :: Vote}
   // | PreagreementBlock {partyId :: PartyId, block :: Block, weight :: VotingWeight}
   // | PreagreementNone {partyId :: PartyId}
-  // | ForgingLogic {partyId :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool}
+  // | ForgingLogic {partyId :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool, block :: Block}
   // | VotingLogic {partyId :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
   // | DiffuseChain {partyId :: PartyId, chain :: Chain}
   // | DiffuseVote {partyId :: PartyId, vote :: Vote}
@@ -59,18 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "NewChainAndVotes":
         if (msg.newChains.length > 0) {
-          msg.newChains.forEach(chain => {
-            const blockId = chain[0].signature;
-            const parentId = chain[0].parentBlock;
-            const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${chain[0].slotNumber}</i>\ncreator: <i>${chain[0].creatorId}</i>`;
-            network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, shape: 'box', label });
-            network.body.data.edges.add({ from: blockId, to: parentId });
-          });
+          msg.newChains.forEach(chain => createBlock(chain[0]));
           network.redraw();
         }
         break;
       case "NewChainPref":
-        console.log("NewChainPref", msg.partyId, msg.newChainPref);
+        if (network.body.data.nodes.get(msg.partyId) === null) {
+          const label = `${msg.partyId}`;
+          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
+        }
+        // we want a single edge from the party to the block which is their preferred chain
+        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.newChainPref[0].signature });
         break;
       case "NewCertificatesReceived":
         console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
@@ -89,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = `round: <i>${msg.vote.votingRound}</i>\nvoter: <i>${msg.vote.creatorId}</i>`;
         network.body.data.nodes.add({ font: { multi: 'html' }, id: msg.vote.signature, shape: 'ellipse', label });
         network.body.data.edges.add({ from: msg.vote.signature, to: blockId });
+        network.redraw();
         break;
       case "PreagreementBlock":
         console.log("PreagreementBlock", msg.partyId, msg.block, msg.weight);
@@ -97,7 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("PreagreementNone", msg.partyId);
         break;
       case "ForgingLogic":
-        console.log("ForgingLogic", msg.partyId, msg.bc1a, msg.bc1b, msg.bc1c);
+        if (network.body.data.nodes.get(msg.partyId) === null) {
+          const label = `${msg.partyId}`;
+          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
+        }
+        createBlock(msg.block);
+        // we want a single edge from the party to the block which is their preferred chain
+        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.block.signature });
+        network.redraw();
         break;
       case "VotingLogic":
         console.log("VotingLogic", msg.partyId, msg.vr1a, msg.vr1b, msg.vr2a, msg.vr2b);

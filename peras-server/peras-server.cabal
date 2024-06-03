@@ -26,6 +26,7 @@ library
                       io-sim,
                       mtl,
                       peras-simulation,
+                      process,
                       scotty,
                       text,
                       wai,

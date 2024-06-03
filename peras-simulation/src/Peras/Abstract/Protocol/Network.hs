@@ -195,7 +195,7 @@ simulate tracer initial =
         . replicateM (fromIntegral $ finish initial - start initial)
         $ do
           payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
-          lift $ threadDelay 1_000_000
+          lift $ threadDelay 100_000
           runNetwork tracer payload
     case result of
       Left e -> pure $ Left e

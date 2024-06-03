@@ -15,12 +15,14 @@ import Control.Concurrent.Class.MonadSTM.TQueue
 import Control.Monad (forever)
 import Control.Monad.Class.MonadAsync (race_)
 import Data.Aeson (Value, encode)
+import Data.Functor (void)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.WebSockets as WS
+import System.Process (spawnProcess)
 import qualified Web.Scotty as Sc
 
 runServer :: TQueue IO Value -> IO ()
@@ -64,3 +66,10 @@ wsapp queue pending = do
     forever $ do
       msg <- atomically $ readTChan clientQueue
       WS.sendTextData conn $ decodeUtf8 $ encode msg
+
+openUI :: IO ()
+openUI = do
+  let port = 8080
+  shell "open" ["http://localhost:" <> show port]
+ where
+  shell cmd args = void $ spawnProcess cmd args
