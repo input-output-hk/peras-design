@@ -33,12 +33,10 @@ import qualified Network.WebSockets as WS
 import Peras.Abstract.Protocol.Network (SimConfig (..), SimControl (pause, stop), simulate)
 import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
 import Peras.Abstract.Protocol.Types (PerasParams (..))
-import System.Process (spawnProcess)
 import qualified Web.Scotty as Sc
 
-runServer :: TQueue IO Value -> TVar IO SimControl -> IO ()
-runServer queue control = do
-  let port = 8091
+runServer :: Warp.Port -> TQueue IO Value -> TVar IO SimControl -> IO ()
+runServer port queue control = do
   let settings = Warp.setPort port Warp.defaultSettings
   sapp <- scottyApp queue control
   clientChannel <- newBroadcastTChanIO
