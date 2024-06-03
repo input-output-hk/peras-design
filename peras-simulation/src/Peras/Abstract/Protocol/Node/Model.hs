@@ -117,10 +117,22 @@ fetched MkNodeModel{clock, protocol, state = MkPerasState{chains, votes}} =
     && any (\MkVote{votingRound} -> votingRound == inRound clock protocol) votes
 
 forged :: NodeModel -> Bool
-forged MkNodeModel{self, clock, state = MkPerasState{chains}} = any (any (\MkBlock{slotNumber, creatorId} -> slotNumber /= clock || creatorId /= pid self)) chains
+forged MkNodeModel{self, clock, state = MkPerasState{chains}} =
+  any
+    ( any
+        ( \MkBlock{slotNumber, creatorId} ->
+            slotNumber /= clock || creatorId /= pid self
+        )
+    )
+    chains
 
 voted :: NodeModel -> Bool
-voted MkNodeModel{self, clock, protocol, state = MkPerasState{votes}} = any (\MkVote{votingRound, creatorId} -> votingRound /= inRound clock protocol || creatorId /= pid self) votes
+voted MkNodeModel{self, clock, protocol, state = MkPerasState{votes}} =
+  any
+    ( \MkVote{votingRound, creatorId} ->
+        votingRound /= inRound clock protocol || creatorId /= pid self
+    )
+    votes
 
 -- FIXME: Replace with an executable specification generated from Agda.
 initializeModeled :: Party -> SlotNumber -> PerasParams -> NodeModel -> ((), NodeModel)
