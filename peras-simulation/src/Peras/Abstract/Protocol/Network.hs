@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +12,7 @@ module Peras.Abstract.Protocol.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
 import Control.Monad (forM, replicateM)
-import Control.Monad.Class.MonadTimer (MonadDelay)
+import Control.Monad.Class.MonadTimer (MonadDelay, threadDelay)
 import Control.Monad.State (StateT, execStateT, gets, modify', runStateT)
 import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
@@ -177,7 +178,7 @@ simConfigExample =
           ]
     }
 
-simulate :: forall m. MonadSTM m => Tracer m PerasLog -> SimConfig -> m (PerasResult SimConfig)
+simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> SimConfig -> m (PerasResult SimConfig)
 simulate tracer initial =
   do
     let mkState partyId MkPartyConfig{..} =
@@ -194,6 +195,7 @@ simulate tracer initial =
         . replicateM (fromIntegral $ finish initial - start initial)
         $ do
           payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
+          lift $ threadDelay 1_000_000
           runNetwork tracer payload
     case result of
       Left e -> pure $ Left e

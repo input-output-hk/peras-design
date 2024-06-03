@@ -1,3 +1,8 @@
 form input {
     margin: 1em;
 }
+
+#chain {
+    width: 90vh;
+    height: 90vh;
+}
