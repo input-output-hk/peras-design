@@ -26,13 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
       arrows:
         { to: { enabled: true, scaleFactor: 1, type: 'arrow' } },
     },
-    // layout: {
-    //   hierarchical: {
-    //     direction: 'RL',
-    //   },
-    // },
+    layout: {
+      hierarchical: {
+        direction: 'RL',
+      },
+    },
   });
-
 
   function createBlock(block) {
     const blockId = block.signature;
@@ -94,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
           network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
         }
         network.body.data.nodes.add({ font: { multi: 'html' }, id: certPrimeId, shape: 'box', color: '#8cc474', label: certPrimeId });
-        network.body.data.edges.update({ id: `star-${certPrimeId}`, from: msg.partyId, to: certPrimeId });
         network.body.data.edges.update({ id: certPrimeId, from: certPrimeId, to: msg.newCertPrime.blockRef });
         break;
       case "NewCertStar":
@@ -104,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
           network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, shape: 'ellipse', label });
         }
         network.body.data.nodes.add({ font: { multi: 'html' }, id: certStarId, shape: 'box', color: '#b59543', label: certStarId });
-        network.body.data.edges.update({ id: `star-${certStarId}`, from: msg.partyId, to: certStarId });
         network.body.data.edges.update({ id: certStarId, from: certStarId, to: msg.newCertStar.blockRef });
         break;
       case "CastVote":
