@@ -99,13 +99,6 @@ wsapp queue pending = do
       msg <- atomically $ readTChan clientQueue
       WS.sendTextData conn $ decodeUtf8 $ encode msg
 
-openUI :: IO ()
-openUI = do
-  let port = 8091 :: Int
-  shell "xdg-open" ["http://localhost:" <> show port]
- where
-  shell cmd args = void $ spawnProcess cmd args
-
 data SimulationRequest = SimulationRequest
   { duration :: Integer
   , parties :: Integer

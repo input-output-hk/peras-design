@@ -9,23 +9,19 @@
   </head>
   <body>
     <div id="network">
-      <div>
-	<button id="uiSimulate" type="button">Simulate</button>
+      <div id="control">
+	      <button id="uiSimulate" type="button">Simulate</button>
+	      <button id="uiStop" type="button">Stop</button>
+	      <button id="uiPause" type="button">Pause</button>
+	      <button id="uiResume" type="button">Resume</button>
       </div>
-      <div>
-	<button id="uiStop" type="button">Stop</button>
-      </div>
-      <div>
-	<button id="uiPause" type="button">Pause</button>
-      </div>
-      <div>
-	<button id="uiResume" type="button">Resume</button>
-      </div>
-      <div>
-        <span>Slot:</span><span id="slot">0</span>
-      </div>
-      <div>
-        <span>Round:</span><span id="roundNumber">0</span>
+      <div id="state">
+        <div>
+          <span>Slot:</span><span id="slot">0</span>
+        </div>
+        <div>
+          <span>Round:</span><span id="roundNumber">0</span>
+        </div>
       </div>
     </div>
     <div id="chain"></div>

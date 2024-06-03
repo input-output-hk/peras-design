@@ -2,6 +2,15 @@ form input {
     margin: 1em;
 }
 
+#control button {
+    margin: .5em;
+}
+
+#state > div {
+    margin: .5em;
+    display: inline-block;
+}
+
 #chain {
     border: 1px solid black;
     width: 90vw;
