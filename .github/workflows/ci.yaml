@@ -31,6 +31,7 @@ jobs:
     - name: 🏗️ Build `peras-simulation`.
       run: |
         nix build --show-trace .#peras-simulation-test
+
   simulate-hs:
     name: Run simulations
     runs-on: self-hosted
@@ -79,6 +80,7 @@ jobs:
     - name: 🔬 Test with `peras-simulation-test`
       run: |
         nix run .#peras-simulation-test
+
   test-demo:
     name: Test Demo
     runs-on: self-hosted
@@ -104,6 +106,34 @@ jobs:
     - name: 🏗️ Compile Haskell Executable
       run: |
         nix build .#test-demo-test
+
+  build-specification:
+    name: Build HTML Specification
+    runs-on: self-hosted
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    - name: 🛠️ Install Nix
+      uses: cachix/install-nix-action@v21
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+        extra_nix_config: |
+          allowed-uris = ${{ env.ALLOWED_URIS }}
+          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+          substituters = ${{ env.SUBSTITUTERS }}
+          experimental-features = nix-command flakes
+    - name: 🏗️ Agda-to-HTML
+      run: |
+        nix shell
+        .github/workflows/scripts/agda-2-html.sh
+    - name: Publish Docusaurus build
+      uses: actions/upload-artifact@v4
+      with:
+        name: agda-specification
+        if-no-files-found: error
+        path: |
+          html/*
 
   build-docusaurus:
     runs-on: ubuntu-22.04
