@@ -6,14 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const simulate = document.getElementById('uiSimulate');
   simulate.addEventListener('click', () => {
     postJSON("/simulate", {
-        duration : 240
-      , parties : 4
-      , u : 20
-      , a : 300
-      , r : 1
-      , k : 3
-      , l : 10
-      , b : 25
+        duration : parseInt(document.getElementById('uiDuration').value)
+      , parties : parseInt(document.getElementById('uiParties').value)
+      , u : parseInt(document.getElementById('uiU').value)
+      , a : parseInt(document.getElementById('uiA').value)
+      , r : parseInt(document.getElementById('uiR').value)
+      , k : parseInt(document.getElementById('uiK').value)
+      , l : parseInt(document.getElementById('uiL').value)
+      , b : parseInt(document.getElementById('uiB').value)
       , delta : 0
       , activeSlots : 0.1
     })
