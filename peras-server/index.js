@@ -1,10 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+  req("/stop", "DELETE");
+
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
   const roundNumber = document.getElementById('roundNumber');
 
   const simulate = document.getElementById('uiSimulate');
   simulate.addEventListener('click', () => {
+    network.body.data.nodes.clear();
+    network.body.data.edges.clear();
     postJSON("/simulate", {
       duration: parseInt(document.getElementById('uiDuration').value)
       , parties: parseInt(document.getElementById('uiParties').value)
@@ -63,6 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
         direction: 'LR',
       },
     },
+    /*physics: {
+  	stabilization: {
+        iterations: 25000,
+    	enabled: true
+      },
+    },*/
   });
 
   function createBlock(block) {
