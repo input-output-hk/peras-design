@@ -70,8 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (network.body.data.nodes.get(blockId) === null) {
       const parentId = mkBlockHashId(block.parentBlock);
       const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
-      network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', label });
+      const color = block.certificate ? "dodgerblue" : "skyblue";
+      network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', color, label });
       network.body.data.edges.add({ from: blockId, to: parentId });
+      if (block.certificate != null) {
+        network.body.data.edges.add({ from: blockId, to: mkCertId(1, block.certificate.round) , color });
+      }
     }
   }
 
@@ -106,8 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return `block:${hash}`;
   }
 
+  // FIXME: Consider the pros and cons.
+  const collapseCerts = true;
+
   function mkCertId(party, round) {
-    return `cert:${party}:${round}`;
+    return collapseCerts ? `cert:1:${round}` : `cert:${party}:${round}`;
   }
 
   function mkCertPrimeId(party) {
@@ -143,9 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
       case "Protocol":
         {
           console.log("Protocol", msg.parameters);
-          network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId , level: nextLevel() , shape: 'box', label : "<b>Genesis</b>" });
-          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel() , shape: 'box', color: 'lightgray', label: "Genesis\ncertificate" });
-          network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, hidden: true });
+          network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId , level: nextLevel() , shape: 'box', color: "dodgerblue", label : "<b>Genesis</b>" });
+          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel() , shape: 'box', color: 'turquoise', label: "Genesis\ncertificate" });
+          network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, color: "dodgerblue" });
           const nParties = parseInt(document.getElementById('uiParties').value)
           for (let party = 1; party <= nParties; party++) {
             const id = mkPartyId(party);
@@ -166,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
         roundNumber.textContent = '' + msg.roundNumber;
         break;
       case "NewChainAndVotes":
-        console.log("NewChainAndVotes", msg.parameters);
         // No drawing required.
         break;
       case "NewChainPref":
@@ -185,8 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.newQuorums.forEach(function (cert) {
           const id = mkCertId(msg.partyId, cert.round);
           const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'lightgray', label });
-          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'lightgray' , dashes: true });
+          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'turquoise', label });
+          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise' , dashes: true });
         });
         break;
       case "NewCertPrime":
@@ -210,11 +216,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case "CastVote":
-        const blockId = mkBlockHashId(msg.vote.blockHash);
-        const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
-        network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "skyblue", label });
-        network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "skyblue" });
-        refresh();
+        {
+          const blockId = mkBlockHashId(msg.vote.blockHash);
+          const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
+          network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "sandybrown", label });
+          network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "skyblue" });
+          refresh();
+        }
         break;
       case "PreagreementBlock":
         console.log("PreagreementBlock", msg.partyId, msg.block, msg.weight);
