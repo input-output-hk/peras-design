@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
       , l: parseInt(document.getElementById('uiL').value)
       , tau: parseInt(document.getElementById('uiTau').value)
       , b: parseInt(document.getElementById('uiB').value)
+      , committee: parseInt(document.getElementById('uiCommittee').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
     })

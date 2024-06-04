@@ -108,6 +108,7 @@ data SimulationRequest = SimulationRequest
   , l :: Integer
   , tau :: Integer
   , b :: Integer
+  , committee :: Integer
   , delta :: Integer
   , activeSlots :: Double
   }
@@ -122,4 +123,5 @@ simRequestToConfig SimulationRequest{..} =
     def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasΔ = delta}
     activeSlots
     parties
+    committee
     (fromIntegral duration)
