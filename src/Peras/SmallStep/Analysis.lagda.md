@@ -265,19 +265,21 @@ Building up the voting string from all the party's block-trees
           let (M' , M'↦M) = prevRound M
           in theorem-2 {M'} {M} {m} M'↦M {!!}
           )
-      ... | (c , st″ , σ′)
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′)
         rewrite σ′
         rewrite knowledge-prop {proj₁ (prevRound M)} {N} {m} ((proj₂ (prevRound M)) ∷″ (M↦N ∷″ []″))
-        with c
-      ... | ？ = {!!}
-      ... | 🄀 = {!!}
-      ... | ⒈
         rewrite lastIsHead {N} {m} st″
+        with c
+
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ⒈
         with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
         with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       ... | yes _ | _ = ⒈ , (HS-II-1 , refl)
       ... | no q | yes p = ？ , (HS-II-? , refl)
       ... | no _ | no _ = {!!} -- TODO: contradiction
+
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = {!!}
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | 🄀 = {!!}
 ```
 <!--
 ```agda
