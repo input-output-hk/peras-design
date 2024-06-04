@@ -14,7 +14,7 @@ export default function FooterWrapper(props: Props): JSX.Element {
   return (
     <>
       <div style={{width: "100%", display: "flex"}}>
-        {isDarkTheme ? <PrefooterDark style={{height: "auto"}} /> : <Prefooter style={{height: "auto"}}/>}
+        {isDarkTheme ? <PrefooterDark style={{height: "auto", width: "inherit"}} /> : <Prefooter style={{height: "auto", width: "inherit"}}/>}
       </div>
       <Footer {...props} />
     </>

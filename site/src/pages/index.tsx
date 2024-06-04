@@ -23,7 +23,7 @@ function HomepageHeader() {
     return (
     <>
     <div style={{width: "100%", display: "flex"}}>
-        {isDarkTheme ? <HeaderBorderTopDark style={{height: "auto"}} /> : <HeaderBorderTop style={{height: "auto"}}/>}
+        {isDarkTheme ? <HeaderBorderTopDark style={{height: "auto", width: "inherit"}} /> : <HeaderBorderTop style={{height: "auto", width: "inherit"}}/>}
         </div>
             <header className={clsx('hero hero--primary', styles.heroBanner)}>
                 <div className="container">
@@ -39,7 +39,7 @@ function HomepageHeader() {
                 </div>
             </header>
             <div style={{width: "100%", display: "flex"}}>
-         {isDarkTheme ? <HeaderBorderBottomDark style={{height: "auto"}} /> : <HeaderBorderBottom style={{height: "auto"}}/>}
+         {isDarkTheme ? <HeaderBorderBottomDark style={{height: "auto", width: "inherit"}} /> : <HeaderBorderBottom style={{height: "auto", width: "inherit"}}/>}
         </div>
         </>
     );
