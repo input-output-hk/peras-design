@@ -125,14 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "NewChainPref":
         if (network.body.data.nodes.get(msg.partyId) === null) {
-          const label = `${msg.partyId}`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: currentLevel , shape: 'ellipse', label });
+          const label = `<b>Tip</b>\nnode: <i>${msg.partyId}</i>`;
+          network.body.data.nodes.add({ font: { multi: 'html', color: 'white' , size: 12}, id: msg.partyId, level: currentLevel , shape: 'circle', color: 'tomato', label });
 	} else {
-          const label = `${msg.partyId}`;
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: currentLevel , shape: 'ellipse', label });
+          const label = `<b>Tip</b>\n<i>node: ${msg.partyId}</i>`;
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: msg.partyId, level: currentLevel , shape: 'circle', color: 'tomato', label });
         }
         // we want a single edge from the party to the block which is their preferred chain
-        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.newChainPref[0].signature });
+        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.newChainPref[0].signature, color: 'tomato', dashes: true });
         break;
       case "NewCertificatesReceived":
         console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
