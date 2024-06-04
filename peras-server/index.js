@@ -89,6 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return currentLevel;
   }
+
+  function refresh() {
+    network.fit();
+  }
+
   // handle incoming traces from the server
   // | Protocol {parameters :: PerasParams}
   // | Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
@@ -120,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case "NewChainAndVotes":
         if (msg.newChains.length > 0) {
           msg.newChains.forEach(chain => createBlock(chain[0]));
-          network.redraw();
+          refresh();
         }
         break;
       case "NewChainPref":
@@ -157,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
         network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "lightgray", label });
         network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "lightgray" });
-        network.redraw();
+        refresh();
         break;
       case "PreagreementBlock":
         console.log("PreagreementBlock", msg.partyId, msg.block, msg.weight);
@@ -173,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createBlock(msg.block);
         // we want a single edge from the party to the block which is their preferred chain
         network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.block.signature });
-        network.redraw();
+        refresh();
         break;
       case "VotingLogic":
         console.log("VotingLogic", msg.partyId, msg.vr1a, msg.vr1b, msg.vr2a, msg.vr2b);
