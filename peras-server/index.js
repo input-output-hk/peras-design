@@ -201,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const certId = mkCertId(msg.partyId, msg.newCertPrime.round);
           const partyId = mkPartyId(msg.partyId);
           const label = "cert′";
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: partyId, level: currentLevel , shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
           network.body.data.edges.update({ font: {color: 'tomato'}, id: certPrimeId, from: partyId, to: certId, color: 'hotpink' , dashes: true, label });
           refresh();
         }
@@ -211,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const certId = mkCertId(msg.partyId, msg.newCertStar.round);
           const partyId = mkPartyId(msg.partyId);
           const label = "cert*";
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: partyId, level: currentLevel , shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
           network.body.data.edges.update({ font: {color: 'tomato'}, id: certStarId, from: partyId, to: certId, color: 'deeppink' , dashes: true, label });
           refresh();
         }
