@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const blockId = mkBlockId(block);
     if (network.body.data.nodes.get(blockId) === null) {
       const parentId = mkBlockHashId(block.parentBlock);
-      const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
+      const label = `<b>${block.signature.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
       const color = block.certificate ? "dodgerblue" : "skyblue";
       network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', color, label });
       network.body.data.edges.add({ from: blockId, to: parentId });
