@@ -79,11 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function setStatus(message) {
+    document.getElementById('uiMessage').innerText = message;
+  }
+   
   let currentLevel = 0;
   let currentSlot = 0;
   let currentRound = 0;
   let lastSlot = 0;
   let lastRound = 0;
+  let preaggreementBlock = null;
 
   function nextLevel() {
     if (currentSlot != lastSlot) {
@@ -125,6 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return `certStar:${party}`;
   }
 
+  function mkVoteId(vote) {
+    return `vote:${vote.signature}`;
+  }
+
+  function mkCooldownId(party, round) {
+    return `cool:${party}:${round}`;
+  }
+
   const genesisBlockId = "block:0000000000000000";
 
   const genesisCertId = "cert:0:0";
@@ -146,10 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // | DiffuseChain {partyId :: PartyId, chain :: Chain}
   // | DiffuseVote {partyId :: PartyId, vote :: Vote}
   function handleMessage(msg) {
+    setStatus(msg.tag);
     switch (msg.tag) {
       case "Protocol":
         {
-          console.log("Protocol", msg.parameters);
           network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId , level: nextLevel() , shape: 'box', color: "dodgerblue", label : "<b>Genesis</b>" });
           network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel() , shape: 'box', color: 'turquoise', label: "Genesis\ncertificate" });
           network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, color: "dodgerblue" });
@@ -184,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case "NewCertificatesReceived":
-        console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
         // No drawing required.
         break;
       case "NewCertificatesFromQuorum":
@@ -221,16 +233,17 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           const blockId = mkBlockHashId(msg.vote.blockHash);
           const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
-          network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "sandybrown", label });
-          network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "skyblue" });
+          network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: mkVoteId(msg.vote), level: nextLevel() , shape: 'circle', color: "sandybrown", label });
+          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId , dashes: true , color: "skyblue" });
           refresh();
         }
         break;
       case "PreagreementBlock":
-        console.log("PreagreementBlock", msg.partyId, msg.block, msg.weight);
+        preagreementBlock = msg.block;
+        // Nothing to draw.
         break;
       case "PreagreementNone":
-        console.log("PreagreementNone", msg.partyId);
+        // Nothing to draw.
         break;
       case "ForgingLogic":
         {
@@ -243,12 +256,19 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "VotingLogic":
         console.log("VotingLogic", msg.partyId, msg.vr1a, msg.vr1b, msg.vr2a, msg.vr2b);
+        if (!(msg.vr1a && msg.vr1b || msg.vr2a && msg.vr2b)) {
+          const blockId = mkBlockId(preagreementBlock);
+          const label = `Cooldown\nround: <i>${currentRound}</i>\nparty: <i>${msg.partyId}</i>`;
+          network.body.data.nodes.add({ font: { multi: 'html' , color: 'white', size: 12}, id: mkCooldownId(msg.partyId,currentRound), level: nextLevel() , shape: 'ellipse', color: "darkkhaki", label });
+          network.body.data.edges.add({ from: mkCooldownId(msg.partyId,currentRound), to: blockId , dashes: true , hidden: true });
+          refresh();
+        }
         break;
       case "DiffuseChain":
-        console.log("DiffuseChain", msg.partyId, msg.chain);
+        // Nothing to draw.
         break;
       case "DiffuseVote":
-        console.log("DiffuseVote", msg.partyId, msg.vote);
+        // Nothing to draw.
         break;
       default:
         console.log("Unknown message", msg);
