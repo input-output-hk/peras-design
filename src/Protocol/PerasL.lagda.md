@@ -3,7 +3,7 @@
 <!--
 ```agda
 {-# OPTIONS --type-in-type --allow-unsolved-metas #-}
-module Peras.ProtocolL where
+module Protocol.PerasL where
 
 open import Effect.Monad
 open import Data.Nat.DivMod using ( _div_ ; _mod_ )

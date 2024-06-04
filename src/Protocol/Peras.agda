@@ -1,6 +1,6 @@
 {-# OPTIONS --type-in-type --allow-unsolved-metas #-}
 {- An attempt at "sideways-engineering" pseudo-code from Peras document -}
-module Peras.Protocol where
+module Protocol.Peras where
 
 open import Effect.Monad
 open import Data.Nat.DivMod using ( _div_ ; _mod_ )
