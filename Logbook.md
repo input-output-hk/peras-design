@@ -1,3 +1,214 @@
+## 2024-06-02
+
+### Restartable Peras simulations
+
+- The `SimConfig` type contains complete information for starting a simulation from an arbitrary state.
+    - Start and end times
+    - Protocol parameters   
+    - Which parties are slot leaders for particular rounds.
+    - Which parties are committee members for particular rounds.
+    - The initial `PerasState` for each party.
+    - What pending chains and votes will be diffused in future slots.
+- `peras-simulate` now outputs a `SimConfig` that can be edited and input into `peras-simulate` to continue the simulation.
+- `peras-visualize` converts simulation traces to GraphViz DOT files.
+    - Additional visualization and log-processing options can be added to this.
+    - The next option to be added will convert the log to CSV files.
+- The underlying simulation and visualization functions can easily be incorporated into `peras-server`.
+
+## 2024-05-31
+
+### Dynamic QuickCheck for Haskell prototype
+
+The `Peras.Abstract.Protocol.Node.Model` module implements `quickcheck-dynamic` models for the Haskell prototype.
+
+- Presently, the prototype is used as the `StateModel`, but the code is organized so that we can drop in an Agda-generated model when that is ready.
+- Even prior to that, we can add dynamic logic properties to `Peras.Abstract.Protocol.Node.ModelSpec` to test whether the prototype exhibits the behavior outlined in the paper or in Agda. An example would be a liveness property.
+- We can also create additional state models for fetching, block-creation, and voting, and then test the prototype (as a run model) against those.
+- Thus, the conformance tests might end up including a general-purpose check of faithfulness to the spec and several focused models.
+
+Findings:
+
+1. The usage of `MonadSTM` significantly complicated the construction of the state and run models. It is a serious problem for `RunModel` because there exists no `MonadSTM Gen`, which is needed for the dynamic-logic tests, but implementing that instances would be laborious. (This is another facet of the earlier problems we had using random numbers in `MonadSTM`.)
+2. Similarly, we probably should define a newtype wrapping a monad transformer stack that has instances such as `MonadError PerasError` and `MonadState`. This would let us remove the `runExceptT` and `ExceptT` functions that are scattered throughout the model code.
+3. We could consider having the `Action`s return a `[PerasLog]`: on one hand that would provide deeper observability, but on the other hand the run model would be less of a black box.
+4. It is unclear how closely the Agda-generated code will align with the `Action`s in the node model. *We'll need closer coordination to align the Agda with the Haskell actions.*
+5. It would be possible to revive the Agda `Peras.QCD.Node.Conformance` executable specification and use that as the model for testing the prototype.
+
+In summary, we’ve considered and investigated three prominent approaches to link formal specification in Agda to dynamic property-based tests in Haskell.
+
+1. Relational spec → make it decidable → use that executable version for testing.
+    - Pro: yields an executable specification in Haskell.
+    - Con: requires decidable versions of each small step.
+2. Relational spec → formulate test properties → prove that test properties conform
+    - Pro: yields properties in Haskell
+    - Con: no executable specification in Haskell
+    - ***We are pursuing this now.***
+3. Relational spec + executable spec → prove their equivalence
+    - Pro: yields an executable specification in Haskell
+    - Con: consistency and completeness proofs may be difficult
+
+### Publishing Peras Website
+
+* Started work on a [docusaurus](https://docusaurus.io) based website for Peras that will be aimed at sharing the team's progress and findings, and various documents, specifications, and tools we produce.
+* Website is currently published at https://input-output-hk.github.io/peras-design but I plan to move it to peras.cardano-scaling.org
+* It currently hosts the technical report, an early version of the Agda specification, and some unfinished introduction text, so definitely room for improvements
+
+## 2024-05-30
+
+### Removed obsolete code
+
+The following top-level folders have been removed:
+
+- `peras-iosim`
+- `peras-quickcheck`
+- `peras-rust`
+- `peras_topology`
+
+### Haskell prototype
+
+* Did some minor renaming modification to clarify the 2 different running modes: As a single node against an (adversarial) environment, and as multiple nodes interacting
+  * The former is useful to more easily model complex and powerful adversaries that would control a significant fraction of the stake, at the cost of some complexity in the generation of chains and votes
+  * The latter is useful to understand and observe the behaviour of the protocol
+* Also moved this code to own `peras-simulation` package
+  * We should probably thrash `peras-iosim`?
+  * Not sure how to fix the underlying nix stuff, but at the time of this writing cache.iog.io yields [error 500](https://github.com/input-output-hk/peras-design/actions/runs/9298516175/job/25590566233#step:6:17) anyway so there's not much I can do at this stage
+
+### Planning
+
+* Cleanup
+  * rm -fr peras-iosim
+  * rm -fr peras-quickcheck
+  * rm -fr peras-rust
+  * fix nix build
+  * move test-demo -> quickcheck-dynamic
+  * keep peras-delta-q & analytics
+  * skim through the Logbook to ensure everything can be published
+* Brian to take over weekly updates
+* popularisation of Peras?
+  * Interactive web site -> part of the job
+* tests
+  * Brian -> write unit tests to explore corner cases with an eye towards porting them Agda
+  * Quviq has started working on the formal spec <-> QCD bridge
+  * Yves doing liaison w/ Quviq => QCD bridge
+* Dealing w/ downloading & storage votes/certificates
+  * what happens when you sync up
+    * need full certificates history
+    * need certificates in blocks
+    * votes
+    * => make a proposal and see what comes out from the commu
+* people complaining about CIP not being accessible
+  * viz + formal spec + diagrams
+* equivocation?
+  * swithc in testing/prototype -> accept multiple votes / reject equivocated votes
+* what to do with ties in chains (eg. every slot you could change chain which is silly)?
+  * could just write a unit/qcd test for that?
+* preagreement
+  * need communication to agree not to vote
+
+## 2024-05-29
+
+### Formal specification in Agda
+
+In the small-step semantics in order to ensure that all steps of the protocol are executed and missing-out voting is detected by the
+semantics, I split the `NextStep` constructor into two, differentiating if the step transitions also to a new voting round.
+In case of a new voting round, we require that votes for the current round are present, if the previous round was successful.
+This is required to correctly build up the voting string explained in the paper (see rule HS-II).
+
+```agda
+    data _↝_ : State → State → Set where
+
+      Deliver : ∀ {m}
+        → h ⊢ M [ m ]⇀ N
+          --------------
+        → M ↝ N
+
+      CastVote :
+          h ⊢ M ⇉ N
+          ---------
+        → M ↝ N
+
+      CreateBlock :
+          h ⊢ M ↷ N
+          ---------
+        → M ↝ N
+
+      NextSlot :
+          Delivered M
+        → NextSlotInSameRound M
+          ---------------------
+        → M ↝ tick M
+
+      NextSlotNewRound :
+          Delivered M
+        → LastSlotInRound M
+        → RequiredVotes M
+          ---------------
+        → M ↝ tick M
+```
+
+A similar issue with respect to block creation was pointed out last week when relying the test-spec to the formal specification. A similar
+condition as for voting needs to be added for block creation.
+
+### Discussion items for next steps
+
+Several significant items need discussion among the prototyping team, as they have the potential to delay or block progress.
+
+- [x] *Prototype review and testing:* Since, for the time being, we'll be relying on the Haskell prototype for the conformance tests . . .
+    - [x] Should we do a line-by-line code review to ensure it matches Figure 2 of the draft paper?
+    - [x] Should we prioritize creating the `quickcheck-dynamic` actions for simulation?
+        - [x] The actions can be used as a DSL for defining single- and multi-node honest and adversarial scenarios.
+        - [x] They would also test that implementations have the same observable effects as the reference implementation.
+    - [x] Aside from the `quickcheck-dynamic` model-based testing, should we also create a full suite of unit tests that focus on edge cases for the protocol?
+        - [x] Should these be backported to Agda?
+        - [x] Or should they be written in Agda and ported to Haskell?
+- [ ] *Equivocation:* The draft paper says little about how to handle equivocation.
+    - [ ] Should we leave the prototype without any equivocation checks, since the paper's Figure 2 does not have any?
+    - [ ] Or should we add a universal rule that the first chain or vote received always supercedes any subsequent equivocated ones?
+- [ ] *Leadership and membership schedules in the prototype:* It is still a bit awkward in the prototype to set predetermined schedules for slot leadership and voting committee membership.
+    - [ ] Embedding the leadership/membership in the `Party` type is not practical for long or ad-hoc scenarios.
+    - [ ] Could the leadership/membership be expressed via a DSL like in the Agda `Peras.SmallStep.Execution`?
+    - [ ] Should externally generated leadership/membership proofs simply be handing to the `blockCreation`/`voting` functions?
+- [ ] *Vote weights:* A party may have multiple votes because they can win the stake lottery several times in the same round. Shall we coordinate soon on including this in the Agda `Vote` type and in the Haskell prototype?
+- [ ] *Preagreement:* When should we tackle coding preagreement in the prototype and conformance tests? The preagreement process might result in significant message traffic and delays, so we cannot just ignore it.
+- [ ] *Pseudo-code vs Agda in CIP:* Do we now have sufficient stakeholder feedback to settle on how to present the Peras protocol in the CIP?
+- [ ] *Diffusion:* The prototype's current diffusion schema is lossless and has a fixed delay for delivering messages.
+    - [ ] What variants on a fixed delay should we implement?
+- [x] *Visualization:* We're reaching the limits of convenient usage of GraphViz for visualizing the chain evolution. Should we develop a lightweight web-based visualizer for the `PerasLog` output? If so, should it be based on a standard JavaScript library or done via SVG in WASM Rust?
+- [ ] *Stakeholder-facing software:* What software will we develop and deploy for stakeholders to experiment with the protocol?
+- [ ] *Cryptography implementations:* The conformance tests will need implementations of signatures, hashes, proofs, and certificates. What is the priority for implementing these?
+
+### Haskell prototype
+
+* The Haskell prototype now fully implements (aside from preagreement) the May version of the Peras protocol. The implementation has been cleaned up and more thoroughly documented.
+* Its tracing facility is used to generate GraphViz diagrams of the blockchain, votes, and certificates.
+* It can be run in multi-node mode.
+* Logging has been expaned to include initialization, preagreement, and the internal logic of voting and block creation.
+* The diffusion capabilities have been revised to allow for chains and votes to be delayed before delivery. This makes it possible to do "worst-case" network scenarios where every message is delayed by delta.
+
+## 2024-05-27
+
+### Haskell Prototype
+
+* Added executable which can be run as `cabal run peras`, with everything currently hardcoded (eg. no parameters).
+* The executable runs a single node in an infinite loop, simulating the `Environment` through some scenario.
+  * Current scenario is very simple: Input a new chain every 20 slots, and 10 votes for the block at cutoff window distance $L$ from start of the round every slot within a given round
+* Sprinkled `Tracer` calls at every step relevant for the protocol, outputting JSON formatted log entries on standard out.
+  * I was able to verify that certificate creation, quorum gathering, and voting logic work (eg. a trace is emitted as expected)
+* Tried to simplify logs too
+
+```
+{"round":98,"slot":1961,"tag":"Tick"}
+{"chains":[{"bodyHash":"","certificate":null,"creatorId":43,"leadershipProof":"864cceeef469dcfd","parentBlock":"065f88496d4fc64d","signature":"d265acba13971427","slotNumber":1960}],"tag":"NewChainAndVotes","votes":[{"blockHash":"5b798fcb7fc22d8b","creatorId":0},{"blockHash":"5b798fcb7fc22d8b","creatorId":1},{"blockHash":"5b798fcb7fc22d8b","creatorId":2},{"blockHash":"5b798fcb7fc22d8b","creatorId":3},{"blockHash":"5b798fcb7fc22d8b","creatorId":4},{"blockHash":"5b798fcb7fc22d8b","creatorId":5},{"blockHash":"5b798fcb7fc22d8b","creatorId":6},{"blockHash":"5b798fcb7fc22d8b","creatorId":7},{"blockHash":"5b798fcb7fc22d8b","creatorId":8},{"blockHash":"5b798fcb7fc22d8b","creatorId":9}]}
+{"chain":{"bodyHash":"","certificate":null,"creatorId":43,"leadershipProof":"864cceeef469dcfd","parentBlock":"065f88496d4fc64d","signature":"d265acba13971427","slotNumber":1960},"tag":"NewChainPref"}
+{"round":98,"slot":1962,"tag":"Tick"}
+...
+{"chains":[],"tag":"NewChainAndVotes","votes":[{"blockHash":"5b798fcb7fc22d8b","creatorId":70},{"blockHash":"5b798fcb7fc22d8b","creatorId":71},{"blockHash":"5b798fcb7fc22d8b","creatorId":72},{"blockHash":"5b798fcb7fc22d8b","creatorId":73},{"blockHash":"5b798fcb7fc22d8b","creatorId":74},{"blockHash":"5b798fcb7fc22d8b","creatorId":75},{"blockHash":"5b798fcb7fc22d8b","creatorId":76},{"blockHash":"5b798fcb7fc22d8b","creatorId":77},{"blockHash":"5b798fcb7fc22d8b","creatorId":78},{"blockHash":"5b798fcb7fc22d8b","creatorId":79}]}
+{"quorums":[{"blockRef":"5b798fcb7fc22d8b","round":98}],"tag":"NewCertificatesFromQuorum"}
+{"certificate":{"blockRef":"5b798fcb7fc22d8b","round":98},"tag":"NewCertPrime"}
+...
+{"tag":"CastVote","vote":{"blockHash":"d265acba13971427","creatorId":42,"proofM":"f68b0b711289e4b0","signature":"a7f7fb277efb6148","votingRound":100}}
+```
+
 ## 2024-05-23
 
 ### Ledger specification

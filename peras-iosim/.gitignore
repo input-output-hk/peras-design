@@ -1,6 +1,0 @@
-*.json
-!golden/*.json
-*.txt
-*.dot
-*.png
-*.svg

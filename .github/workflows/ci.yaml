@@ -28,18 +28,10 @@ jobs:
     - name: 🏗️ Typecheck Agda
       run: |
         nix build --show-trace .#peras
-    - name: 🏗️ Build `peras-iosim`.
+    - name: 🏗️ Build `peras-simulation`.
       run: |
-        nix build --show-trace .#peras-iosim
-    - name: 🏗️ Build `peras-quickcheck`.
-      run: |
-        nix build --show-trace .#peras-quickcheck-test
-    - name: 🏗️ Build `peras_rust`.
-      run: |
-        nix build --show-trace .#peras_rust
-    - name: 🏗️ Build `peras_topology`.
-      run: |
-        nix build --show-trace .#peras_topology
+        nix build --show-trace .#peras-simulation-test
+
   simulate-hs:
     name: Run simulations
     runs-on: self-hosted
@@ -56,20 +48,15 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🔮 Simulate pseudo-Praos on a small network
+    - name: 🗳️ Simulate Peras
       run: |
-        nix run .#peras-iosim -- \
-          --parameter-file peras-iosim/small-network.yaml \
-          --protocol-file peras-iosim/pseudo-praos.yaml \
-          --trace-file "/dev/null" \
-          --result-file "/dev/null"
-    - name: 🗳️ Simulate pseudo-Peras on a small network
-      run: |
-        nix run .#peras-iosim -- \
-          --parameter-file peras-iosim/small-network.yaml \
-          --protocol-file peras-iosim/pseudo-peras.yaml \
-          --trace-file "/dev/null" \
-          --result-file "/dev/null"
+        nix run .#peras-simulate -- \
+          --in-file peras-simulation/example-input.yaml \
+          --out-file peras-simulation/tmp-output.yaml \
+          --trace-file peras-simulation/tmp-trace.jsonarray
+        nix run .#peras-visualize -- \
+          --trace-file peras-simulation/tmp-trace.jsonarray \
+          --dot-file peras-simulation/tmp.dot
   tests:
     if: true
     name: Run tests
@@ -90,15 +77,10 @@ jobs:
     - name: 🔬 Test with `peras-hs-test`
       run: |
         nix run .#peras-hs-test
-    - name: 🔬 Test with `peras-iosim-test`
+    - name: 🔬 Test with `peras-simulation-test`
       run: |
-        nix run .#peras-iosim-test
-    - name: 🔬 Test with `peras-quickcheck-test`
-      run: |
-        nix build .#peras_rust -o peras_rust
-        export DYLD_LIBRARY_PATH="$PWD/peras_rust/lib"
-        nix build .#peras-quickcheck-test
-        ./result/bin/peras-quickcheck-test
+        nix run .#peras-simulation-test
+
   test-demo:
     name: Test Demo
     runs-on: self-hosted
@@ -124,3 +106,78 @@ jobs:
     - name: 🏗️ Compile Haskell Executable
       run: |
         nix build .#test-demo-test
+
+  build-specification:
+    name: Build HTML Specification
+    runs-on: self-hosted
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    - name: 🛠️ Install Nix
+      uses: cachix/install-nix-action@v21
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+        extra_nix_config: |
+          allowed-uris = ${{ env.ALLOWED_URIS }}
+          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+          substituters = ${{ env.SUBSTITUTERS }}
+          experimental-features = nix-command flakes
+    - name: 🏗️ Agda-to-HTML
+      run: |
+        nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
+    - name: Publish Docusaurus build
+      uses: actions/upload-artifact@v4
+      with:
+        name: agda-specification
+        if-no-files-found: error
+        path: |
+          html/*
+
+  build-docusaurus:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build Docusaurus site
+        working-directory: site
+        run: |
+          npm run build
+
+      - name: Publish Docusaurus build
+        uses: actions/upload-artifact@v4
+        with:
+          name: docusaurus-build
+          if-no-files-found: error
+          path: |
+            site/build/*
+
+  publish-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    needs:
+      - build-docusaurus
+    steps:
+      - name: Download Docusaurus build
+        uses: actions/download-artifact@v4
+        with:
+          name: docusaurus-build
+          path: ./github-pages
+
+      - name: Publish GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
+          publish_dir: ./github-pages

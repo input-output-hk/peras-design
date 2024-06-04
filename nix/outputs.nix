@@ -11,8 +11,6 @@ in
   {
     inherit repoRoot;
     packages.peras = peras-agda;
-    packages.peras_topology = rust.peras_topology;
-    packages.peras_rust = rust.peras_rust;
     packages.test-demo-agda = test-demo-agda;
     devShells.profiled = project.variants.profiled.devShell;
   }
