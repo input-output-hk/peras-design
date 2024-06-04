@@ -16,8 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
       , tau: parseInt(document.getElementById('uiTau').value)
       , b: parseInt(document.getElementById('uiB').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
-      , delta: 0
-      , activeSlots: 0.1
+      , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
     })
   });
 
