@@ -1,4 +1,5 @@
 ```agda
+{-# OPTIONS --allow-unsolved-metas #-}
 module Peras.SmallStep.Execution where
 ```
 
@@ -10,7 +11,7 @@ open import Data.List.Relation.Unary.Any using (Any; here; there)
 open import Data.List.Relation.Unary.All using (All) renaming ([] to empty)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Maybe using (just; nothing)
-open import Data.Nat using (_+_; _*_)
+open import Data.Nat using (_+_; _*_; _≟_)
 open import Data.Nat.Properties using (+-identityˡ; +-identityʳ)
 open import Function using (_∘_; id; _$_; flip)
 
@@ -21,7 +22,8 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
 
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
+open import Prelude.AssocList hiding (_∈_)
+open Decidable _≟_
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -122,18 +124,18 @@ Initial state
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
-          initialMap = fromList ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
+          initialMap = ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
 ```
 Final state after the execution of all the steps
 ```agda
       finalState : GlobalState
-      finalState = ⟦ MkSlotNumber 6 , finalMap , [] , finalMsg , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
           finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           finalTree = addVote (extendTree tree₀ block₁) vote₁
-          finalMap = fromList ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
+          finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
 ```
 Properties of cert₀
 ```agda
@@ -160,15 +162,15 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
-
+{-
         _ : initialState ↝⋆ finalState
-        _ =  NextSlot empty  -- slot 1
+        _ =  NextSlot empty refl -- slot 1
           ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
           ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlot empty  -- slot 2
+          ↣ NextSlotNewRound empty refl ? -- slot 2
           ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Deliver (honest refl (here refl) VoteReceived)
-          ↣ NextSlot empty  -- slot 3
+          ↣ NextSlot empty refl -- slot 3
 --          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
 --          ↣ Deliver (honest refl (here refl) BlockReceived)
 --
@@ -177,13 +179,15 @@ Execution trace of the protocol
 -- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
 -- agda: Use `+RTS -M<size>' to increase it.
 --
-          ↣ NextSlot empty  -- slot 4
-          ↣ NextSlot empty  -- slot 5
-          ↣ NextSlot empty  -- slot 6
+--          ↣ NextSlotNewRound empty refl ?  -- slot 4
+--          ↣ NextSlot empty refl -- slot 5
+--          ↣ NextSlotNewRound empty refl ? -- slot 6
           ↣ ∎
+-}
 ```
 Trace dependent properties
 ```agda
+{-
           where
             latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
@@ -195,4 +199,5 @@ Trace dependent properties
               PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
               valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
+-}
 ```

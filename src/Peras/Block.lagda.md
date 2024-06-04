@@ -148,9 +148,6 @@ record Certificate where
   
 open Certificate public
 
-findCert : RoundNumber → List Certificate → Maybe Certificate
-findCert r = head ∘ filter ((_≟-RoundNumber r) ∘ round)
-
 latestCert : Certificate → List Certificate → Certificate
 latestCert = argmax roundNumber
 

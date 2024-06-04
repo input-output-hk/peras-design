@@ -53,6 +53,9 @@ record Vote : Set where
         blockHash   : Hash Block
         signature   : Signature
 
+  votingRound' : ℕ
+  votingRound' = getRoundNumber votingRound
+
 open Vote public
 
 instance
@@ -205,8 +208,12 @@ module _ ⦃ _ : Hashable Block ⦄
   StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * U
 ```
 ```agda
-  v-round : SlotNumber → ⦃ _ : NonZero U ⦄ → RoundNumber
-  v-round (MkSlotNumber s) = MkRoundNumber (s / U)
+  rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
+  rnd s = s / U
+```
+```agda
+  v-round : SlotNumber → RoundNumber
+  v-round (MkSlotNumber s) = MkRoundNumber (rnd s)
 ```
 ### Chain weight
 

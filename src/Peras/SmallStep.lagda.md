@@ -8,8 +8,8 @@ open import Data.Bool using (Bool; true; false; _∧_; _∨_; not)
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_)
-open import Data.Maybe using (Maybe; just; nothing; is-just)
+open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; any?)
+open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
@@ -20,9 +20,12 @@ open import Function using (_∘_; id; _$_; flip)
 open import Relation.Binary.Bundles using (StrictTotalOrder)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
-open import Relation.Nullary using (yes; no; ¬_)
-open import Relation.Nullary.Decidable using (⌊_⌋; ¬?)
+open import Relation.Nullary using (yes; no; ¬_; Dec)
+open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
+
+open import Prelude.AssocList hiding (_∈_)
+open Decidable _≟_
 
 open import Peras.Block
 open import Peras.Chain
@@ -30,7 +33,6 @@ open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
 
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open Honesty public
@@ -183,7 +185,9 @@ has to fulfil all the properties mentioned below:
          : Set₁ where
 
     allBlocksUpTo : SlotNumber → T → List Block
-    allBlocksUpTo sl t = filter ((_≤? getSlotNumber sl) ∘ slotNumber') (allBlocks t)
+    allBlocksUpTo sl =
+      let cond = (_≤? getSlotNumber sl) ∘ slotNumber'
+      in filter cond ∘ allBlocks
 
     field
 ```
@@ -198,6 +202,12 @@ as proposed in the paper.
 
       instantiated-certs :
         certs tree₀ ≡ cert₀ ∷ []
+
+      genesis-block-slotnumber :
+        getSlotNumber (slotNumber block₀) ≡ 0
+
+      genesis-cert-roundnumber :
+        getRoundNumber (round cert₀) ≡ 0
 
       extendable : ∀ (t : T) (b : Block)
         → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
@@ -236,6 +246,15 @@ as proposed in the paper.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
+
+      quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
+        → length (filter (λ {v →
+                    (getRoundNumber (votingRound v) ≟ r)
+              ×-dec (blockHash v ≟-BlockHash hash b)}
+            ) (votes t)) ≥ τ
+        → Any (λ {c →
+            (getRoundNumber (round c) ≡ r)
+          × (blockRef c ≡ hash b) }) (certs t)
 ```
 In addition to blocks the block-tree manages votes and certificates as well.
 The block tree type is defined as follows:
@@ -261,21 +280,23 @@ The block tree type is defined as follows:
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
     latestCertOnChain : SlotNumber → T → Certificate
-    latestCertOnChain s = latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ bestChain s
+    latestCertOnChain s =
+      latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ bestChain s
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
 
-    votes′ : T → RoundNumber → Block → List Vote
-    votes′ t r b =
-      filter (_≟-RoundNumber r ∘ votingRound)
-        $ filter (_≟-BlockHash (hash b) ∘ blockHash) (votes t)
+    hasCert : RoundNumber → T → Set
+    hasCert (MkRoundNumber r) = Any ((r ≡_) ∘ roundNumber) ∘ certs
 
-    certs′ : T → RoundNumber → Block → List Certificate
-    certs′ t r b = filter (_≟-BlockHash (hash b) ∘ blockRef) (certs t)
+    hasCert? : (r : RoundNumber) (t : T) → Dec (hasCert r t)
+    hasCert? (MkRoundNumber r) = any? ((r ≟_) ∘ roundNumber) ∘ certs
 
-    quorum : T → RoundNumber → Block → Bool
-    quorum t r b = (τ ≤ᵇ length (votes′ t r b)) ∨ is-just (findCert r (certs′ t r b))
+    hasVote : RoundNumber → T → Set
+    hasVote (MkRoundNumber r) = Any ((r ≡_) ∘ votingRound') ∘ votes
+
+    hasVote? : (r : RoundNumber) (t : T) → Dec (hasVote r t)
+    hasVote? (MkRoundNumber r) = any? ((r ≟_) ∘ votingRound') ∘ votes
 ```
 ### Additional parameters
 
@@ -291,7 +312,7 @@ following parameters
   module _ {T : Set} {blockTree : TreeType T}
            {S : Set} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
-           {parties : Parties}
+           {parties : Parties} -- TODO: use parties from blockTrees
 
            where
 
@@ -318,17 +339,17 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 ```agda
-    data VoteInRound : T → RoundNumber → Set where
+    data VoteInRound : RoundNumber → T → Set where
 
       Regular : ∀ {r t} →
         let
           pref = bestChain (MkSlotNumber $ r * U) t
           cert′ = latestCertSeen t
         in
-          r ≡ (roundNumber cert′) + 1 -- VR-1A
-        → cert′ PointsInto pref       -- VR-1B
+          r ≡ (roundNumber cert′) + 1       -- VR-1A
+        → cert′ PointsInto pref             -- VR-1B
           -------------------------------
-        → VoteInRound t (MkRoundNumber r)
+        → VoteInRound (MkRoundNumber r) t
 
       AfterCooldown : ∀ {r c t} →
         let
@@ -339,38 +360,30 @@ cool-down phase.
         → r ≥ (roundNumber cert′) + R       -- VR-2A
         → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
           ---------------------------------
-        → VoteInRound t (MkRoundNumber r)
+        → VoteInRound (MkRoundNumber r) t
 ```
 ### State
 
-The small-step semantics rely on a global state.
+The small-step semantics rely on a global state, which consists of the following fields:
+
+* Current slot of the system
+* Map with local state per party
+* All the messages that have been sent but not yet been delivered
+* All the messages that have been sent
+* Adversarial state
 
 ```agda
     record State : Set where
       constructor ⟦_,_,_,_,_⟧
       field
-```
-The global state consists of the following fields:
-
-* Current slot of the system
-```agda
         clock : SlotNumber
-```
-* Map with local state per party
-```agda
-        stateMap : Map T
-```
-* All the messages that have been sent but not yet been delivered
-```agda
+        blockTrees : AssocList PartyId T
         messages : List Envelope
-```
-* All the messages that have been sent
-```agda
         history : List Message
-```
-* Adversarial state
-```agda
         adversarialState : S
+
+      blockTrees' : List T
+      blockTrees' = map proj₂ blockTrees
 ```
 #### Progress
 
@@ -379,34 +392,57 @@ messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
     Delivered : State → Set
-    Delivered = All (λ { z → delay z ≢ zero }) ∘ messages where open State
+    Delivered = All (λ { z → delay z ≢ zero }) ∘ messages
+      where open State
+```
+```agda
+    LastSlotInRound : State → Set
+    LastSlotInRound M =
+      suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
+      where open State M
+```
+```agda
+    NextSlotInSameRound : State → Set
+    NextSlotInSameRound M =
+      rnd (getSlotNumber clock) ≡ rnd (suc (getSlotNumber clock))
+      where open State M
+```
+```agda
+    RequiredVotes : State → Set
+    RequiredVotes M =
+      let r = v-round clock
+       in Any (VoteInRound r ∘ proj₂) blockTrees
+        → Any (hasVote r ∘ proj₂) blockTrees
+      where open State M
 ```
 Ticking the global clock increments the slot number and decrements the delay of
 all the messages in the message buffer.
 ```agda
     tick : State → State
-    tick M = let open State M in
+    tick M =
       record M
         { clock = next clock
         ; messages =
             map (λ where e → record e { delay = decr (delay e) })
               messages
         }
+      where open State M
 ```
 Updating the global state inserting the updated block-tree for a given party,
 adding messages to the message buffer for the other parties and appending the
 history.
 ```agda
-    _,_,_,_↑_ : Message → Delay → PartyId → T → State → State
-    m , d , p , l ↑ M = let open State M in
+    _,_,_,_⇑_ : Message → Delay → PartyId → T → State → State
+    m , d , p , l ⇑ M =
       record M
-        { stateMap = insert p l stateMap
+        { blockTrees = (p , l) ↑ blockTrees
         ; messages =
             map (uncurry ⦅_,_, m , d ⦆)
               (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
             ++ messages
         ; history = m ∷ history
         }
+      where open State M
 ```
 ## Fetching
 
@@ -415,20 +451,21 @@ the party, updating the local block tree and putting the local state back into
 the global state.
 
 ```agda
-    data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → State → Message → State → Set where
+    data _⊢_[_]⇀_ : {p : PartyId} → Honesty p → State → Message → State → Set
+      where
 ```
 An honest party consumes a message from the global message buffer and updates
 the local state
 ```agda
       honest : ∀ {p} {t t′} {m} {N}
         → let open State N in
-          lookup stateMap p ≡ just t
+          p ‼ blockTrees ≡ just t
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
           ------------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N
-            { stateMap = insert p t′ stateMap
+            { blockTrees = (p , t′) ↑ blockTrees
             ; messages = messages ─ m∈ms
             }
 ```
@@ -468,14 +505,14 @@ is added to be consumed immediately.
                     }
           in
           vote ≡ v
-        → lookup stateMap p ≡ just t
+        → p ‼ blockTrees ≡ just t
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
-        → VoteInRound t r
+        → VoteInRound r t
           ----------------------------------------------
         → Honest {p} ⊢
-            M ⇉ (VoteMsg v , zero , p , addVote t v ↑ M)
+            M ⇉ (VoteMsg v , zero , p , addVote t v ⇑ M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -515,12 +552,12 @@ certificate reference is included in the block.
                     }
           in
           block ≡ b
-        → lookup stateMap p ≡ just t
+        → p ‼ blockTrees ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
           --------------------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
+            M ↷ (BlockMsg b , zero , p , extendTree t b ⇑ M)
 ```
 During a cool-down phase, the block includes a certificate reference.
 ```agda
@@ -546,15 +583,15 @@ During a cool-down phase, the block includes a certificate reference.
               r = getRoundNumber (v-round clock)
           in
           block ≡ b
-        → lookup stateMap p ≡ just t
+        → p ‼ blockTrees ≡ just t
         → IsBlockSignature b sig
         → IsSlotLeader p clock prf
-        → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t) -- (a)
-        → r ≤ A + roundNumber cert′                         -- (b)
-        → roundNumber cert′ > roundNumber cert⋆             -- (c)
-          --------------------------------------------------------
+        → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t)  -- (a)
+        → r ≤ A + roundNumber cert′                          -- (b)
+        → roundNumber cert′ > roundNumber cert⋆              -- (c)
+          --------------------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , extendTree t b ↑ M)
+            M ↷ (BlockMsg b , zero , p , extendTree t b ⇑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
 delay the message.
@@ -589,7 +626,15 @@ The small-step semantics describe the evolution of the global state.
 
       NextSlot :
           Delivered M
-          -----------
+        → NextSlotInSameRound M
+          ---------------------
+        → M ↝ tick M
+
+      NextSlotNewRound :
+          Delivered M
+        → LastSlotInRound M
+        → RequiredVotes M
+          ---------------
         → M ↝ tick M
 ```
 
@@ -726,7 +771,8 @@ When the current state is collision free, the pervious state was so too
     ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
     ↝-collision-free (CastVote x) cf-N = []⇉-collision-free cf-N x
     ↝-collision-free (CreateBlock x) cf-N =  []↷-collision-free cf-N x
-    ↝-collision-free (NextSlot _) (collision-free x) = collision-free x
+    ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
+    ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
 ```
 -->
 
