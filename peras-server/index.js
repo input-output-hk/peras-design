@@ -118,6 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return `certStar:${party}`;
   }
 
+  const genesisBlockId = "block:0000000000000000";
+
+  const genesisCertId = "cert:0:0";
+
   // handle incoming traces from the server
   // | Protocol {parameters :: PerasParams}
   // | Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
@@ -137,8 +141,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleMessage(msg) {
     switch (msg.tag) {
       case "Protocol":
-        console.log("Protocol", msg.parameters);
-        network.body.data.nodes.add({ font: { multi: 'html' }, id: "block:0000000000000000" , level: nextLevel() , shape: 'box', label : "<b>Genesis</b>" });
+        {
+          console.log("Protocol", msg.parameters);
+          network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId , level: nextLevel() , shape: 'box', label : "<b>Genesis</b>" });
+          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel() , shape: 'box', color: 'lightgray', label: "Genesis\ncertificate" });
+          network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, hidden: true });
+          const nParties = parseInt(document.getElementById('uiParties').value)
+          for (let party = 1; party <= nParties; party++) {
+            const id = mkPartyId(party);
+            const certPrimeId = mkCertPrimeId(party);
+            const certStarId = mkCertStarId(party);
+            const label = `Node: <i>${party}</i>`;
+            network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id, level: currentLevel , shape: 'circle', color: 'tomato', label })
+            network.body.data.edges.update({ id, from: id, to: genesisBlockId, color: 'tomato', dashes: true });
+            network.body.data.edges.update({ font: {color: 'tomato'}, id: certPrimeId, from: id, to: genesisCertId, color: 'hotpink' , dashes: true, label: "cert′"});
+            network.body.data.edges.update({ font: {color: 'tomato'}, id: certStarId, from: id, to: genesisCertId, color: 'deeppink' , dashes: true, label: "cert*"});
+          }
+        }
         break;
       case "Tick":
 	currentSlot = msg.slot;
@@ -147,21 +166,20 @@ document.addEventListener('DOMContentLoaded', () => {
         roundNumber.textContent = '' + msg.roundNumber;
         break;
       case "NewChainAndVotes":
-        if (msg.newChains.length > 0) {
-          msg.newChains.forEach(chain => createBlock(chain[0]));
-          refresh();
-        }
+        console.log("NewChainAndVotes", msg.parameters);
+        // No drawing required.
         break;
       case "NewChainPref":
         {
           const id = mkPartyId(msg.partyId);
-          const label = `<b>Tip</b>\nnode: <i>${msg.partyId}</i>`;
+          const label = `Node: <i>${msg.partyId}</i>`;
           network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id, level: currentLevel , shape: 'circle', color: 'tomato', label });
-          network.body.data.edges.update({ id, from: id, to: mkBlockId(msg.newChainPref[0]), color: 'tomato', dashes: true });
+          network.body.data.edges.update({ font: { color: "tomato"}, id, from: id, to: mkBlockId(msg.newChainPref[0]), color: 'tomato', dashes: true, label: "tip" });
         }
         break;
       case "NewCertificatesReceived":
         console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
+        // No drawing required.
         break;
       case "NewCertificatesFromQuorum":
         msg.newQuorums.forEach(function (cert) {
