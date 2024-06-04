@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (msg.tag) {
       case "Protocol":
         console.log("Protocol", msg.parameters);
+        network.body.data.nodes.add({ font: { multi: 'html' }, id: "0000000000000000" , shape: 'box', label : "<b>Genesis</b>"  });
         break;
       case "Tick":
         slot.textContent = '' + msg.slot;
