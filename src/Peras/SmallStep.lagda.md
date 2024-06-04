@@ -384,6 +384,12 @@ The small-step semantics rely on a global state, which consists of the following
 
       blockTrees' : List T
       blockTrees' = map proj₂ blockTrees
+
+      v-rnd : RoundNumber
+      v-rnd = v-round clock
+
+      v-rnd' : ℕ
+      v-rnd' = getRoundNumber v-rnd
 ```
 #### Progress
 
@@ -637,7 +643,6 @@ The small-step semantics describe the evolution of the global state.
           ---------------
         → M ↝ tick M
 ```
-
 ### Reflexive, transitive closure
 
 ```agda
@@ -669,7 +674,20 @@ The small-step semantics describe the evolution of the global state.
     ↝∘↝⋆ (M↝M₁ ∷′ M₁↝⋆N) N↝O = M↝M₁ ∷′ ↝∘↝⋆ M₁↝⋆N N↝O
 ```
 -->
+Transitions of voting rounds
+```agda
+    data _↦_ : State → State → Set where
 
+      NextRound : let open State in
+          suc (v-rnd' M) ≡ v-rnd' N
+        → M ↝⋆ N
+        → M ↦ N
+```
+```agda
+    data _↦⋆_ : State → State → Set where
+      []″ : M ↦⋆ M
+      _∷″_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
+```
 ## Collision free predicate
 
 <!--
