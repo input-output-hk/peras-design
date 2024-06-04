@@ -68,7 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
         direction: 'LR',
       },
     },
-    physics: false, // This turns of the physics animation.
+    /*physics: {
+  	stabilization: {
+        iterations: 25000,
+    	enabled: true
+      },
+    },*/
   });
 
   function createBlock(block) {
