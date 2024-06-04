@@ -143,25 +143,30 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
         break;
       case "NewCertificatesFromQuorum":
-        console.log("NewCertificatesFromQuorum", msg.partyId, msg.newQuorums);
+        msg.newQuorums.forEach(function (cert) {
+          const id = `cert:${msg.partyId}/${cert.round}`;
+          const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
+          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'lightgray', label });
+          network.body.data.edges.update({ id, from: id, to: cert.blockRef , color: 'lightgray' , dashes: true });
+        });
         break;
       case "NewCertPrime":
-        const certPrimeId = `prime:${msg.partyId}`;
-        const certPrimeLabel = `round: <i>${msg.newCertPrime.round}</i>\nparty: <i>${msg.partyId}</i>`;
-        network.body.data.nodes.update({ font: { multi: 'html' }, id: certPrimeId, level: nextLevel() , shape: 'box', color: '#8cc474', label: certPrimeLabel });
-        network.body.data.edges.update({ id: certPrimeId, from: certPrimeId, to: msg.newCertPrime.blockRef });
+//      const certPrimeId = `prime:${msg.partyId}`;
+//      const certPrimeLabel = `cert′\nround: <i>${msg.newCertPrime.round}</i>\nnode: <i>${msg.partyId}</i>`;
+//      network.body.data.nodes.update({ font: { multi: 'html' }, id: certPrimeId, level: nextLevel() , shape: 'box', color: 'lightgray', label: certPrimeLabel });
+//      network.body.data.edges.update({ id: certPrimeId, from: certPrimeId, to: msg.newCertPrime.blockRef , color: 'lightgray' , dashes: true });
         break;
       case "NewCertStar":
-        const certStarId = `star:${msg.partyId}`;
-        const certStarLabel = `round: <i>${msg.newCertStar.round}</i>\nparty: <i>${msg.partyId}</i>`;
-        network.body.data.nodes.update({ font: { multi: 'html' }, id: certStarId, level: nextLevel() , shape: 'box', color: '#b59543', label: certStarLabel });
-        network.body.data.edges.update({ id: certStarId, from: certStarId, to: msg.newCertStar.blockRef });
+//      const certStarId = `star:${msg.partyId}`;
+//      const certStarLabel = `round: <i>${msg.newCertStar.round}</i>\nparty: <i>${msg.partyId}</i>`;
+//      network.body.data.nodes.update({ font: { multi: 'html' }, id: certStarId, level: nextLevel() , shape: 'box', color: '#b59543', label: certStarLabel });
+//      network.body.data.edges.update({ id: certStarId, from: certStarId, to: msg.newCertStar.blockRef });
         break;
       case "CastVote":
         const blockId = msg.vote.blockHash;
         const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
-        network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "lightgray", label });
-        network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "lightgray" });
+        network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "skyblue", label });
+        network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "skyblue" });
         refresh();
         break;
       case "PreagreementBlock":
