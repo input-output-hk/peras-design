@@ -278,7 +278,7 @@ Building up the voting string from all the party's block-trees
       ... | no q | yes p = ？ , (HS-II-? , refl)
       ... | no _ | no _ = {!!} -- TODO: contradiction
 
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = {!!}
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = 🄀 , HS-III , {!!}
       theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | 🄀 = {!!}
 ```
 <!--
