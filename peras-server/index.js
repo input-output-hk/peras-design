@@ -127,10 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
       case "NewChainPref":
         if (network.body.data.nodes.get(msg.partyId) === null) {
           const label = `${msg.partyId}`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: nextLevel() , shape: 'ellipse', label });
+          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: currentLevel , shape: 'ellipse', label });
 	} else {
           const label = `${msg.partyId}`;
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: nextLevel() , shape: 'ellipse', label });
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: currentLevel , shape: 'ellipse', label });
         }
         // we want a single edge from the party to the block which is their preferred chain
         network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.newChainPref[0].signature });
