@@ -68,10 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createBlock(block) {
     const blockId = block.signature;
-    const parentId = block.parentBlock;
-    const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
-    network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', label });
-    network.body.data.edges.add({ from: blockId, to: parentId });
+    if (network.body.data.nodes.get(blockId) === null) {
+      const parentId = block.parentBlock;
+      const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
+      network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', label });
+      network.body.data.edges.add({ from: blockId, to: parentId });
+    }
   }
 
   let currentLevel = 0;
