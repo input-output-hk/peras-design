@@ -16,16 +16,14 @@ genSimConfigIO params activeSlotCoefficient nParties finish =
   generate $ genSimConfig params activeSlotCoefficient nParties finish
 
 genSimConfig :: PerasParams -> Double -> Integer -> SlotNumber -> Gen SimConfig
-genSimConfig params@MkPerasParams{perasU} activeSlotCoefficient nParties finish =
+genSimConfig params@MkPerasParams{perasU, perasτ} activeSlotCoefficient nParties finish =
   do
     let
-      quorumFraction = 3 / 4 :: Double
-      perasτ = ceiling $ quorumFraction * fromIntegral nParties
       start = systemStart
       slots = [systemStart .. finish]
       rounds = fromIntegral <$> [(fromIntegral start `div` perasU + 1) .. (fromIntegral finish `div` perasU)]
       pLead = 1 - (1 - activeSlotCoefficient) ** (1 / fromIntegral nParties)
-      pVote = quorumFraction
+      pVote = 4 / 3 * fromIntegral perasτ / fromIntegral nParties
       genLottery p = fmap Set.fromList . filterM (const $ (<= p) <$> genDouble)
       mkParty pid =
         do
@@ -33,7 +31,7 @@ genSimConfig params@MkPerasParams{perasU} activeSlotCoefficient nParties finish 
           membershipRounds <- genLottery pVote rounds
           pure (pid, def{leadershipSlots, membershipRounds})
     parties <- Map.fromList <$> mapM mkParty [1 .. nParties]
-    pure def{start, finish, params = params{perasτ}, parties}
+    pure def{start, finish, params = params, parties}
 
 exampleSimConfig :: SimConfig
 exampleSimConfig =

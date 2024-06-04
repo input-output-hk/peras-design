@@ -106,6 +106,7 @@ data SimulationRequest = SimulationRequest
   , r :: Integer
   , k :: Integer
   , l :: Integer
+  , tau :: Integer
   , b :: Integer
   , delta :: Integer
   , activeSlots :: Double
@@ -118,7 +119,7 @@ instance ToJSON SimulationRequest
 simRequestToConfig :: SimulationRequest -> IO SimConfig
 simRequestToConfig SimulationRequest{..} =
   genSimConfigIO
-    def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasB = b, perasΔ = delta}
+    def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasΔ = delta}
     activeSlots
     parties
     (fromIntegral duration)
