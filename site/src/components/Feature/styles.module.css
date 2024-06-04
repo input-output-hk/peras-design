@@ -1,0 +1,25 @@
+.featureItem {
+    text-align: center; 
+    flex-direction: column;
+    align-items: center;
+    padding-left: 64px;
+    padding-right: 64px;
+    
+  }
+
+.featureItem svg{
+    max-width: 150px;
+    fill: #1F5B3B;
+    margin-bottom: 10px; 
+    height: fit-content !;
+}
+  
+.featureTitle {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+  
+.featureDescription {
+    font-size: 1rem;
+}
