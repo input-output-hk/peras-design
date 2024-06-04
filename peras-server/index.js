@@ -66,9 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function createBlock(block) {
-    const blockId = block.signature;
+    const blockId = mkBlockId(block);
     if (network.body.data.nodes.get(blockId) === null) {
-      const parentId = block.parentBlock;
+      const parentId = mkBlockHashId(block.parentBlock);
       const label = `<b>${blockId.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
       network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', label });
       network.body.data.edges.add({ from: blockId, to: parentId });
@@ -94,6 +94,30 @@ document.addEventListener('DOMContentLoaded', () => {
     network.fit();
   }
 
+  function mkPartyId(party) {
+    return `party:${party}`;
+  }
+
+  function mkBlockId(block) {
+    return `block:${block.signature}`;
+  }
+
+  function mkBlockHashId(hash) {
+    return `block:${hash}`;
+  }
+
+  function mkCertId(party, round) {
+    return `cert:${party}:${round}`;
+  }
+
+  function mkCertPrimeId(party) {
+    return `certPrime:${party}`;
+  }
+
+  function mkCertStarId(party) {
+    return `certStar:${party}`;
+  }
+
   // handle incoming traces from the server
   // | Protocol {parameters :: PerasParams}
   // | Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
@@ -114,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (msg.tag) {
       case "Protocol":
         console.log("Protocol", msg.parameters);
-        network.body.data.nodes.add({ font: { multi: 'html' }, id: "0000000000000000" , level: nextLevel() , shape: 'box', label : "<b>Genesis</b>" });
+        network.body.data.nodes.add({ font: { multi: 'html' }, id: "block:0000000000000000" , level: nextLevel() , shape: 'box', label : "<b>Genesis</b>" });
         break;
       case "Tick":
 	currentSlot = msg.slot;
@@ -129,41 +153,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case "NewChainPref":
-        if (network.body.data.nodes.get(msg.partyId) === null) {
+        {
+          const id = mkPartyId(msg.partyId);
           const label = `<b>Tip</b>\nnode: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'white' , size: 12}, id: msg.partyId, level: currentLevel , shape: 'circle', color: 'tomato', label });
-	} else {
-          const label = `<b>Tip</b>\n<i>node: ${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: msg.partyId, level: currentLevel , shape: 'circle', color: 'tomato', label });
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id, level: currentLevel , shape: 'circle', color: 'tomato', label });
+          network.body.data.edges.update({ id, from: id, to: mkBlockId(msg.newChainPref[0]), color: 'tomato', dashes: true });
         }
-        // we want a single edge from the party to the block which is their preferred chain
-        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.newChainPref[0].signature, color: 'tomato', dashes: true });
         break;
       case "NewCertificatesReceived":
         console.log("NewCertificatesReceived", msg.partyId, msg.newCertificates);
         break;
       case "NewCertificatesFromQuorum":
         msg.newQuorums.forEach(function (cert) {
-          const id = `cert:${msg.partyId}/${cert.round}`;
+          const id = mkCertId(msg.partyId, cert.round);
           const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
           network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'lightgray', label });
-          network.body.data.edges.update({ id, from: id, to: cert.blockRef , color: 'lightgray' , dashes: true });
+          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'lightgray' , dashes: true });
         });
         break;
       case "NewCertPrime":
-//      const certPrimeId = `prime:${msg.partyId}`;
-//      const certPrimeLabel = `cert′\nround: <i>${msg.newCertPrime.round}</i>\nnode: <i>${msg.partyId}</i>`;
-//      network.body.data.nodes.update({ font: { multi: 'html' }, id: certPrimeId, level: nextLevel() , shape: 'box', color: 'lightgray', label: certPrimeLabel });
-//      network.body.data.edges.update({ id: certPrimeId, from: certPrimeId, to: msg.newCertPrime.blockRef , color: 'lightgray' , dashes: true });
+        {
+          const certPrimeId = mkCertPrimeId(msg.partyId);
+          const certId = mkCertId(msg.partyId, msg.newCertPrime.round);
+          const partyId = mkPartyId(msg.partyId);
+          const label = "cert′";
+          network.body.data.edges.update({ font: {color: 'tomato'}, id: certPrimeId, from: partyId, to: certId, color: 'hotpink' , dashes: true, label });
+          refresh();
+        }
         break;
       case "NewCertStar":
-//      const certStarId = `star:${msg.partyId}`;
-//      const certStarLabel = `round: <i>${msg.newCertStar.round}</i>\nparty: <i>${msg.partyId}</i>`;
-//      network.body.data.nodes.update({ font: { multi: 'html' }, id: certStarId, level: nextLevel() , shape: 'box', color: '#b59543', label: certStarLabel });
-//      network.body.data.edges.update({ id: certStarId, from: certStarId, to: msg.newCertStar.blockRef });
+        {
+          const certStarId = mkCertStarId(msg.partyId);
+          const certId = mkCertId(msg.partyId, msg.newCertStar.round);
+          const partyId = mkPartyId(msg.partyId);
+          const label = "cert*";
+          network.body.data.edges.update({ font: {color: 'tomato'}, id: certStarId, from: partyId, to: certId, color: 'deeppink' , dashes: true, label });
+          refresh();
+        }
         break;
       case "CastVote":
-        const blockId = msg.vote.blockHash;
+        const blockId = mkBlockHashId(msg.vote.blockHash);
         const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
         network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "skyblue", label });
         network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "skyblue" });
@@ -176,14 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("PreagreementNone", msg.partyId);
         break;
       case "ForgingLogic":
-        if (network.body.data.nodes.get(msg.partyId) === null) {
+        {
+          const id = mkPartyId(msg.partyId);
           const label = `${msg.partyId}`;
-          network.body.data.nodes.add({ font: { multi: 'html', color: 'red' }, id: msg.partyId, level: nextLevel() , shape: 'ellipse', label });
+          createBlock(msg.block);
+          network.body.data.edges.update({ id, from: id, to: mkBlockId(msg.block), color: 'tomato', dashes: true });
+          refresh();
         }
-        createBlock(msg.block);
-        // we want a single edge from the party to the block which is their preferred chain
-        network.body.data.edges.update({ id: msg.partyId, from: msg.partyId, to: msg.block.signature });
-        refresh();
         break;
       case "VotingLogic":
         console.log("VotingLogic", msg.partyId, msg.vr1a, msg.vr1b, msg.vr2a, msg.vr2b);
