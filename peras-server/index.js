@@ -154,9 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "CastVote":
         const blockId = msg.vote.blockHash;
-        const label = `round: <i>${msg.vote.votingRound}</i>\nvoter: <i>${msg.vote.creatorId}</i>`;
-        network.body.data.nodes.add({ font: { multi: 'html' }, id: msg.vote.signature, level: nextLevel() , shape: 'ellipse', label });
-        network.body.data.edges.add({ from: msg.vote.signature, to: blockId });
+        const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
+        network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: msg.vote.signature, level: nextLevel() , shape: 'circle', color: "lightgray", label });
+        network.body.data.edges.add({ from: msg.vote.signature, to: blockId , dashes: true , color: "lightgray" });
         network.redraw();
         break;
       case "PreagreementBlock":
