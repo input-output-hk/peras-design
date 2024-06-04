@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,8 +11,9 @@
 module Peras.Abstract.Protocol.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Monad (forM, replicateM)
-import Control.Monad.Class.MonadTimer (MonadDelay)
+import Control.Monad (forM)
+import Control.Monad.Class.MonadTimer (MonadDelay, threadDelay)
+import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, execStateT, gets, modify', runStateT)
 import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
@@ -125,60 +127,21 @@ instance Default SimConfig where
       , diffuser = def
       }
 
-simConfigExample :: SimConfig
-simConfigExample =
-  def
-    { finish = 130
-    , params =
-        MkPerasParams
-          { perasU = 20
-          , perasA = 2160
-          , perasR = 2
-          , perasK = 3
-          , perasL = 15
-          , perasτ = 2
-          , perasB = 100
-          , perasΔ = 2
-          }
-    , parties =
-        Map.fromList
-          [
-            ( 1
-            , MkPartyConfig
-                { leadershipSlots = Set.fromList [2, 10, 25, 33, 39, 56, 71, 96, 101, 108, 109, 115]
-                , membershipRounds = Set.fromList [1, 2, 6]
-                , perasState = def
-                }
-            )
-          ,
-            ( 2
-            , MkPartyConfig
-                { leadershipSlots = Set.fromList [12, 17, 33, 44, 50, 67, 75, 88, 105]
-                , membershipRounds = Set.fromList [2, 3, 5, 6]
-                , perasState = def
-                }
-            )
-          ,
-            ( 3
-            , MkPartyConfig
-                { leadershipSlots = Set.fromList [5, 15, 42, 56, 71, 82, 124]
-                , membershipRounds = Set.fromList [3, 4, 5, 6]
-                , perasState = def
-                }
-            )
-          ,
-            ( 4
-            , MkPartyConfig
-                { leadershipSlots = Set.fromList [8, 15, 21, 38, 50, 65, 127]
-                , membershipRounds = Set.fromList [1, 5]
-                , perasState = def
-                }
-            )
-          ]
-    }
+data SimControl = MkSimControl
+  { delay :: Int
+  , stop :: Bool
+  , pause :: Bool
+  }
+  deriving (Eq, Generic, Show)
 
-simulate :: forall m. MonadSTM m => Tracer m PerasLog -> SimConfig -> m (PerasResult SimConfig)
-simulate tracer initial =
+instance A.FromJSON SimControl
+instance A.ToJSON SimControl
+
+instance Default SimControl where
+  def = MkSimControl 100_000 False False
+
+simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> TVar m SimControl -> SimConfig -> m (PerasResult SimConfig)
+simulate tracer controlVar initial =
   do
     let mkState partyId MkPartyConfig{..} =
           (mkParty partyId (toList leadershipSlots) (toList membershipRounds),)
@@ -188,13 +151,18 @@ simulate tracer initial =
         <$> (Map.fromList <$> mapM (uncurry mkState) (Map.toList $ parties initial))
         <*> newTVarIO (diffuser initial)
     traceWith tracer . Protocol $ params initial
-    (result, net') <-
-      flip runStateT net
-        . fmap sequence
-        . replicateM (fromIntegral $ finish initial - start initial)
-        $ do
-          payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
-          runNetwork tracer payload
+    let go count =
+          do
+            MkSimControl{delay, stop, pause} <- lift . lift $ readTVarIO controlVar
+            lift . lift $ threadDelay delay
+            case (stop || count <= 0, pause) of
+              (True, _) -> pure ()
+              (_, True) -> go count
+              (False, False) -> do
+                payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
+                ExceptT $ runNetwork tracer payload
+                go $ count - 1
+    (result, net') <- flip runStateT net . runExceptT . go $ finish initial - start initial
     case result of
       Left e -> pure $ Left e
       Right _ -> do

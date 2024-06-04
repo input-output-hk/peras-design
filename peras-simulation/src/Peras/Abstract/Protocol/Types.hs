@@ -8,6 +8,7 @@ module Peras.Abstract.Protocol.Types where
 import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
+import qualified Data.ByteString as BS
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.Set (Set, singleton)
@@ -149,7 +150,7 @@ systemStart :: SlotNumber
 systemStart = 0
 
 genesisHash :: Hash Block
-genesisHash = MkHash mempty
+genesisHash = MkHash (BS.replicate 8 0)
 
 genesisChain :: Chain
 genesisChain = mempty

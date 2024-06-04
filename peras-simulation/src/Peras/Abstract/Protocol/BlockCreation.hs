@@ -51,8 +51,8 @@ blockCreation tracer protocol@MkPerasParams{..} party stateVar s payload diffuse
               if bc1a && bc1b && bc1c
                 then Just certPrime
                 else Nothing
-        lift . traceWith tracer $ ForgingLogic (pid party) bc1a bc1b bc1c
         block <- ExceptT $ createSignedBlock party s parent certificate lproof (hash payload)
+        lift . traceWith tracer $ ForgingLogic (pid party) bc1a bc1b bc1c block
         -- 2. Extend Cpref by B, add the new Cpref to C and diffuse it.
         let chain' = block : chainPref
         lift . traceWith tracer $ NewChainPref (pid party) chain'

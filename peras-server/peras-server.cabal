@@ -1,0 +1,69 @@
+cabal-version:      3.0
+name:               peras-server
+version:            0.1.0.0
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Arnaud Bailly
+maintainer:         arnaud.bailly@iohk.io
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+library
+    import:           warnings
+
+    exposed-modules:  Peras.Server
+
+    build-depends:    QuickCheck,
+                      aeson,
+                      base ^>=4.18.1.0,
+                      base16-bytestring,
+                      bytestring,
+                      contra-tracer,
+                      data-default,
+                      http-types,
+                      io-classes,
+                      io-sim,
+                      mtl,
+                      peras-simulation,
+                      process,
+                      scotty,
+                      text,
+                      wai,
+                      wai-extra,
+                      wai-websockets,
+                      warp,
+                      websockets
+
+    hs-source-dirs:   src
+
+    default-language: Haskell2010
+
+executable peras-server
+    import:           warnings
+
+    ghc-options:  -threaded -rtsopts
+
+    main-is:          Main.hs
+
+    -- Other library packages from which modules are imported.
+    build-depends:    QuickCheck,
+                      aeson,
+                      base ^>=4.18.1.0,
+                      base16-bytestring,
+                      bytestring,
+                      contra-tracer,
+                      data-default,
+                      io-classes,
+                      io-sim,
+                      peras-server,
+                      peras-simulation,
+                      text
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010

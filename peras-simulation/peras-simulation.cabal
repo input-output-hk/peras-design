@@ -71,6 +71,7 @@ library
                      Peras.Abstract.Protocol.Environment
                      Peras.Abstract.Protocol.Fetching
                      Peras.Abstract.Protocol.Network
+                     Peras.Abstract.Protocol.Network.Arbitrary
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Node.Model
                      Peras.Abstract.Protocol.Preagreement
@@ -135,6 +136,8 @@ executable  peras-simulate
     build-depends:    aeson
                     , base ^>=4.18.1.0
                     , bytestring
+                    , data-default
+                    , io-classes
                     , optparse-applicative
                     , peras-simulation
                     , yaml

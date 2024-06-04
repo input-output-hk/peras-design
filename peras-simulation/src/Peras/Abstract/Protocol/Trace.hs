@@ -30,7 +30,7 @@ data PerasLog
   | CastVote {partyId :: PartyId, vote :: Vote}
   | PreagreementBlock {partyId :: PartyId, block :: Block, weight :: VotingWeight}
   | PreagreementNone {partyId :: PartyId}
-  | ForgingLogic {partyId :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool}
+  | ForgingLogic {partyId :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool, block :: Block}
   | VotingLogic {partyId :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
   | DiffuseChain {partyId :: PartyId, chain :: Chain}
   | DiffuseVote {partyId :: PartyId, vote :: Vote}

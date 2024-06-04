@@ -48,7 +48,7 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
             oldEnough s = fromIntegral s + perasΔ <= fromIntegral (roundNumber - 1) * perasU + perasU - 1
             vr1a =
               round certPrime + 1 == roundNumber
-                && maybe False oldEnough (Map.lookup certPrime certs)
+                && maybe True {- Only the genesis certificate is not in the map. -} oldEnough (Map.lookup certPrime certs)
             -- (VR-1B) B extends the block certified by cert', or
             vr1b = extends block certPrime $ toList chains
             -- (VR-2A) r >= round(cert') + R,
