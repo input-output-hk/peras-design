@@ -210,7 +210,6 @@ Building up the voting string from all the party's block-trees
       ... | no p  = ⊥-elim (p genesis-cert)
 -}
 ```
--->
 ```agda
 {-
       postulate
@@ -233,6 +232,9 @@ Building up the voting string from all the party's block-trees
              in V.length σₘ ≡ V.length σₙ
       lemma-length-σ {M} {N} x = lemma-length-σ′ {blockTrees M} {blockTrees N} (cong getRoundNumber x)
 -}
+```
+-->
+```agda
       postulate
         prevRound : ∀ (N : GlobalState)
           → ∃[ M ] (
