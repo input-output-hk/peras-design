@@ -125,8 +125,7 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🏗️ Agda-to-HTML
       run: |
-        nix shell
-        .github/workflows/scripts/agda-2-html.sh
+        nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
     - name: Publish Docusaurus build
       uses: actions/upload-artifact@v4
       with:
