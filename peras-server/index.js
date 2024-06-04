@@ -68,12 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         direction: 'LR',
       },
     },
-    /*physics: {
-  	stabilization: {
-        iterations: 25000,
-    	enabled: true
-      },
-    },*/
   });
 
   function createBlock(block) {
@@ -170,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // | DiffuseChain {partyId :: PartyId, chain :: Chain}
   // | DiffuseVote {partyId :: PartyId, vote :: Vote}
   function handleMessage(msg) {
+    console.debug(msg);
     setStatus(msg.tag);
     switch (msg.tag) {
       case "Protocol":
@@ -266,7 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case "VotingLogic":
-        console.log("VotingLogic", msg.partyId, msg.vr1a, msg.vr1b, msg.vr2a, msg.vr2b);
         if (!(msg.vr1a && msg.vr1b || msg.vr2a && msg.vr2b)) {
           const blockId = mkBlockId(preagreementBlock);
           const label = `Cooldown\nround: <i>${currentRound}</i>\nparty: <i>${msg.partyId}</i>`;
@@ -282,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Nothing to draw.
         break;
       default:
-        console.log("Unknown message", msg);
+        console.warn("Unknown message", msg);
     }
   }
 
