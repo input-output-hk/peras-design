@@ -18,9 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     n: "uiCommittee", 
     delta: "uiDelta",
     alpha: "uiAlpha",
-    rngSeed: "uiSeed",
-    delayMicroseconds: "uiDelay",
-    
   };
 
   for (const paramName in paramToInputMap) {
@@ -376,6 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
           }
       }
+
+      document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
   });
 
   // Share link generation
