@@ -91,12 +91,13 @@ Assign a letter for a voting round for a list of block-trees:
 ```
 Building up the voting string from all the party's block-trees
 ```agda
-    build-σ : ∀ (n : ℕ) → AssocList PartyId T → Vec Σ n
+    build-σ′ : ∀ (n : RoundNumber) → List T → Vec Σ (getRoundNumber n)
+    build-σ′ (MkRoundNumber 0) _ = []
+    build-σ′ (MkRoundNumber (suc n)) ts =
+      σᵢ (MkRoundNumber (suc n)) ts ∷ build-σ′ (MkRoundNumber n) ts
+
+    build-σ : ∀ (n : RoundNumber) → AssocList PartyId T → Vec Σ (getRoundNumber n)
     build-σ n = build-σ′ n ∘ map proj₂
-      where
-        build-σ′ : ∀ (n : ℕ) → List T → Vec Σ n
-        build-σ′ 0 _ = []
-        build-σ′ (suc n) ts = σᵢ (MkRoundNumber (suc n)) ts ∷ build-σ′ n ts
 ```
 ### Voting string analysis
 ```agda
@@ -151,12 +152,39 @@ Building up the voting string from all the party's block-trees
         → (replicate L 🄀 ++ (？ ∷ 🄀 ∷ σ)) ⟶ ⒈
 ```
 ```agda
+    postulate
+      lastIsHead : ∀ {ts : List T} {m} {x}
+        → build-σ′ (MkRoundNumber m) ts ⟶ x
+        → V.head (build-σ′ (MkRoundNumber (suc m)) ts) ≡ x
+```
+<!--
+```agda
+{-
+    lastIsHead {ts} {m} {x} x₁
+      with (build-σ′ (MkRoundNumber (suc m)) ts)
+    ... | (x₂ ∷ _)
+      with any? (hasCert? (MkRoundNumber (suc m))) ts
+      with any? (hasVote? (MkRoundNumber (suc m))) ts
+    lastIsHead {ts} {m} {⒈} x₁ | x₂ ∷ _ | yes _ | _    = refl
+    lastIsHead {ts} {m} {⒈} x₁ | x₂ ∷ _ | no _ | yes _ = {!!}
+    lastIsHead {ts} {m} {⒈} x₁ | x₂ ∷ _ | no _ | no _  = {!!}
+    lastIsHead {ts} {m} {？} x₁ | x₂ ∷ _ | no  _ | yes _ = refl
+    lastIsHead {ts} {m} {🄀} x₁ | x₂ ∷ _ | no _  | no _  = refl
+-}
+```
+-->
+<!--
+Reflexive, transitive closure
+```agda
+{-
     infix 2 _⟶⋆_
 
     data _⟶⋆_ : VotingString m → VotingString n → Set where
       [] : σ ⟶⋆ σ
       _<>_ : ∀ {i} → σ ⟶⋆ σ″ → (σ″ ⟶ i) → σ ⟶⋆ (i ∷ σ″)
+-}
 ```
+-->
 <!--
 ```
 {-
@@ -208,13 +236,14 @@ Building up the voting string from all the party's block-trees
       ... | no p  = ⊥-elim (p genesis-cert)
 -}
 ```
--->
 ```agda
+{-
       postulate
         theorem-2 : ∀ {M N : GlobalState} {m n : ℕ}
           → M ↝⋆ N
           → build-σ m (blockTrees M) ⟶⋆ build-σ n (blockTrees N)
-
+-}
+{-
       lemma-length-σ′ : ∀ {tₘ tₙ} {m n : ℕ}
           → m ≡ n
           → let σₘ = build-σ m tₘ
@@ -228,47 +257,57 @@ Building up the voting string from all the party's block-trees
                 σₙ = build-σ (getRoundNumber (v-round (clock N))) (blockTrees N)
              in V.length σₘ ≡ V.length σₙ
       lemma-length-σ {M} {N} x = lemma-length-σ′ {blockTrees M} {blockTrees N} (cong getRoundNumber x)
-
+-}
+```
+-->
+```agda
       postulate
         prevRound : ∀ (N : GlobalState)
-          → ∃[ M ] (
-              (RequiredVotes M)
-            × (suc (rnd $ getSlotNumber (clock M)) ≡ rnd (getSlotNumber (clock N)))
-            × (M ↝⋆ N)
-            )
+          → ∃[ M ] (M ↦ N)
 
+        knowledge-prop : ∀ {m} {M N : GlobalState}
+          → M ↦⋆ N
+          → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
+
+        prev-rnd : ∀ {M N : GlobalState} {m}
+          → M ↦ N
+          → suc m ≡ v-rnd' N
+          → m ≡ v-rnd' M
+
+        …… : {A : Set} → A
+```
+#### Theorem 2:
+The voting string of every execution of the protocol is built according to the HS-rules
+```agda
       -- preconditions
       -- * transition to new voting round
       -- * required votes from the previous round
-      postulate
-        theorem-3 : ∀ {M N : GlobalState} {m}
-          → M ↝⋆ N
-          → rnd (getSlotNumber (clock M)) ≡ m
-          → rnd (getSlotNumber (clock N)) ≡ suc m
-          → RequiredVotes M
-          → RequiredVotes N
-          → let σₘ = build-σ m (blockTrees M)
-                σₙ = build-σ (suc m) (blockTrees N)
-            in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
-{-
-      theorem-3 {M} {N} {zero} _ _ _ _ _ = ⒈ , (HS-I , {!!}) -- rewrite genesis cert
-      theorem-3 {M} {N} {suc m} st rndM≡m _ rₘ rₙ
+      theorem-2 : ∀ {M N : GlobalState} {m}
+        → M ↦ N
+        → m ≡ v-rnd' M
+        → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
+              σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
+          in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
+      theorem-2 {M} {N} {zero} _ _ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM
         with
-          (
-          let (M' , rₘ′ , r′ , st′) = prevRound M
-          in theorem-3 {M'} {M} {m} st′ (suc-injective (trans r′ rndM≡m)) rndM≡m rₘ′ rₘ
-          )
-      ... | (c , st″ , σ′) rewrite σ′
+          (let (M' , M'↦M) = prevRound M
+           in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
+        rewrite σ′
+        rewrite knowledge-prop {m} (proj₂ (prevRound M) ∷″ M↦N ∷″ []″)
+        rewrite lastIsHead {blockTrees' N} st″
         with c
-      ... | ？ = {!!}
-      ... | 🄀 = {!!}
-      ... | ⒈
+
+      theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
         with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
         with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-      ... | yes p | _ = ⒈ , (HS-II-1 , {!!}) -- cong (⒈ ∷_) {!!})
-      ... | no q | yes p = {!!}
-      ... | no _ | no _ = {!!}
--}
+      ... | yes _ | _     = ⒈ , (HS-II-1 , refl)
+      ... | no _  | yes _ = ？ , (HS-II-? , refl)
+      ... | no _  | no _  = …… -- TODO: contradiction
+
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
 ```
 <!--
 ```agda
