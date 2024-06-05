@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-
+/*
   req("/stop", "DELETE");
 
   const node = document.getElementById('chain');
@@ -296,8 +296,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ws.onclose = function() {
     console.log('disconnected');
-  };
+  };*/
 
+  // Toggle parameters field
+
+  const toggleChevron = document.getElementById("toggleParams");
+  const parameterFields = document.getElementById("parameterFields");
+  parameterFields.style.display = "grid";
+
+  toggleChevron.addEventListener("click", () => {
+    if (parameterFields.style.display === "grid") { // Check if it's currently visible
+      parameterFields.style.display = "none";
+      toggleChevron.classList.remove("up");
+      toggleChevron.classList.add("down");
+  } else {
+      parameterFields.style.display = "grid";
+      toggleChevron.classList.remove("down");
+      toggleChevron.classList.add("up");
+  }
+  });
 });
 
 async function postJSON(url, data) {
@@ -328,3 +345,6 @@ async function req(url, method) {
     console.error("Error: %o", error);
   }
 }
+
+
+

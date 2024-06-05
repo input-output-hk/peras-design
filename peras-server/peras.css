@@ -21,11 +21,99 @@ h3 {
     margin: .5em;
 }
 
-.params {
+#parameterHeader{
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
+    flex-direction: row;
 }
+
+.chevron {
+    display: inline-block;
+    cursor: pointer;
+    height: 20px;
+    width: 30px;
+    margin-left: 0.5em;
+    transform: rotate(180deg); 
+}
+
+.chevron.down {
+    transform: rotate(0deg); 
+}
+
+.chevron.up {
+    transform: rotate(180deg); 
+}
+
+
+#control {
+    display: flex;
+    flex-direction: column;
+}
+
+#parameterFields { 
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5em;
+    margin-left: 1em;
+    margin-top: 2em;
+}
+
+
+@media (max-width: 768px) {
+    #parameterFields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); 
+    }
+}
+
+@media (max-width: 600px) { 
+    #control {
+        flex-direction: column; 
+    }
+
+    #buttons, #state {
+        flex-basis: auto; 
+    }
+}
+
+
+@media (max-width: 480px) {
+    #parameterFields {
+        grid-template-columns: 1fr;
+    }
+}
+
+#toggleParams {
+    background-color: #85D5AB;
+    color: white;
+    padding: 0.4em 0.8em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 1em; 
+}
+
+#toggleParams:hover {
+    background-color: #1F5B3B;
+}
+
+
+.params  {
+    margin: 0;
+    padding: 0.8em; 
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.params label {
+    display: block;
+    margin-bottom: 0.5em;
+}
+
+.params input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+}
+
 
 #control {
     display: flex;
@@ -33,7 +121,7 @@ h3 {
 }
 
 #control button {
-  background-color: lightblue;
+  background-color: #85D5AB;
   border: none;
   color: white;
   padding: .5em;
@@ -43,10 +131,11 @@ h3 {
   font-size: 16px;
   margin: 1em;
   border-radius: 5px;
+  cursor: pointer;
 }
 
 #control button:hover {
-    background-color: blue;
+    background-color: #1F5B3B;
 }
 
 .params .control {
@@ -58,14 +147,14 @@ h3 {
     display: flex;
     flex-wrap: wrap;
     flex-basis: 50%;
-    align-items: flex-start;
+    align-items: center;
 }
 
 #state {
     display: flex;
     flex-wrap: wrap;
     flex-basis: 50%;
-    align-items: flex-start;
+    align-items: center;
 }
 
 #state span {
