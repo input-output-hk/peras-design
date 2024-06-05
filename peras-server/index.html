@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8">
     <title>Peras Simulator</title>
+    <link rel="icon" type="image/x-icon" href="./pilcrow.ico">
     <link rel="stylesheet" href="peras.css" >
     <script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
     <script src="index.js" ></script>
   </head>
   <body>
-    <div id="network">
-	    <div id="control">
+	    <div id="controlPanel">
         <div id="parameterHeader">
           <h3>Parameters</h3> 
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" class="chevron" id="toggleParams">
-            <path d="M8 4l-3 -3 -3 3" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 5 3)"/> 
+            <path d="M8 4l-3 -3 -3 3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 5 3)"/> 
           </svg>
           </div>
           <div id="parameterFields">
@@ -46,7 +46,6 @@
           <span>Message</span><em><span id="uiMessage">0</span></em>
         </div>
       </div>
-    </div>
     <div id="chain"></div>
   </body>
 </html>
