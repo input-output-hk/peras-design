@@ -175,17 +175,12 @@ has to fulfil all the properties mentioned below:
                     (tree₀ : T)
                     (extendTree : T → Block → T)
                     (allBlocks : T → List Block)
-                    (bestChain : SlotNumber → T → Chain)
+                    (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
                     (certs : T → List Certificate)
                     (cert₀ : Certificate)
          : Set₁ where
-
-    allBlocksUpTo : SlotNumber → T → List Block
-    allBlocksUpTo sl =
-      let cond = (_≤? getSlotNumber sl) ∘ slotNumber'
-      in filter cond ∘ allBlocks
 
     field
 ```
@@ -217,18 +212,18 @@ as proposed in the paper.
         → allBlocks (addVote t v) ≐ allBlocks t
 
       valid : ∀ (t : T) (sl : SlotNumber)
-        → ValidChain (bestChain sl t)
+        → ValidChain (preferredChain t)
 
-      optimal : ∀ (c : Chain) (t : T) (sl : SlotNumber)
-        → let b = bestChain sl t
+      optimal : ∀ (c : Chain) (t : T)
+        → let b = preferredChain t
               cts = certs t
           in
           ValidChain c
-        → c ⊆ allBlocksUpTo sl t
+        → c ⊆ allBlocks t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
-      self-contained : ∀ (t : T) (sl : SlotNumber)
-        → bestChain sl t ⊆ allBlocksUpTo sl t
+      self-contained : ∀ (t : T)
+        → preferredChain t ⊆ allBlocks t
 
       valid-votes : ∀ (t : T)
         → All ValidVote (votes t)
@@ -263,7 +258,7 @@ The block tree type is defined as follows:
       tree₀ : T
       extendTree : T → Block → T
       allBlocks : T → List Block
-      bestChain : SlotNumber → T → Chain
+      preferredChain : T → Chain
 
       addVote : T → Vote → T
 
@@ -275,15 +270,15 @@ The block tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ extendTree allBlocks bestChain
+                      tree₀ extendTree allBlocks preferredChain
                       addVote votes certs cert₀
 
     tipBest : SlotNumber → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
-    latestCertOnChain : SlotNumber → T → Certificate
-    latestCertOnChain s =
-      latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ bestChain s
+    latestCertOnChain : T → Certificate
+    latestCertOnChain =
+      latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ preferredChain
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
@@ -299,6 +294,11 @@ The block tree type is defined as follows:
 
     hasVote? : (r : RoundNumber) (t : T) → Dec (hasVote r t)
     hasVote? (MkRoundNumber r) = any? ((r ≟_) ∘ votingRound') ∘ votes
+
+    preferredChain′ : SlotNumber → T → Chain
+    preferredChain′ (MkSlotNumber sl) =
+      let cond = (_≤? sl) ∘ slotNumber'
+      in filter cond ∘ preferredChain
 ```
 ### Additional parameters
 
@@ -345,7 +345,7 @@ cool-down phase.
 
       Regular : ∀ {r t} →
         let
-          pref = bestChain (MkSlotNumber $ r * U) t
+          pref  = preferredChain t
           cert′ = latestCertSeen t
         in
           r ≡ (roundNumber cert′) + 1       -- VR-1A
@@ -355,7 +355,7 @@ cool-down phase.
 
       AfterCooldown : ∀ {r c t} →
         let
-          cert⋆ = latestCertOnChain (MkSlotNumber $ r * U) t
+          cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
         in
           c > 0
@@ -586,7 +586,7 @@ During a cool-down phase, the block includes a certificate reference.
                                }
                     ; signature = sig
                     }
-              cert⋆ = latestCertOnChain clock t
+              cert⋆ = latestCertOnChain t
               cert′ = latestCertSeen t
               r = getRoundNumber (v-round clock)
           in

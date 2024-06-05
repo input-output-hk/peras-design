@@ -564,8 +564,8 @@ that period.
         → p₁ ‼ blockTrees N₁ ≡ just t₁
         → p₂ ‼ blockTrees N₂ ≡ just t₂
         → getSlotNumber (luckySlots (clock N₁ , clock N₂)) ≥ w
-        → let c₁ = bestChain (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
-              c₂ = bestChain (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
+        → let c₁ = preferredChain′ (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
+              c₂ = preferredChain′ (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
               cs₁ = certs t₁
               cs₂ = certs t₂
           in ∥ c₁ ∥ cs₁ + w ≤ ∥ c₂ ∥ cs₂
@@ -596,7 +596,7 @@ chains of honest parties will always be a common prefix of each other.
         → CollisionFree N
         → h ≡ Honest {p}
         → let sl = clock N
-          in prune k (bestChain (MkSlotNumber $ getSlotNumber sl ∸ 1) t) ⪯ c
+          in prune k (preferredChain′ (MkSlotNumber $ getSlotNumber sl ∸ 1) t) ⪯ c
            ⊎ ∃[ sl′ ] (getSlotNumber sl′ < getSlotNumber k × getSlotNumber (superSlots (sl′ , sl)) < 2 * getSlotNumber (adversarialSlots (sl′ , sl)))
 ```
 ## Timed common prefix
