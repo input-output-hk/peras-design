@@ -18,15 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
     n: "uiCommittee", 
     delta: "uiDelta",
     alpha: "uiAlpha",
+    delayMicroseconds: "uiDelay",
+    rngSeed: "uiSeed",
   };
 
   for (const paramName in paramToInputMap) {
     const inputId = paramToInputMap[paramName];
-    const defaultValue = document.getElementById(inputId).value; 
+    const defaultValue = paramName != "rngSeed" ? document.getElementById(inputId).value : Math.round(Math.random() * 1000000000); 
     setInputValue(inputId, paramName, defaultValue); 
   }
-
-  document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
 
   // This is needed to stop any prior simulations when refreshing the browser.
   req("/stop", "DELETE");
@@ -350,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
           uiCommittee: { input: document.getElementById("uiCommittee")},
           uiDelta: { input: document.getElementById("uiDelta") },
           uiAlpha: { input: document.getElementById("uiAlpha") },
+          uiSeed: { input: document.getElementById("uiSeed") },
       };
       const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
       const getRandomFloat = (min, max, step) => {
@@ -374,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       }
 
-      document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
   });
 
   // Share link generation
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareLinkContainer = document.getElementById("shareLink");
 
   shareButton.addEventListener("click", () => {
-      const baseUrl = `${self.location.host}/simulator`; // TODO 
+      const baseUrl = `${self.location.origin}${self.location.pathname}`;
       const params = [];
 
       params.push(`duration=${document.getElementById("uiDuration").value}`);
