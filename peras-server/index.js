@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       , committee: parseInt(document.getElementById('uiCommittee').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
+      , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
     })
   });
 
