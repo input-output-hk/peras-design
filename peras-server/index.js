@@ -231,9 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
       case "NewCertificatesFromQuorum":
         msg.newQuorums.forEach(function(cert) {
           const id = mkCertId(msg.partyId, cert.round);
-          const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel(), shape: 'box', color: 'turquoise', label });
-          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise', dashes: true });
+          const label = collapseCerts ? `Certificate\nround: <i>${cert.round}</i>` : `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
+          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'turquoise', label });
+          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise' , dashes: true });
         });
         break;
       case "NewCertPrime":
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const blockId = mkBlockHashId(msg.vote.blockHash);
           const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
           network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: mkVoteId(msg.vote), level: nextLevel(), shape: 'circle', color: "sandybrown", label });
-          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "skyblue" });
+          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "sandybrown" });
           refresh();
         }
         break;
