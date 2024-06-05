@@ -1,7 +1,33 @@
 document.addEventListener('DOMContentLoaded', () => {
-  
+  const baseUrl = "oursite.com/simulator"; // TODO 
 
-  req("/stop", "DELETE");
+  // info from the link to the input fields
+  const setInputValue = (inputId, paramName, defaultValue = "error") => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const value = urlParams.get(paramName) || defaultValue;
+    document.getElementById(inputId).value = value;
+  };
+
+  const paramToInputMap = {
+    duration: "uiDuration",
+    parties: "uiParties",
+    u: "uiU",
+    a: "uiA",
+    r: "uiR",
+    k: "uiK",
+    l: "uiL",
+    b: "uiB",
+    tau: "uiTau",
+    n: "uiCommittee", 
+    delta: "uiDelta",
+    alpha: "uiAlpha",
+  };
+
+  for (const paramName in paramToInputMap) {
+    const inputId = paramToInputMap[paramName];
+    const defaultValue = document.getElementById(inputId).value; 
+    setInputValue(inputId, paramName, defaultValue); 
+  }
 
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
@@ -415,6 +441,3 @@ async function req(url, method) {
     console.error("Error: %o", error);
   }
 }
-
-
-
