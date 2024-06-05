@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareLinkContainer = document.getElementById("shareLink");
 
   shareButton.addEventListener("click", () => {
-      const baseUrl = "oursite.com/simulator"; // TODO 
+      const baseUrl = `${self.location.host}/simulator`; // TODO 
       const params = [];
 
       params.push(`duration=${document.getElementById("uiDuration").value}`);
@@ -397,6 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
       params.push(`n=${document.getElementById("uiCommittee").value}`);
       params.push(`delta=${document.getElementById("uiDelta").value}`);
       params.push(`alpha=${document.getElementById("uiAlpha").value}`);
+      params.push(`delayMicroseconds=${document.getElementById("uiDelay").value}`);
+      params.push(`rngSeed=${document.getElementById("uiSeed").value}`);
 
       const shareUrl = `${baseUrl}?${params.join("&")}`;
 
