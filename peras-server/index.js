@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-/*
+  
+
   req("/stop", "DELETE");
 
   const node = document.getElementById('chain');
@@ -296,7 +297,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ws.onclose = function() {
     console.log('disconnected');
-  };*/
+  };
+
+  // Share link generation
+  const shareButton = document.getElementById("shareButton");
+  const shareLinkContainer = document.getElementById("shareLink");
+
+  shareButton.addEventListener("click", () => {
+      const baseUrl = "oursite.com/simulator"; // Replace with your actual site URL
+      const params = [];
+
+      // Add parameters to the array
+      params.push(`duration=${document.getElementById("uiDuration").value}`);
+      params.push(`parties=${document.getElementById("uiParties").value}`);
+      params.push(`u=${document.getElementById("uiU").value}`);
+      params.push(`a=${document.getElementById("uiA").value}`);
+      params.push(`r=${document.getElementById("uiR").value}`);
+      params.push(`k=${document.getElementById("uiK").value}`);
+      params.push(`l=${document.getElementById("uiL").value}`);
+      params.push(`b=${document.getElementById("uiB").value}`);
+      params.push(`tau=${document.getElementById("uiTau").value}`);
+      params.push(`n=${document.getElementById("uiCommittee").value}`);
+      params.push(`delta=${document.getElementById("uiDelta").value}`);
+      params.push(`alpha=${document.getElementById("uiAlpha").value}`);
+
+      const shareUrl = `${baseUrl}?${params.join("&")}`;
+
+      // Create and display the share link
+      shareLinkContainer.innerHTML = `<a href="${shareUrl}">${shareUrl}</a>`;
+  });
 
   // Toggle parameters field
 

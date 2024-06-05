@@ -14,10 +14,7 @@ h3 {
     margin: 0; 
 }
 
-input:focus,
-select:focus,
-textarea:focus,
-button:focus {
+input:focus {
     outline: 0 none;
     border: 1px solid #1F5B3B !important; 
 }
@@ -36,6 +33,8 @@ button {
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
+
+
 
 button:hover {
     background-color: #1F5B3B;
@@ -72,7 +71,7 @@ form input {
 #toggleParams:hover {
     background-color: #1F5B3B;
     stroke: white;
-    transition: stroke 0.2s ease; 
+    transition:  stroke 0.2s ease; 
 }
 
 .chevron {
@@ -191,6 +190,18 @@ form input {
     #buttons, #state {
         flex-basis: auto; /* Allow full width on small screens */
     }
+}
+
+
+#shareLink {
+    display: inline-block;
+    margin-left: 1em;
+    overflow-wrap: break-word; /* Allow long links to wrap */
+}
+
+#shareLink a {
+    color: #1F5B3B; /* Or another color that fits your theme */
+    text-decoration: none;
 }
 
 
