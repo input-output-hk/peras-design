@@ -1,77 +1,240 @@
+/* ------------------------------------------------------------ */
+/*  General Styles                                              */
+/* ------------------------------------------------------------ */
+
+body {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    background-color: #F8FCFA;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+h3 {
+    margin: 0; 
+}
+
+input:focus {
+    outline: 0 none;
+    border: 1px solid #1F5B3B !important; 
+}
+
+button {
+    background-color: #85D5AB;
+    border: none;
+    color: white;
+    padding: 0.5em 1em; 
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+
+
+button:hover {
+    background-color: #1F5B3B;
+}
+
 form input {
     margin: 1em;
 }
 
-body {
+
+/* ------------------------------------------------------------ */
+/* Parameter Header                                              */
+/* ------------------------------------------------------------ */
+
+#parameterHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+/* ------------------------------------------------------------ */
+/* Chevron (Toggle Icon)                                       */
+/* ------------------------------------------------------------ */
+
+#toggleParams {
+    padding: 0.4em 0.8em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 1em; 
+    stroke: #85D5AB;
+}
+
+#toggleParams:hover {
+    background-color: #1F5B3B;
+    stroke: white;
+    transition:  stroke 0.2s ease; 
+}
+
+.chevron {
+    display: inline-block;
+    cursor: pointer;
+    height: 20px;
+    width: 30px;
+    margin-left: 0.5em;
+    transform: rotate(180deg); 
+    stroke: #85D5AB;
+    transition: transform 0.3s ease;
+}
+
+.chevron.down {
+    transform: rotate(0deg); 
+}
+
+
+/* ------------------------------------------------------------ */
+/* Parameter Fields                                            */
+/* ------------------------------------------------------------ */
+
+#parameterFields { 
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5em;
+    margin: 1em 0 2em 1em;
+}
+
+#parameterFields .control {
+    margin: 0;
+    padding: 0.8em;
+    border: 1px solid #00000022; 
+    border-radius: 8px; 
+    background-color: #F8FCFA; 
+    position: relative; /* Positioning context for arrows */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#parameterFields .control:focus-within { 
+    background-color: #c5e8d6;
+    border: 1px solid #1F5B3B; 
+}
+
+#parameterFields label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+#parameterFields input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6em;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#parameterFields input[type="number"]:focus {
+    color: #1F5B3B; 
+}
+
+#parameterFields input[type="number"]::-webkit-inner-spin-button,
+#parameterFields input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none; 
+    margin: 0;
+}
+
+#parameterFields input[type="number"] {
+    -moz-appearance: textfield; 
+}
+
+
+#parameterFields input[type="number"]::after {
+    display: block;
+    width: 24px; 
+    height: 24px; 
+    position: absolute;
+    right: 10px; 
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+
+@media (max-width: 768px) {
+    #parameterFields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); 
+    }
+}
+
+@media (max-width: 480px) {
+    #parameterFields {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
+/* ------------------------------------------------------------ */
+/* Control Panel (Paremeters, button and state)        */
+/* ------------------------------------------------------------ */
+
+#controlPanel {
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
 }
 
-h3 {
-    margin: none;
-    margin-block-start:0; margin-block-end:0; margin-inline-start:0; margin-inline-end:0;
-    padding-block-start:0; padding-block-end:0; padding-inline-start:0; padding-inline-end:0;
+/* Media Query for Responsive Layout */
+@media (max-width: 600px) { 
+    #controlPanel {
+        flex-direction: column; /* Stack vertically on small screens */
+    }
+
+    #buttons, #state {
+        flex-basis: auto; /* Allow full width on small screens */
+    }
 }
 
-#network {
+
+#shareLink {
+    display: inline-block;
+    margin-left: 1em;
+    overflow-wrap: break-word; /* Allow long links to wrap */
 }
 
-#network h3 {
-    margin: .5em;
+#shareLink a {
+    color: #1F5B3B; /* Or another color that fits your theme */
+    text-decoration: none;
 }
 
-.params {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-}
 
-#control {
-    display: flex;
-    flex-wrap: wrap;
-}
-
-#control button {
-  background-color: lightblue;
-  border: none;
-  color: white;
-  padding: .5em;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 1em;
-  border-radius: 5px;
-}
-
-#control button:hover {
-    background-color: blue;
-}
-
-.params .control {
-    margin: .5em;
-    padding: .2em;
-}
+/* ------------------------------------------------------------ */
+/* Buttons                                                     */
+/* ------------------------------------------------------------ */
 
 #buttons {
     display: flex;
     flex-wrap: wrap;
     flex-basis: 50%;
-    align-items: flex-start;
+    align-items: center;
 }
+
+
+/* ------------------------------------------------------------ */
+/* State                                                       */
+/* ------------------------------------------------------------ */
 
 #state {
     display: flex;
     flex-wrap: wrap;
     flex-basis: 50%;
-    align-items: flex-start;
+    align-items: center;
 }
 
 #state span {
-    margin: .5em;
+    margin: 0.5em;
 }
 
+/* ------------------------------------------------------------ */
+/* Chain                                                       */
+/* ------------------------------------------------------------ */
 
 #chain {
     border: thin solid black;

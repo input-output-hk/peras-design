@@ -3,34 +3,44 @@
   <head>
     <meta charset="UTF-8">
     <title>Peras Simulator</title>
+    <link rel="icon" type="image/x-icon" href="./pilcrow.ico">
     <link rel="stylesheet" href="peras.css" >
     <script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
-    <script src="index.js"></script>
+    <script src="index.js" ></script>
   </head>
   <body>
-    <div id="network">
-	    <div id="control">
-        <div class="params">
-          <h3>Parameters</h3>
-	        <div class="control"><label for="uiDuration">Duration (slots):</label> <input id="uiDuration" type="number" min="10" max="7200" value="600"/></div>
-	        <div class="control"><label for="uiParties">Nodes:</label> <input id="uiParties" type="number" min="1" max="15" value="7"/></div>
-	        <div class="control"><label for="uiU">Round length (U, in slots):</label> <input id="uiU" type="number" min="5" max="120" value="20"/></div>
-	        <div class="control"><label for="uiA">Cert. expiration (A, in slots):</label> <input id="uiA" type="number" min="30" max="900" value="300"/></div>
-	        <div class="control"><label for="uiR">Chain ignorance (R, in slots):</label> <input id="uiR" type="number" min="0" max="10" value="1"/></div>
-          <div class="control"><label for="uiK">Cooldown period (K, in slots):</label> <input id="uiK" type="number" min="0" max="50" value="2"/></div>
-          <div class="control"><label for="uiL">Block selection offset (L, in slots):</label> <input id="uiL" type="number" min="1" max="120" value="10"/></div>
-	        <div class="control"><label for="uiB">Boost (B, in blocks):</label> <input id="uiB" type="number" min="0" max="100" value="25"/></div>
-	        <div class="control"><label for="uiTau">Quorum size (τ, in nodes):</label> <input id="uiTau" type="number" min="0" max="15" value="3"/></div>
-	        <div class="control"><label for="uiCommittee">Mean committee size (n, in nodes):</label> <input id="uiCommittee" type="number" min="0" max="15" value="5"/></div>
-	        <div class="control"><label for="uiDelta">Network diffusion delay (Δ, in slots):</label> <input id="uiDelta" type="number" min="0" max="20" value="0"/></div>
-	        <div class="control"><label for="uiAlpha">Active slot coefficient (α, in 1/nodes):</label> <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/></div>
-        </div>
+	    <div id="controlPanel">
+        <div id="parameterHeader">
+          <h3>Parameters</h3> 
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" class="chevron" id="toggleParams">
+            <path d="M8 4l-3 -3 -3 3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 5 3)"/> 
+          </svg>
+          <button id="shareButton" type="button">Share</button> <div id="shareLink"></div>
+
+          </div>
+          <div id="parameterFields">
+            <div class="control"><label for="uiDuration">Duration (slots):</label> <input id="uiDuration" type="number" min="10" max="7200" value="600"/></div>
+            <div class="control"><label for="uiParties">Nodes:</label> <input id="uiParties" type="number" min="1" max="15" value="7"/></div>
+            <div class="control"><label for="uiU">Round length (U, in slots):</label> <input id="uiU" type="number" min="5" max="120" value="20"/></div>
+            <div class="control"><label for="uiA">Cert. expiration (A, in slots):</label> <input id="uiA" type="number" min="30" max="900" value="300"/></div>
+            <div class="control"><label for="uiR">Chain ignorance (R, in slots):</label> <input id="uiR" type="number" min="0" max="10" value="1"/></div>
+            <div class="control"><label for="uiK">Cooldown period (K, in slots):</label> <input id="uiK" type="number" min="0" max="50" value="2"/></div>
+            <div class="control"><label for="uiL">Block selection offset (L, in slots):</label> <input id="uiL" type="number" min="1" max="120" value="10"/></div>
+            <div class="control"><label for="uiB">Boost (B, in blocks):</label> <input id="uiB" type="number" min="0" max="100" value="25"/></div>
+            <div class="control"><label for="uiTau">Quorum size (τ, in nodes):</label> <input id="uiTau" type="number" min="0" max="15" value="3"/></div>
+            <div class="control"><label for="uiCommittee">Mean committee size (n, in nodes):</label> <input id="uiCommittee" type="number" min="0" max="15" value="5"/></div>
+            <div class="control"><label for="uiDelta">Network diffusion delay (Δ, in slots):</label> <input id="uiDelta" type="number" min="0" max="20" value="0"/></div>
+            <div class="control"><label for="uiAlpha">Active slot coefficient (α, in 1/nodes):</label> <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/></div>
+            
+        
+          </div>
 	      <div id="buttons">
           <h3>Run</h3>
           <button id="uiSimulate" type="button">Simulate</button>
 	        <button id="uiStop" type="button">Stop</button>
 	        <button id="uiPause" type="button">Pause</button>
 	        <button id="uiResume" type="button">Resume</button>
+          <button id="randomizeButton" type="button">Randomize</button> 
         </div>
         <div id="state">
           <h3>Time</h3>
@@ -39,7 +49,6 @@
           <span>Message</span><em><span id="uiMessage">0</span></em>
         </div>
       </div>
-    </div>
     <div id="chain"></div>
   </body>
 </html>

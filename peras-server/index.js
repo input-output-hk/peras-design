@@ -1,6 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const setInputValue = (inputId, paramName, defaultValue = "error") => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const value = urlParams.get(paramName) || defaultValue;
+    document.getElementById(inputId).value = value;
+  };
 
-  req("/stop", "DELETE");
+  const paramToInputMap = {
+    duration: "uiDuration",
+    parties: "uiParties",
+    u: "uiU",
+    a: "uiA",
+    r: "uiR",
+    k: "uiK",
+    l: "uiL",
+    b: "uiB",
+    tau: "uiTau",
+    n: "uiCommittee", 
+    delta: "uiDelta",
+    alpha: "uiAlpha",
+  };
+
+  for (const paramName in paramToInputMap) {
+    const inputId = paramToInputMap[paramName];
+    const defaultValue = document.getElementById(inputId).value; 
+    setInputValue(inputId, paramName, defaultValue); 
+  }
 
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
@@ -298,6 +322,91 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('disconnected');
   };
 
+  // Randomize button
+  const randomizeButton = document.getElementById("randomizeButton");
+
+  randomizeButton.addEventListener("click", () => {
+
+      const parameterValues = {
+          uiDuration: { input: document.getElementById("uiDuration"), },
+          uiParties: { input: document.getElementById("uiParties") },
+          uiU: { input: document.getElementById("uiU") },
+          uiA: { input: document.getElementById("uiA")},
+          uiR: { input: document.getElementById("uiR") },
+          uiK: { input: document.getElementById("uiK")},
+          uiL: { input: document.getElementById("uiL")},
+          uiB: { input: document.getElementById("uiB")},
+          uiTau: { input: document.getElementById("uiTau")},
+          uiCommittee: { input: document.getElementById("uiCommittee")},
+          uiDelta: { input: document.getElementById("uiDelta") },
+          uiAlpha: { input: document.getElementById("uiAlpha") },
+      };
+      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const getRandomFloat = (min, max, step) => {
+        const numSteps = Math.floor((max - min) / step) + 1;
+        const randomStep = Math.floor(Math.random() * numSteps);
+        return min + randomStep * step;
+      };
+  
+      for (const param in parameterValues) {
+          const { input } = parameterValues[param];
+  
+          if (input.type === 'number') {
+              const min = parseFloat(input.min) || 0;  
+              const max = parseFloat(input.max) || 100;
+              const step = parseFloat(input.step) || 1; 
+  
+              if (step === 1) {
+                input.value = getRandomInt(min, max); 
+              } else {
+                input.value = getRandomFloat(min, max, step).toFixed(2); 
+              }
+          }
+      }
+  });
+
+  // Share link generation
+  const shareButton = document.getElementById("shareButton");
+  const shareLinkContainer = document.getElementById("shareLink");
+
+  shareButton.addEventListener("click", () => {
+      const baseUrl = "oursite.com/simulator"; // TODO 
+      const params = [];
+
+      params.push(`duration=${document.getElementById("uiDuration").value}`);
+      params.push(`parties=${document.getElementById("uiParties").value}`);
+      params.push(`u=${document.getElementById("uiU").value}`);
+      params.push(`a=${document.getElementById("uiA").value}`);
+      params.push(`r=${document.getElementById("uiR").value}`);
+      params.push(`k=${document.getElementById("uiK").value}`);
+      params.push(`l=${document.getElementById("uiL").value}`);
+      params.push(`b=${document.getElementById("uiB").value}`);
+      params.push(`tau=${document.getElementById("uiTau").value}`);
+      params.push(`n=${document.getElementById("uiCommittee").value}`);
+      params.push(`delta=${document.getElementById("uiDelta").value}`);
+      params.push(`alpha=${document.getElementById("uiAlpha").value}`);
+
+      const shareUrl = `${baseUrl}?${params.join("&")}`;
+
+      shareLinkContainer.innerHTML = `<a href="${shareUrl}">${shareUrl}</a>`;
+  });
+
+  // Toggle parameters field
+  const toggleChevron = document.getElementById("toggleParams");
+  const parameterFields = document.getElementById("parameterFields");
+  parameterFields.style.display = "grid";
+
+  toggleChevron.addEventListener("click", () => {
+    if (parameterFields.style.display === "grid") { 
+      parameterFields.style.display = "none";
+      toggleChevron.classList.remove("up");
+      toggleChevron.classList.add("down");
+  } else {
+      parameterFields.style.display = "grid";
+      toggleChevron.classList.remove("down");
+      toggleChevron.classList.add("up");
+  }
+  });
 });
 
 async function postJSON(url, data) {
