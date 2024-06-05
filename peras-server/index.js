@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const baseUrl = "oursite.com/simulator"; // TODO 
-
-  // info from the link to the input fields
   const setInputValue = (inputId, paramName, defaultValue = "error") => {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(paramName) || defaultValue;
@@ -362,7 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
               if (step === 1) {
                 input.value = getRandomInt(min, max); 
               } else {
-                // only Delta
                 input.value = getRandomFloat(min, max, step).toFixed(2); 
               }
           }
@@ -374,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareLinkContainer = document.getElementById("shareLink");
 
   shareButton.addEventListener("click", () => {
-      const baseUrl = "oursite.com/simulator"; //TODO replace with real link
+      const baseUrl = "oursite.com/simulator"; // TODO 
       const params = [];
 
       params.push(`duration=${document.getElementById("uiDuration").value}`);
@@ -401,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
   parameterFields.style.display = "grid";
 
   toggleChevron.addEventListener("click", () => {
-    if (parameterFields.style.display === "grid") { // Check if it's currently visible
+    if (parameterFields.style.display === "grid") { 
       parameterFields.style.display = "none";
       toggleChevron.classList.remove("up");
       toggleChevron.classList.add("down");
