@@ -121,9 +121,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr : ∀ {M N : GlobalState}
       → M ↝ N
       → clock' M ≤ clock' N
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote _ (honest _ _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Fetch (honest _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Fetch (corrupt _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateVote _ (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
@@ -170,7 +170,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → {b : Block}
         → (p₁ , h₁) ∈ parties
         → (s : N₀ ↝⋆ N)
-        → Delivered N
+        → Fetched N
         → lookup (blockTrees N) p₁ ≡ just ⟪ t₁ ⟫
         → b ∈ allBlocks blockTree t₁
         → HasCreateStep b s
@@ -187,7 +187,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → {b : Block}
         → (p₁ , h₁) ∈ parties
         → (s : N₀ ↝⋆ N)
-        → Delivered N
+        → Fetched N
         → lookup (blockTrees N) p₁ ≡ just t₁
         → b ∈ allBlocks t₁
         → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
@@ -210,8 +210,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → b ∈ allBlocks tₙ
 
     blocksNotLost (_ ∎) x₁ x₂ x₃ = {!!}
-    blocksNotLost (_ ↝⟨ Deliver x ⟩ x₄) x₁ x₂ x₃ = {!!}
-    blocksNotLost (_ ↝⟨ CastVote x ⟩ x₄) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ Fetch x ⟩ x₄) x₁ x₂ x₃ = {!!}
+    blocksNotLost (_ ↝⟨ CreateVote x ⟩ x₄) x₁ x₂ x₃ = {!!}
     blocksNotLost (_ ↝⟨ CreateBlock x ⟩ x₄) x₁ x₂ x₃ = {!!}
     blocksNotLost (_ ↝⟨ NextSlot x ⟩ x₄) x₁ x₂ x₃ = {!!}
 -}
@@ -268,30 +268,30 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → M ↝⋆ N
         → ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M
         → lookup (blockTrees N) p ≡ just t
-        → Delivered N
+        → Fetched N
         → b ∈ allBlocks t
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M []′ m∈ms N×p≡t Delivered-M =
-      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+    knowledge-propagation₂ {M} {p = p} {b = b} p∈ps N₀↝⋆M []′ m∈ms N×p≡t Fetched-M =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Fetched-M)
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (M↝M′@(Deliver (honest x m′∈ms VoteReceived)) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Delivered-N
+    knowledge-propagation₂ {M} {N} {p} p∈ps N₀↝⋆M (M↝M′@(Fetch (honest x m′∈ms VoteReceived)) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms VoteMsg≢BlockMsg) N×p≡t Fetched-N
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (M↝M′@(Deliver (honest {p′} {tₚ} {tₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ∷′ M′↝⋆N)
-      m∈ms N×p≡t Delivered-N
+    knowledge-propagation₂ {M} {N} {p} {t} {h} {b} p∈ps N₀↝⋆M (M↝M′@(Fetch (honest {p′} {tₚ} {tₚ′} x m′∈ms (BlockReceived {b′} {t₁}))) ∷′ M′↝⋆N)
+      m∈ms N×p≡t Fetched-N
       with p ℕ.≟ p′
     ... | no p≢p′ =
       let m≢m′ = ⦅⦆-injective′ (p≢p′ ∘ sym)
-      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
+      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Fetched-N
     ... | yes p≡p′ with b′ ≟-Block b
     ... | yes b′≡b =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p′} {m = blockTrees M})
@@ -303,37 +303,37 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       in blocksNotLost {tₘ = tₚ′} M′↝⋆N (trans lookup-p≡lookup-p′ lookup-insert≡id) N×p≡t b∈bt
     ... | no b′≢b =
       let m≢m′ = ⦅⦆-injective₃′ (Message-injective′ b′≢b)
-      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Delivered-N
+      in knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (m′∈ms─m∈ms m′∈ms m∈ms m≢m′) N×p≡t Fetched-N
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (M↝M′@(Deliver (corrupt {p₁} m′∈ms)) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms) N×p≡t Delivered-N
+    knowledge-propagation₂ {M} {N} {p} {t} {b} p∈ps N₀↝⋆M (M↝M′@(Fetch (corrupt {p₁} m′∈ms)) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (e∈m′∈ms∷=m′ m∈ms m′∈ms) N×p≡t Fetched-N
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CastVote x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Delivered-N
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CreateVote x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-vote x₂ m∈ms) N×p≡t Fetched-N
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CreateBlock x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Delivered-N
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(CreateBlock x₂) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      knowledge-propagation₂ p∈ps (↝∘↝⋆ N₀↝⋆M M↝M′) M′↝⋆N (⊆-block x₂ m∈ms) N×p≡t Fetched-N
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlot Delivered-M _) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlot Fetched-M _) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Fetched-M)
 -}
 ```
 ```agda
 {-
-    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlotNewRound Delivered-M _ _) ∷′ M′↝⋆N) m∈ms N×p≡t Delivered-N =
-      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Delivered-M)
+    knowledge-propagation₂ p∈ps N₀↝⋆M (M↝M′@(NextSlotNewRound Fetched-M _ _) ∷′ M′↝⋆N) m∈ms N×p≡t Fetched-N =
+      contradiction (Any.map (sym ∘ cong delay) m∈ms) (All¬⇒¬Any Fetched-M)
 -}
 ```
 ```agda
@@ -348,12 +348,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → N₀ ↝⋆ N
         → lookup (blockTrees N) p₁ ≡ just t₁
         → lookup (blockTrees N) p₂ ≡ just t₂
-        → Delivered N
+        → Fetched N
         → allBlocks t₁ ⊆ allBlocks t₂
-    knowledge-propagation₀ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps x₂ x₃ x₄ Delivered-N x₆
-      with knowledge-propagation₁ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps x₂ Delivered-N x₃ x₆
-    ... | (M , M′) , (fst , fst₁ , snd) , refl , here refl = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (here refl) x₄ Delivered-N
-    ... | (M , M′) , (fst , fst₁ , snd) , refl , there s = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (there s) x₄ Delivered-N
+    knowledge-propagation₀ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps p₂∈ps x₂ x₃ x₄ Fetched-N x₆
+      with knowledge-propagation₁ {N} {p₁} {p₂} {t₁} {t₂} p₁∈ps x₂ Fetched-N x₃ x₆
+    ... | (M , M′) , (fst , fst₁ , snd) , refl , here refl = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (here refl) x₄ Fetched-N
+    ... | (M , M′) , (fst , fst₁ , snd) , refl , there s = knowledge-propagation₂ p₂∈ps (↝∘↝⋆ fst fst₁) snd (there s) x₄ Fetched-N
 -}
 ```
 -->
@@ -375,21 +375,21 @@ The lemma describes how knowledge is propagated between honest parties in the sy
         → N₁ ↝⋆ N₂
         → p₁ ‼ blockTrees N₁ ≡ just t₁
         → p₂ ‼ blockTrees N₂ ≡ just t₂
-        → Delivered N₂
+        → Fetched N₂
         → clock N₁ ≡ clock N₂
         → allBlocks t₁ ⊆ allBlocks t₂
 ```
 <!--
 #### base case
 ```agda
---    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps N₀↝⋆N₁ []′ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ _ = knowledge-propagation₀ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂
+--    knowledge-propagation {N₁} _ _ p₁∈ps p₂∈ps N₀↝⋆N₁ []′ N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ _ = knowledge-propagation₀ p₁∈ps p₂∈ps N₀↝⋆N₁ N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂
 ```
-#### Deliver
+#### Fetch
 ```agda
 {-
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver (honest {p} {tₚ} {.(extendTree _ _)} {.(BlockMsg _)} lookup≡just-tₚ m∈ms (BlockReceived {b} {t}))) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Fetch (honest {p} {tₚ} {.(extendTree _ _)} {.(BlockMsg _)} lookup≡just-tₚ m∈ms (BlockReceived {b} {t}))) ∷′ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 -}
 ```
@@ -402,7 +402,7 @@ proof: p₂ either already has the block in the local blocktree or it is in the 
           lookup-p₁≡lookup-p = cong (lookup (insert p (extendTree t b) (blockTrees N₁))) p₁≡p
           t≡t₁ = sym $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (blockTrees N₁)) p₁≡p) lookup≡just-tₚ)
           N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong (flip extendTree b) t≡t₁)
-          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          H₀ = knowledge-propagation {p₁ = p₁} {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
           ⊆-ext = proj₂ $ extendable is-TreeType t₁ b
       in ⊆-trans
            (xs⊆x∷xs (allBlocks t₁) b)
@@ -414,24 +414,24 @@ adds a block/vote/cert to some p's blocktree
 {-
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = blockTrees N₁} N₁×p₁≡t₁))
-      in knowledge-propagation {p₁ = p₁} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      in knowledge-propagation {p₁ = p₁} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
 -}
 ```
 ```agda
 {-
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂}
-      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver (honest {p} {t} {.(addVote _ _)} {.(VoteMsg _)} lookup≡just-tₚ m∈ms (VoteReceived {v}))) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Fetch (honest {p} {t} {.(addVote _ _)} {.(VoteMsg _)} lookup≡just-tₚ m∈ms (VoteReceived {v}))) ∷′ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = blockTrees N₁} N₁×p₁≡t₁))
-      in knowledge-propagation {p₁ = p₁} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      in knowledge-propagation {p₁ = p₁} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
     ... | yes p₁≡p =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = addVote t v} {m = blockTrees N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p (addVote t v) (blockTrees N₁))) p₁≡p
           t≡t₁ = sym $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (blockTrees N₁)) p₁≡p) lookup≡just-tₚ)
           N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong (flip addVote v) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addVote t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          H₀ = knowledge-propagation {t₁ = addVote t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
           ⊆-ext = proj₂ $ extendable-votes is-TreeType t₁ v
       in ⊆-trans ⊆-ext H₀
 -}
@@ -439,40 +439,40 @@ adds a block/vote/cert to some p's blocktree
 Adversarial behaviour: potentially adds a block to p₂'s blocktree in the next slot
 ```agda
 {-
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Deliver {p} {h} (corrupt {p} m∈ms)) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} {honesty₁} {honesty₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(Fetch {p} {h} (corrupt {p} m∈ms)) ∷′ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
-    ... | no p₁≢p = knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+    ... | no p₁≢p = knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
     ... | yes p₁≡p = contradiction p₁≡p (Honest≢Corrupt {p₁} {p} {honesty₁} {h} h₁ refl)
 -}
 ```
-#### CastVote
-CastVote is not relevant for allBlocks
+#### CreateVote
+CreateVote is not relevant for allBlocks
 ```agda
 {-
-    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CastVote (honest {p} {t} {vote = v} refl lookup≡just-tₚ _ _ _ _)) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+    knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CreateVote (honest {p} {t} {vote = v} refl lookup≡just-tₚ _ _ _ _)) ∷′ N′↝⋆N₂)
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = blockTrees N₁} N₁×p₁≡t₁))
-      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
     ... | yes p₁≡p =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = addVote t v} {m = blockTrees N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p (addVote t v) (blockTrees N₁))) p₁≡p
           t≡t₁ = sym $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (blockTrees N₁)) p₁≡p) lookup≡just-tₚ)
           N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong (flip addVote v) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = addVote t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          H₀ = knowledge-propagation {t₁ = addVote t₁ v} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
           ⊆-ext = proj₂ $ extendable-votes is-TreeType t₁ v
       in ⊆-trans ⊆-ext H₀
 -}
 ```
 #### CreateBlock
-When creating a block, there will be messages for all parties to be consumed in order to get to `Delivered` again. Consuming
+When creating a block, there will be messages for all parties to be consumed in order to get to `Fetched` again. Consuming
 those messages adds the blocks into the local trees.
 ```agda
 {-
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CreateBlock (honest {p} {t} {block = b} refl lookup≡just-tₚ _ _)) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 -}
 ```
@@ -480,13 +480,13 @@ those messages adds the blocks into the local trees.
 {-
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = blockTrees N₁} N₁×p₁≡t₁))
-      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
     ... | yes p₁≡p =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = extendTree t b} {m = blockTrees N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p (extendTree t b) (blockTrees N₁))) p₁≡p
           t≡t₁ = sym $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (blockTrees N₁)) p₁≡p) lookup≡just-tₚ)
           N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong (flip extendTree b) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          H₀ = knowledge-propagation {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
           ⊆-ext = proj₂ $ extendable is-TreeType t₁ b
       in x∷xs⊆ys→xs⊆ys $ ⊆-trans ⊆-ext H₀
       where
@@ -499,7 +499,7 @@ those messages adds the blocks into the local trees.
 ```agda
 {-
     knowledge-propagation {N₁} {N₂} {p₁} {p₂} {t₁} {t₂} h₁ h₂ p₁∈ps p₂∈ps N₀↝⋆N₁ (N₁↝N′@(CreateBlock (honest-cooldown {p} {t} {block = b} refl lookup≡just-tₚ _ _ _ _ _)) ∷′ N′↝⋆N₂)
-      N₁×p₁≡t₁ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      N₁×p₁≡t₁ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
       with p₁ ℕ.≟ p
 
 -}
@@ -508,13 +508,13 @@ those messages adds the blocks into the local trees.
 {-
     ... | no p₁≢p =
       let r = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺ p₁≢p (∈ₖᵥ-lookup⁻ {m = blockTrees N₁} N₁×p₁≡t₁))
-      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+      in knowledge-propagation h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ r N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
     ... | yes p₁≡p =
       let lookup-insert≡id = ∈ₖᵥ-lookup⁺ (∈ₖᵥ-insert⁺⁺ {p} {x = extendTree t b} {m = blockTrees N₁})
           lookup-p₁≡lookup-p = cong (lookup (insert p (extendTree t b) (blockTrees N₁))) p₁≡p
           t≡t₁ = sym $ just-injective $ trans (sym N₁×p₁≡t₁) (trans (cong (lookup (blockTrees N₁)) p₁≡p) lookup≡just-tₚ)
           N′×p₁≡t′ = trans (trans lookup-p₁≡lookup-p lookup-insert≡id) (cong just $ cong (flip extendTree b) t≡t₁)
-          H₀ = knowledge-propagation {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Delivered-N₂ clock-N₁≡clock-N₂
+          H₀ = knowledge-propagation {t₁ = extendTree t₁ b} h₁ h₂ p₁∈ps p₂∈ps (↝∘↝⋆ N₀↝⋆N₁ N₁↝N′) N′↝⋆N₂ N′×p₁≡t′ N₂×p₂≡t₂ Fetched-N₂ clock-N₁≡clock-N₂
           ⊆-ext = proj₂ $ extendable is-TreeType t₁ b
       in x∷xs⊆ys→xs⊆ys $ ⊆-trans ⊆-ext H₀
       where

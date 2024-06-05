@@ -399,8 +399,8 @@ Rather that keeping track of progress, we introduce a predicate stating that all
 messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
-    Delivered : State → Set
-    Delivered = All (λ { z → delay z ≢ zero }) ∘ messages
+    Fetched : State → Set
+    Fetched = All (λ { z → delay z ≢ zero }) ∘ messages
       where open State
 ```
 ```agda
@@ -621,31 +621,31 @@ The small-step semantics describe the evolution of the global state.
 ```agda
     data _↝_ : State → State → Set where
 
-      Deliver : ∀ {m}
+      Fetch : ∀ {m}
         → h ⊢ M [ m ]⇀ N
           --------------
         → M ↝ N
 
-      CastVote :
-          Delivered M
+      CreateVote :
+          Fetched M
         → h ⊢ M ⇉ N
           ---------
         → M ↝ N
 
       CreateBlock :
-          Delivered M
+          Fetched M
         → h ⊢ M ↷ N
           ---------
         → M ↝ N
 
       NextSlot :
-          Delivered M
+          Fetched M
         → NextSlotInSameRound M
           ---------------------
         → M ↝ tick M
 
       NextSlotNewRound :
-          Delivered M
+          Fetched M
         → LastSlotInRound M
         → RequiredVotes M
           ---------------
@@ -798,8 +798,8 @@ When the current state is collision free, the pervious state was so too
 ```
 <!--
 ```agda
-    ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
-    ↝-collision-free (CastVote _ x) cf-N = []⇉-collision-free cf-N x
+    ↝-collision-free (Fetch x) cf-N = []⇀-collision-free cf-N x
+    ↝-collision-free (CreateVote _ x) cf-N = []⇉-collision-free cf-N x
     ↝-collision-free (CreateBlock _ x) cf-N =  []↷-collision-free cf-N x
     ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
     ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
