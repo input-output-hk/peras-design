@@ -94,6 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
         direction: 'LR',
       },
     },
+    physics: {
+      enabled: false,
+    },
   });
 
   function createBlock(block) {
