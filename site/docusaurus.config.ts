@@ -72,7 +72,8 @@ const config: Config = {
             title: 'Peras R&D',
             logo: {
                 alt: 'My Site Logo',
-                src: 'img/pilcrow.jpeg',
+                src: 'img/logo.png',
+                srcDark: 'img/logo-for-dark.png'
             },
             items: [
                 {
@@ -98,7 +99,6 @@ const config: Config = {
             ],
         },
         footer: {
-            style: 'dark',
             links: [
                 {
                     title: 'Docs',

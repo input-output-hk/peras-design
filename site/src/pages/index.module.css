@@ -1,9 +1,4 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
-.heroBanner {
+ .heroBanner {
   padding: 4rem 0;
   text-align: center;
   position: relative;
@@ -16,8 +11,17 @@
   }
 }
 
-.buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.heroSubtitle{
+  color: #fff !important;
+  font-size: 1.5rem;
+}
+
+.ctaButton{
+  color: var(--ifm-color-primary-lightest);
+}
+
+.featuresContainer {
+  display: flex; /* Use flexbox for layout */
+  justify-content: space-around; /* Distribute items evenly */
+  gap: 20px; /* Optional spacing between items */
 }
