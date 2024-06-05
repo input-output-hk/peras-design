@@ -35,22 +35,22 @@ const config: Config = {
                     remarkPlugins: [remarkMath],
                     rehypePlugins: [rehypeKatex],
 
-                }// ,
-                // blog: {
-                //     path: "weekly",
-                //     routeBasePath: "/weekly",
-                //     showReadingTime: true,
-                //     blogTitle: 'Peras R&D Updates',
-                //     blogDescription: 'Regular updates from Peras R&D Team',
-                //     postsPerPage: 5,
-                //     blogSidebarTitle: 'Recent Posts',
-                //     blogSidebarCount: 10,
-                //     feedOptions: {
-                //         type: 'all',
-                //         title: 'Peras R&D Feed',
-                //         description: 'Regular updates from Peras R&D Teams',
-                //     },
-                // }
+                },
+                blog: {
+                    path: "weekly",
+                    routeBasePath: "/weekly",
+                    showReadingTime: true,
+                    blogTitle: 'Peras R&D Updates',
+                    blogDescription: 'Regular updates from Peras R&D Team',
+                    postsPerPage: 5,
+                    blogSidebarTitle: 'Recent Updates',
+                    blogSidebarCount: 'ALL',
+                    feedOptions: {
+                        type: 'all',
+                        title: 'Peras R&D Feed',
+                        description: 'Regular updates from Peras R&D Teams',
+                    },
+                }
                 ,
                 theme: {
                     customCss: './src/css/custom.css',
@@ -87,7 +87,7 @@ const config: Config = {
                     position: 'left'
                 },
                 {
-                    to: '/docs/update',
+                    to: '/weekly',
                     label: 'Updates',
                     position: 'left'
                 },
@@ -114,7 +114,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Discord',
-                            href: 'https://discord.gg/9EgySPJk',
+                            href: 'https://discord.gg/JRkqQKb3',
                         },
                         {
                             label: 'GitHub Discussions',
@@ -127,7 +127,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Updates',
-                            to: '/docs/update',
+                            to: '/weekly',
                         },
                         {
                             label: 'GitHub',
