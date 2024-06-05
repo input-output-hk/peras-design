@@ -164,6 +164,7 @@ delayed.
     → e₁ ≢ e₂
   ⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
 ```
+-->
 #### Block-tree
 
 A block-tree is defined by properties - an implementation of the block-tree
