@@ -684,6 +684,10 @@ Transitions of voting rounds
         → M ↦ N
 ```
 ```agda
+    infix  2 _↦⋆_
+    infixr 2 _∷″_
+    infix  3 []″
+
     data _↦⋆_ : State → State → Set where
       []″ : M ↦⋆ M
       _∷″_ : M ↦ N → N ↦⋆ O → M ↦⋆ O

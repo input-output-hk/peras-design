@@ -238,7 +238,7 @@ Building up the voting string from all the party's block-trees
         prevRound : ∀ (N : GlobalState)
           → ∃[ M ] (M ↦ N)
 
-        knowledge-prop : ∀ {M N : GlobalState} {m}
+        knowledge-prop : ∀ {m} {M N : GlobalState}
           → M ↦⋆ N
           → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
 
@@ -262,28 +262,26 @@ Building up the voting string from all the party's block-trees
         → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
               σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
           in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
-      theorem-2 {M} {N} {zero} x x₁ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
-      theorem-2 {M} {N} {suc m} M↦N x₁
+      theorem-2 {M} {N} {zero} _ _ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM
         with
-          (
-          let (M' , M'↦M) = prevRound M
-          in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M x₁)
-          )
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′)
+          (let (M' , M'↦M) = prevRound M
+           in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
         rewrite σ′
-        rewrite knowledge-prop {proj₁ (prevRound M)} {N} {m} ((proj₂ (prevRound M)) ∷″ (M↦N ∷″ []″))
-        rewrite lastIsHead {N} {m} st″
+        rewrite knowledge-prop {m} (proj₂ (prevRound M) ∷″ M↦N ∷″ []″)
+        rewrite lastIsHead {N} st″
         with c
 
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ⒈
+      theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
         with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
         with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       ... | yes _ | _ = ⒈ , (HS-II-1 , refl)
       ... | no q | yes p = ？ , (HS-II-? , refl)
       ... | no _ | no _ = …… -- TODO: contradiction
 
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | 🄀 = …… -- TODO
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
+      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
 ```
 <!--
 ```agda
