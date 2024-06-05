@@ -77,10 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const parentId = mkBlockHashId(block.parentBlock);
       const label = `<b>${block.signature.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
       const color = block.certificate ? "dodgerblue" : "skyblue";
-      network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level : nextLevel() , shape: 'box', color, label });
+      network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level: nextLevel(), shape: 'box', color, label });
       network.body.data.edges.add({ from: blockId, to: parentId });
       if (block.certificate != null) {
-        network.body.data.edges.add({ from: blockId, to: mkCertId(1, block.certificate.round) , color });
+        network.body.data.edges.add({ from: blockId, to: mkCertId(1, block.certificate.round), color });
       }
     }
   }
@@ -88,19 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function setStatus(message) {
     document.getElementById('uiMessage').innerText = message;
   }
-   
+
   let currentLevel = 0;
   let currentSlot = 0;
   let currentRound = 0;
   let lastSlot = 0;
-  let lastRound = 0;
-  let preaggreementBlock = null;
+  let preagreementBlock = null;
 
   function nextLevel() {
     if (currentSlot != lastSlot) {
       currentLevel += 1;
       lastSlot = currentSlot;
-      lastRound = currentRound;
     }
     return currentLevel;
   }
@@ -170,25 +168,25 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (msg.tag) {
       case "Protocol":
         {
-          network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId , level: nextLevel() , shape: 'box', color: "dodgerblue", label : "<b>Genesis</b>" });
-          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel() , shape: 'box', color: 'turquoise', label: "Genesis\ncertificate" });
+          network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId, level: nextLevel(), shape: 'box', color: "dodgerblue", label: "<b>Genesis</b>" });
+          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel(), shape: 'box', color: 'turquoise', label: "Genesis\ncertificate" });
           network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, color: "dodgerblue" });
-          const nParties = parseInt(document.getElementById('uiParties').value)
+          const nParties = parseInt(document.getElementById('uiParties').value);
           for (let party = 1; party <= nParties; party++) {
             const id = mkPartyId(party);
             const certPrimeId = mkCertPrimeId(party);
             const certStarId = mkCertStarId(party);
             const label = `Node: <i>${party}</i>`;
-            network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id, level: currentLevel , shape: 'circle', color: 'tomato', label })
+            network.body.data.nodes.update({ font: { multi: 'html', color: 'white', size: 12 }, id, level: currentLevel, shape: 'circle', color: 'tomato', label });
             network.body.data.edges.update({ id, from: id, to: genesisBlockId, color: 'tomato', dashes: true });
-            network.body.data.edges.update({ font: {color: 'tomato'}, id: certPrimeId, from: id, to: genesisCertId, color: 'hotpink' , dashes: true, label: "cert′"});
-            network.body.data.edges.update({ font: {color: 'tomato'}, id: certStarId, from: id, to: genesisCertId, color: 'deeppink' , dashes: true, label: "cert*"});
+            network.body.data.edges.update({ font: { color: 'tomato' }, id: certPrimeId, from: id, to: genesisCertId, color: 'hotpink', dashes: true, label: "cert′" });
+            network.body.data.edges.update({ font: { color: 'tomato' }, id: certStarId, from: id, to: genesisCertId, color: 'deeppink', dashes: true, label: "cert*" });
           }
         }
         break;
       case "Tick":
-	currentSlot = msg.slot;
-	currentRound = msg.roundNumber;
+        currentSlot = msg.slot;
+        currentRound = msg.roundNumber;
         slot.textContent = '' + msg.slot;
         roundNumber.textContent = '' + msg.roundNumber;
         break;
@@ -199,19 +197,19 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           const id = mkPartyId(msg.partyId);
           const label = `Node: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id, level: currentLevel , shape: 'circle', color: 'tomato', label });
-          network.body.data.edges.update({ font: { color: "tomato"}, id, from: id, to: mkBlockId(msg.newChainPref[0]), color: 'tomato', dashes: true, label: "tip" });
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white', size: 12 }, id, level: currentLevel, shape: 'circle', color: 'tomato', label });
+          network.body.data.edges.update({ font: { color: "tomato" }, id, from: id, to: mkBlockId(msg.newChainPref[0]), color: 'tomato', dashes: true, label: "tip" });
         }
         break;
       case "NewCertificatesReceived":
         // No drawing required.
         break;
       case "NewCertificatesFromQuorum":
-        msg.newQuorums.forEach(function (cert) {
+        msg.newQuorums.forEach(function(cert) {
           const id = mkCertId(msg.partyId, cert.round);
           const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'turquoise', label });
-          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise' , dashes: true });
+          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel(), shape: 'box', color: 'turquoise', label });
+          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise', dashes: true });
         });
         break;
       case "NewCertPrime":
@@ -220,8 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const certId = mkCertId(msg.partyId, msg.newCertPrime.round);
           const partyId = mkPartyId(msg.partyId);
           const label = "cert′";
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: partyId, level: currentLevel , shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
-          network.body.data.edges.update({ font: {color: 'tomato'}, id: certPrimeId, from: partyId, to: certId, color: 'hotpink' , dashes: true, label });
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white', size: 12 }, id: partyId, level: currentLevel, shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
+          network.body.data.edges.update({ font: { color: 'tomato' }, id: certPrimeId, from: partyId, to: certId, color: 'hotpink', dashes: true, label });
           refresh();
         }
         break;
@@ -231,8 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const certId = mkCertId(msg.partyId, msg.newCertStar.round);
           const partyId = mkPartyId(msg.partyId);
           const label = "cert*";
-          network.body.data.nodes.update({ font: { multi: 'html', color: 'white' , size: 12}, id: partyId, level: currentLevel , shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
-          network.body.data.edges.update({ font: {color: 'tomato'}, id: certStarId, from: partyId, to: certId, color: 'deeppink' , dashes: true, label });
+          network.body.data.nodes.update({ font: { multi: 'html', color: 'white', size: 12 }, id: partyId, level: currentLevel, shape: 'circle', color: 'tomato', label: `Node: <i>${msg.partyId}</i>` });
+          network.body.data.edges.update({ font: { color: 'tomato' }, id: certStarId, from: partyId, to: certId, color: 'deeppink', dashes: true, label });
           refresh();
         }
         break;
@@ -240,8 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           const blockId = mkBlockHashId(msg.vote.blockHash);
           const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
-          network.body.data.nodes.add({ font: { multi: 'html' , size: 12}, id: mkVoteId(msg.vote), level: nextLevel() , shape: 'circle', color: "sandybrown", label });
-          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId , dashes: true , color: "skyblue" });
+          network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: mkVoteId(msg.vote), level: nextLevel(), shape: 'circle', color: "sandybrown", label });
+          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "skyblue" });
           refresh();
         }
         break;
@@ -255,7 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
       case "ForgingLogic":
         {
           const id = mkPartyId(msg.partyId);
-          const label = `${msg.partyId}`;
           createBlock(msg.block);
           network.body.data.edges.update({ id, from: id, to: mkBlockId(msg.block), color: 'tomato', dashes: true });
           refresh();
@@ -264,9 +261,10 @@ document.addEventListener('DOMContentLoaded', () => {
       case "VotingLogic":
         if (!(msg.vr1a && msg.vr1b || msg.vr2a && msg.vr2b)) {
           const blockId = mkBlockId(preagreementBlock);
+          const cooldownId = mkCooldownId(msg.partyId, currentRound);
           const label = `Cooldown\nround: <i>${currentRound}</i>\nparty: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.add({ font: { multi: 'html' , color: 'white', size: 12}, id: mkCooldownId(msg.partyId,currentRound), level: nextLevel() , shape: 'ellipse', color: "darkkhaki", label });
-          network.body.data.edges.add({ from: mkCooldownId(msg.partyId,currentRound), to: blockId , dashes: true , hidden: true });
+          network.body.data.nodes.add({ font: { multi: 'html', color: 'white', size: 12 }, id: cooldownId, level: nextLevel(), shape: 'ellipse', color: "darkkhaki", label });
+          network.body.data.edges.add({ from: cooldownId, to: blockId, dashes: true, color: "darkkhaki" });
           refresh();
         }
         break;
@@ -315,7 +313,7 @@ async function postJSON(url, data) {
     const result = await response.json();
     console.log("Success:", result);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error: %o", error);
   }
 }
 
@@ -327,6 +325,6 @@ async function req(url, method) {
     const result = await response.json();
     console.log("Success:", result);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error: %o", error);
   }
 }
