@@ -107,6 +107,11 @@ record Postulates : Set₁ where
     IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set
     IsBlockSignature : Block → Signature → Set
     IsVoteSignature : Vote → Signature → Set
+
+record Network : Set₁ where
+  field
+    block₀ : Block
+    Δ : ℕ
 ```
 ```agda
 module _ ⦃ _ : Postulates ⦄
@@ -237,14 +242,15 @@ open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
 ```agda
-module _ {block₀ : Block}
-         ⦃ _ : Hashable Block ⦄
+module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Postulates ⦄
+         ⦃ _ : Network ⦄
 
          where
 
   open Hashable ⦃...⦄
   open Postulates ⦃...⦄
+  open Network ⦃...⦄
 ```
 ```agda
   data ValidChain : Chain → Set where

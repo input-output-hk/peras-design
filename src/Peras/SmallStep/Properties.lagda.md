@@ -44,7 +44,6 @@ open import Peras.SmallStep
 
 open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
-open import Data.List.Relation.Binary.Subset.Propositional {A = Envelope} renaming (_⊆_ to _⊆ᵐ_)
 
 open import Data.List.Relation.Binary.Equality.Propositional using (_≋_; ≡⇒≋; ≋⇒≡)
 
@@ -70,13 +69,17 @@ module _ {block₀ : Block} {cert₀ : Certificate}
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Network ⦄
          ⦃ _ : Postulates ⦄
 
          where
 
   open Hashable ⦃...⦄
   open Params ⦃...⦄
+  open Network ⦃...⦄
   open Postulates ⦃...⦄
+
+  open import Data.List.Relation.Binary.Subset.Propositional {A = Envelope} renaming (_⊆_ to _⊆ᵐ_)
 
   module _ {T : Set} (blockTree : TreeType T)
            {S : Set} (adversarialState₀ : S)
@@ -89,7 +92,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     open TreeType blockTree
 
-    GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+    GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
     states₀ : AssocList PartyId T
     states₀ = map (λ where (p , _) → (p , tree₀)) parties
@@ -120,9 +123,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       → clock' M ≤ clock' N
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (honest _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Deliver (corrupt _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote (honest _ _ _ _ _ _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest _ _ _ _)) = ≤-refl
-    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CastVote _ (honest _ _ _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest _ _ _ _)) = ≤-refl
+    clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest-cooldown _ _ _ _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
     clock-incr {M} (NextSlotNewRound _ _ _) = n≤1+n (clock' M)
 

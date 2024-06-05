@@ -57,19 +57,20 @@ VotingString = Vec Σ
 ```
 #### Semantics
 ```agda
-module _ {block₀ : Block} {cert₀ : Certificate}
-         ⦃ _ : Hashable Block ⦄
+module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Network ⦄
          ⦃ _ : Postulates ⦄
 
          where
 
   open Params ⦃...⦄
+  open Network ⦃...⦄
   open Postulates ⦃...⦄
   open Hashable ⦃...⦄
 
-  module _ {T : Set} (blockTree : TreeType {block₀} {cert₀} T)
+  module _ {T : Set} (blockTree : TreeType T)
            where
 
     open TreeType blockTree
@@ -209,7 +210,7 @@ Reflexive, transitive closure
       open State
       open IsTreeType
 
-      GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
       states₀ : AssocList PartyId T
       states₀ = map (λ where (p , _) → (p , tree₀)) parties

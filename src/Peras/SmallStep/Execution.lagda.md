@@ -29,17 +29,15 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 ```
 -->
 ```agda
-module _ {block₀}
-         ⦃ _ : Postulates ⦄
+module _ ⦃ _ : Postulates ⦄
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
+         ⦃ _ : Network ⦄
          where
 
   open Postulates ⦃...⦄
+  open Network ⦃...⦄
   open Hashable ⦃...⦄
-
-  cert₀ : Certificate
-  cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
 
   instance
     params : Params
@@ -77,7 +75,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (party₁ , Honest) ∷ (party₂ , Honest) ∷ []
 
-      GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
       createBlock : PartyId → SlotNumber → Block → Block
@@ -138,7 +136,7 @@ Final state after the execution of all the steps
 ```
 Properties of cert₀
 ```agda
-      cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} c → cert₀ PointsInto c
+      cert₀PointsIntoValidChain : ∀ {c} → ValidChain c → cert₀ PointsInto c
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _ ∷ _)} (Cons _ _ _ v) = there (cert₀PointsIntoValidChain v)
 ```

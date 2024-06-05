@@ -87,53 +87,6 @@ Message-injective′ : ∀ {b₁ b₂}
 Message-injective′ = contraposition Message-injective
 ```
 -->
-Messages can be delayed by an adversary. Delay is either
-  * *0* for not delayed
-  * *1* when delayed to the next slot.
-
-**TODO**: Rethink network delay model
-```agda
-Delay = Fin 2
-```
-Messages are put into an envelope and assigned to a party. The message can be
-delayed.
-```agda
-record Envelope : Set where
-  constructor ⦅_,_,_,_⦆
-  field
-    partyId : PartyId
-    honesty : Honesty partyId
-    message : Message
-    delay : Delay
-
-open Envelope
-```
-<!--
-```agda
-⦅⦆-injective : ∀ {e₁ e₂}
-  → e₁ ≡ e₂
-  → partyId e₁ ≡ partyId e₂
-⦅⦆-injective refl = refl
-```
-```agda
-⦅⦆-injective₃ : ∀ {e₁ e₂}
-  → e₁ ≡ e₂
-  → message e₁ ≡ message e₂
-⦅⦆-injective₃ refl = refl
-```
-```agda
-⦅⦆-injective′ : ∀ {e₁ e₂}
-  → partyId e₁ ≢ partyId e₂
-  → e₁ ≢ e₂
-⦅⦆-injective′ = contraposition ⦅⦆-injective
-```
-```agda
-⦅⦆-injective₃′ : ∀ {e₁ e₂}
-  → message e₁ ≢ message e₂
-  → e₁ ≢ e₂
-⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
-```
--->
 <!--
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
@@ -153,10 +106,10 @@ The parameters for the Peras protocol and hash functions are defined as instance
 arguments of the module.
 
 ```agda
-module _ {block₀ : Block} {cert₀ : Certificate}
-         ⦃ _ : Hashable Block ⦄
+module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
+         ⦃ _ : Network ⦄
          ⦃ _ : Postulates ⦄
 
          where
@@ -166,7 +119,50 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
   open Hashable ⦃...⦄
   open Params ⦃...⦄
+  open Network ⦃...⦄
   open Postulates ⦃...⦄
+```
+Messages can be delayed by a number of slots
+```agda
+  Delay = Fin (suc (suc Δ))
+```
+Messages are put into an envelope and assigned to a party. The message can be
+delayed.
+```agda
+  record Envelope : Set where
+    constructor ⦅_,_,_,_⦆
+    field
+      partyId : PartyId
+      honesty : Honesty partyId
+      message : Message
+      delay : Delay
+
+  open Envelope
+```
+<!--
+```agda
+  ⦅⦆-injective : ∀ {e₁ e₂}
+    → e₁ ≡ e₂
+    → partyId e₁ ≡ partyId e₂
+  ⦅⦆-injective refl = refl
+```
+```agda
+  ⦅⦆-injective₃ : ∀ {e₁ e₂}
+    → e₁ ≡ e₂
+    → message e₁ ≡ message e₂
+  ⦅⦆-injective₃ refl = refl
+```
+```agda
+  ⦅⦆-injective′ : ∀ {e₁ e₂}
+    → partyId e₁ ≢ partyId e₂
+    → e₁ ≢ e₂
+  ⦅⦆-injective′ = contraposition ⦅⦆-injective
+```
+```agda
+  ⦅⦆-injective₃′ : ∀ {e₁ e₂}
+    → message e₁ ≢ message e₂
+    → e₁ ≢ e₂
+  ⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
 ```
 #### Block-tree
 
@@ -182,6 +178,7 @@ has to fulfil all the properties mentioned below:
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
                     (certs : T → List Certificate)
+                    (cert₀ : Certificate)
          : Set₁ where
 
     allBlocksUpTo : SlotNumber → T → List Block
@@ -219,13 +216,13 @@ as proposed in the paper.
         → allBlocks (addVote t v) ≐ allBlocks t
 
       valid : ∀ (t : T) (sl : SlotNumber)
-        → ValidChain {block₀} (bestChain sl t)
+        → ValidChain (bestChain sl t)
 
       optimal : ∀ (c : Chain) (t : T) (sl : SlotNumber)
         → let b = bestChain sl t
               cts = certs t
           in
-          ValidChain {block₀} c
+          ValidChain c
         → c ⊆ allBlocksUpTo sl t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
@@ -272,9 +269,13 @@ The block tree type is defined as follows:
       votes : T → List Vote
       certs : T → List Certificate
 
+    cert₀ : Certificate
+    cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
+
+    field
       is-TreeType : IsTreeType
                       tree₀ extendTree allBlocks bestChain
-                      addVote votes certs
+                      addVote votes certs cert₀
 
     tipBest : SlotNumber → T → Block
     tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
@@ -612,6 +613,10 @@ The small-step semantics describe the evolution of the global state.
       p : PartyId
       h : Honesty p
 ```
+* Fetching messages at the beginning of each slot
+* Block creation
+* Voting
+* Transition to next slot
 ```agda
     data _↝_ : State → State → Set where
 
@@ -621,12 +626,14 @@ The small-step semantics describe the evolution of the global state.
         → M ↝ N
 
       CastVote :
-          h ⊢ M ⇉ N
+          Delivered M
+        → h ⊢ M ⇉ N
           ---------
         → M ↝ N
 
       CreateBlock :
-          h ⊢ M ↷ N
+          Delivered M
+        → h ⊢ M ↷ N
           ---------
         → M ↝ N
 
@@ -791,8 +798,8 @@ When the current state is collision free, the pervious state was so too
 <!--
 ```agda
     ↝-collision-free (Deliver x) cf-N = []⇀-collision-free cf-N x
-    ↝-collision-free (CastVote x) cf-N = []⇉-collision-free cf-N x
-    ↝-collision-free (CreateBlock x) cf-N =  []↷-collision-free cf-N x
+    ↝-collision-free (CastVote _ x) cf-N = []⇉-collision-free cf-N x
+    ↝-collision-free (CreateBlock _ x) cf-N =  []↷-collision-free cf-N x
     ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
     ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
 ```
