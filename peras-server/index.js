@@ -299,15 +299,58 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('disconnected');
   };
 
+  // Randomize button
+  const randomizeButton = document.getElementById("randomizeButton");
+
+  randomizeButton.addEventListener("click", () => {
+
+      const parameterValues = {
+          uiDuration: { input: document.getElementById("uiDuration"), },
+          uiParties: { input: document.getElementById("uiParties") },
+          uiU: { input: document.getElementById("uiU") },
+          uiA: { input: document.getElementById("uiA")},
+          uiR: { input: document.getElementById("uiR") },
+          uiK: { input: document.getElementById("uiK")},
+          uiL: { input: document.getElementById("uiL")},
+          uiB: { input: document.getElementById("uiB")},
+          uiTau: { input: document.getElementById("uiTau")},
+          uiCommittee: { input: document.getElementById("uiCommittee")},
+          uiDelta: { input: document.getElementById("uiDelta") },
+          uiAlpha: { input: document.getElementById("uiAlpha") },
+      };
+      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const getRandomFloat = (min, max, step) => {
+        const numSteps = Math.floor((max - min) / step) + 1;
+        const randomStep = Math.floor(Math.random() * numSteps);
+        return min + randomStep * step;
+      };
+  
+      for (const param in parameterValues) {
+          const { input } = parameterValues[param];
+  
+          if (input.type === 'number') {
+              const min = parseFloat(input.min) || 0;  
+              const max = parseFloat(input.max) || 100;
+              const step = parseFloat(input.step) || 1; 
+  
+              if (step === 1) {
+                input.value = getRandomInt(min, max); 
+              } else {
+                // only Delta
+                input.value = getRandomFloat(min, max, step).toFixed(2); 
+              }
+          }
+      }
+  });
+
   // Share link generation
   const shareButton = document.getElementById("shareButton");
   const shareLinkContainer = document.getElementById("shareLink");
 
   shareButton.addEventListener("click", () => {
-      const baseUrl = "oursite.com/simulator"; // Replace with your actual site URL
+      const baseUrl = "oursite.com/simulator"; //TODO replace with real link
       const params = [];
 
-      // Add parameters to the array
       params.push(`duration=${document.getElementById("uiDuration").value}`);
       params.push(`parties=${document.getElementById("uiParties").value}`);
       params.push(`u=${document.getElementById("uiU").value}`);
@@ -323,12 +366,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const shareUrl = `${baseUrl}?${params.join("&")}`;
 
-      // Create and display the share link
       shareLinkContainer.innerHTML = `<a href="${shareUrl}">${shareUrl}</a>`;
   });
 
   // Toggle parameters field
-
   const toggleChevron = document.getElementById("toggleParams");
   const parameterFields = document.getElementById("parameterFields");
   parameterFields.style.display = "grid";
