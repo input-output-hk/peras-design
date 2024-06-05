@@ -1,5 +1,4 @@
 ```agda
-{-# OPTIONS --allow-unsolved-metas #-}
 module Peras.SmallStep.Analysis where
 ```
 <!--
@@ -237,9 +236,7 @@ Building up the voting string from all the party's block-trees
 ```agda
       postulate
         prevRound : ∀ (N : GlobalState)
-          → ∃[ M ] (
-            (M ↦ N)
-            )
+          → ∃[ M ] (M ↦ N)
 
         knowledge-prop : ∀ {M N : GlobalState} {m}
           → M ↦⋆ N
@@ -248,6 +245,13 @@ Building up the voting string from all the party's block-trees
         lastIsHead : ∀ {N : GlobalState} {m} {x}
           → build-σ′ (MkRoundNumber m) (blockTrees' N) ⟶ x
           → V.head (build-σ′ (MkRoundNumber (suc m)) (blockTrees' N)) ≡ x
+
+        prev-rnd : ∀ {M N : GlobalState} {m}
+          → M ↦ N
+          → suc m ≡ v-rnd' N
+          → m ≡ v-rnd' M
+
+        …… : {A : Set} → A
 
       -- preconditions
       -- * transition to new voting round
@@ -258,12 +262,12 @@ Building up the voting string from all the party's block-trees
         → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
               σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
           in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
-      theorem-2 {M} {N} {zero} x x₁ = ⒈ , (HS-I , {!!}) -- TODO: rewrite with genesis cert
+      theorem-2 {M} {N} {zero} x x₁ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
       theorem-2 {M} {N} {suc m} M↦N x₁
         with
           (
           let (M' , M'↦M) = prevRound M
-          in theorem-2 {M'} {M} {m} M'↦M {!!}
+          in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M x₁)
           )
       theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′)
         rewrite σ′
@@ -276,10 +280,10 @@ Building up the voting string from all the party's block-trees
         with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       ... | yes _ | _ = ⒈ , (HS-II-1 , refl)
       ... | no q | yes p = ？ , (HS-II-? , refl)
-      ... | no _ | no _ = {!!} -- TODO: contradiction
+      ... | no _ | no _ = …… -- TODO: contradiction
 
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = 🄀 , HS-III , {!!}
-      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | 🄀 = {!!}
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
+      theorem-2 {M} {N} {suc m} M↦N x₁ | (c , st″ , σ′) | 🄀 = …… -- TODO
 ```
 <!--
 ```agda
