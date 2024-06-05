@@ -1,3 +1,9 @@
+## 2024-06-05
+
+### Simulation visualization
+
+A rudimentary user interface for controlling, visualizing, and debugging simulations. Several ambiguities and/or bugs have been found already through its use.
+
 ## 2024-06-02
 
 ### Restartable Peras simulations

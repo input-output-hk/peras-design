@@ -16,7 +16,7 @@ import qualified Data.Map as Map (lookup)
 import qualified Data.Set as Set (insert, singleton)
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement)
+import Peras.Abstract.Protocol.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
@@ -71,11 +71,14 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
               ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU) vote
               lift $ traceWith tracer $ CastVote (pid party) vote
 
--- Check whether a block extends the block certified in a certificate.
+-- | Check whether a block extends the block certified in a certificate.
+-- Note that the `extends` relationship is transitive ''and'' reflexive.
 extends :: Block -> Certificate -> [Chain] -> Bool
-extends block cert = any chainExtends
+extends block cert chain
+  | cert == genesisCert = True -- All blocks extend genesis.
+  | otherwise = any chainExtends chain
  where
   chainExtends :: Chain -> Bool
   chainExtends =
-    any ((== blockRef cert) . parentBlock) -- Is the certified block on the chain?
+    any ((== blockRef cert) . hash) -- Is the certified block on the chain?
       . dropWhile ((/= hash block) . hash) -- Truncate the chain to the block in question.

@@ -14,7 +14,7 @@ import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..))
 import Peras.Crypto (hash)
-import Test.Hspec (Spec, it, shouldReturn)
+import Test.Hspec (Spec, describe, it, shouldReturn)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
 
@@ -33,6 +33,7 @@ spec = do
         initialPerasState
           { chainPref = someChain
           , certPrime = someCertificate
+          , chains = Set.singleton someChain
           }
 
   {- FIXME: Needs a better generator.
@@ -84,28 +85,45 @@ spec = do
         roundNumber
         preagreement
         (diffuseVote diffuser)
-    --      `shouldReturn` Left NoVoting
 
     allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
-  it "VR1-B - does not vote if block does not extend immediately last seen certificate" $ do
-    let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
-        preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
-    perasState <- newTVarIO steadyState
-    diffuser <- newTVarIO $ defaultDiffuser 0
+  describe "VR1-B" $ do
+    it "does not vote if block does not extend last seen certificate" $ do
+      let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
+          preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
+      perasState <- newTVarIO steadyState
+      diffuser <- newTVarIO $ defaultDiffuser 0
 
-    void $
-      voting
-        nullTracer
-        params
-        committeeMember
-        perasState
-        roundNumber
-        preagreementSelectsFork
-        (diffuseVote diffuser)
-    --     `shouldReturn` Left NoVoting
+      void $
+        voting
+          nullTracer
+          params
+          committeeMember
+          perasState
+          roundNumber
+          preagreementSelectsFork
+          (diffuseVote diffuser)
 
-    allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
+      allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
+
+    it "does vote if block is same as the one from last seen certificate" $ do
+      let certifiedBlock = head someChain
+          preagreementSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
+      perasState <- newTVarIO steadyState
+      diffuser <- newTVarIO $ defaultDiffuser 0
+
+      void $
+        voting
+          nullTracer
+          params
+          committeeMember
+          perasState
+          roundNumber
+          preagreementSelectsCertifiedBlock
+          (diffuseVote diffuser)
+
+      Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
   it "VR2-A - votes on preagreement's block given last seen certificate is older than cooldown period" $ do
     let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}, certStar = someCertificate{round = 430 - 2 * 100}}

@@ -9,11 +9,15 @@ import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Network (PartyConfig (..), SimConfig (..))
 import Peras.Abstract.Protocol.Types (PerasParams (..), systemStart)
 import Peras.Numbering (SlotNumber)
-import Test.QuickCheck.Gen (Gen, genDouble, generate)
+import Test.QuickCheck.Gen (Gen (MkGen), genDouble)
+import Test.QuickCheck.Random (mkQCGen)
 
-genSimConfigIO :: PerasParams -> Double -> Integer -> Integer -> SlotNumber -> IO SimConfig
-genSimConfigIO params activeSlotCoefficient nParties nCommittee finish =
-  generate $ genSimConfig params activeSlotCoefficient nParties nCommittee finish
+genSimConfigIO :: PerasParams -> Double -> Integer -> Integer -> SlotNumber -> Int -> IO SimConfig
+genSimConfigIO params activeSlotCoefficient nParties nCommittee finish rngSeed =
+  generateWith rngSeed $ genSimConfig params activeSlotCoefficient nParties nCommittee finish
+
+generateWith :: Int -> Gen a -> IO a
+generateWith seed (MkGen g) = pure $ mkQCGen seed `g` 30
 
 genSimConfig :: PerasParams -> Double -> Integer -> Integer -> SlotNumber -> Gen SimConfig
 genSimConfig params@MkPerasParams{perasU} activeSlotCoefficient nParties nCommittee finish =

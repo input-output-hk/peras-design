@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setInputValue(inputId, paramName, defaultValue); 
   }
 
+  document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
+
+  // This is needed to stop any prior simulations when refreshing the browser.
+  req("/stop", "DELETE");
+
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
   const roundNumber = document.getElementById('roundNumber');
@@ -47,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
       , committee: parseInt(document.getElementById('uiCommittee').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
+      , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
+      , rngSeed: parseInt(document.getElementById('uiSeed').value)
     })
   });
 
@@ -92,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
       hierarchical: {
         direction: 'LR',
       },
+    },
+    physics: {
+      enabled: false,
     },
   });
 
@@ -231,9 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
       case "NewCertificatesFromQuorum":
         msg.newQuorums.forEach(function(cert) {
           const id = mkCertId(msg.partyId, cert.round);
-          const label = `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
-          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel(), shape: 'box', color: 'turquoise', label });
-          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise', dashes: true });
+          const label = collapseCerts ? `Certificate\nround: <i>${cert.round}</i>` : `Certificate\nround: <i>${cert.round}</i>\nnode: <i>${msg.partyId}</i>`;
+          network.body.data.nodes.update({ font: { multi: 'html', size: 12 }, id, level: nextLevel() , shape: 'box', color: 'turquoise', label });
+          network.body.data.edges.update({ id, from: id, to: mkBlockHashId(cert.blockRef), color: 'turquoise' , dashes: true });
         });
         break;
       case "NewCertPrime":
@@ -263,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const blockId = mkBlockHashId(msg.vote.blockHash);
           const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
           network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: mkVoteId(msg.vote), level: nextLevel(), shape: 'circle', color: "sandybrown", label });
-          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "skyblue" });
+          network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "sandybrown" });
           refresh();
         }
         break;
@@ -363,6 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
           }
       }
+
+      document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
   });
 
   // Share link generation

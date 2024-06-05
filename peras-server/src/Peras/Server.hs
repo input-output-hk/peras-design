@@ -13,7 +13,7 @@ import Control.Concurrent.Class.MonadSTM (
   writeTChan,
  )
 import Control.Concurrent.Class.MonadSTM.TChan (TChan, dupTChan, readTChan)
-import Control.Concurrent.Class.MonadSTM.TQueue
+import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Concurrent.Class.MonadSTM.TVar (TVar, modifyTVar')
 import Control.Monad (forever)
 import Control.Monad.Class.MonadAsync (race_)
@@ -30,7 +30,7 @@ import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.WebSockets as WS
-import Peras.Abstract.Protocol.Network (SimConfig (..), SimControl (pause, stop), simulate)
+import Peras.Abstract.Protocol.Network (SimConfig (..), SimControl (delay, pause, stop), simulate)
 import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
 import Peras.Abstract.Protocol.Types (PerasParams (..))
 import qualified Web.Scotty as Sc
@@ -72,7 +72,7 @@ scottyApp queue control =
         >>= \case
           Nothing -> Sc.status status400
           Just req -> liftIO $ do
-            atomically . modifyTVar' control $ \c -> c{stop = False, pause = False}
+            atomically . modifyTVar' control $ \c -> c{delay = delayMicroseconds req, stop = False, pause = False}
             simConfig <- simRequestToConfig req
             void $ simulate (mkTracer queue) control simConfig
 
@@ -111,6 +111,8 @@ data SimulationRequest = SimulationRequest
   , committee :: Integer
   , delta :: Integer
   , activeSlots :: Double
+  , delayMicroseconds :: Int
+  , rngSeed :: Int
   }
   deriving (Eq, Generic, Show)
 
@@ -125,3 +127,4 @@ simRequestToConfig SimulationRequest{..} =
     parties
     committee
     (fromIntegral duration)
+    rngSeed
