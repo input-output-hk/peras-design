@@ -13,7 +13,7 @@ import Control.Concurrent.Class.MonadSTM (
   writeTChan,
  )
 import Control.Concurrent.Class.MonadSTM.TChan (TChan, dupTChan, readTChan)
-import Control.Concurrent.Class.MonadSTM.TQueue
+import Control.Concurrent.Class.MonadSTM.TQueue (TQueue, readTQueue, writeTQueue)
 import Control.Concurrent.Class.MonadSTM.TVar (TVar, modifyTVar')
 import Control.Monad (forever)
 import Control.Monad.Class.MonadAsync (race_)
@@ -112,6 +112,7 @@ data SimulationRequest = SimulationRequest
   , delta :: Integer
   , activeSlots :: Double
   , delayMicroseconds :: Int
+  , rngSeed :: Int
   }
   deriving (Eq, Generic, Show)
 
@@ -126,3 +127,4 @@ simRequestToConfig SimulationRequest{..} =
     parties
     committee
     (fromIntegral duration)
+    rngSeed

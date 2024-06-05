@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     n: "uiCommittee", 
     delta: "uiDelta",
     alpha: "uiAlpha",
+    rngSeed: "uiSeed",
+    delayMicroseconds: "uiDelay",
+    
   };
 
   for (const paramName in paramToInputMap) {
@@ -25,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultValue = document.getElementById(inputId).value; 
     setInputValue(inputId, paramName, defaultValue); 
   }
+
+  document.getElementById('uiSeed').value = Math.round(Math.random() * 1000000000)
+
+  // This is needed to stop any prior simulations when refreshing the browser.
+  req("/stop", "DELETE");
 
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
@@ -48,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
       , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
+      , rngSeed: parseInt(document.getElementById('uiSeed').value)
     })
   });
 
