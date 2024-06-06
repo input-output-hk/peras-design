@@ -510,7 +510,9 @@ is added to be consumed immediately.
                     { votingRound = r
                     ; creatorId = p
                     ; proofM = prf
-                    ; blockHash = hash $ tip Cpref -- FIXME: Preagreement, (clock earlierBy L) t
+                    ; blockHash =
+                        let b = tip Cpref
+                        in hash b -- FIXME: Preagreement, (clock earlierBy L) t
                     ; signature = sig
                     }
           in
@@ -563,12 +565,11 @@ Figure 2)
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
+              (h , _) , pr = uncons Cpref
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock =
-                        let b = tip Cpref
-                        in hash b
+                    ; parentBlock = hash h
                     ; certificate =
                         let r = v-round clock
                         in needCert r t
@@ -585,12 +586,12 @@ Figure 2)
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
-        → (bs : IsBlockSignature b sig)
-        → (sl : IsSlotLeader p clock prf)
-          ---------------------------------------------------------------
+        → (σ : IsBlockSignature b sig)
+        → (π : IsSlotLeader p clock prf)
+          -----------------------------------------
         → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (Cons bs sl refl (proj₂ (uncons Cpref)) Cpref)
+                  ChainMsg (Cons σ π refl pr Cpref)
                 , zero
                 , p) to t
                 diffuse M
