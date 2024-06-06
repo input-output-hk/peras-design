@@ -56,7 +56,7 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
             -- (VR-2B) r = round(cert*) + c K for some c > 0, and
             vr2b =
               roundNumber > round certStar -- eliminates c = 0
-                && fromIntegral (roundNumber - round certStar) `mod` perasK == 0 -- some muliple of K
+                && fromIntegral roundNumber `mod` perasK == fromIntegral (round certStar) `mod` perasK -- some muliple of K
           lift $ traceWith tracer $ VotingLogic (pid party) vr1a vr1b vr2a vr2b
           -- then create a vote v = (r, P, h, π, σ)
           when (vr1a && vr1b || vr2a && vr2b) $
