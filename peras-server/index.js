@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const blockId = mkBlockId(block);
     if (network.body.data.nodes.get(blockId) === null) {
       const parentId = mkBlockHashId(block.parentBlock);
-      const label = `<b>${block.signature.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>`;
+      const label = `<b>${block.signature.substr(0, 8)}</b>\nslot: <i>${block.slotNumber}</i>\ncreator: <i>${block.creatorId}</i>\n${cache["bl"]}`;
       const color = block.certificate ? "dodgerblue" : "skyblue";
       network.body.data.nodes.add({ font: { multi: 'html' }, id: blockId, level: nextLevel(), shape: 'box', color, label });
       network.body.data.edges.add({ from: blockId, to: parentId });
@@ -179,6 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const genesisBlockId = "block:0000000000000000";
 
   const genesisCertId = "cert:0:0";
+
+  function logic(x) {
+    return x ? "⊤" : "⊥";
+  }
+
+  const cache = {};
 
   // handle incoming traces from the server
   // | Protocol {parameters :: PerasParams}
@@ -271,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case "CastVote":
         {
           const blockId = mkBlockHashId(msg.vote.blockHash);
-          const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>`;
+          const label = `Vote\nround: <i>${msg.vote.votingRound}</i>\ncreator: <i>${msg.vote.creatorId}</i>\n${cache["vl"]}`;
           network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: mkVoteId(msg.vote), level: nextLevel(), shape: 'circle', color: "sandybrown", label });
           network.body.data.edges.add({ from: mkVoteId(msg.vote), to: blockId, dashes: true, color: "sandybrown" });
           refresh();
@@ -286,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "ForgingLogic":
         {
+	  cache["bl"] = `${logic(msg.bc1a)}${logic(msg.bc1b)}${logic(msg.bc1c)}`;
           const id = mkPartyId(msg.partyId);
           createBlock(msg.block);
           network.body.data.edges.update({ id, from: id, to: mkBlockId(msg.block), color: 'tomato', dashes: true });
@@ -293,10 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         break;
       case "VotingLogic":
+	cache["vl"] = `${logic(msg.vr1a)}${logic(msg.vr1b)}${logic(msg.vr2a)}${logic(msg.vr2b)}`;
         if (!(msg.vr1a && msg.vr1b || msg.vr2a && msg.vr2b)) {
           const blockId = mkBlockId(preagreementBlock);
           const cooldownId = mkCooldownId(msg.partyId, currentRound);
-          const label = `Cooldown\nround: <i>${currentRound}</i>\nparty: <i>${msg.partyId}</i>`;
+          const label = `Cooldown\nround: <i>${currentRound}</i>\nparty: <i>${msg.partyId}</i>\n${cache["vl"]}`;
           network.body.data.nodes.add({ font: { multi: 'html', color: 'white', size: 12 }, id: cooldownId, level: nextLevel(), shape: 'ellipse', color: "darkkhaki", label });
           network.body.data.edges.add({ from: cooldownId, to: blockId, dashes: true, color: "darkkhaki" });
           refresh();
