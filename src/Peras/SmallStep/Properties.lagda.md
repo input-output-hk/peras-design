@@ -238,7 +238,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     CertMsg≢BlockMsg x with cong message x
     ... | ()
 -}
-
+{-
     VoteMsg≢BlockMsg : ∀ {p q v b} → ⦅ p , Honest , VoteMsg v , zero ⦆ ≢ ⦅ q , Honest , BlockMsg b , zero ⦆
     VoteMsg≢BlockMsg x with cong message x
     ... | ()
@@ -253,6 +253,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       → messages M ⊆ᵐ messages N
     ⊆-block {p = p} (honest {block = b} refl _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆)  (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
     ⊆-block {p = p} (honest-cooldown {block = b} refl _ _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆) (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
+-}
 ```
 -->
 <!--
@@ -587,6 +588,7 @@ The common prefix property informally says that during the execution of the prot
 chains of honest parties will always be a common prefix of each other.
 
 ```agda
+{-
     postulate
       common-prefix : ∀ {N : GlobalState}
         → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : T}
@@ -598,6 +600,7 @@ chains of honest parties will always be a common prefix of each other.
         → let sl = clock N
           in prune k (preferredChain′ (MkSlotNumber $ getSlotNumber sl ∸ 1) t) ⪯ c
            ⊎ ∃[ sl′ ] (getSlotNumber sl′ < getSlotNumber k × getSlotNumber (superSlots (sl′ , sl)) < 2 * getSlotNumber (adversarialSlots (sl′ , sl)))
+-}
 ```
 ## Timed common prefix
 

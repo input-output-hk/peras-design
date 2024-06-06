@@ -62,30 +62,6 @@ protocol)
 References:
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
-
-#### Messages
-
-Messages for sending and receiving blocks and votes. In the `Peras` protocol
-certificates are not diffused explicitly with the exception of bootstraping the
-system.
-```agda
-data Message : Set where
-  BlockMsg : Block → Message
-  VoteMsg : Vote → Message
-```
-<!--
-```agda
-Message-injective : ∀ {b₁ b₂}
-  → BlockMsg b₁ ≡ BlockMsg b₂
-  → b₁ ≡ b₂
-Message-injective refl = refl
-```
-```agda
-Message-injective′ : ∀ {b₁ b₂}
-  → b₁ ≢ b₂
-  → BlockMsg b₁ ≢ BlockMsg b₂
-Message-injective′ = contraposition Message-injective
-```
 -->
 <!--
 ```agda
@@ -121,6 +97,33 @@ module _ ⦃ _ : Hashable Block ⦄
   open Params ⦃...⦄
   open Network ⦃...⦄
   open Postulates ⦃...⦄
+```
+#### Messages
+
+Messages for sending and receiving blocks and votes. In the `Peras` protocol
+certificates are not diffused explicitly with the exception of bootstraping the
+system.
+```agda
+  data Message : Set where
+    ChainMsg : ∀ {c : Chain} → ValidChain c → Message
+    VoteMsg : Vote → Message
+```
+<!--
+```agda
+{-
+  Message-injective : ∀ {b₁ b₂}
+    → ChainMsg b₁ ≡ ChainMsg b₂
+    → b₁ ≡ b₂
+  Message-injective refl = refl
+-}
+```
+```agda
+{-
+  Message-injective′ : ∀ {b₁ b₂}
+    → b₁ ≢ b₂
+    → ChainMsg b₁ ≢ ChainMsg b₂
+  Message-injective′ = contraposition Message-injective
+-}
 ```
 Messages can be delayed by a number of slots
 ```agda
@@ -173,7 +176,7 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Set}
                     (tree₀ : T)
-                    (extendTree : T → Block → T)
+                    (newChain : ∀ {c : Chain} → T → ValidChain c → T)
                     (allBlocks : T → List Block)
                     (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
@@ -202,16 +205,16 @@ as proposed in the paper.
       genesis-cert-roundnumber :
         getRoundNumber (round cert₀) ≡ 0
 
-      extendable : ∀ (t : T) (b : Block)
-        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
+--      extendable : ∀ (t : T) (b : Block)
+--        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
 
-      extendable-certs : ∀ (t : T) (b : Block)
-        → certs (extendTree t b) ≡ certs t
+--      extendable-certs : ∀ (t : T) (b : Block)
+--        → certs (extendTree t b) ≡ certs t
 
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
-      valid : ∀ (t : T) (sl : SlotNumber)
+      valid : ∀ (t : T)
         → ValidChain (preferredChain t)
 
       optimal : ∀ (c : Chain) (t : T)
@@ -256,7 +259,7 @@ The block tree type is defined as follows:
 
     field
       tree₀ : T
-      extendTree : T → Block → T
+      newChain : ∀ {c : Chain} → T → ValidChain c → T
       allBlocks : T → List Block
       preferredChain : T → Chain
 
@@ -270,11 +273,8 @@ The block tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ extendTree allBlocks preferredChain
+                      tree₀ newChain allBlocks preferredChain
                       addVote votes certs cert₀
-
-    tipBest : SlotNumber → T → Block
-    tipBest sl t = tip (valid is-TreeType t sl) where open IsTreeType
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
@@ -331,9 +331,9 @@ Updating the block-tree upon receiving a message for vote and block messages.
           ----------------------------
         → t [ VoteMsg v ]→ addVote t v
 
-      BlockReceived : ∀ {b t}
-          --------------------------------
-        → t [ BlockMsg b ]→ extendTree t b
+      ChainReceived : ∀ {b t} {c : ValidChain b}
+          ------------------------------
+        → t [ ChainMsg c ]→ newChain t c
 ```
 #### Vote in round
 
@@ -503,12 +503,14 @@ is added to be consumed immediately.
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open State M
+              open IsTreeType
+              Cpref = valid is-TreeType t
               r = v-round clock
               v = record
                     { votingRound = r
                     ; creatorId = p
                     ; proofM = prf
-                    ; blockHash = hash $ tipBest (clock earlierBy L) t
+                    ; blockHash = hash $ tip Cpref -- FIXME: Preagreement, (clock earlierBy L) t
                     ; signature = sig
                     }
           in
@@ -543,10 +545,13 @@ certificate reference is included in the block.
 ```agda
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
+              open IsTreeType
+              Cpref = valid is-TreeType t
+              (hl , ht) = uncons Cpref
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tipBest clock t
+                    ; parentBlock = hash (tip Cpref)
                     ; certificate = nothing
                     ; leadershipProof = prf
                     ; bodyHash =
@@ -561,20 +566,24 @@ certificate reference is included in the block.
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
-        → IsBlockSignature b sig
-        → IsSlotLeader p clock prf
+        → (bs : IsBlockSignature b sig)
+        → (sl : IsSlotLeader p clock prf)
           --------------------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , extendTree t b ⇑ M)
+            M ↷ let c = Cons bs sl refl ht Cpref
+                in (ChainMsg c , zero , p , newChain t c ⇑ M)
 ```
 During a cool-down phase, the block includes a certificate reference.
 ```agda
       honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
+              open IsTreeType
+              Cpref = valid is-TreeType t
+              (hl , ht) = uncons Cpref
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tipBest clock t
+                    ; parentBlock = hash $ tip Cpref
                     ; certificate = nothing -- TODO: add certificate
                     ; leadershipProof = prf
                     ; bodyHash =
@@ -592,14 +601,15 @@ During a cool-down phase, the block includes a certificate reference.
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
-        → IsBlockSignature b sig
-        → IsSlotLeader p clock prf
+        → (bs : IsBlockSignature b sig)
+        → (sl : IsSlotLeader p clock prf)
         → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t)  -- (a)
         → r ≤ A + roundNumber cert′                          -- (b)
         → roundNumber cert′ > roundNumber cert⋆              -- (c)
           --------------------------------------------------
         → Honest {p} ⊢
-            M ↷ (BlockMsg b , zero , p , extendTree t b ⇑ M)
+            M ↷ let c = Cons bs sl refl ht Cpref
+                in (ChainMsg c , zero , p , newChain t c ⇑ M)
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
 delay the message.
@@ -713,6 +723,7 @@ or that any reachable state is collision-free, there is a predicate assuming
 that there are no hash collisions during the execution of the protocol.
 
 ```agda
+{-
     data CollisionFree (N : State) : Set where
 
       collision-free : ∀ {b₁ b₂ : Block}
@@ -721,10 +732,12 @@ that there are no hash collisions during the execution of the protocol.
                (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
           (cartesianProduct (history N) (history N))
         → CollisionFree N
+-}
 ```
 
 <!--
 ```agda
+{-
     open import Data.List.Relation.Binary.Subset.Propositional.Properties
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
     open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
@@ -782,6 +795,7 @@ that there are no hash collisions during the execution of the protocol.
       → h ⊢ M ⇉ N
       → CollisionFree M
     []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
+-}
 ```
 -->
 
@@ -790,36 +804,44 @@ that there are no hash collisions during the execution of the protocol.
 When the current state is collision free, the pervious state was so too
 
 ```agda
+{-
     ↝-collision-free :
         M ↝ N
       → CollisionFree N
         ----------------
       → CollisionFree M
+-}
 ```
 <!--
 ```agda
+{-
     ↝-collision-free (Fetch x) cf-N = []⇀-collision-free cf-N x
     ↝-collision-free (CreateVote _ x) cf-N = []⇉-collision-free cf-N x
     ↝-collision-free (CreateBlock _ x) cf-N =  []↷-collision-free cf-N x
     ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
     ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
+-}
 ```
 -->
 
 When the current state is collision free, previous states were so too
 
 ```agda
+{-
     ↝⋆-collision-free :
         M ↝⋆ N
       → CollisionFree N
         ----------------
       → CollisionFree M
+-}
 ```
 <!--
 ```agda
+{-
     ↝⋆-collision-free ([]′) N = N
     ↝⋆-collision-free (M↝N ∷′ N↝⋆O) O =
       ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
+-}
 ```
 -->
 
@@ -830,6 +852,7 @@ cannot send any block with the `creatorId` of an honest party that is not
 already in the block history.
 
 ```agda
+{-
     data ForgingFree (N : State) : Set where
 
       forging-free : ∀ {M : State} {b} {p}
@@ -837,4 +860,5 @@ already in the block history.
         → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
             → m ∈ history M }) (history N)
         → ForgingFree N
+-}
 ```
