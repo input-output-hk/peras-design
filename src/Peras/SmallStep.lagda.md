@@ -563,7 +563,6 @@ Figure 2)
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
-              (hl , ht) = uncons Cpref
               r = getRoundNumber (v-round clock)
               b = record
                     { slotNumber = clock
@@ -580,8 +579,6 @@ Figure 2)
                                }
                     ; signature = sig
                     }
-              cert⋆ = latestCertOnChain t
-              cert′ = latestCertSeen t
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
@@ -589,7 +586,10 @@ Figure 2)
         → (sl : IsSlotLeader p clock prf)
           ---------------------------------------------------------------
         → Honest {p} ⊢
-            M ↷ add (ChainMsg (Cons bs sl refl ht Cpref) , zero , p) to t
+            M ↷ add (
+                  ChainMsg (Cons bs sl refl (proj₂ (uncons Cpref)) Cpref)
+                , zero
+                , p) to t
                 diffuse M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
