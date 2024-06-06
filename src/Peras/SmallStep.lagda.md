@@ -210,7 +210,7 @@ as proposed in the paper.
         → allBlocks (addVote t v) ≐ allBlocks t
 
       extendable-chain : ∀ (t : T) {c : Chain} (v : ValidChain c)
-        → (certsFromChain c) ⊆ᶜ certs (newChain t v)
+        → certsFromChain c ⊆ᶜ certs (newChain t v)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
