@@ -272,9 +272,13 @@ module _ ⦃ _ : Hashable Block ⦄
   tip (Cons {b₁ = b} _ _ refl refl _) = b
 ```
 ```agda
-  uncons : ∀ {c : Chain} → (v : ValidChain c) → Σ[ d ∈ Chain ] (c ≡ tip v ∷ d)
-  uncons {block₀ ∷ .[]} Genesis = [] , refl
-  uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₂ ∷ c₁) , cong (_∷ (b₂ ∷ c₁)) refl
+  uncons : ∀ {c : Chain} → (v : ValidChain c) → Σ[ (b , d) ∈ Block × Chain ] (c ≡ b ∷ d)
+  uncons {block₀ ∷ .[]} Genesis = (block₀ , []) , refl
+  uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₁ , (b₂ ∷ c₁)) , cong (_∷ (b₂ ∷ c₁)) refl
+```
+```agda
+  certsFromChain : Chain → List Certificate
+  certsFromChain = catMaybes ∘ map certificate
 ```
 <!--
 ```agda

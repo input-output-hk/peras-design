@@ -34,6 +34,7 @@ open import Peras.Numbering
 open import Peras.Params
 
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
+open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} renaming (_⊆_ to _⊆ᶜ_)
 
 open Honesty public
 open MembershipProof public
@@ -207,6 +208,9 @@ as proposed in the paper.
 
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
+
+      extendable-chain : ∀ (t : T) {c : Chain} (v : ValidChain c)
+        → certsFromChain c ⊆ᶜ certs (newChain t v)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
@@ -510,7 +514,9 @@ is added to be consumed immediately.
                     { votingRound = r
                     ; creatorId = p
                     ; proofM = prf
-                    ; blockHash = hash $ tip Cpref -- FIXME: Preagreement, (clock earlierBy L) t
+                    ; blockHash =
+                        let b = tip Cpref
+                        in hash b -- FIXME: Preagreement, (clock earlierBy L) t
                     ; signature = sig
                     }
           in
@@ -546,8 +552,8 @@ certificate reference is included in the block. The exact conditions to
 decide wheter a certificate has to be included are (see: Block creation in
 Figure 2)
 ```agda
-    needCert : ℕ → T → Maybe Certificate
-    needCert r t =
+    needCert : RoundNumber → T → Maybe Certificate
+    needCert (MkRoundNumber r) t =
       let cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
       in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
@@ -563,12 +569,14 @@ Figure 2)
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
-              r = getRoundNumber (v-round clock)
+              (h , _) , pr = uncons Cpref
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tip Cpref
-                    ; certificate = needCert r t
+                    ; parentBlock = hash h
+                    ; certificate =
+                        let r = v-round clock
+                        in needCert r t
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p
@@ -582,12 +590,12 @@ Figure 2)
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
-        → (bs : IsBlockSignature b sig)
-        → (sl : IsSlotLeader p clock prf)
-          ---------------------------------------------------------------
+        → (σ : IsBlockSignature b sig)
+        → (π : IsSlotLeader p clock prf)
+          -----------------------------------------
         → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (Cons bs sl refl (proj₂ (uncons Cpref)) Cpref)
+                  ChainMsg (Cons σ π refl pr Cpref)
                 , zero
                 , p) to t
                 diffuse M
