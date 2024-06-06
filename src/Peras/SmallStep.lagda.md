@@ -438,7 +438,7 @@ all the messages in the message buffer.
 ```
 Updating the global state inserting the updated block-tree for a given party,
 adding messages to the message buffer for the other parties and appending the
-history.
+history. "add and diffuse" from the paper
 ```agda
     _,_,_,_⇑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ⇑ M =
@@ -451,6 +451,10 @@ history.
         ; history = m ∷ history
         }
       where open State M
+
+    add_to_diffuse_ : (Message × Delay × PartyId) → T → State → State
+    add (m@(ChainMsg x) , d , p) to t diffuse M = m , d , p , newChain t x ⇑ M
+    add (m@(VoteMsg x) , d , p) to t diffuse M = m , d , p , addVote t x ⇑ M
 ```
 ## Fetching
 
@@ -522,7 +526,8 @@ is added to be consumed immediately.
         → VoteInRound r t
           ----------------------------------------------
         → Honest {p} ⊢
-            M ⇉ (VoteMsg v , zero , p , addVote t v ⇑ M)
+            M ⇉ (add (VoteMsg v , zero , p) to t
+                 diffuse M)
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -568,10 +573,11 @@ certificate reference is included in the block.
         → p ‼ blockTrees ≡ just t
         → (bs : IsBlockSignature b sig)
         → (sl : IsSlotLeader p clock prf)
-          --------------------------------------------------
+          -----------------------------------------
         → Honest {p} ⊢
             M ↷ let c = Cons bs sl refl ht Cpref
-                in (ChainMsg c , zero , p , newChain t c ⇑ M)
+                in add (ChainMsg c , zero , p) to t
+                   diffuse M
 ```
 During a cool-down phase, the block includes a certificate reference.
 ```agda
@@ -609,7 +615,8 @@ During a cool-down phase, the block includes a certificate reference.
           --------------------------------------------------
         → Honest {p} ⊢
             M ↷ let c = Cons bs sl refl ht Cpref
-                in (ChainMsg c , zero , p , newChain t c ⇑ M)
+                in add (ChainMsg c , zero , p) to t
+                   diffuse M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
 delay the message.
