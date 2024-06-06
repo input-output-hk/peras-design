@@ -503,6 +503,8 @@ A party can cast a vote for a block, if
 Voting updates the party's local state and for all other parties a message
 is added to be consumed immediately.
 ```agda
+    infix 2 _⊢_⇉_
+
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Set where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
@@ -524,10 +526,10 @@ is added to be consumed immediately.
         → StartOfRound clock r
         → IsCommitteeMember p r prf
         → VoteInRound r t
-          ----------------------------------------------
+          -------------------------------------
         → Honest {p} ⊢
-            M ⇉ (add (VoteMsg v , zero , p) to t
-                 diffuse M)
+            M ⇉ add (VoteMsg v , zero , p) to t
+                diffuse M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -543,6 +545,8 @@ possible, if
 Block creation updates the party's local state and for all other parties a
 message is added to be consumed immediately.
 ```agda
+    infix 2 _⊢_↷_
+
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Set where
 ```
 During regular execution of the protocol, i.e. not in cool-down phase, no
@@ -573,11 +577,10 @@ certificate reference is included in the block.
         → p ‼ blockTrees ≡ just t
         → (bs : IsBlockSignature b sig)
         → (sl : IsSlotLeader p clock prf)
-          -----------------------------------------
+          ---------------------------------------------------------------
         → Honest {p} ⊢
-            M ↷ let c = Cons bs sl refl ht Cpref
-                in add (ChainMsg c , zero , p) to t
-                   diffuse M
+            M ↷ add (ChainMsg (Cons bs sl refl ht Cpref) , zero , p) to t
+                diffuse M
 ```
 During a cool-down phase, the block includes a certificate reference.
 ```agda
@@ -612,11 +615,10 @@ During a cool-down phase, the block includes a certificate reference.
         → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t)  -- (a)
         → r ≤ A + roundNumber cert′                          -- (b)
         → roundNumber cert′ > roundNumber cert⋆              -- (c)
-          --------------------------------------------------
+          ---------------------------------------------------------------
         → Honest {p} ⊢
-            M ↷ let c = Cons bs sl refl ht Cpref
-                in add (ChainMsg c , zero , p) to t
-                   diffuse M
+            M ↷ add (ChainMsg (Cons bs sl refl ht Cpref) , zero , p) to t
+                diffuse M
 ```
 Rather than creating a delayed block, an adversary can honestly create it and
 delay the message.
