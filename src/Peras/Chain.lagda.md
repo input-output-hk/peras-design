@@ -107,6 +107,11 @@ record Postulates : Set₁ where
     IsCommitteeMember : PartyId → RoundNumber → MembershipProof → Set
     IsBlockSignature : Block → Signature → Set
     IsVoteSignature : Vote → Signature → Set
+
+record Network : Set₁ where
+  field
+    block₀ : Block
+    Δ : ℕ
 ```
 ```agda
 module _ ⦃ _ : Postulates ⦄
@@ -237,14 +242,15 @@ open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
 ```agda
-module _ {block₀ : Block}
-         ⦃ _ : Hashable Block ⦄
+module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Postulates ⦄
+         ⦃ _ : Network ⦄
 
          where
 
   open Hashable ⦃...⦄
   open Postulates ⦃...⦄
+  open Network ⦃...⦄
 ```
 ```agda
   data ValidChain : Chain → Set where
@@ -252,19 +258,24 @@ module _ {block₀ : Block}
     Genesis :
       ValidChain (block₀ ∷ [])
 
-    Cons : ∀ {c : Chain} {b₁ b₂ : Block}
+    Cons : ∀ {c₁ c₂ : Chain} {b₁ b₂ : Block}
       → IsBlockSignature b₁ (signature b₁)
       → IsSlotLeader (creatorId b₁) (slotNumber b₁) (leadershipProof b₁)
       → parentBlock b₁ ≡ hash b₂
-      → ValidChain (b₂ ∷ c)
-      → ValidChain (b₁ ∷ (b₂ ∷ c))
+      → c₂ ≡ b₂ ∷ c₁
+      → ValidChain c₂
+      → ValidChain (b₁ ∷ c₂)
 ```
 ```agda
   tip : ∀ {c : Chain} → ValidChain c → Block
   tip Genesis = block₀
-  tip (Cons {c} {b₁} _ _ refl _) = b₁
+  tip (Cons {b₁ = b} _ _ refl refl _) = b
 ```
-
+```agda
+  uncons : ∀ {c : Chain} → (v : ValidChain c) → Σ[ d ∈ Chain ] (c ≡ tip v ∷ d)
+  uncons {block₀ ∷ .[]} Genesis = [] , refl
+  uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₂ ∷ c₁) , cong (_∷ (b₂ ∷ c₁)) refl
+```
 <!--
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own

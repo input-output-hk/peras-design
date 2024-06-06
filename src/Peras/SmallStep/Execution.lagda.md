@@ -29,17 +29,15 @@ open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
 ```
 -->
 ```agda
-module _ {block₀}
-         ⦃ _ : Postulates ⦄
+module _ ⦃ _ : Postulates ⦄
          ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
+         ⦃ _ : Network ⦄
          where
 
   open Postulates ⦃...⦄
+  open Network ⦃...⦄
   open Hashable ⦃...⦄
-
-  cert₀ : Certificate
-  cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
 
   instance
     params : Params
@@ -77,7 +75,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (party₁ , Honest) ∷ (party₂ , Honest) ∷ []
 
-      GlobalState = State {block₀} {cert₀} {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
       createBlock : PartyId → SlotNumber → Block → Block
@@ -109,6 +107,7 @@ This is a very simple example of the execution of the protocol in the small-step
 ```
 Blocks and Votes
 ```agda
+{-
       block₁ : Block
       block₁ = createBlock party₁ (MkSlotNumber 1) (tipBest (MkSlotNumber 1) tree₀) -- TODO: block₀
 
@@ -117,6 +116,7 @@ Blocks and Votes
 
       block₃ : Block
       block₃ = createBlock party₂ (MkSlotNumber 3) (tipBest (MkSlotNumber 3) (addVote (extendTree tree₀ block₁) vote₁)) -- TODO: block₁
+      -}
 ```
 Initial state
 ```agda
@@ -127,6 +127,7 @@ Initial state
 ```
 Final state after the execution of all the steps
 ```agda
+{-
       finalState : GlobalState
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
@@ -135,22 +136,24 @@ Final state after the execution of all the steps
           finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           finalTree = addVote (extendTree tree₀ block₁) vote₁
           finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
+-}
 ```
 Properties of cert₀
 ```agda
-      cert₀PointsIntoValidChain : ∀ {c} → ValidChain {block₀} c → cert₀ PointsInto c
+      cert₀PointsIntoValidChain : ∀ {c} → ValidChain c → cert₀ PointsInto c
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
-      cert₀PointsIntoValidChain {.(_ ∷ _ ∷ _)} (Cons _ _ _ v) = there (cert₀PointsIntoValidChain v)
+      cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
 ```
 Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
-
+{-
       latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (extendTree t b) ≡ latestCertSeen t
       latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
 
       latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
       latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
+-}
 ```
 Execution trace of the protocol
 ```agda
