@@ -4,6 +4,6 @@ Peras, or more precisely Ouroboros Peras, is an extension of [Ouroboros Praos](h
 
 :::warning
 
-Work in progress, add some description of Peras
+Coming soon! We are working on providing documentation at various levels of details for Peras. Stay tuned.
 
 :::
