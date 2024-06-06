@@ -276,6 +276,10 @@ module _ ⦃ _ : Hashable Block ⦄
   uncons {block₀ ∷ .[]} Genesis = (block₀ , []) , refl
   uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₁ , (b₂ ∷ c₁)) , cong (_∷ (b₂ ∷ c₁)) refl
 ```
+```agda
+  certsFromChain : Chain → List Certificate
+  certsFromChain = catMaybes ∘ map certificate
+```
 <!--
 ```agda
 -- | `foldl` does not exist in `Haskell.Prelude` so let's roll our own

@@ -34,6 +34,7 @@ open import Peras.Numbering
 open import Peras.Params
 
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
+open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} renaming (_⊆_ to _⊆ᶜ_)
 
 open Honesty public
 open MembershipProof public
@@ -207,6 +208,9 @@ as proposed in the paper.
 
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
+
+      extendable-chain : ∀ (t : T) {c : Chain} (v : ValidChain c)
+        → (certsFromChain c) ⊆ᶜ certs (newChain t v)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
