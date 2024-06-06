@@ -546,8 +546,8 @@ certificate reference is included in the block. The exact conditions to
 decide wheter a certificate has to be included are (see: Block creation in
 Figure 2)
 ```agda
-    needCert : ℕ → T → Maybe Certificate
-    needCert r t =
+    needCert : RoundNumber → T → Maybe Certificate
+    needCert (MkRoundNumber r) t =
       let cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
       in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
@@ -563,12 +563,15 @@ Figure 2)
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
-              r = getRoundNumber (v-round clock)
               b = record
                     { slotNumber = clock
                     ; creatorId = p
-                    ; parentBlock = hash $ tip Cpref
-                    ; certificate = needCert r t
+                    ; parentBlock =
+                        let b = tip Cpref
+                        in hash b
+                    ; certificate =
+                        let r = v-round clock
+                        in needCert r t
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p
