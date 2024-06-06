@@ -4,13 +4,13 @@ module Peras.SmallStep where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false; _∧_; _∨_; not)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes)
+open import Data.Bool using (Bool; true; false; _∧_; _∨_; not; if_then_else_)
+open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes; any)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; any?)
 open import Data.Maybe using (Maybe; just; nothing)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_)
+open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_;_<ᵇ_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
@@ -540,54 +540,36 @@ Block creation updates the party's local state and for all other parties a
 message is added to be consumed immediately.
 ```agda
     infix 2 _⊢_↷_
-
-    data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Set where
 ```
 During regular execution of the protocol, i.e. not in cool-down phase, no
-certificate reference is included in the block.
+certificate reference is included in the block. The exact conditions to
+decide wheter a certificate has to be included are (see: Block creation in
+Figure 2)
 ```agda
+    needCert : ℕ → T → Maybe Certificate
+    needCert r t =
+      let cert⋆ = latestCertOnChain t
+          cert′ = latestCertSeen t
+      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
+          ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
+          ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
+        then just cert′
+        else nothing
+```
+```agda
+    data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Set where
+
       honest : ∀ {p} {t} {M} {prf} {sig} {block}
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
               (hl , ht) = uncons Cpref
-              b = record
-                    { slotNumber = clock
-                    ; creatorId = p
-                    ; parentBlock = hash (tip Cpref)
-                    ; certificate = nothing
-                    ; leadershipProof = prf
-                    ; bodyHash =
-                        let txs = txSelection clock p
-                        in blockHash
-                             record
-                               { blockHash = hash txs
-                               ; payload = txs
-                               }
-                    ; signature = sig
-                    }
-          in
-          block ≡ b
-        → p ‼ blockTrees ≡ just t
-        → (bs : IsBlockSignature b sig)
-        → (sl : IsSlotLeader p clock prf)
-          ---------------------------------------------------------------
-        → Honest {p} ⊢
-            M ↷ add (ChainMsg (Cons bs sl refl ht Cpref) , zero , p) to t
-                diffuse M
-```
-During a cool-down phase, the block includes a certificate reference.
-```agda
-      honest-cooldown : ∀ {p} {t} {M} {prf} {sig} {block}
-        → let open State M
-              open IsTreeType
-              Cpref = valid is-TreeType t
-              (hl , ht) = uncons Cpref
+              r = getRoundNumber (v-round clock)
               b = record
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tip Cpref
-                    ; certificate = just (latestCertSeen t)
+                    ; certificate = needCert r t
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p
@@ -600,15 +582,11 @@ During a cool-down phase, the block includes a certificate reference.
                     }
               cert⋆ = latestCertOnChain t
               cert′ = latestCertSeen t
-              r = getRoundNumber (v-round clock)
           in
           block ≡ b
         → p ‼ blockTrees ≡ just t
         → (bs : IsBlockSignature b sig)
         → (sl : IsSlotLeader p clock prf)
-        → ¬ Any (λ { c → roundNumber c + 2 ≡ r }) (certs t)  -- (a)
-        → r ≤ A + roundNumber cert′                          -- (b)
-        → roundNumber cert′ > roundNumber cert⋆              -- (c)
           ---------------------------------------------------------------
         → Honest {p} ⊢
             M ↷ add (ChainMsg (Cons bs sl refl ht Cpref) , zero , p) to t
