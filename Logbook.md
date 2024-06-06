@@ -1,3 +1,9 @@
+## 2024-06-06
+
+### Constraints on Peras parameters
+
+Created [a table of constraints on Peras parameters](../d93d0512f9dd4f5098ad85d167c481defded265f/analytics/Parameters.md) for use in simulation studies and UIs that involve setting the protocol parameters. Some of these are from the draft Peras paper but others were determined analytically or intuitively. We do not have precise values for the healing, chain-quality, and common-prefix times because they depend upon the level of security desired for the chain.
+
 ## 2024-06-05
 
 ### Simulation visualization
