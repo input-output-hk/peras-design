@@ -205,12 +205,6 @@ as proposed in the paper.
       genesis-cert-roundnumber :
         getRoundNumber (round cert₀) ≡ 0
 
---      extendable : ∀ (t : T) (b : Block)
---        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
-
---      extendable-certs : ∀ (t : T) (b : Block)
---        → certs (extendTree t b) ≡ certs t
-
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
@@ -593,7 +587,7 @@ During a cool-down phase, the block includes a certificate reference.
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash $ tip Cpref
-                    ; certificate = nothing -- TODO: add certificate
+                    ; certificate = just (latestCertSeen t)
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p
