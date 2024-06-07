@@ -20,8 +20,18 @@ import Prelude hiding (round)
 
 spec :: Spec
 spec = do
-  let params = def
-      MkPerasParams{perasR} = params
+  let params@MkPerasParams{perasR} =
+        def
+          { perasU = 20
+          , perasA = 2160
+          , perasR = 100
+          , perasK = 100
+          , perasL = 30
+          , perasτ = 75
+          , perasB = 100
+          , perasT = 0
+          , perasΔ = 5
+          }
       roundNumber = 430
       someChain = arbitrary `generateWith` 42
       someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}

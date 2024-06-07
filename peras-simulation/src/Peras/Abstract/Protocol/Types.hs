@@ -28,13 +28,15 @@ data PerasParams = MkPerasParams
   , perasR :: Integer
   -- ^ Length of chain-ignorance period, in rounds
   , perasK :: Integer
-  -- ^ Length of cool-down period, in slots
+  -- ^ Length of cool-down period, in rounds
   , perasL :: Integer
   -- ^ Minimum age for voted block, in slots
   , perasτ :: Integer
   -- ^ Quorum size, as a percentage of total expected votes
   , perasB :: Integer
   -- ^ Certificate boost, in blocks
+  , perasT :: Integer
+  -- ^ Termination bound for preagreement, in slots
   , perasΔ :: Integer
   -- ^ Delivery guarantee for diffusion, in slots
   }
@@ -50,6 +52,7 @@ instance FromJSON PerasParams where
       perasL <- o A..: "L"
       perasτ <- o A..: "τ"
       perasB <- o A..: "B"
+      perasT <- o A..: "T"
       perasΔ <- o A..: "Δ"
       pure MkPerasParams{..}
 
@@ -63,6 +66,7 @@ instance ToJSON PerasParams where
       , "L" A..= perasL
       , "τ" A..= perasτ
       , "B" A..= perasB
+      , "T" A..= perasT
       , "Δ" A..= perasΔ
       ]
 
@@ -72,12 +76,13 @@ instance Default PerasParams where
   def =
     MkPerasParams
       { perasU = 20
-      , perasA = 2160
-      , perasR = 100
-      , perasK = 100
-      , perasL = 30
-      , perasτ = 75
-      , perasB = 100
+      , perasA = 200
+      , perasR = 10
+      , perasK = 17
+      , perasL = 10
+      , perasτ = 3
+      , perasB = 10
+      , perasT = 15
       , perasΔ = 5
       }
 

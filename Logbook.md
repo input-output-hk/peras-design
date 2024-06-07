@@ -1,3 +1,15 @@
+## 2024-06-07
+
+### Simulation and visualzation
+
+Upgraded simulation server:
+
+- Handle multiple clients
+- Control via WebSockets
+- Optional basic authentication
+- Added preagreement termination bound
+- More realistic defaults for visualization
+
 ## 2024-06-06
 
 ### Constraints on Peras parameters

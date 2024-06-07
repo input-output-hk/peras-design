@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+  // retrieve simulation data from server
+  const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
+  const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
+
   const setInputValue = (inputId, paramName, defaultValue = "error") => {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(paramName) || defaultValue;
@@ -13,8 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     r: "uiR",
     k: "uiK",
     l: "uiL",
-    b: "uiB",
     tau: "uiTau",
+    b: "uiB",
+    t: "uiT",
     n: "uiCommittee", 
     delta: "uiDelta",
     alpha: "uiAlpha",
@@ -24,12 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   for (const paramName in paramToInputMap) {
     const inputId = paramToInputMap[paramName];
-    const defaultValue = paramName != "rngSeed" ? document.getElementById(inputId).value : Math.round(Math.random() * 1000000000); 
+    const defaultValue = document.getElementById(inputId).value; 
     setInputValue(inputId, paramName, defaultValue); 
   }
-
-  // This is needed to stop any prior simulations when refreshing the browser.
-  req("/stop", "DELETE");
 
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
@@ -39,8 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
   simulate.addEventListener('click', () => {
     network.body.data.nodes.clear();
     network.body.data.edges.clear();
-    postJSON("/simulate", {
-      duration: parseInt(document.getElementById('uiDuration').value)
+    ws.send(JSON.stringify({
+        tag: "Simulate"
+      , duration: parseInt(document.getElementById('uiDuration').value)
       , parties: parseInt(document.getElementById('uiParties').value)
       , u: parseInt(document.getElementById('uiU').value)
       , a: parseInt(document.getElementById('uiA').value)
@@ -49,32 +53,29 @@ document.addEventListener('DOMContentLoaded', () => {
       , l: parseInt(document.getElementById('uiL').value)
       , tau: parseInt(document.getElementById('uiTau').value)
       , b: parseInt(document.getElementById('uiB').value)
+      , t: parseInt(document.getElementById('uiT').value)
       , committee: parseInt(document.getElementById('uiCommittee').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
       , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
       , rngSeed: parseInt(document.getElementById('uiSeed').value)
-    })
+    }));
   });
 
   const stop = document.getElementById('uiStop');
   stop.addEventListener('click', () => {
-    req("/stop", "DELETE");
+    ws.send(JSON.stringify({tag: "Stop"}));
   });
 
   const pause = document.getElementById('uiPause');
   pause.addEventListener('click', () => {
-    req("/pause", "PATCH");
+    ws.send(JSON.stringify({tag: "Pause"}));
   });
 
   const resume = document.getElementById('uiResume');
   resume.addEventListener('click', () => {
-    req("/resume", "PATCH");
+    ws.send(JSON.stringify({tag: "Resume"}));
   });
-
-  // retrieve simulation data from server
-  const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
-  const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
 
   const nodes = [];
   const edges = [];
@@ -353,8 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
           uiR: { input: document.getElementById("uiR") },
           uiK: { input: document.getElementById("uiK")},
           uiL: { input: document.getElementById("uiL")},
-          uiB: { input: document.getElementById("uiB")},
           uiTau: { input: document.getElementById("uiTau")},
+          uiB: { input: document.getElementById("uiB")},
+          uiT: { input: document.getElementById("uiT")},
           uiCommittee: { input: document.getElementById("uiCommittee")},
           uiDelta: { input: document.getElementById("uiDelta") },
           uiAlpha: { input: document.getElementById("uiAlpha") },
@@ -400,8 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
       params.push(`r=${document.getElementById("uiR").value}`);
       params.push(`k=${document.getElementById("uiK").value}`);
       params.push(`l=${document.getElementById("uiL").value}`);
-      params.push(`b=${document.getElementById("uiB").value}`);
       params.push(`tau=${document.getElementById("uiTau").value}`);
+      params.push(`b=${document.getElementById("uiB").value}`);
+      params.push(`t=${document.getElementById("uiT").value}`);
       params.push(`n=${document.getElementById("uiCommittee").value}`);
       params.push(`delta=${document.getElementById("uiDelta").value}`);
       params.push(`alpha=${document.getElementById("uiAlpha").value}`);
@@ -430,32 +433,3 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   });
 });
-
-async function postJSON(url, data) {
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    console.log("Success:", result);
-  } catch (error) {
-    console.error("Error: %o", error);
-  }
-}
-
-async function req(url, method) {
-  try {
-    const response = await fetch(url, {
-      method: method
-    });
-    const result = await response.json();
-    console.log("Success:", result);
-  } catch (error) {
-    console.error("Error: %o", error);
-  }
-}

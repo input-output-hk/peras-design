@@ -67,4 +67,4 @@ test-suite peras-hs-test
     build-tool-depends:
        hspec-discover:hspec-discover
 
-    ghc-options: -rtsopts -threaded
+    ghc-options: -Wall -Wunused-packages -rtsopts -threaded

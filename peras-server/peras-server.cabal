@@ -9,26 +9,19 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Wunused-packages
 
 library
     import:           warnings
-
     exposed-modules:  Peras.Server
-
-    build-depends:    QuickCheck,
-                      aeson,
+                      Peras.Server.App
+    build-depends:    aeson,
                       base ^>=4.18.1.0,
-                      base16-bytestring,
                       bytestring,
                       contra-tracer,
                       data-default,
-                      http-types,
                       io-classes,
-                      io-sim,
-                      mtl,
                       peras-simulation,
-                      process,
                       scotty,
                       text,
                       wai,
@@ -36,34 +29,18 @@ library
                       wai-websockets,
                       warp,
                       websockets
-
     hs-source-dirs:   src
-
     default-language: Haskell2010
 
 executable peras-server
     import:           warnings
-
     ghc-options:  -threaded -rtsopts
-
     main-is:          Main.hs
-
-    -- Other library packages from which modules are imported.
-    build-depends:    QuickCheck,
-                      aeson,
-                      base ^>=4.18.1.0,
-                      base16-bytestring,
-                      bytestring,
-                      contra-tracer,
-                      data-default,
-                      io-classes,
-                      io-sim,
+    other-modules:    Paths_peras_server
+    build-depends:    base ^>=4.18.1.0,
+                      optparse-applicative,
                       peras-server,
-                      peras-simulation,
-                      text
-
-    -- Directories containing source files.
+                      text,
+                      warp,
     hs-source-dirs:   app
-
-    -- Base language which the package is written in.
     default-language: Haskell2010

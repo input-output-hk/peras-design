@@ -1,14 +1,15 @@
 params:
-  A: 2160
-  B: 100
-  K: 3
-  L: 15
-  R: 2
   U: 20
-  Δ: 2
+  A: 200
+  R: 10
+  K: 17
+  L: 10
   τ: 2
+  B: 10
+  T: 15
+  Δ: 5
 start: 0
-finish: 130
+finish: 300
 payloads: {}
 parties:
   '1':
