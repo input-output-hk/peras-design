@@ -31,6 +31,7 @@ data AppControl
       , l :: Integer
       , tau :: Integer
       , b :: Integer
+      , t :: Integer
       , committee :: Integer
       , delta :: Integer
       , activeSlots :: Double
@@ -64,7 +65,7 @@ wsapp pending = do
             modifyControl $ \c -> c{delay = delayMicroseconds, stop = False, pause = False}
             simConfig <-
               genSimConfigIO
-                def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasΔ = delta}
+                def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasT = t, perasΔ = delta}
                 activeSlots
                 parties
                 committee

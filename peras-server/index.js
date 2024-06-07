@@ -18,8 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     r: "uiR",
     k: "uiK",
     l: "uiL",
-    b: "uiB",
     tau: "uiTau",
+    b: "uiB",
+    t: "uiT",
     n: "uiCommittee", 
     delta: "uiDelta",
     alpha: "uiAlpha",
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       , l: parseInt(document.getElementById('uiL').value)
       , tau: parseInt(document.getElementById('uiTau').value)
       , b: parseInt(document.getElementById('uiB').value)
+      , t: parseInt(document.getElementById('uiT').value)
       , committee: parseInt(document.getElementById('uiCommittee').value)
       , delta: parseInt(document.getElementById('uiDelta').value)
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
@@ -352,8 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
           uiR: { input: document.getElementById("uiR") },
           uiK: { input: document.getElementById("uiK")},
           uiL: { input: document.getElementById("uiL")},
-          uiB: { input: document.getElementById("uiB")},
           uiTau: { input: document.getElementById("uiTau")},
+          uiB: { input: document.getElementById("uiB")},
+          uiT: { input: document.getElementById("uiT")},
           uiCommittee: { input: document.getElementById("uiCommittee")},
           uiDelta: { input: document.getElementById("uiDelta") },
           uiAlpha: { input: document.getElementById("uiAlpha") },
@@ -399,8 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
       params.push(`r=${document.getElementById("uiR").value}`);
       params.push(`k=${document.getElementById("uiK").value}`);
       params.push(`l=${document.getElementById("uiL").value}`);
-      params.push(`b=${document.getElementById("uiB").value}`);
       params.push(`tau=${document.getElementById("uiTau").value}`);
+      params.push(`b=${document.getElementById("uiB").value}`);
+      params.push(`t=${document.getElementById("uiT").value}`);
       params.push(`n=${document.getElementById("uiCommittee").value}`);
       params.push(`delta=${document.getElementById("uiDelta").value}`);
       params.push(`alpha=${document.getElementById("uiAlpha").value}`);

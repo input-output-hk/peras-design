@@ -50,6 +50,7 @@ exampleSimConfig =
           , perasL = 15
           , perasτ = 2
           , perasB = 100
+          , perasT = 15
           , perasΔ = 2
           }
     , parties =
