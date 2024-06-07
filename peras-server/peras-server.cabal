@@ -9,7 +9,7 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Wunused-packages
 
 library
     import:           warnings
@@ -17,19 +17,12 @@ library
     exposed-modules:  Peras.Server
                       Peras.Server.App
 
-    build-depends:    QuickCheck,
-                      aeson,
+    build-depends:    aeson,
                       base ^>=4.18.1.0,
-                      base16-bytestring,
-                      bytestring,
                       contra-tracer,
                       data-default,
-                      http-types,
                       io-classes,
-                      io-sim,
-                      mtl,
                       peras-simulation,
-                      process,
                       scotty,
                       text,
                       wai,
@@ -50,18 +43,8 @@ executable peras-server
     main-is:          Main.hs
 
     -- Other library packages from which modules are imported.
-    build-depends:    QuickCheck,
-                      aeson,
-                      base ^>=4.18.1.0,
-                      base16-bytestring,
-                      bytestring,
-                      contra-tracer,
-                      data-default,
-                      io-classes,
-                      io-sim,
+    build-depends:    base ^>=4.18.1.0,
                       peras-server,
-                      peras-simulation,
-                      text
 
     -- Directories containing source files.
     hs-source-dirs:   app
