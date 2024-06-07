@@ -76,12 +76,12 @@ instance Default PerasParams where
   def =
     MkPerasParams
       { perasU = 20
-      , perasA = 2160
-      , perasR = 100
-      , perasK = 100
-      , perasL = 30
-      , perasτ = 75
-      , perasB = 100
+      , perasA = 200
+      , perasR = 10
+      , perasK = 17
+      , perasL = 10
+      , perasτ = 3
+      , perasB = 10
       , perasT = 15
       , perasΔ = 5
       }

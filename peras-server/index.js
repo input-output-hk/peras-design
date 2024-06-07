@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   for (const paramName in paramToInputMap) {
     const inputId = paramToInputMap[paramName];
-    const defaultValue = paramName != "rngSeed" ? document.getElementById(inputId).value : Math.round(Math.random() * 1000000000); 
+    const defaultValue = document.getElementById(inputId).value; 
     setInputValue(inputId, paramName, defaultValue); 
   }
 
