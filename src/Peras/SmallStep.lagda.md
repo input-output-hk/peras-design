@@ -374,7 +374,7 @@ The small-step semantics rely on a global state, which consists of the following
 
 ```agda
     record State : Set where
-      constructor ⟦_,_,_,_,_,_⟧
+      constructor ⟦_,_,_,_,_⟧
       field
         clock : SlotNumber
         blockTrees : AssocList PartyId T
