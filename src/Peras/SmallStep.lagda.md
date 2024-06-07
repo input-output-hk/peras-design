@@ -9,7 +9,7 @@ open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; 
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
 open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; any?)
-open import Data.Maybe using (Maybe; just; nothing)
+open import Data.Maybe using (Maybe; just; nothing; fromMaybe)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_;_<ᵇ_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
@@ -492,8 +492,18 @@ An adversarial party might delay a message
             }
 ```
 ## Voting
+#### Preagreement
 
-A party can cast a vote for a block, if
+TODO: Needs to be finalized in the Peras paper
+
+```agda
+    Preagreement : SlotNumber → T → Block
+    Preagreement (MkSlotNumber s) t =
+      let Cpref = preferredChain t
+          bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
+       in fromMaybe block₀ (head bs)
+```
+A party can vote for a block, if
   * the current slot is the first slot in a voting round
   * the party is a member of the voting committee
   * the chain is not in a cool-down phase
@@ -507,16 +517,14 @@ is added to be consumed immediately.
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open State M
-              open IsTreeType
-              Cpref = valid is-TreeType t
               r = v-round clock
               v = record
                     { votingRound = r
                     ; creatorId = p
                     ; proofM = prf
                     ; blockHash =
-                        let b = tip Cpref
-                        in hash b -- FIXME: Preagreement, (clock earlierBy L) t
+                        let b = Preagreement clock t
+                        in hash b
                     ; signature = sig
                     }
           in
