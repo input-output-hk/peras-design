@@ -2,23 +2,36 @@
 
 module Peras.Server where
 
+import Control.Monad (unless)
+import qualified Data.ByteString.Char8 as BS8
+import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
+import Network.Wai.Middleware.HttpAuth (
+  AuthSettings (authIsProtected),
+  CheckCreds,
+  basicAuth,
+ )
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.WebSockets as WS
 import Peras.Server.App (wsapp)
 import qualified Web.Scotty as Sc
 
-runServer :: Warp.Port -> IO ()
-runServer port =
+runServer :: [(Text, Text)] -> Warp.Port -> IO ()
+runServer authorizedCreds port =
   Warp.runSettings (Warp.setPort port Warp.defaultSettings)
     . WS.websocketsOr WS.defaultConnectionOptions wsapp
-    =<< scottyApp
+    =<< scottyApp authorizedCreds
 
-scottyApp :: IO Wai.Application
-scottyApp =
+scottyApp :: [(Text, Text)] -> IO Wai.Application
+scottyApp authorizedCreds =
   Sc.scottyApp $ do
+    unless (null authorizedCreds)
+      . Sc.middleware
+      $ checkCreds authorizedCreds `basicAuth` "Peras Realm"{authIsProtected = const $ pure True}
+
     Sc.middleware logStdoutDev
 
     Sc.get "/" $
@@ -32,3 +45,7 @@ scottyApp =
 
     Sc.get "/peras.css" $
       Sc.file "peras.css"
+
+checkCreds :: [(Text, Text)] -> CheckCreds
+checkCreds authorized username password =
+  pure $ (T.pack $ BS8.unpack username, T.pack $ BS8.unpack password) `elem` authorized
