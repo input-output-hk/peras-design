@@ -214,17 +214,11 @@ jobs:
       # specified image. The `id` "meta" allows the output of this
       # step to be referenced in a subsequent step. The `images` value
       # provides the base name for the tags and labels.
-      #
-      # TODO: do not force the value to latest
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-            type=ref,event=pr
-            type=ref,event=branch
 
       # This step uses the `docker/build-push-action` action to build
       # the image, based on your repository's `Dockerfile`. If the
