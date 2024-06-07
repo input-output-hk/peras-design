@@ -15,6 +15,7 @@ library
     import:           warnings
 
     exposed-modules:  Peras.Server
+                      Peras.Server.App
 
     build-depends:    QuickCheck,
                       aeson,

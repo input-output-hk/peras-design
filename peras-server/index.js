@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+  // retrieve simulation data from server
+  const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
+  const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
+
   const setInputValue = (inputId, paramName, defaultValue = "error") => {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(paramName) || defaultValue;
@@ -28,9 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setInputValue(inputId, paramName, defaultValue); 
   }
 
-  // This is needed to stop any prior simulations when refreshing the browser.
-  req("/stop", "DELETE");
-
   const node = document.getElementById('chain');
   const slot = document.getElementById('slot');
   const roundNumber = document.getElementById('roundNumber');
@@ -39,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   simulate.addEventListener('click', () => {
     network.body.data.nodes.clear();
     network.body.data.edges.clear();
-    postJSON("/simulate", {
-      duration: parseInt(document.getElementById('uiDuration').value)
+    ws.send(JSON.stringify({
+        tag: "Simulate"
+      , duration: parseInt(document.getElementById('uiDuration').value)
       , parties: parseInt(document.getElementById('uiParties').value)
       , u: parseInt(document.getElementById('uiU').value)
       , a: parseInt(document.getElementById('uiA').value)
@@ -54,27 +57,23 @@ document.addEventListener('DOMContentLoaded', () => {
       , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
       , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
       , rngSeed: parseInt(document.getElementById('uiSeed').value)
-    })
+    }));
   });
 
   const stop = document.getElementById('uiStop');
   stop.addEventListener('click', () => {
-    req("/stop", "DELETE");
+    ws.send(JSON.stringify({tag: "Stop"}));
   });
 
   const pause = document.getElementById('uiPause');
   pause.addEventListener('click', () => {
-    req("/pause", "PATCH");
+    ws.send(JSON.stringify({tag: "Pause"}));
   });
 
   const resume = document.getElementById('uiResume');
   resume.addEventListener('click', () => {
-    req("/resume", "PATCH");
+    ws.send(JSON.stringify({tag: "Resume"}));
   });
-
-  // retrieve simulation data from server
-  const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
-  const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
 
   const nodes = [];
   const edges = [];
@@ -430,32 +429,3 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   });
 });
-
-async function postJSON(url, data) {
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    console.log("Success:", result);
-  } catch (error) {
-    console.error("Error: %o", error);
-  }
-}
-
-async function req(url, method) {
-  try {
-    const response = await fetch(url, {
-      method: method
-    });
-    const result = await response.json();
-    console.log("Success:", result);
-  } catch (error) {
-    console.error("Error: %o", error);
-  }
-}
