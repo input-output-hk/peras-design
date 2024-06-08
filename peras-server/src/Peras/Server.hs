@@ -4,7 +4,6 @@ module Peras.Server where
 
 import Control.Monad (unless)
 import qualified Data.ByteString.Char8 as BS8
-import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Network.Wai as Wai
@@ -40,10 +39,6 @@ scottyApp authorizedCreds =
       Sc.redirect "/index.html"
 
     Sc.middleware static
-
-serveFiles :: [FilePath] -> Sc.ScottyM ()
-serveFiles = mapM_ $ \file ->
-  Sc.get (fromString $ "/" <> file) $ Sc.file file
 
 checkCreds :: [(Text, Text)] -> CheckCreds
 checkCreds authorized username password =
