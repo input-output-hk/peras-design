@@ -12,179 +12,179 @@ on:
     branches:
     - main
 jobs:
-  typecheck:
-    name: Build libraries
-    runs-on: self-hosted
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-    - name: 🛠️ Install Nix
-      uses: cachix/install-nix-action@v21
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
-        extra_nix_config: |
-          allowed-uris = ${{ env.ALLOWED_URIS }}
-          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
-          substituters = ${{ env.SUBSTITUTERS }}
-          experimental-features = nix-command flakes
-    - name: 🏗️ Typecheck Agda
-      run: |
-        nix build --show-trace .#peras
-    - name: 🏗️ Build `peras-simulation`.
-      run: |
-        nix build --show-trace .#peras-simulation-test
+  # typecheck:
+  #   name: Build libraries
+  #   runs-on: self-hosted
+  #   steps:
+  #   - name: 📥 Checkout repository
+  #     uses: actions/checkout@v4
+  #   - name: 🛠️ Install Nix
+  #     uses: cachix/install-nix-action@v21
+  #     with:
+  #       nix_path: nixpkgs=channel:nixos-unstable
+  #       install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+  #       extra_nix_config: |
+  #         allowed-uris = ${{ env.ALLOWED_URIS }}
+  #         trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+  #         substituters = ${{ env.SUBSTITUTERS }}
+  #         experimental-features = nix-command flakes
+  #   - name: 🏗️ Typecheck Agda
+  #     run: |
+  #       nix build --show-trace .#peras
+  #   - name: 🏗️ Build `peras-simulation`.
+  #     run: |
+  #       nix build --show-trace .#peras-simulation-test
 
-  simulate-hs:
-    name: Run simulations
-    runs-on: self-hosted
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-    - name: 🛠️ Install Nix
-      uses: cachix/install-nix-action@v21
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
-        extra_nix_config: |
-          allowed-uris = ${{ env.ALLOWED_URIS }}
-          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
-          substituters = ${{ env.SUBSTITUTERS }}
-          experimental-features = nix-command flakes
-    - name: 🗳️ Simulate Peras
-      run: |
-        nix run .#peras-simulate -- \
-          --in-file peras-simulation/example-input.yaml \
-          --out-file peras-simulation/tmp-output.yaml \
-          --trace-file peras-simulation/tmp-trace.jsonarray
-        nix run .#peras-visualize -- \
-          --trace-file peras-simulation/tmp-trace.jsonarray \
-          --dot-file peras-simulation/tmp.dot
-  tests:
-    if: true
-    name: Run tests
-    runs-on: self-hosted
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-    - name: 🛠️ Install Nix
-      uses: cachix/install-nix-action@v21
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
-        extra_nix_config: |
-          allowed-uris = ${{ env.ALLOWED_URIS }}
-          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
-          substituters = ${{ env.SUBSTITUTERS }}
-          experimental-features = nix-command flakes
-    - name: 🔬 Test with `peras-hs-test`
-      run: |
-        nix run .#peras-hs-test
-    - name: 🔬 Test with `peras-simulation-test`
-      run: |
-        nix run .#peras-simulation-test
+  # simulate-hs:
+  #   name: Run simulations
+  #   runs-on: self-hosted
+  #   steps:
+  #   - name: 📥 Checkout repository
+  #     uses: actions/checkout@v4
+  #   - name: 🛠️ Install Nix
+  #     uses: cachix/install-nix-action@v21
+  #     with:
+  #       nix_path: nixpkgs=channel:nixos-unstable
+  #       install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+  #       extra_nix_config: |
+  #         allowed-uris = ${{ env.ALLOWED_URIS }}
+  #         trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+  #         substituters = ${{ env.SUBSTITUTERS }}
+  #         experimental-features = nix-command flakes
+  #   - name: 🗳️ Simulate Peras
+  #     run: |
+  #       nix run .#peras-simulate -- \
+  #         --in-file peras-simulation/example-input.yaml \
+  #         --out-file peras-simulation/tmp-output.yaml \
+  #         --trace-file peras-simulation/tmp-trace.jsonarray
+  #       nix run .#peras-visualize -- \
+  #         --trace-file peras-simulation/tmp-trace.jsonarray \
+  #         --dot-file peras-simulation/tmp.dot
+  # tests:
+  #   if: true
+  #   name: Run tests
+  #   runs-on: self-hosted
+  #   steps:
+  #   - name: 📥 Checkout repository
+  #     uses: actions/checkout@v4
+  #   - name: 🛠️ Install Nix
+  #     uses: cachix/install-nix-action@v21
+  #     with:
+  #       nix_path: nixpkgs=channel:nixos-unstable
+  #       install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+  #       extra_nix_config: |
+  #         allowed-uris = ${{ env.ALLOWED_URIS }}
+  #         trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+  #         substituters = ${{ env.SUBSTITUTERS }}
+  #         experimental-features = nix-command flakes
+  #   - name: 🔬 Test with `peras-hs-test`
+  #     run: |
+  #       nix run .#peras-hs-test
+  #   - name: 🔬 Test with `peras-simulation-test`
+  #     run: |
+  #       nix run .#peras-simulation-test
 
-  test-demo:
-    name: Test Demo
-    runs-on: self-hosted
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-    - name: 🛠️ Install Nix
-      uses: cachix/install-nix-action@v21
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
-        extra_nix_config: |
-          allowed-uris = ${{ env.ALLOWED_URIS }}
-          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
-          substituters = ${{ env.SUBSTITUTERS }}
-          experimental-features = nix-command flakes
-    - name: 🏗️ Compile Agda
-      run: |
-        nix build .#test-demo-agda
-    - name: 🏗️ Compile Haskell Library
-      run: |
-        nix build .#test-demo
-    - name: 🏗️ Compile Haskell Executable
-      run: |
-        nix build .#test-demo-test
+  # test-demo:
+  #   name: Test Demo
+  #   runs-on: self-hosted
+  #   steps:
+  #   - name: 📥 Checkout repository
+  #     uses: actions/checkout@v4
+  #   - name: 🛠️ Install Nix
+  #     uses: cachix/install-nix-action@v21
+  #     with:
+  #       nix_path: nixpkgs=channel:nixos-unstable
+  #       install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+  #       extra_nix_config: |
+  #         allowed-uris = ${{ env.ALLOWED_URIS }}
+  #         trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+  #         substituters = ${{ env.SUBSTITUTERS }}
+  #         experimental-features = nix-command flakes
+  #   - name: 🏗️ Compile Agda
+  #     run: |
+  #       nix build .#test-demo-agda
+  #   - name: 🏗️ Compile Haskell Library
+  #     run: |
+  #       nix build .#test-demo
+  #   - name: 🏗️ Compile Haskell Executable
+  #     run: |
+  #       nix build .#test-demo-test
 
-  build-specification:
-    name: Build HTML Specification
-    runs-on: self-hosted
-    steps:
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-    - name: 🛠️ Install Nix
-      uses: cachix/install-nix-action@v21
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        install_url: https://releases.nixos.org/nix/nix-2.10.3/install
-        extra_nix_config: |
-          allowed-uris = ${{ env.ALLOWED_URIS }}
-          trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
-          substituters = ${{ env.SUBSTITUTERS }}
-          experimental-features = nix-command flakes
-    - name: 🏗️ Agda-to-HTML
-      run: |
-        nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
-    - name: Publish Docusaurus build
-      uses: actions/upload-artifact@v4
-      with:
-        name: agda-specification
-        if-no-files-found: error
-        path: |
-          html/*
+  # build-specification:
+  #   name: Build HTML Specification
+  #   runs-on: self-hosted
+  #   steps:
+  #   - name: 📥 Checkout repository
+  #     uses: actions/checkout@v4
+  #   - name: 🛠️ Install Nix
+  #     uses: cachix/install-nix-action@v21
+  #     with:
+  #       nix_path: nixpkgs=channel:nixos-unstable
+  #       install_url: https://releases.nixos.org/nix/nix-2.10.3/install
+  #       extra_nix_config: |
+  #         allowed-uris = ${{ env.ALLOWED_URIS }}
+  #         trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
+  #         substituters = ${{ env.SUBSTITUTERS }}
+  #         experimental-features = nix-command flakes
+  #   - name: 🏗️ Agda-to-HTML
+  #     run: |
+  #       nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
+  #   - name: Publish Docusaurus build
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: agda-specification
+  #       if-no-files-found: error
+  #       path: |
+  #         html/*
 
-  build-docusaurus:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+  # build-docusaurus:
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: site/package-lock.json
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: 'npm'
+  #         cache-dependency-path: site/package-lock.json
 
-      - name: Install dependencies
-        working-directory: site
-        run: npm ci
+  #     - name: Install dependencies
+  #       working-directory: site
+  #       run: npm ci
 
-      - name: Build Docusaurus site
-        working-directory: site
-        run: |
-          npm run build
+  #     - name: Build Docusaurus site
+  #       working-directory: site
+  #       run: |
+  #         npm run build
 
-      - name: Publish Docusaurus build
-        uses: actions/upload-artifact@v4
-        with:
-          name: docusaurus-build
-          if-no-files-found: error
-          path: |
-            site/build/*
+  #     - name: Publish Docusaurus build
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: docusaurus-build
+  #         if-no-files-found: error
+  #         path: |
+  #           site/build/*
 
-  publish-docs:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-22.04
-    needs:
-      - build-docusaurus
-    steps:
-      - name: Download Docusaurus build
-        uses: actions/download-artifact@v4
-        with:
-          name: docusaurus-build
-          path: ./github-pages
+  # publish-docs:
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - build-docusaurus
+  #   steps:
+  #     - name: Download Docusaurus build
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: docusaurus-build
+  #         path: ./github-pages
 
-      - name: Publish GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
-          publish_dir: ./github-pages
-          cname: peras.cardano-scaling.org
+  #     - name: Publish GitHub Pages
+  #       uses: peaceiris/actions-gh-pages@v4
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
+  #         publish_dir: ./github-pages
+  #         cname: peras.cardano-scaling.org
 
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -202,12 +202,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to Google Artifact registry
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: access_token
+          credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
+          access_token_lifetime: 1200s # need to be long enough for docker build to finish
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       # This step uses
       # [docker/metadata-action](https://github.com/docker/metadata-action#about)
       # to extract tags and labels that will be applied to the
@@ -230,7 +239,7 @@ jobs:
       # in the README of the `docker/build-push-action` repository.
       # It uses the `tags` and `labels` parameters to tag and label
       # the image with the output from the "meta" step.
-      - name: Build and push Docker image
+      - name: Build and push image to GHCR
         id: push
         uses: docker/build-push-action@v5
         with:
@@ -240,6 +249,22 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:cache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:cache,mode=max
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v1
+        with:
+          registry: us-east1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Push to GCR
+        run: |-
+          docker pull $image_tag
+          docker tag $image_tag "us-east1-docker.pkg.dev/iog-hydra/peras-docker/${{ env.IMAGE_NAME}}:$GITHUB_SHA"
+          docker push "us-east1-docker.pkg.dev/iog-hydra/peras-docker/${{ env.IMAGE_NAME}}:$GITHUB_SHA"
+        env:
+          image_id: ${{ steps.push.outputs.imageid }}
+          image_tag: ${{ steps.meta.outputs.tags }}
 
       # TODO: uncomment once the repository is public This step
       # generates an artifact attestation for the image, which is an
@@ -254,3 +279,26 @@ jobs:
       #     subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
       #     subject-digest: ${{ steps.push.outputs.digest }}
       #     push-to-registry: true
+
+  # deploy built server to Gcloud run action
+  # deploy-server:
+  #   needs: [ build-and-push-image ]
+  #   permissions:
+  #     contents: read
+  #     packages: read
+
+  #   steps:
+  #   - uses: 'actions/checkout@v4'
+
+  #   - uses: 'google-github-actions/auth@v2'
+  #     with:
+  #       credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
+
+  #   - id: 'deploy'
+  #     uses: 'google-github-actions/deploy-cloudrun@v2'
+  #     with:
+  #       service: 'peras-server'
+  #       image: 'gcr.io/cloudrun/hello'
+
+  #   - name: 'Use output'
+  #     run: 'curl "${{ steps.deploy.outputs.url }}"'

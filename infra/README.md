@@ -61,3 +61,33 @@ terraform apply plan
 ```
 
 Can take a while...
+
+To deploy built docker image from Github action, craete a dedicated service account:
+
+```
+export GCLOUD_SERVICE_ACCOUNT=peras-service-account@${GCLOUD_PROJECT_ID}.iam.gserviceaccount.com
+gcloud iam service-accounts create "peras-service-account" \
+  --project "${GCLOUD_PROJECT_ID}"
+```
+
+Create a key
+
+```
+gcloud iam service-accounts keys create "peras-service-account.json" \
+  --iam-account ${GCLOUD_SERVICE_ACCOUNT}
+```
+
+Give the service account the right set of permissions to:
+
+* Manage the artifact registry
+* Manage the Cloud Run service
+* Create OAuth token to be used as part of the workflow
+
+```
+gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/artifactregistry.admin
+gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/run.admin
+gcloud iam service-accounts add-iam-policy-binding  ${GCLOUD_SERVICE_ACCOUNT} --project="${GCLOUD_PROJECT_ID}" --role="roles/iam.serviceAccountTokenCreator" --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT}
+gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/iam.serviceAccountTokenCreator
+```
+
+Upload key as secret in the repository under name `GOOGLE_APPLICATION_CREDENTIALS`
