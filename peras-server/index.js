@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // retrieve simulation data from server
   const wsPath = window.location.pathname.split('/').slice(0, -1).join('/');
-  const ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + wsPath);
+  const protocol = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${protocol}//${window.location.hostname}:${window.location.port}${wsPath}`);
 
   const setInputValue = (inputId, paramName, defaultValue = "error") => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tau: "uiTau",
     b: "uiB",
     t: "uiT",
-    n: "uiCommittee", 
+    n: "uiCommittee",
     delta: "uiDelta",
     alpha: "uiAlpha",
     delayMicroseconds: "uiDelay",
@@ -30,8 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   for (const paramName in paramToInputMap) {
     const inputId = paramToInputMap[paramName];
-    const defaultValue = document.getElementById(inputId).value; 
-    setInputValue(inputId, paramName, defaultValue); 
+    const defaultValue = document.getElementById(inputId).value;
+    setInputValue(inputId, paramName, defaultValue);
   }
 
   const node = document.getElementById('chain');
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     uiPause.disabled = false;
     ws.send(JSON.stringify({tag: "Resume"}));
   });
+
 
   const nodes = [];
   const edges = [];
@@ -394,19 +396,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomStep = Math.floor(Math.random() * numSteps);
         return min + randomStep * step;
       };
-  
+
       for (const param in parameterValues) {
           const { input } = parameterValues[param];
-  
+
           if (input.type === 'number') {
-              const min = parseFloat(input.min) || 0;  
+              const min = parseFloat(input.min) || 0;
               const max = parseFloat(input.max) || 100;
-              const step = parseFloat(input.step) || 1; 
-  
+              const step = parseFloat(input.step) || 1;
+
               if (step === 1) {
-                input.value = getRandomInt(min, max); 
+                input.value = getRandomInt(min, max);
               } else {
-                input.value = getRandomFloat(min, max, step).toFixed(2); 
+                input.value = getRandomFloat(min, max, step).toFixed(2);
               }
           }
       }
@@ -448,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
   parameterFields.style.display = "grid";
 
   toggleChevron.addEventListener("click", () => {
-    if (parameterFields.style.display === "grid") { 
+    if (parameterFields.style.display === "grid") {
       parameterFields.style.display = "none";
       toggleChevron.classList.remove("up");
       toggleChevron.classList.add("down");
