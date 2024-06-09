@@ -16,6 +16,7 @@ import Network.Wai.Middleware.HttpAuth (
   basicAuth,
  )
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Network.Wai.Middleware.Static (static)
 import qualified Network.WebSockets as WS
 import Peras.Server.App (wsapp)
 import qualified Web.Scotty as Sc
@@ -38,7 +39,7 @@ scottyApp authorizedCreds =
     Sc.get "/" $
       Sc.redirect "/index.html"
 
-    serveFiles ["index.html", "index.js", "peras.css", "pilcrow.ico"]
+    Sc.middleware static
 
 serveFiles :: [FilePath] -> Sc.ScottyM ()
 serveFiles = mapM_ $ \file ->
