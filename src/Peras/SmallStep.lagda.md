@@ -604,9 +604,9 @@ Figure 2)
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash h
-                    ; certificate = nothing
---                        let r = v-round clock
---                        in needCert r t
+                    ; certificate =
+                        let r = v-round clock
+                        in needCert r t
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p

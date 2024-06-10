@@ -78,12 +78,14 @@ This is a very simple example of the execution of the protocol in the small-step
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
-      createBlock : PartyId → SlotNumber → Block → Block
-      createBlock p s b = record
+      createBlock : PartyId → SlotNumber → Block → T → Block
+      createBlock p s b t = record
             { slotNumber = s
             ; creatorId = p
             ; parentBlock = hash b
-            ; certificate = nothing -- needCert  tree₀
+            ; certificate =
+                let r = v-round s
+                in needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} r t
             ; leadershipProof = createLeadershipProof s p
             ; bodyHash = bodyHash′
             ; signature = createBlockSignature p
@@ -110,13 +112,15 @@ Blocks and Votes
       open IsTreeType
 
       block₁ : Block
-      block₁ = createBlock party₁ (MkSlotNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType tree₀)) --  (MkSlotNumber 1))) -- TODO: block₀
+      block₁ = createBlock party₁ (MkSlotNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType tree₀)) tree₀ --  (MkSlotNumber 1))) -- TODO: block₀
 
       vote₁ : Vote
       vote₁ = createVote party₁ (MkRoundNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType (extendTree tree₀ block₁))) -- (MkSlotNumber 1))) -- TODO: block₁
 
       block₃ : Block
-      block₃ = createBlock party₂ (MkSlotNumber 3) (proj₁ $ proj₁ $ uncons (valid is-TreeType (addVote (extendTree tree₀ block₁) vote₁))) -- (MkSlotNumber 1))) -- TODO: block₁
+      block₃ =
+        let t = addVote (extendTree tree₀ block₁) vote₁
+        in createBlock party₂ (MkSlotNumber 3) (proj₁ $ proj₁ $ uncons (valid is-TreeType t)) t -- (MkSlotNumber 1))) -- TODO: block₁
 ```
 Initial state
 ```agda
