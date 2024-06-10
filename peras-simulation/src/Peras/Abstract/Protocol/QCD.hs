@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Control.Monad
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Control.Tracer
@@ -141,14 +143,22 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       modify $ \ rs -> rs { unfetchedVotes = Set.insert v (unfetchedVotes rs) }
       pure mempty
 
-  postcondition (s, _) (Step a) _ r =
-    pure $ Just r == fmap fst (transition s a)
+  postcondition (s, _) (Step a) _ r = do
+    let expected = fromJust $ fmap fst (transition s a)
+    let ok = r == expected
+    monitorPost . counterexample $ "  action $ " ++ show a
+    unless (null r) $ do
+      monitorPost . counterexample $ "  -- got: " ++ show (Set.toList r)
+    unless ok $ do
+      monitorPost . counterexample $ "  -- expected: " ++ show (Set.toList expected)
+    pure ok
 
-prop_node :: Actions NodeModel -> Property
-prop_node as = monadicIO $ do
+prop_node :: Blind (Actions NodeModel) -> Property
+prop_node (Blind as) = monadicIO $ do
   stateVar <- lift $ IO.newTVarIO initialPerasState
   diffuserVar <- lift $ IO.newTVarIO def
   let unfetchedChains = mempty
       unfetchedVotes = mempty
+  monitor $ counterexample "do"
   _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
   pure True
