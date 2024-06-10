@@ -250,6 +250,14 @@ document.addEventListener('DOMContentLoaded', () => {
         currentRound = msg.roundNumber;
         slot.textContent = '' + msg.slot;
         roundNumber.textContent = '' + msg.roundNumber;
+	if (currentSlot == parseInt(uiDuration.value)) {
+          [uiDuration, uiParties, uiU, uiA, uiR, uiK, uiL, uiTau, uiB, uiT, uiCommittee, uiDelta, uiAlpha, uiDelay, uiSeed].forEach( ui => ui.disabled = false)
+          uiSimulate.disabled = false;
+          uiResume.disabled = true;
+          uiRandomize.disabled = false;
+          uiStop.disabled = true;
+          uiPause.disabled = true;
+	}
         break;
       case "NewChainAndVotes":
         // No drawing required.
