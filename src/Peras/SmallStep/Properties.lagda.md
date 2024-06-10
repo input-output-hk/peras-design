@@ -94,8 +94,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
     GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
-    states₀ : AssocList PartyId T
-    states₀ = map (λ where (p , _) → (p , tree₀)) parties
+    states₀ : Map T
+    states₀ = fromList $ map (λ where (p , _) → (p , tree₀)) parties
 
     N₀ : GlobalState
     N₀ = ⟦ MkSlotNumber 0
@@ -126,7 +126,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateVote _ (honest _ _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest _ _ _ _)) = ≤-refl
     clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
-    clock-incr {M} (NextSlotNewRound _ _ _) = n≤1+n (clock' M)
+    clock-incr {M} (NextSlotNewRound _ _) = n≤1+n (clock' M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
       → M ↝⋆ N
@@ -373,8 +373,8 @@ The lemma describes how knowledge is propagated between honest parties in the sy
         → (p₂ , honesty₂) ∈ parties
         → N₀ ↝⋆ N₁
         → N₁ ↝⋆ N₂
-        → p₁ ‼ blockTrees N₁ ≡ just t₁
-        → p₂ ‼ blockTrees N₂ ≡ just t₂
+        → lookup (blockTrees N₁) p₁ ≡ just t₁
+        → lookup (blockTrees N₂) p₂ ≡ just t₂
         → Fetched N₂
         → clock N₁ ≡ clock N₂
         → allBlocks t₁ ⊆ allBlocks t₂
@@ -561,8 +561,8 @@ that period.
         → h₂ ≡ Honest {p₂}
         → N₀ ↝⋆ N₁
         → N₁ ↝⋆ N₂
-        → p₁ ‼ blockTrees N₁ ≡ just t₁
-        → p₂ ‼ blockTrees N₂ ≡ just t₂
+        → lookup (blockTrees N₁) p₁ ≡ just t₁
+        → lookup (blockTrees N₂) p₂ ≡ just t₂
         → getSlotNumber (luckySlots (clock N₁ , clock N₂)) ≥ w
         → let c₁ = preferredChain′ (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
               c₂ = preferredChain′ (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
