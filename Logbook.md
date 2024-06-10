@@ -1,3 +1,23 @@
+## 2024-06-10
+
+### Deploying Peras simulation
+
+Spent some time to add automatic deployment of our Peras simulation server to some well known address so that people can benefit from it.
+It's been quite a journey as is often the case with cloud-based deployments when it's not one's day-to-day job, but it's kind of working with some degree of IaaC and automation.
+
+Here is a quick summary of what was done:
+
+* A docker image is built in [CI](https://github.com/input-output-hk/peras-design/blob/ea067d8453f514d3b7d929e897f311af3a402ee1/.github/workflows/ci.yaml#L1), and pushed to 2 different docker registries:
+  * Github's registry, which makes it available under `Packages` for manual download
+  * A custom GCloud Artifacts Registry, because Cloud Run actions cannot pull from ghcr.io
+    * There's a concept of _Remote Registry_ that can be used to expose ghcr.io
+* It's all deployed under `iog-hydra` GCloud project with some dedicated service account
+* The server is deployed as a single-container Cloud Run service with a custom domain mapping from https://peras-simulation.cardano-scaling.org
+
+The following picture summarizes the overall workflow:
+
+![Peras Server Deployment](site/diagrams/server-deployment.jpg)
+
 ## 2024-06-07
 
 ### Simulation and visualzation
@@ -28,7 +48,7 @@ A rudimentary user interface for controlling, visualizing, and debugging simulat
 
 - The `SimConfig` type contains complete information for starting a simulation from an arbitrary state.
     - Start and end times
-    - Protocol parameters   
+    - Protocol parameters
     - Which parties are slot leaders for particular rounds.
     - Which parties are committee members for particular rounds.
     - The initial `PerasState` for each party.
