@@ -182,7 +182,7 @@ Execution trace of the protocol
           ↣ Fetch (honest refl (here refl) BlockReceived)
           ↣ NextSlotNewRound empty refl   -- slot 4
           ↣ NextSlot empty refl           -- slot 5
-          ↣ NextSlotNewRound empty refl ? -- slot 6
+          ↣ NextSlotNewRound empty refl   -- slot 6
           ↣ ∎
 ```
 Trace dependent properties
