@@ -1,5 +1,42 @@
 ## 2024-06-10
 
+### Next steps with formal specification
+
+Goal:
+
+* We want quickcheck tests for "arbitrary" implementations (eg. in various languages)
+
+Questions:
+
+* Do we want an "Executable spec"?
+  * ie. Agda code from which we could generate runnable Haskell
+  * Observation from the past: the proofs might be too hard
+  * Test language is sound w.r.t. full specification but not _complete_
+  * Having an executbale specification gives you _completeness_ + reference implementation for free
+  * Andre's experience from Ledger: Just write an executable specification, leave the proofs for later
+    * There's a central proof that's maintained over time
+  * Pros: completeness, ref impl for free
+  * Cons: proofs are harder
+* Without exec spec:
+  * Pros: simpler to prove, more abstract
+  * Cons: need to pay attention to completeness of test models
+* Do we want a "Reference implementation"?
+  * _yes_, we need at least for simulation
+  * we also need that to "test the quickcheck tests"
+* What FastBFT is doing?
+  * Implementing Agda2Rust => goal is to have an executable specification
+  * everything is decidable
+
+* Formal spec is similar to the research paper
+
+Decision:
+
+* We won't write an _Executable spec_ per se, only in the form of q-d tests
+* We focus on the Voting logic
+
+* Current small example of trace is already eating a lot of memory in Agda
+  * Compile Agda with Haskell profiling on???
+
 ### Deploying Peras simulation
 
 Spent some time to add automatic deployment of our Peras simulation server to some well known address so that people can benefit from it.
