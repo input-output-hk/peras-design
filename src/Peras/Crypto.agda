@@ -19,7 +19,6 @@ postulate
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.ByteString
 import GHC.Generics (Generic)
 eqBS :: ByteString -> ByteString -> Bool
 eqBS = (==)
