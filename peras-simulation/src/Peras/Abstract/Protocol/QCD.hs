@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Data.Maybe
 import Data.Foldable
 import Data.Default
 import Peras.Chain
@@ -46,7 +47,11 @@ instance StateModel NodeModel where
   data Action NodeModel a where
     Step :: EnvAction -> Action NodeModel (Maybe Vote)
 
-  initialState = MkNodeModel{self = mkParty 1 mempty mempty, clock = systemStart + 1, protocol = def, state = initialPerasState}
+  initialState = MkNodeModel{ self = mkParty 1 mempty mempty
+                            , clock = systemStart + 1
+                            , protocol = def
+                            , state = initialPerasState
+                            }
 
   arbitraryAction _ MkNodeModel{self, clock, state = MkPerasState{..}} = Some . Step <$>
       frequency [ (1, pure Tick)
@@ -75,3 +80,7 @@ instance StateModel NodeModel where
       genCertificate _ = pure Nothing -- TODO
       genVote = arbitrary
       genPartyId = arbitrary `suchThat` (/= pid self)
+
+  precondition s (Step a) = isJust (transition s a)
+
+  nextState s (Step a) _ = snd . fromJust $ transition s a
