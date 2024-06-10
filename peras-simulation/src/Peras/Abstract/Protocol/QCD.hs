@@ -40,9 +40,9 @@ import Test.QuickCheck.Monadic
 import Control.Concurrent.STM.TVar qualified as IO
 
 data NodeModel = MkNodeModel
-  { self :: Party
-  , clock :: SlotNumber
-  , protocol :: PerasParams
+  { modelSUT  :: Party
+  , clock     :: SlotNumber
+  , protocol  :: PerasParams
   , allChains :: [Chain]
   }
   deriving (Eq, Show)
@@ -70,7 +70,7 @@ instance StateModel NodeModel where
   data Action NodeModel a where
     Step :: EnvAction -> Action NodeModel (Set Vote)
 
-  initialState = MkNodeModel{ self = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
+  initialState = MkNodeModel{ modelSUT = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
                             , clock = systemStart + 1
                             , protocol = def { perasU = 5
                                              , perasR = 2
@@ -82,7 +82,7 @@ instance StateModel NodeModel where
                             , allChains = []
                             }
 
-  arbitraryAction _ MkNodeModel{self, clock, allChains} = Some . Step <$>
+  arbitraryAction _ MkNodeModel{modelSUT, clock, allChains} = Some . Step <$>
       frequency [ (1, pure Tick)
                 , (1, NewChain <$> genChain)
                 , (1, NewVote  <$> genVote)
@@ -110,7 +110,7 @@ instance StateModel NodeModel where
 
       genCertificate _ = pure Nothing -- TODO
       genVote = arbitrary
-      genPartyId = arbitrary `suchThat` (/= pid self)
+      genPartyId = arbitrary `suchThat` (/= pid modelSUT)
 
   shrinkAction _ _ (Step Tick) = []
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
@@ -134,8 +134,8 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       RunState{..} <- get
       modify $ \ rs -> rs { unfetchedChains = mempty, unfetchedVotes = mempty }
       lift $ do
-        _ <- fetching nullTracer protocol self stateVar clock unfetchedChains unfetchedVotes
-        let party = mkCommitteeMember self protocol clock True
+        _ <- fetching nullTracer protocol modelSUT stateVar clock unfetchedChains unfetchedVotes
+        let party = mkCommitteeMember modelSUT protocol clock True
             preagreement' = preagreement nullTracer
             diffuser = diffuseVote diffuserVar
         _ <- voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
