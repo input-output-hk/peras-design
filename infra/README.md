@@ -66,6 +66,7 @@ To deploy built docker image from Github action, craete a dedicated service acco
 
 ```
 export GCLOUD_SERVICE_ACCOUNT=peras-service-account@${GCLOUD_PROJECT_ID}.iam.gserviceaccount.com
+export GCLOUD_COMPUTE_SERVICE_ACCOUNT=${GCLOUD_PROJECT_NUMBER}-compute@developer.gserviceaccount.com
 gcloud iam service-accounts create "peras-service-account" \
   --project "${GCLOUD_PROJECT_ID}"
 ```
@@ -86,8 +87,14 @@ Give the service account the right set of permissions to:
 ```
 gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/artifactregistry.admin
 gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/run.admin
-gcloud iam service-accounts add-iam-policy-binding  ${GCLOUD_SERVICE_ACCOUNT} --project="${GCLOUD_PROJECT_ID}" --role="roles/iam.serviceAccountTokenCreator" --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT}
 gcloud projects add-iam-policy-binding ${GCLOUD_PROJECT_ID} --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role=roles/iam.serviceAccountTokenCreator
 ```
 
 Upload key as secret in the repository under name `GOOGLE_APPLICATION_CREDENTIALS`
+
+[Permissions](https://cloud.google.com/run/docs/reference/iam/roles#additional-configuration) to set for deploying Cloud run:
+
+```
+gcloud run services add-iam-policy-binding peras-server --project="${GCLOUD_PROJECT_ID}" --region=us-east1 --role="roles/run.admin" --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT}
+gcloud iam service-accounts  add-iam-policy-binding ${GCLOUD_COMPUTE_SERVICE_ACCOUNT}  --project="${GCLOUD_PROJECT_ID}"  --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} --role="roles/iam.serviceAccountUser"
+```
