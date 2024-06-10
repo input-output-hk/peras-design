@@ -10,6 +10,11 @@ variable "google_zone" {
   default     = "us-east1-b"
 }
 
+variable "google_service_account" {
+  type        = string
+  description = "The service account to use for deploying services"
+}
+
 variable "google_service_credentials_json_file" {
   type        = string
   description = "The credentials of the GCP service account"
