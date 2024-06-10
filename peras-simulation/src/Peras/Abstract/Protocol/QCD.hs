@@ -1,4 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,6 +12,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Control.Tracer
+import Control.Concurrent.Class.MonadSTM
+import Control.Monad.State hiding (state)
 import Data.Maybe
 import Data.Foldable
 import Data.Default
@@ -16,22 +26,30 @@ import Peras.Crypto ()
 import Peras.Numbering
 import Peras.Arbitraries ()
 import Peras.Abstract.Protocol.Types
+import Peras.Abstract.Protocol.Fetching
+import Peras.Abstract.Protocol.Preagreement
 import Peras.Abstract.Protocol.Crypto
+import Peras.Abstract.Protocol.Diffusion
+import Peras.Abstract.Protocol.Voting
 import Test.QuickCheck
 import Test.QuickCheck.StateModel
+import Test.QuickCheck.Extras
+import Test.QuickCheck.Monadic
+import Control.Concurrent.STM.TVar qualified as IO
 
 data NodeModel = MkNodeModel
   { self :: Party
   , clock :: SlotNumber
   , protocol :: PerasParams
-  , state :: PerasState
+  , allChains :: [Chain]
   }
   deriving (Eq, Show)
 
 instance HasVariables NodeModel where
   getAllVariables _ = mempty
 
-deriving instance Show (Action NodeModel a)
+instance Show (Action NodeModel a) where
+  show (Step a) = show a
 deriving instance Eq (Action NodeModel a)
 
 instance HasVariables (Action NodeModel a) where
@@ -40,20 +58,23 @@ instance HasVariables (Action NodeModel a) where
 data EnvAction = Tick | NewChain Chain | NewVote Vote
   deriving (Show, Eq, Generic)
 
-transition :: NodeModel -> EnvAction -> Maybe (Maybe Vote, NodeModel)
-transition s _ = Just (Nothing, s)
+transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
+transition s a = case a of
+  Tick -> Just (mempty, s { clock = clock s + 1 })
+  NewChain c -> Just (mempty, s { allChains = c : allChains s })
+  _ -> Just (mempty, s)
 
 instance StateModel NodeModel where
   data Action NodeModel a where
-    Step :: EnvAction -> Action NodeModel (Maybe Vote)
+    Step :: EnvAction -> Action NodeModel (Set Vote)
 
-  initialState = MkNodeModel{ self = mkParty 1 mempty mempty
+  initialState = MkNodeModel{ self = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
                             , clock = systemStart + 1
                             , protocol = def
-                            , state = initialPerasState
+                            , allChains = []
                             }
 
-  arbitraryAction _ MkNodeModel{self, clock, state = MkPerasState{..}} = Some . Step <$>
+  arbitraryAction _ MkNodeModel{self, clock, allChains} = Some . Step <$>
       frequency [ (1, pure Tick)
                 , (1, NewChain <$> genChain)
                 , (1, NewVote  <$> genVote)
@@ -61,7 +82,9 @@ instance StateModel NodeModel where
     where
       genChain =
         do
-          tip' <- elements $ toList chains
+          tip' <- case allChains of
+                    [] -> elements $ toList (chains initialPerasState)
+                    _  -> elements $ toList allChains
           tip <- flip drop tip' <$> arbitrary
           let minSlot =
                 case tip of
@@ -84,3 +107,48 @@ instance StateModel NodeModel where
   precondition s (Step a) = isJust (transition s a)
 
   nextState s (Step a) _ = snd . fromJust $ transition s a
+
+data RunState m =
+  RunState { stateVar        :: TVar m PerasState
+           , diffuserVar     :: TVar m Diffuser
+           , unfetchedChains :: Set Chain
+           , unfetchedVotes  :: Set Vote
+           }
+
+type Runtime m = StateT (RunState m) m
+
+getVotes :: MonadSTM m => NodeModel -> Runtime m (Set Vote)
+getVotes MkNodeModel{..} = do
+  RunState{..} <- get
+  let party = mkCommitteeMember self protocol clock True
+      preagreement' = preagreement nullTracer
+      diffuser = diffuseVote diffuserVar
+  lift $ do
+    _ <- voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
+    snd <$> popChainsAndVotes diffuserVar clock
+
+instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (Runtime m) where
+  perform nm@MkNodeModel{..} (Step a) _ = case a of
+    Tick -> do
+      RunState{..} <- get
+      _ <- lift $ fetching nullTracer protocol self stateVar clock unfetchedChains unfetchedVotes
+      modify $ \ rs -> rs { unfetchedChains = mempty, unfetchedVotes = mempty }
+      getVotes nm
+    NewChain c -> do
+      modify $ \ rs -> rs { unfetchedChains = Set.insert c (unfetchedChains rs) }
+      pure mempty
+    NewVote v -> do
+      modify $ \ rs -> rs { unfetchedVotes = Set.insert v (unfetchedVotes rs) }
+      pure mempty
+
+  postcondition (s, _) (Step a) _ r =
+    pure $ Just r == fmap fst (transition s a)
+
+prop_node :: Actions NodeModel -> Property
+prop_node as = monadicIO $ do
+  stateVar <- lift $ IO.newTVarIO initialPerasState
+  diffuserVar <- lift $ IO.newTVarIO def
+  let unfetchedChains = mempty
+      unfetchedVotes = mempty
+  _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
+  pure True
