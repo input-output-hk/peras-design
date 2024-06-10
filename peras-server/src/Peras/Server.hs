@@ -38,7 +38,7 @@ scottyApp authorizedCreds =
     Sc.get "/" $
       Sc.redirect "/index.html"
 
-    serveFiles ["index.html", "main.js", "style.css", "pilcrow.ico"]
+    serveFiles ["index.html", "index.js", "peras.css", "pilcrow.ico"]
 
 serveFiles :: [FilePath] -> Sc.ScottyM ()
 serveFiles = mapM_ $ \file ->
