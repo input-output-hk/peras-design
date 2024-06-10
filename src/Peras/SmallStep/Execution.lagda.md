@@ -21,8 +21,12 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
 
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; fromList)
+
+{-
 open import Prelude.AssocList hiding (_∈_)
 open Decidable _≟_
+-}
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
@@ -104,7 +108,7 @@ This is a very simple example of the execution of the protocol in the small-step
             ; creatorId = p
             ; proofM = createMembershipProof r p
             ; blockHash =
-                let b = Preagreement {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s t
+                let b = block₀ -- Preagreement {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s t
                 in hash b
             ; signature = createVoteSignature p
             }
@@ -117,7 +121,7 @@ Blocks and Votes
       block₁ = createBlock party₁ (MkSlotNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType tree₀)) tree₀ --  (MkSlotNumber 1))) -- TODO: block₀
 
       vote₁ : Vote
-      vote₁ = createVote party₁ (MkSlotNumber 1) (MkRoundNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType (extendTree tree₀ block₁))) (extendTree tree₀ block₀) -- (MkSlotNumber 1))) -- TODO: block₁
+      vote₁ = createVote party₁ (MkSlotNumber 2) (MkRoundNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType (extendTree tree₀ block₁))) (extendTree tree₀ block₀) -- (MkSlotNumber 1))) -- TODO: block₁
 
       block₃ : Block
       block₃ =
@@ -129,18 +133,18 @@ Initial state
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
-          initialMap = ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
+          initialMap = fromList ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
 ```
 Final state after the execution of all the steps
 ```agda
       finalState : GlobalState
-      finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalHst , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 6 , finalMap , [] , finalHst , adversarialState₀ ⟧
         where
-          -- finalHst = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
-          -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
-          finalHst = {- VoteMsg vote₁ ∷ -} BlockMsg block₁ ∷ []
-          finalTree = (extendTree tree₀ block₁)
-          finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
+          finalHst = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
+          finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
+          -- finalHst = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
+          -- finalTree = addVote (extendTree tree₀ block₁) vote₁
+          finalMap = fromList ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
 ```
 Properties of cert₀
 ```agda
@@ -167,20 +171,18 @@ Execution trace of the protocol
 
         where
         _ : initialState ↝⋆ finalState
-        _ =  NextSlot empty refl -- slot 1
+        _ =  NextSlot empty refl          -- slot 1
           ↣ CreateBlock empty (honest refl refl isBlockSignature isSlotLeader)
           ↣ Fetch (honest refl (here refl) BlockReceived)
-          ↣ NextSlotNewRound empty refl {- FIXME -} -- slot 2
-          {-
-          ↣ CreateVote empty (honest refl refl isVoteSignature refl isCommitteeMember Regular vr-1a vr-1b)
+          ↣ NextSlotNewRound empty refl   -- slot 2
+          ↣ CreateVote empty (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Fetch (honest refl (here refl) VoteReceived)
-          -}
-          ↣ NextSlot empty refl -- slot 3
---          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
---          ↣ Fetch (honest refl (here refl) BlockReceived)
---          ↣ NextSlotNewRound empty refl ?  -- slot 4
---          ↣ NextSlot empty refl -- slot 5
---          ↣ NextSlotNewRound empty refl ? -- slot 6
+          ↣ NextSlot empty refl           -- slot 3
+          ↣ CreateBlock empty (honest refl refl isBlockSignature isSlotLeader)
+          ↣ Fetch (honest refl (here refl) BlockReceived)
+          ↣ NextSlotNewRound empty refl   -- slot 4
+          ↣ NextSlot empty refl           -- slot 5
+          ↣ NextSlotNewRound empty refl ? -- slot 6
           ↣ ∎
 ```
 Trace dependent properties
@@ -191,10 +193,9 @@ Trace dependent properties
 
             vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ block₁)) + 1
             vr-1a rewrite latestCert≡cert₀ = refl
-{-
+
             vr-1b : (latestCertSeen (extendTree tree₀ block₁))
               PointsInto (preferredChain (extendTree tree₀ block₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-              valid' is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
--}
+              valid is-TreeType (extendTree tree₀ block₁)
 ```

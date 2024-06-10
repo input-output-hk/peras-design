@@ -36,8 +36,12 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
+
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; toList; fromList)
+{-
 open import Prelude.AssocList hiding (_∈_)
 open Decidable _≟_
+-}
 ```
 -->
 ## Protocol Analysis
@@ -97,8 +101,8 @@ Building up the voting string from all the party's block-trees
     build-σ′ (MkRoundNumber (suc n)) ts =
       σᵢ (MkRoundNumber (suc n)) ts ∷ build-σ′ (MkRoundNumber n) ts
 
-    build-σ : ∀ (n : RoundNumber) → AssocList PartyId T → Vec Σ (getRoundNumber n)
-    build-σ n = build-σ′ n ∘ map proj₂
+    build-σ : ∀ (n : RoundNumber) → Map T → Vec Σ (getRoundNumber n)
+    build-σ n = build-σ′ n ∘ map proj₂ ∘ toList
 ```
 ### Voting string analysis
 ```agda
@@ -154,9 +158,9 @@ Building up the voting string from all the party's block-trees
 ```
 ```agda
     postulate
-      lastIsHead : ∀ {ts : List T} {m} {x}
-        → build-σ′ (MkRoundNumber m) ts ⟶ x
-        → V.head (build-σ′ (MkRoundNumber (suc m)) ts) ≡ x
+      lastIsHead : ∀ {ts : Map T} {m} {x}
+        → build-σ (MkRoundNumber m) ts ⟶ x
+        → V.head (build-σ (MkRoundNumber (suc m)) ts) ≡ x
 ```
 <!--
 ```agda
@@ -212,8 +216,8 @@ Reflexive, transitive closure
 
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
-      states₀ : AssocList PartyId T
-      states₀ = map (λ where (p , _) → (p , tree₀)) parties
+      states₀ : Map T
+      states₀ = fromList $ map (λ where (p , _) → (p , tree₀)) parties
 
       N₀ : GlobalState
       N₀ = ⟦ MkSlotNumber 0
@@ -283,6 +287,7 @@ The voting string of every execution of the protocol is built according to the H
       -- preconditions
       -- * transition to new voting round
       -- * required votes from the previous round
+      {-
       theorem-2 : ∀ {M N : GlobalState} {m}
         → M ↦ N
         → m ≡ v-rnd' M
@@ -297,7 +302,7 @@ The voting string of every execution of the protocol is built according to the H
       theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
         rewrite σ′
         rewrite knowledge-prop {m} (proj₂ (prevRound M) ∷″ M↦N ∷″ []″)
-        rewrite lastIsHead {blockTrees' N} st″
+        rewrite lastIsHead {blockTrees N} ? -- st″
         with c
 
       theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
@@ -309,6 +314,7 @@ The voting string of every execution of the protocol is built according to the H
 
       theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
       theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
+      -}
 ```
 <!--
 ```agda

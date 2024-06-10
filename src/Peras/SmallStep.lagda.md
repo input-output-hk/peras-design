@@ -24,14 +24,18 @@ open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
+{-
 open import Prelude.AssocList hiding (_∈_)
 open Decidable _≟_
+-}
 
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
+
+open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; toList)
 
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} renaming (_⊆_ to _⊆ᶜ_)
@@ -398,13 +402,13 @@ The small-step semantics rely on a global state, which consists of the following
       constructor ⟦_,_,_,_,_⟧
       field
         clock : SlotNumber
-        blockTrees : AssocList PartyId T
+        blockTrees : Map T
         messages : List Envelope
         history : List Message
         adversarialState : S
 
       blockTrees' : List T
-      blockTrees' = map proj₂ blockTrees
+      blockTrees' = map proj₂ (toList blockTrees)
 
       v-rnd : RoundNumber
       v-rnd = v-round clock
@@ -435,12 +439,14 @@ must hold before transitioning to the next slot.
       where open State M
 ```
 ```agda
+{-
     RequiredVotes : State → Set
     RequiredVotes M =
       let r = v-round clock
        in Any (VoteInRound r ∘ proj₂) blockTrees
         → Any (hasVote r ∘ proj₂) blockTrees
       where open State M
+-}
 ```
 Ticking the global clock increments the slot number and decrements the delay of
 all the messages in the message buffer.
@@ -462,7 +468,7 @@ history. "add and diffuse" from the paper
     _,_,_,_⇑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ⇑ M =
       record M
-        { blockTrees = (p , l) ↑ blockTrees
+        { blockTrees = insert p l blockTrees
         ; messages =
             map (uncurry ⦅_,_, m , d ⦆)
               (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
@@ -491,13 +497,13 @@ the local state
 ```agda
       honest : ∀ {p} {t t′} {m} {N}
         → let open State N in
-          p ‼ blockTrees ≡ just t
+          lookup blockTrees p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
           ------------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N
-            { blockTrees = (p , t′) ↑ blockTrees
+            { blockTrees = insert p t′ blockTrees
             ; messages = messages ─ m∈ms
             }
 ```
@@ -545,13 +551,13 @@ is added to be consumed immediately.
                     ; creatorId = p
                     ; proofM = prf
                     ; blockHash =
-                        let b = Preagreement clock t
+                        let b = block₀ -- Preagreement clock t
                         in hash b
                     ; signature = sig
                     }
           in
           vote ≡ v
-        → p ‼ blockTrees ≡ just t
+        → lookup blockTrees p ≡ just t
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
@@ -619,7 +625,7 @@ Figure 2)
                     }
           in
           block ≡ b
-        → p ‼ blockTrees ≡ just t
+        → lookup blockTrees p ≡ just t
         → (σ : IsBlockSignature b sig)
         → (π : IsSlotLeader p clock prf)
           -----------------------------------------
