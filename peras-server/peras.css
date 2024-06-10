@@ -40,6 +40,11 @@ button:hover {
     background-color: #1F5B3B;
 }
 
+:disabled {
+    background-color: #CCCCCC;
+    cursor: not-allowed;
+}
+
 form input {
     margin: 1em;
 }

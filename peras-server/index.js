@@ -38,42 +38,62 @@ document.addEventListener('DOMContentLoaded', () => {
   const slot = document.getElementById('slot');
   const roundNumber = document.getElementById('roundNumber');
 
-  const simulate = document.getElementById('uiSimulate');
-  simulate.addEventListener('click', () => {
+  [uiStop, uiPause, uiResume].forEach(ui => ui.disabled = true);
+
+  uiSimulate.addEventListener('click', () => {
     network.body.data.nodes.clear();
     network.body.data.edges.clear();
+    [uiDuration, uiParties, uiU, uiA, uiR, uiK, uiL, uiTau, uiB, uiT, uiCommittee, uiDelta, uiAlpha, uiDelay, uiSeed].forEach( ui => ui.disabled = true)
+    uiSimulate.disabled = true;
+    uiResume.disabled = true;
+    uiRandomize.disabled = true;
+    uiStop.disabled = false;
+    uiPause.disabled = false;
     ws.send(JSON.stringify({
         tag: "Simulate"
-      , duration: parseInt(document.getElementById('uiDuration').value)
-      , parties: parseInt(document.getElementById('uiParties').value)
-      , u: parseInt(document.getElementById('uiU').value)
-      , a: parseInt(document.getElementById('uiA').value)
-      , r: parseInt(document.getElementById('uiR').value)
-      , k: parseInt(document.getElementById('uiK').value)
-      , l: parseInt(document.getElementById('uiL').value)
-      , tau: parseInt(document.getElementById('uiTau').value)
-      , b: parseInt(document.getElementById('uiB').value)
-      , t: parseInt(document.getElementById('uiT').value)
-      , committee: parseInt(document.getElementById('uiCommittee').value)
-      , delta: parseInt(document.getElementById('uiDelta').value)
-      , activeSlots: parseFloat(document.getElementById('uiAlpha').value)
-      , delayMicroseconds: Math.round(parseFloat(document.getElementById('uiDelay').value) * 1000000)
-      , rngSeed: parseInt(document.getElementById('uiSeed').value)
+      , duration: parseInt(uiDuration.value)
+      , parties: parseInt(uiParties.value)
+      , u: parseInt(uiU.value)
+      , a: parseInt(uiA.value)
+      , r: parseInt(uiR.value)
+      , k: parseInt(uiK.value)
+      , l: parseInt(uiL.value)
+      , tau: parseInt(uiTau.value)
+      , b: parseInt(uiB.value)
+      , t: parseInt(uiT.value)
+      , committee: parseInt(uiCommittee.value)
+      , delta: parseInt(uiDelta.value)
+      , activeSlots: parseFloat(uiAlpha.value)
+      , delayMicroseconds: Math.round(parseFloat(uiDelay.value) * 1000000)
+      , rngSeed: parseInt(uiSeed.value)
     }));
   });
 
-  const stop = document.getElementById('uiStop');
-  stop.addEventListener('click', () => {
+  uiStop.addEventListener('click', () => {
+    [uiDuration, uiParties, uiU, uiA, uiR, uiK, uiL, uiTau, uiB, uiT, uiCommittee, uiDelta, uiAlpha, uiDelay, uiSeed].forEach( ui => ui.disabled = false)
+    uiSimulate.disabled = false;
+    uiResume.disabled = true;
+    uiRandomize.disabled = false;
+    uiStop.disabled = true;
+    uiPause.disabled = true;
     ws.send(JSON.stringify({tag: "Stop"}));
   });
 
-  const pause = document.getElementById('uiPause');
-  pause.addEventListener('click', () => {
+  uiPause.addEventListener('click', () => {
+    uiSimulate.disabled = true;
+    uiResume.disabled = false;
+    uiRandomize.disabled = true;
+    uiStop.disabled = false;
+    uiPause.disabled = true;
     ws.send(JSON.stringify({tag: "Pause"}));
   });
 
-  const resume = document.getElementById('uiResume');
-  resume.addEventListener('click', () => {
+  uiResume.addEventListener('click', () => {
+    uiSimulate.disabled = true;
+    uiResume.disabled = true;
+    uiRandomize.disabled = true;
+    uiStop.disabled = false;
+    uiPause.disabled = false;
     ws.send(JSON.stringify({tag: "Resume"}));
   });
 
@@ -121,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setStatus(message) {
-    document.getElementById('uiMessage').innerText = message;
+    uiMessage.innerText = message;
   }
 
   let currentLevel = 0;
@@ -212,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
           network.body.data.nodes.add({ font: { multi: 'html' }, id: genesisBlockId, level: nextLevel(), shape: 'box', color: "dodgerblue", label: "<b>Genesis</b>" });
           network.body.data.nodes.add({ font: { multi: 'html', size: 12 }, id: genesisCertId, level: nextLevel(), shape: 'box', color: 'turquoise', label: "Genesis\ncertificate" });
           network.body.data.edges.add({ id: genesisCertId, from: genesisCertId, to: genesisBlockId, color: "dodgerblue" });
-          const nParties = parseInt(document.getElementById('uiParties').value);
+          const nParties = parseInt(uiParties.value);
           for (let party = 1; party <= nParties; party++) {
             const id = mkPartyId(party);
             const certPrimeId = mkCertPrimeId(party);
@@ -342,9 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Randomize button
-  const randomizeButton = document.getElementById("randomizeButton");
-
-  randomizeButton.addEventListener("click", () => {
+  uiRandomize.addEventListener("click", () => {
 
       const parameterValues = {
           uiDuration: { input: document.getElementById("uiDuration"), },
@@ -395,21 +413,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const baseUrl = `${self.location.origin}${self.location.pathname}`;
       const params = [];
 
-      params.push(`duration=${document.getElementById("uiDuration").value}`);
-      params.push(`parties=${document.getElementById("uiParties").value}`);
-      params.push(`u=${document.getElementById("uiU").value}`);
-      params.push(`a=${document.getElementById("uiA").value}`);
-      params.push(`r=${document.getElementById("uiR").value}`);
-      params.push(`k=${document.getElementById("uiK").value}`);
-      params.push(`l=${document.getElementById("uiL").value}`);
-      params.push(`tau=${document.getElementById("uiTau").value}`);
-      params.push(`b=${document.getElementById("uiB").value}`);
-      params.push(`t=${document.getElementById("uiT").value}`);
-      params.push(`n=${document.getElementById("uiCommittee").value}`);
-      params.push(`delta=${document.getElementById("uiDelta").value}`);
-      params.push(`alpha=${document.getElementById("uiAlpha").value}`);
-      params.push(`delayMicroseconds=${document.getElementById("uiDelay").value}`);
-      params.push(`rngSeed=${document.getElementById("uiSeed").value}`);
+      params.push(`duration=${uiDuration.value}`);
+      params.push(`parties=${uiParties.value}`);
+      params.push(`u=${uiU.value}`);
+      params.push(`a=${uiA.value}`);
+      params.push(`r=${uiR.value}`);
+      params.push(`k=${uiK.value}`);
+      params.push(`l=${uiL.value}`);
+      params.push(`tau=${uiTau.value}`);
+      params.push(`b=${uiB.value}`);
+      params.push(`t=${uiT.value}`);
+      params.push(`n=${uiCommittee.value}`);
+      params.push(`delta=${uiDelta.value}`);
+      params.push(`alpha=${uiAlpha.value}`);
+      params.push(`delayMicroseconds=${uiDelay.value}`);
+      params.push(`rngSeed=${uiSeed.value}`);
 
       const shareUrl = `${baseUrl}?${params.join("&")}`;
 
@@ -432,4 +450,5 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleChevron.classList.add("up");
   }
   });
+
 });
