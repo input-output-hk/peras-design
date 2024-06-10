@@ -31,6 +31,7 @@ library
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Node.Model
                      Peras.Abstract.Protocol.Preagreement
+                     Peras.Abstract.Protocol.QCD
                      Peras.Abstract.Protocol.Trace
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Visualizer
