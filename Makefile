@@ -7,7 +7,7 @@ LHSFILES := $(patsubst %.lagda.md,$(HSDIR)/%.hs,$(LAGDAFILES))
 AGDAFLAGS := -i src
 AGDA ?= agda
 AGDA2HS ?= agda2hs
-AGDA2HS_CONFIG ?= $(HOME)/rewrites.yaml
+AGDA2HS_CONFIG ?= rewrites.yaml
 AGDA_LIBS ?= $(HOME)/.agda/libraries
 
 $(info $(HSFILES))
