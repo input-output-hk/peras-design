@@ -72,7 +72,13 @@ instance StateModel NodeModel where
 
   initialState = MkNodeModel{ self = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
                             , clock = systemStart + 1
-                            , protocol = def
+                            , protocol = def { perasU = 5
+                                             , perasR = 2
+                                             , perasK = 4
+                                             , perasL = 1
+                                             , perasT = 4
+                                             , perasΔ = 1
+                                             }
                             , allChains = []
                             }
 
@@ -106,6 +112,9 @@ instance StateModel NodeModel where
       genVote = arbitrary
       genPartyId = arbitrary `suchThat` (/= pid self)
 
+  shrinkAction _ _ (Step Tick) = []
+  shrinkAction _ _ (Step _) = [Some (Step Tick)]
+
   precondition s (Step a) = isJust (transition s a)
 
   nextState s (Step a) _ = snd . fromJust $ transition s a
@@ -119,23 +128,18 @@ data RunState m =
 
 type Runtime m = StateT (RunState m) m
 
-getVotes :: MonadSTM m => NodeModel -> Runtime m (Set Vote)
-getVotes MkNodeModel{..} = do
-  RunState{..} <- get
-  let party = mkCommitteeMember self protocol clock True
-      preagreement' = preagreement nullTracer
-      diffuser = diffuseVote diffuserVar
-  lift $ do
-    _ <- voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
-    snd <$> popChainsAndVotes diffuserVar clock
-
 instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform nm@MkNodeModel{..} (Step a) _ = case a of
+  perform MkNodeModel{..} (Step a) _ = case a of
     Tick -> do
       RunState{..} <- get
-      _ <- lift $ fetching nullTracer protocol self stateVar clock unfetchedChains unfetchedVotes
       modify $ \ rs -> rs { unfetchedChains = mempty, unfetchedVotes = mempty }
-      getVotes nm
+      lift $ do
+        _ <- fetching nullTracer protocol self stateVar clock unfetchedChains unfetchedVotes
+        let party = mkCommitteeMember self protocol clock True
+            preagreement' = preagreement nullTracer
+            diffuser = diffuseVote diffuserVar
+        _ <- voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
+        snd <$> popChainsAndVotes diffuserVar clock
     NewChain c -> do
       modify $ \ rs -> rs { unfetchedChains = Set.insert c (unfetchedChains rs) }
       pure mempty
