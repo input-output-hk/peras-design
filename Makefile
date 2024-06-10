@@ -7,6 +7,7 @@ LHSFILES := $(patsubst %.lagda.md,$(HSDIR)/%.hs,$(LAGDAFILES))
 AGDAFLAGS := -i src
 AGDA ?= agda
 AGDA2HS ?= agda2hs
+AGDA2HS_CONFIG ?= rewrites.yaml
 AGDA_LIBS ?= $(HOME)/.agda/libraries
 
 $(info $(HSFILES))
@@ -22,11 +23,11 @@ typecheck: $(HSFILES) $(LHSFILES)
 
 # From https://stackoverflow.com/questions/34621364/makefile-compile-o-from-c-files
 $(HSDIR)/%.hs: %.agda
-	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src --config $(AGDA2HS_CONFIG) $^
 	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 $(HSDIR)/%.hs: %.lagda.md
-	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
+	@$(AGDA2HS) --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src --config $(AGDA2HS_CONFIG) $^
 	@$(AGDA) --compile --ghc-dont-call-ghc --no-main --local-interfaces --library-file=$(AGDA_LIBS) --compile-dir=$(HSDIR)/src $^
 
 .PHONY : clean veryclean

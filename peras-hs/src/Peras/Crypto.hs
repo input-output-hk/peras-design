@@ -2,7 +2,8 @@
 
 module Peras.Crypto where
 
-import Data.ByteString
+import Data.ByteString (ByteString)
+
 import GHC.Generics (Generic)
 
 eqBS :: ByteString -> ByteString -> Bool
