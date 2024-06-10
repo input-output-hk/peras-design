@@ -83,7 +83,7 @@ This is a very simple example of the execution of the protocol in the small-step
             { slotNumber = s
             ; creatorId = p
             ; parentBlock = hash b
-            ; certificate = nothing
+            ; certificate = nothing -- needCert  tree₀
             ; leadershipProof = createLeadershipProof s p
             ; bodyHash = bodyHash′
             ; signature = createBlockSignature p
@@ -107,16 +107,16 @@ This is a very simple example of the execution of the protocol in the small-step
 ```
 Blocks and Votes
 ```agda
-{-
+      open IsTreeType
+
       block₁ : Block
-      block₁ = createBlock party₁ (MkSlotNumber 1) (tipBest (MkSlotNumber 1) tree₀) -- TODO: block₀
+      block₁ = createBlock party₁ (MkSlotNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType tree₀)) --  (MkSlotNumber 1))) -- TODO: block₀
 
       vote₁ : Vote
-      vote₁ = createVote party₁ (MkRoundNumber 1) (tipBest (MkSlotNumber 1) (extendTree tree₀ block₁)) -- TODO: block₁
+      vote₁ = createVote party₁ (MkRoundNumber 1) (proj₁ $ proj₁ $ uncons (valid is-TreeType (extendTree tree₀ block₁))) -- (MkSlotNumber 1))) -- TODO: block₁
 
       block₃ : Block
-      block₃ = createBlock party₂ (MkSlotNumber 3) (tipBest (MkSlotNumber 3) (addVote (extendTree tree₀ block₁) vote₁)) -- TODO: block₁
-      -}
+      block₃ = createBlock party₂ (MkSlotNumber 3) (proj₁ $ proj₁ $ uncons (valid is-TreeType (addVote (extendTree tree₀ block₁) vote₁))) -- (MkSlotNumber 1))) -- TODO: block₁
 ```
 Initial state
 ```agda
@@ -127,16 +127,14 @@ Initial state
 ```
 Final state after the execution of all the steps
 ```agda
-{-
       finalState : GlobalState
-      finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
+      finalState = ⟦ MkSlotNumber 1 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
-          finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
-          finalTree = addVote (extendTree tree₀ block₁) vote₁
+          finalMsg = {- VoteMsg vote₁ ∷ -} BlockMsg block₁ ∷ []
+          finalTree = extendTree tree₀ block₁
           finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
--}
 ```
 Properties of cert₀
 ```agda
@@ -147,13 +145,11 @@ Properties of cert₀
 Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
-{-
       latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (extendTree t b) ≡ latestCertSeen t
       latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
 
       latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
       latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
--}
 ```
 Execution trace of the protocol
 ```agda
@@ -164,42 +160,35 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
-{-
         _ : initialState ↝⋆ finalState
         _ =  NextSlot empty refl -- slot 1
-          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
-          ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlotNewRound empty refl ? -- slot 2
-          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
-          ↣ Deliver (honest refl (here refl) VoteReceived)
+          ↣ CreateBlock empty (honest refl refl isBlockSignature isSlotLeader)
+          ↣ Fetch (honest refl (here refl) BlockReceived)
+          {-
+          ↣ NextSlotNewRound empty refl {!!} -- slot 2
+          ↣ CreateVote empty (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Fetch (honest refl (here refl) VoteReceived)
           ↣ NextSlot empty refl -- slot 3
+          -}
 --          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
---          ↣ Deliver (honest refl (here refl) BlockReceived)
---
--- Checking Peras.SmallStep.Execution (/build/zz1xvsqhxyydv60s1wr35yx8wpib5h1x-source/src/Peras/SmallStep/Execution.lagda.md).
--- agda: Heap exhausted;
--- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
--- agda: Use `+RTS -M<size>' to increase it.
---
+--          ↣ Fetch (honest refl (here refl) BlockReceived)
 --          ↣ NextSlotNewRound empty refl ?  -- slot 4
 --          ↣ NextSlot empty refl -- slot 5
 --          ↣ NextSlotNewRound empty refl ? -- slot 6
           ↣ ∎
--}
 ```
 Trace dependent properties
 ```agda
-{-
           where
             latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
-
+{-
             vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ block₁)) + 1
             vr-1a rewrite latestCert≡cert₀ = refl
 
             vr-1b : (latestCertSeen (extendTree tree₀ block₁))
-              PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
+              PointsInto (preferredChain (extendTree tree₀ block₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-              valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
+              valid' is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
 -}
 ```

@@ -106,7 +106,8 @@ certificates are not diffused explicitly with the exception of bootstraping the
 system.
 ```agda
   data Message : Set where
-    ChainMsg : ∀ {c : Chain} → ValidChain c → Message
+--    ChainMsg : ∀ {c : Chain} → ValidChain c → Message
+    BlockMsg : Block → Message
     VoteMsg : Vote → Message
 ```
 <!--
@@ -177,7 +178,8 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Set}
                     (tree₀ : T)
-                    (newChain : ∀ {c : Chain} → T → ValidChain c → T)
+                    (extendTree : T → Block → T)
+                 --   (newChain : ∀ {c : Chain} → T → ValidChain c → T)
                     (allBlocks : T → List Block)
                     (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
@@ -206,14 +208,26 @@ as proposed in the paper.
       genesis-cert-roundnumber :
         getRoundNumber (round cert₀) ≡ 0
 
+      extendable : ∀ (t : T) (b : Block)
+        → allBlocks (extendTree t b) ≐ (b ∷ allBlocks t)
+
+      extendable-certs : ∀ (t : T) (b : Block)
+        → certs (extendTree t b) ≡ certs t
+
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
+{-
       extendable-chain : ∀ (t : T) {c : Chain} (v : ValidChain c)
         → certsFromChain c ⊆ᶜ certs (newChain t v)
+-}
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
+
+      valid' : ∀ (t : T) (sl : SlotNumber) →
+         let cond = (_≤? getSlotNumber sl) ∘ slotNumber'
+         in ValidChain (filter cond (preferredChain t))
 
       optimal : ∀ (c : Chain) (t : T)
         → let b = preferredChain t
@@ -257,7 +271,8 @@ The block tree type is defined as follows:
 
     field
       tree₀ : T
-      newChain : ∀ {c : Chain} → T → ValidChain c → T
+      -- newChain : ∀ {c : Chain} → T → ValidChain c → T
+      extendTree : T → Block → T
       allBlocks : T → List Block
       preferredChain : T → Chain
 
@@ -271,7 +286,7 @@ The block tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ newChain allBlocks preferredChain
+                      tree₀ extendTree {- newChain -} allBlocks preferredChain
                       addVote votes certs cert₀
 
     latestCertOnChain : T → Certificate
@@ -329,9 +344,15 @@ Updating the block-tree upon receiving a message for vote and block messages.
           ----------------------------
         → t [ VoteMsg v ]→ addVote t v
 
+      BlockReceived : ∀ {b t}
+          --------------------------------
+        → t [ BlockMsg b ]→ extendTree t b
+
+{-
       ChainReceived : ∀ {b t} {c : ValidChain b}
           ------------------------------
         → t [ ChainMsg c ]→ newChain t c
+-}
 ```
 #### Vote in round
 
@@ -451,7 +472,8 @@ history. "add and diffuse" from the paper
       where open State M
 
     add_to_diffuse_ : (Message × Delay × PartyId) → T → State → State
-    add (m@(ChainMsg x) , d , p) to t diffuse M = m , d , p , newChain t x ⇑ M
+    -- add (m@(ChainMsg x) , d , p) to t diffuse M = m , d , p , newChain t x ⇑ M
+    add (m@(BlockMsg x) , d , p) to t diffuse M = m , d , p , extendTree t x ⇑ M
     add (m@(VoteMsg x) , d , p) to t diffuse M = m , d , p , addVote t x ⇑ M
 ```
 ## Fetching
@@ -582,9 +604,9 @@ Figure 2)
                     { slotNumber = clock
                     ; creatorId = p
                     ; parentBlock = hash h
-                    ; certificate =
-                        let r = v-round clock
-                        in needCert r t
+                    ; certificate = nothing
+--                        let r = v-round clock
+--                        in needCert r t
                     ; leadershipProof = prf
                     ; bodyHash =
                         let txs = txSelection clock p
@@ -603,7 +625,8 @@ Figure 2)
           -----------------------------------------
         → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (Cons σ π refl pr Cpref)
+                  BlockMsg b
+                  -- ChainMsg (Cons σ π refl pr Cpref)
                 , zero
                 , p) to t
                 diffuse M
