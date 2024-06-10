@@ -677,7 +677,7 @@ The small-step semantics describe the evolution of the global state.
       NextSlotNewRound :
           Fetched M
         → LastSlotInRound M
-        → RequiredVotes M
+      -- FIXME  → RequiredVotes M
           ---------------
         → M ↝ tick M
 ```
