@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Data.Function
 import Prelude hiding (round)
 import Control.Monad
 import Data.Set (Set)
@@ -42,14 +43,15 @@ import Test.QuickCheck.StateModel
 import Test.QuickCheck.Extras
 import Test.QuickCheck.Monadic
 import Control.Concurrent.STM.TVar qualified as IO
-import Text.PrettyPrint
-import Text.PrettyPrint.HughesPJClass
+import Text.PrettyPrint hiding ((<>))
+import Text.PrettyPrint.HughesPJClass hiding ((<>))
 
 data NodeModel = MkNodeModel
   { modelSUT  :: Party
   , clock     :: SlotNumber
   , protocol  :: PerasParams
   , allChains :: [(RoundNumber, Chain)]
+  , allCerts  :: Set Certificate
   }
   deriving (Eq, Show)
 
@@ -95,9 +97,9 @@ instance Pretty Vote where
                                                   ])
 
 
-preferredChain :: PerasParams -> [Chain] -> Chain
-preferredChain _ [] = []
-preferredChain _ cs = maximumBy (comparing length) cs
+preferredChain :: PerasParams -> Set Certificate -> [Chain] -> Chain
+preferredChain MkPerasParams{..} certs chains =
+  maximumBy (compare `on` chainWeight perasB certs) (Set.insert genesisChain $ Set.fromList chains)
 
 lastSeenCert :: [Chain] -> Certificate
 lastSeenCert chains = maximumBy (comparing round) $ [ cert | c <- chains, MkBlock{certificate = Just cert} <- c ]
@@ -111,7 +113,9 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
     getVote = do
       let r = inRound clock protocol
           chains' = map snd $ filter ((< r) . fst) allChains
-          pref  = preferredChain protocol chains'
+          -- TODO: the issue here might have something to do with certificates only
+          -- being valid after seeing a quorum??
+          pref  = preferredChain protocol allCerts chains'
           cert' = lastSeenCert chains'
           certS = maximumBy (comparing round) $ [ c | MkBlock{certificate=Just c} <- pref ] ++ [genesisCert]
           party = mkCommitteeMember modelSUT protocol (clock - fromIntegral perasT) True
@@ -133,7 +137,10 @@ transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
   Tick -> Just (votesInState s', s')
     where s' = s { clock = clock s + 1 }
-  NewChain c -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), c) : allChains s })
+  NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
+                                    , allCerts = Set.fromList [ c | MkBlock{certificate = Just c} <- chain ]
+                                                 <> allCerts s
+                                    })
   _ -> Just (mempty, s)
 
 instance StateModel NodeModel where
@@ -150,6 +157,7 @@ instance StateModel NodeModel where
                                              , perasΔ = 1
                                              }
                             , allChains = [(0, genesisChain)]
+                            , allCerts = mempty
                             }
 
   arbitraryAction _ MkNodeModel{modelSUT, clock, allChains, protocol} =
