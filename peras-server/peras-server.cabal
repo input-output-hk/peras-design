@@ -26,6 +26,7 @@ library
                       text,
                       wai,
                       wai-extra,
+                      wai-middleware-static,
                       wai-websockets,
                       warp,
                       websockets

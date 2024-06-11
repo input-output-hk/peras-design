@@ -16,3 +16,8 @@ target/
 Cargo.lock
 node_modules/
 \#*
+
+.terraform*
+.terraform
+plan
+*.tfvars

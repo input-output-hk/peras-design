@@ -4,7 +4,6 @@ module Peras.Server where
 
 import Control.Monad (unless)
 import qualified Data.ByteString.Char8 as BS8
-import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Network.Wai as Wai
@@ -16,6 +15,7 @@ import Network.Wai.Middleware.HttpAuth (
   basicAuth,
  )
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Network.Wai.Middleware.Static (static)
 import qualified Network.WebSockets as WS
 import Peras.Server.App (wsapp)
 import qualified Web.Scotty as Sc
@@ -38,11 +38,7 @@ scottyApp authorizedCreds =
     Sc.get "/" $
       Sc.redirect "/index.html"
 
-    serveFiles ["index.html", "index.js", "peras.css", "pilcrow.ico"]
-
-serveFiles :: [FilePath] -> Sc.ScottyM ()
-serveFiles = mapM_ $ \file ->
-  Sc.get (fromString $ "/" <> file) $ Sc.file file
+    Sc.middleware static
 
 checkCreds :: [(Text, Text)] -> CheckCreds
 checkCreds authorized username password =
