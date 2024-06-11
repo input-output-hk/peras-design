@@ -80,12 +80,13 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
       let r = inRound clock protocol
           pref  = preferredChain allChains
           cert' = lastSeenCert allChains
+          party = mkCommitteeMember modelSUT protocol clock True
       guard $ mod (getSlotNumber clock) perasU == perasT
       guard $ round cert' + 1 == r  -- VR-1A
       block <- listToMaybe $ dropWhile (not . oldEnough) pref
       guard $ extends block cert' allChains -- VR-1B
-      Right proof <- createMembershipProof r (Set.singleton modelSUT)
-      Right vote  <- createSignedVote modelSUT r (hash block) proof 1
+      Right proof <- createMembershipProof r (Set.singleton party)
+      Right vote  <- createSignedVote party r (hash block) proof 1
       pure vote
     oldEnough MkBlock{..} = getSlotNumber slotNumber + perasL <= getSlotNumber clock - perasT
 
