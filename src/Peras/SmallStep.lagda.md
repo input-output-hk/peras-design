@@ -24,6 +24,7 @@ open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
+open import Prelude.InferenceRules
 open import Prelude.AssocList hiding (_∈_)
 open Decidable _≟_
 
@@ -346,21 +347,21 @@ cool-down phase.
           pref  = preferredChain t
           cert′ = latestCertSeen t
         in
-          r ≡ (roundNumber cert′) + 1       -- VR-1A
-        → cert′ PointsInto pref             -- VR-1B
-          -------------------------------
-        → VoteInRound (MkRoundNumber r) t
+        ∙ r ≡ (roundNumber cert′) + 1       -- VR-1A
+        ∙ cert′ PointsInto pref             -- VR-1B
+          ───────────────────────────────
+          VoteInRound (MkRoundNumber r) t
 
       AfterCooldown : ∀ {r c t} →
         let
           cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
         in
-          c > 0
-        → r ≥ (roundNumber cert′) + R       -- VR-2A
-        → r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
-          ---------------------------------
-        → VoteInRound (MkRoundNumber r) t
+        ∙ c > 0
+        ∙ r ≥ (roundNumber cert′) + R       -- VR-2A
+        ∙ r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
+          ───────────────────────────────
+          VoteInRound (MkRoundNumber r) t
 ```
 ### State
 
