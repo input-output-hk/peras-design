@@ -19,6 +19,8 @@ import Prelude hiding (round)
 import Control.Monad
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Ord
 import Data.List
 import Control.Tracer
@@ -51,7 +53,7 @@ data NodeModel = MkNodeModel
   , clock     :: SlotNumber
   , protocol  :: PerasParams
   , allChains :: [(RoundNumber, Chain)]
-  , allCerts  :: Set Certificate
+  , allCerts  :: Map Certificate SlotNumber
   }
   deriving (Eq, Show)
 
@@ -115,8 +117,10 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
           chains' = map snd $ filter ((< r) . fst) allChains
           -- TODO: the issue here might have something to do with certificates only
           -- being valid after seeing a quorum??
-          pref  = preferredChain protocol allCerts chains'
-          cert' = lastSeenCert chains'
+          pref  = preferredChain protocol (Map.keysSet allCerts) chains'
+          cert' = fst $ maximumBy (comparing snd)
+                                  -- Filtering out things that arrived before pre-agreement
+                                  (Map.toList $ Map.filter ((< fromIntegral r * perasU) . fromIntegral) allCerts)
           certS = maximumBy (comparing round) $ [ c | MkBlock{certificate=Just c} <- pref ] ++ [genesisCert]
           party = mkCommitteeMember modelSUT protocol (clock - fromIntegral perasT) True
       guard $ mod (getSlotNumber clock) perasU == perasT
@@ -138,8 +142,10 @@ transition s a = case a of
   Tick -> Just (votesInState s', s')
     where s' = s { clock = clock s + 1 }
   NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
-                                    , allCerts = Set.fromList [ c | MkBlock{certificate = Just c} <- chain ]
-                                                 <> allCerts s
+                                    -- TODO: the problem with this is that it ignores the fact that we
+                                    -- need to get votes for the certs to be accepted! Something is off here...
+                                    , allCerts = Map.fromList [ (c, clock s) | MkBlock{certificate = Just c} <- chain ]
+                                               <> allCerts s
                                     })
   _ -> Just (mempty, s)
 
@@ -157,7 +163,7 @@ instance StateModel NodeModel where
                                              , perasΔ = 1
                                              }
                             , allChains = [(0, genesisChain)]
-                            , allCerts = mempty
+                            , allCerts = Map.singleton genesisCert 0
                             }
 
   arbitraryAction _ MkNodeModel{modelSUT, clock, allChains, protocol} =
