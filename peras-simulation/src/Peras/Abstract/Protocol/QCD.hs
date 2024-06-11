@@ -13,18 +13,21 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Prelude hiding (round)
 import Control.Monad
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Ord
+import Data.List
 import Control.Tracer
 import Control.Concurrent.Class.MonadSTM
 import Control.Monad.State hiding (state)
 import Data.Maybe
-import Data.Foldable
+import Data.Foldable ()
 import Data.Default
 import Peras.Chain
 import Peras.Block
-import Peras.Crypto ()
+import Peras.Crypto
 import Peras.Numbering
 import Peras.Arbitraries ()
 import Peras.Abstract.Protocol.Types
@@ -60,9 +63,36 @@ instance HasVariables (Action NodeModel a) where
 data EnvAction = Tick | NewChain Chain | NewVote Vote
   deriving (Show, Eq, Generic)
 
+preferredChain :: [Chain] -> Chain
+preferredChain []      = []
+preferredChain (c : _) = c
+
+lastSeenCert :: [Chain] -> Certificate
+lastSeenCert chains = maximumBy (comparing round) $ [ cert | c <- chains, MkBlock{certificate = Just cert} <- c ]
+                                                 ++ [genesisCert]
+
+votesInState :: NodeModel -> Set Vote
+votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
+  | Just vote <- getVote = Set.singleton vote
+  | otherwise = mempty
+  where
+    getVote = do
+      let r = inRound clock protocol
+          pref  = preferredChain allChains
+          cert' = lastSeenCert allChains
+      guard $ mod (getSlotNumber clock) perasU == perasT
+      guard $ round cert' + 1 == r  -- VR-1A
+      block <- listToMaybe $ dropWhile (not . oldEnough) pref
+      guard $ extends block cert' allChains -- VR-1B
+      Right proof <- createMembershipProof r (Set.singleton modelSUT)
+      Right vote  <- createSignedVote modelSUT r (hash block) proof 1
+      pure vote
+    oldEnough MkBlock{..} = getSlotNumber slotNumber + perasL <= getSlotNumber clock - perasT
+
 transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
-  Tick -> Just (mempty, s { clock = clock s + 1 })
+  Tick -> Just (votesInState s', s')
+    where s' = s { clock = clock s + 1 }
   NewChain c -> Just (mempty, s { allChains = c : allChains s })
   _ -> Just (mempty, s)
 
@@ -79,7 +109,7 @@ instance StateModel NodeModel where
                                              , perasT = 4
                                              , perasΔ = 1
                                              }
-                            , allChains = []
+                            , allChains = [genesisChain]
                             }
 
   arbitraryAction _ MkNodeModel{modelSUT, clock, allChains} = Some . Step <$>
@@ -90,10 +120,9 @@ instance StateModel NodeModel where
     where
       genChain =
         do
-          tip' <- case allChains of
-                    [] -> elements $ toList (chains initialPerasState)
-                    _  -> elements $ toList allChains
-          tip <- flip drop tip' <$> arbitrary
+          tip' <- elements allChains
+          n <- choose (0, length tip' - 1)
+          let tip = drop n tip'
           let minSlot =
                 case tip of
                   [] -> 1
@@ -113,6 +142,7 @@ instance StateModel NodeModel where
       genPartyId = arbitrary `suchThat` (/= pid modelSUT)
 
   shrinkAction _ _ (Step Tick) = []
+  shrinkAction _ _ (Step (NewChain (_:chain))) = map (Some . Step) [Tick, NewChain chain]
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
 
   precondition s (Step a) = isJust (transition s a)
@@ -134,12 +164,14 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       RunState{..} <- get
       modify $ \ rs -> rs { unfetchedChains = mempty, unfetchedVotes = mempty }
       lift $ do
-        _ <- fetching nullTracer protocol modelSUT stateVar clock unfetchedChains unfetchedVotes
-        let party = mkCommitteeMember modelSUT protocol clock True
+        let clock' = clock + 1
+        -- TODO: also invoke blockCreation
+        _ <- fetching nullTracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
+        let party = mkCommitteeMember modelSUT protocol clock' True
             preagreement' = preagreement nullTracer
             diffuser = diffuseVote diffuserVar
-        _ <- voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
-        snd <$> popChainsAndVotes diffuserVar clock
+        _ <- voting nullTracer protocol party stateVar (inRound clock' protocol) preagreement' diffuser
+        snd <$> popChainsAndVotes diffuserVar clock'
     NewChain c -> do
       modify $ \ rs -> rs { unfetchedChains = Set.insert c (unfetchedChains rs) }
       pure mempty
@@ -147,10 +179,12 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       modify $ \ rs -> rs { unfetchedVotes = Set.insert v (unfetchedVotes rs) }
       pure mempty
 
-  postcondition (s, _) (Step a) _ r = do
+  postcondition (s, s') (Step a) _ r = do
     let expected = fromJust $ fmap fst (transition s a)
     let ok = r == expected
     monitorPost . counterexample $ "  action $ " ++ show a
+    when (a == Tick && newRound (clock s') (protocol s')) $
+      monitorPost . counterexample $ "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
     unless (null r) $ do
       monitorPost . counterexample $ "  -- got: " ++ show (Set.toList r)
     unless ok $ do
