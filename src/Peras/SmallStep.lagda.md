@@ -326,13 +326,13 @@ Updating the block-tree upon receiving a message for vote and block messages.
 ```agda
     data _[_]→_ : T → Message → T → Set where
 
-      VoteReceived : ∀ {v t}
-          ----------------------------
-        → t [ VoteMsg v ]→ addVote t v
+      VoteReceived : ∀ {v t} →
+          ────────────────────────────
+          t [ VoteMsg v ]→ addVote t v
 
-      ChainReceived : ∀ {b t} {c : ValidChain b}
-          ------------------------------
-        → t [ ChainMsg c ]→ newChain t c
+      ChainReceived : ∀ {b t} {c : ValidChain b} →
+          ───────────────────────────────────────
+          t [ ChainMsg c ]→ newChain t c
 ```
 #### Vote in round
 
@@ -360,7 +360,7 @@ cool-down phase.
         ∙ c > 0
         ∙ r ≥ (roundNumber cert′) + R       -- VR-2A
         ∙ r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
-          ───────────────────────────────
+          ─────────────────────────────────
           VoteInRound (MkRoundNumber r) t
 ```
 ### State
@@ -629,35 +629,35 @@ The small-step semantics describe the evolution of the global state.
 ```agda
     data _↝_ : State → State → Set where
 
-      Fetch : ∀ {m}
-        → h ⊢ M [ m ]⇀ N
-          --------------
-        → M ↝ N
+      Fetch : ∀ {m} →
+        ∙ h ⊢ M [ m ]⇀ N
+          ────────────────
+          M ↝ N
 
       CreateVote :
-          Fetched M
-        → h ⊢ M ⇉ N
-          ---------
-        → M ↝ N
+        ∙ Fetched M
+        ∙ h ⊢ M ⇉ N
+          ───────────
+          M ↝ N
 
       CreateBlock :
-          Fetched M
-        → h ⊢ M ↷ N
-          ---------
-        → M ↝ N
+        ∙ Fetched M
+        ∙ h ⊢ M ↷ N
+          ───────────
+          M ↝ N
 
       NextSlot :
-          Fetched M
-        → NextSlotInSameRound M
-          ---------------------
-        → M ↝ tick M
+        ∙ Fetched M
+        ∙ NextSlotInSameRound M
+          ─────────────────────
+          M ↝ tick M
 
       NextSlotNewRound :
-          Fetched M
-        → LastSlotInRound M
-        → RequiredVotes M
-          ---------------
-        → M ↝ tick M
+        ∙ Fetched M
+        ∙ LastSlotInRound M
+        ∙ RequiredVotes M
+          ─────────────────
+          M ↝ tick M
 ```
 ### Reflexive, transitive closure
 
