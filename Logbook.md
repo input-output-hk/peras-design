@@ -1,3 +1,32 @@
+## 2024-06-11
+
+### Markov-chain computations of adversarial scenarios
+
+The new [peras-markov](../a6f9560b791bbae56595f063fb814d6e58669366/peras-markov/ReadMe.md) implements a framework for Markov-chain computations of adversarial scenarios. Two scenarios are included so far:
+
+- The adversary builds an alternative chain separate from the honest chain and then later reveals it.
+- The adversary aims to keep active two chains of nearly equal length.
+
+The computations may be expressed as symbolic expressions, rational numbers, or real numbers.
+
+The example below is for the scenario where the adversary builds a chain separately from the honest parties. The delta in the table is the length of the honest chain minus the length of the adversarial chain. We generate ten blocks and compute the probabilities, given that the honest party controls `p` fraction of the stake and the adversary controls `q`.
+
+|Delta| Probability|
+|----:|-----------:|
+| -10 | q¹⁰        |
+| -8  | 10⋅p⋅q⁹    |
+| -6  | 45⋅p²⋅q⁸   |
+| -4  | 120⋅p³⋅q⁷  |
+| -2  | 210⋅p⁴⋅q⁶  |
+| 0   | 252⋅p⁵⋅q⁵  |
+| 2   | 210⋅p⁶⋅q⁴  |
+| 4   | 120⋅p⁷⋅q³  |
+| 6   | 45⋅p⁸⋅q²   |
+| 8   | 10⋅p⁹⋅q    |
+| 10  | p¹⁰        |
+
+This framework can be extended with scenarios to compute finality probabilities, in order to compare Praos vs Peras. Boosts can be included in the analyses, too.
+
 ## 2024-06-10
 
 ### Next steps with formal specification

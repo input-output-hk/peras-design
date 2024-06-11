@@ -17,6 +17,7 @@ index-state:
 packages:
   peras-hs
   peras-simulation
+  peras-markov
   peras-server
   peras-delta-q
   test-demo
