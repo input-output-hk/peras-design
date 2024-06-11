@@ -46,7 +46,7 @@ data NodeModel = MkNodeModel
   { modelSUT  :: Party
   , clock     :: SlotNumber
   , protocol  :: PerasParams
-  , allChains :: [Chain]
+  , allChains :: [(RoundNumber, Chain)]
   }
   deriving (Eq, Show)
 
@@ -63,9 +63,9 @@ instance HasVariables (Action NodeModel a) where
 data EnvAction = Tick | NewChain Chain | NewVote Vote
   deriving (Show, Eq, Generic)
 
-preferredChain :: [Chain] -> Chain
-preferredChain []      = []
-preferredChain (c : _) = c
+preferredChain :: PerasParams -> [Chain] -> Chain
+preferredChain _ [] = []
+preferredChain _ cs = maximumBy (comparing length) cs
 
 lastSeenCert :: [Chain] -> Certificate
 lastSeenCert chains = maximumBy (comparing round) $ [ cert | c <- chains, MkBlock{certificate = Just cert} <- c ]
@@ -78,13 +78,15 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
   where
     getVote = do
       let r = inRound clock protocol
-          pref  = preferredChain allChains
-          cert' = lastSeenCert allChains
-          party = mkCommitteeMember modelSUT protocol clock True
+          gotBeforeThisRound (r', _) = r' < r
+          chains' = map snd $ filter gotBeforeThisRound allChains
+          pref  = preferredChain protocol chains'
+          cert' = lastSeenCert chains'
+          party = mkCommitteeMember modelSUT protocol (clock - fromIntegral perasT) True
       guard $ mod (getSlotNumber clock) perasU == perasT
       guard $ round cert' + 1 == r  -- VR-1A
       block <- listToMaybe $ dropWhile (not . oldEnough) pref
-      guard $ extends block cert' allChains -- VR-1B
+      guard $ extends block cert' chains' -- VR-1B
       Right proof <- createMembershipProof r (Set.singleton party)
       Right vote  <- createSignedVote party r (hash block) proof 1
       pure vote
@@ -94,7 +96,7 @@ transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
   Tick -> Just (votesInState s', s')
     where s' = s { clock = clock s + 1 }
-  NewChain c -> Just (mempty, s { allChains = c : allChains s })
+  NewChain c -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), c) : allChains s })
   _ -> Just (mempty, s)
 
 instance StateModel NodeModel where
@@ -110,7 +112,7 @@ instance StateModel NodeModel where
                                              , perasT = 4
                                              , perasΔ = 1
                                              }
-                            , allChains = [genesisChain]
+                            , allChains = [(0, genesisChain)]
                             }
 
   arbitraryAction _ MkNodeModel{modelSUT, clock, allChains} = Some . Step <$>
@@ -121,7 +123,7 @@ instance StateModel NodeModel where
     where
       genChain =
         do
-          tip' <- elements allChains
+          tip' <- elements $ map snd allChains
           n <- choose (0, length tip' - 1)
           let tip = drop n tip'
           let minSlot =
