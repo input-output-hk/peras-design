@@ -413,7 +413,7 @@ instance Monad m => RunModel NodeModel (RunMonad m) where
       BlockCreation isLeader payload -> check $ blockCreationModeled isLeader payload
       Voting isMember -> check $ votingModeled isMember
    where
-    check :: (Monad m, Eq a) => (NodeModel -> (a, NodeModel)) -> a -> m Bool
+    check :: forall m' a. (Monad m', Eq a) => (NodeModel -> (a, NodeModel)) -> a -> m' Bool
     check action' actual =
       pure $ fst (action' prior) == actual
 

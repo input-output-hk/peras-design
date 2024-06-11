@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -41,6 +42,8 @@ import Test.QuickCheck.StateModel
 import Test.QuickCheck.Extras
 import Test.QuickCheck.Monadic
 import Control.Concurrent.STM.TVar qualified as IO
+import Text.PrettyPrint
+import Text.PrettyPrint.HughesPJClass
 
 data NodeModel = MkNodeModel
   { modelSUT  :: Party
@@ -63,6 +66,35 @@ instance HasVariables (Action NodeModel a) where
 data EnvAction = Tick | NewChain Chain | NewVote Vote
   deriving (Show, Eq, Generic)
 
+instance Pretty EnvAction where
+  pPrint Tick = "Tick"
+  pPrint (NewChain chain) =
+    "NewChain" <+> vcat [ pPrint b | b <- chain ]
+  pPrint (NewVote vote) = "NewVote" <+> pPrintPrec prettyNormal 10 vote
+
+instance Pretty Block where
+  pPrint MkBlock{..} =
+    "Block" <+> braces (vcat [ "hash    =" <+> text (show signature)
+                             , "slot    =" <+> pPrint (getSlotNumber slotNumber)
+                             , "creator =" <+> pPrint creatorId
+                             , "parent  =" <+> text (show parentBlock)
+                             , "cert    =" <+> pPrint certificate
+                             ])
+
+instance Pretty Certificate where
+  pPrintPrec _ d MkCertificate{..} =
+    maybeParens (d > 0) $ "Cert" <+> pPrint (getRoundNumber round) <+> text (show blockRef)
+
+instance Pretty Vote where
+  pPrintPrec _ d MkVote{..} =
+    maybeParens (d > 0) $ "Vote" <+> braces (vcat [ "round     =" <+> pPrint (getRoundNumber votingRound)
+                                                  , "creator   =" <+> pPrint creatorId
+                                                  , "blockHash =" <+> text (show blockHash)
+                                                  , "proofM    =" <+> text (show proofM)
+                                                  , "signature =" <+> text (show signature)
+                                                  ])
+
+
 preferredChain :: PerasParams -> [Chain] -> Chain
 preferredChain _ [] = []
 preferredChain _ cs = maximumBy (comparing length) cs
@@ -78,15 +110,20 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
   where
     getVote = do
       let r = inRound clock protocol
-          gotBeforeThisRound (r', _) = r' < r
-          chains' = map snd $ filter gotBeforeThisRound allChains
+          chains' = map snd $ filter ((< r) . fst) allChains
           pref  = preferredChain protocol chains'
           cert' = lastSeenCert chains'
+          certS = maximumBy (comparing round) $ [ c | MkBlock{certificate=Just c} <- pref ] ++ [genesisCert]
           party = mkCommitteeMember modelSUT protocol (clock - fromIntegral perasT) True
       guard $ mod (getSlotNumber clock) perasU == perasT
-      guard $ round cert' + 1 == r  -- VR-1A
       block <- listToMaybe $ dropWhile (not . oldEnough) pref
-      guard $ extends block cert' chains' -- VR-1B
+      let vr1A = round cert' + 1 == r  -- VR-1A
+          vr1B = extends block cert' chains' -- VR-1B
+          vr2A = r >= round cert' + fromIntegral perasR
+          vr2B = r > round certS &&
+                  0 == fromIntegral (r - round certS) `mod` perasK
+          shouldVote = vr1A && vr1B || vr2A && vr2B
+      guard shouldVote
       Right proof <- createMembershipProof r (Set.singleton party)
       Right vote  <- createSignedVote party r (hash block) proof 1
       pure vote
@@ -115,11 +152,11 @@ instance StateModel NodeModel where
                             , allChains = [(0, genesisChain)]
                             }
 
-  arbitraryAction _ MkNodeModel{modelSUT, clock, allChains} = Some . Step <$>
-      frequency [ (1, pure Tick)
-                , (1, NewChain <$> genChain)
-                , (1, NewVote  <$> genVote)
-                ]
+  arbitraryAction _ MkNodeModel{modelSUT, clock, allChains, protocol} =
+    fmap (Some . Step) $
+      frequency $ [ (1, pure Tick) ] ++
+                  [ (1, NewChain <$> genChain) ] ++
+                  [ (1, NewVote  <$> genVote) | canGenVotes, False ]
     where
       genChain =
         do
@@ -140,9 +177,29 @@ instance StateModel NodeModel where
               <*> arbitrary
               <*> arbitrary
 
-      genCertificate _ = pure Nothing -- TODO
-      genVote = arbitrary
+      genVote =
+        do
+          block <- elements (concat $ map snd allChains)
+          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+      canGenVotes =
+        newRound clock protocol -- Voting is only allowed in the first slot of a round.
+          && not (all (null . snd) allChains) -- There must be some block to vote for.
+          && r > 0 -- No voting is allowed in the zeroth round.
+      genCertificate chain =
+        frequency
+          [
+            ( 9
+            , pure Nothing
+            )
+          ,
+            ( if null chain || null validCertRounds then 0 else 1
+            , fmap Just . MkCertificate <$> elements validCertRounds <*> (hash <$> elements chain)
+            )
+          ]
+      validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
       genPartyId = arbitrary `suchThat` (/= pid modelSUT)
+      genRound = elements [1 .. r]
+      r = inRound clock protocol
 
   shrinkAction _ _ (Step Tick) = []
   shrinkAction _ _ (Step (NewChain (_:chain))) = map (Some . Step) [Tick, NewChain chain]
@@ -184,14 +241,15 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
 
   postcondition (s, s') (Step a) _ r = do
     let expected = fromJust $ fmap fst (transition s a)
+    -- let ok = length r == length expected
     let ok = r == expected
-    monitorPost . counterexample $ "  action $ " ++ show a
+    monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $ "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
     unless (null r) $ do
-      monitorPost . counterexample $ "  -- got: " ++ show (Set.toList r)
+      monitorPost . counterexample . show $ "  --      got:" <+> pPrint (Set.toList r)
     unless ok $ do
-      monitorPost . counterexample $ "  -- expected: " ++ show (Set.toList expected)
+      monitorPost . counterexample . show $ "  -- expected:" <+> pPrint (Set.toList expected)
     pure ok
 
 prop_node :: Blind (Actions NodeModel) -> Property
