@@ -708,13 +708,12 @@ Transitions of voting rounds
       []″ : M ↦⋆ M
       _∷″_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
 ```
+<!--
 ## Collision free predicate
 
-<!--
 ```agda
     open State
 ```
--->
 
 Rather than assuming a global axiom on the injectivity of the hash function
 or that any reachable state is collision-free, there is a predicate assuming
@@ -732,7 +731,7 @@ that there are no hash collisions during the execution of the protocol.
         → CollisionFree N
 -}
 ```
-
+-->
 <!--
 ```agda
 {-
@@ -796,7 +795,7 @@ that there are no hash collisions during the execution of the protocol.
 -}
 ```
 -->
-
+<!--
 ### Properties
 
 When the current state is collision free, the pervious state was so too
@@ -810,6 +809,7 @@ When the current state is collision free, the pervious state was so too
       → CollisionFree M
 -}
 ```
+-->
 <!--
 ```agda
 {-
@@ -821,7 +821,7 @@ When the current state is collision free, the pervious state was so too
 -}
 ```
 -->
-
+<!--
 When the current state is collision free, previous states were so too
 
 ```agda
@@ -833,6 +833,7 @@ When the current state is collision free, previous states were so too
       → CollisionFree M
 -}
 ```
+-->
 <!--
 ```agda
 {-
@@ -842,7 +843,7 @@ When the current state is collision free, previous states were so too
 -}
 ```
 -->
-
+<!--
 ## Forging free predicate
 
 Signatures are not modelled explicitly. Instead we assume that the adversary
@@ -860,3 +861,4 @@ already in the block history.
         → ForgingFree N
 -}
 ```
+-->
