@@ -502,13 +502,6 @@ TODO: Needs to be finalized in the Peras paper
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
        in fromMaybe block₀ (head bs)
 ```
-A party can vote for a block, if
-  * the current slot is the first slot in a voting round
-  * the party is a member of the voting committee
-  * the chain is not in a cool-down phase
-
-Voting updates the party's local state and for all other parties a message
-is added to be consumed immediately.
 ```agda
     createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
     createVote s p prf sig t =
@@ -522,22 +515,29 @@ is added to be consumed immediately.
         ; signature = sig
         }
 ```
+A party can vote for a block, if
+  * the current slot is the first slot in a voting round
+  * the party is a member of the voting committee
+  * the chain is not in a cool-down phase
+
+Voting updates the party's local state and for all other parties a message
+is added to be consumed immediately.
 ```agda
     infix 2 _⊢_⇉_
 
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
-      honest : ∀ {p} {t} {M} {prf} {sig}
+      honest : ∀ {p} {t} {M} {π} {σ}
         → let
-            open State M
-            s = clock
+            open State
+            s = clock M
             r = v-round s
-            v = createVote s p prf sig t
+            v = createVote s p π σ t
           in
-        ∙ blockTrees ⁉ p ≡ just t
-        ∙ IsVoteSignature v sig
+        ∙ blockTrees M ⁉ p ≡ just t
+        ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
-        ∙ IsCommitteeMember p r prf
+        ∙ IsCommitteeMember p r π
         ∙ VoteInRound r t
           ───────────────────────────────────
           Honest {p} ⊢
@@ -549,6 +549,44 @@ delay the message.
 
 ## Block creation
 
+```agda
+    needCert : RoundNumber → T → Maybe Certificate
+    needCert (MkRoundNumber r) t =
+      let
+        cert⋆ = latestCertOnChain t
+        cert′ = latestCertSeen t
+      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
+          ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
+          ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
+        then just cert′
+        else nothing
+```
+```agda
+    createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
+    createBlock s p π σ t =
+      let
+        open IsTreeType
+        Cpref = valid is-TreeType t
+        h = proj₁ (proj₁ (uncons Cpref))
+      in
+      record
+        { slotNumber = s
+        ; creatorId = p
+        ; parentBlock = hash h
+        ; certificate =
+            let r = v-round s
+            in needCert r t
+        ; leadershipProof = π
+        ; bodyHash =
+            let txs = txSelection s p
+            in blockHash
+                 record
+                   { blockHash = hash txs
+                   ; payload = txs
+                   }
+        ; signature = σ
+        }
+```
 A party can create a new block by adding it to the local block tree and
 gossiping the block creation messages to the other parties. Block creation is
 possible, if
@@ -564,44 +602,6 @@ During regular execution of the protocol, i.e. not in cool-down phase, no
 certificate reference is included in the block. The exact conditions to
 decide wheter a certificate has to be included are (see: Block creation in
 Figure 2)
-```agda
-    needCert : RoundNumber → T → Maybe Certificate
-    needCert (MkRoundNumber r) t =
-      let
-        cert⋆ = latestCertOnChain t
-        cert′ = latestCertSeen t
-      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
-          ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
-          ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
-        then just cert′
-        else nothing
-```
-```agda
-    createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
-    createBlock s p prf sig t =
-      let
-        open IsTreeType
-        Cpref = valid is-TreeType t
-        h = proj₁ (proj₁ (uncons Cpref))
-      in
-      record
-        { slotNumber = s
-        ; creatorId = p
-        ; parentBlock = hash h
-        ; certificate =
-            let r = v-round s
-            in needCert r t
-        ; leadershipProof = prf
-        ; bodyHash =
-            let txs = txSelection s p
-            in blockHash
-                 record
-                   { blockHash = hash txs
-                   ; payload = txs
-                   }
-        ; signature = sig
-        }
-```
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
