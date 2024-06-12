@@ -1,5 +1,28 @@
 ## 2024-06-12
 
+### Markov-chain scenario for ambiguous candidate blocks
+
+We began analyzing [the scenario](../c8043ab71e2bfa17ccbcc58db4dd7c551f67b823/peras-markov/src/Peras/Markov/Adversary/CommonCandidate.hs) where an adversary maintains a fork that contains a candidate block for voting (i.e., at least $L$ slots old on its preferred chain). We use the Markov-chain simulation to examine the situation where, at the start of a new round, a block of age $L + U$ contains a certificate and an adversary builds their own chain upon that. If the adversary succeeds in building a block in the next $U$ slots, then there would be a candidate-block proposal both on the honest chain and the adversarial one.
+
+In the preliminary results below (only lightly QA'ed), the round length is $U = 150 \text{slots}$, the block-selection offset is $L = 6 \text{slots}$, the honest party has 75% of the stake, the adversarial party has 25% of the stake, the active slot coefficient is 5%, and network diffusion occurs in one slot.
+
+| Outcome                                                           | Probability |
+|-------------------------------------------------------------------|-------------|
+| At least one adversarial candidate block & Adversary chain longer |      3.07 % |
+| At least one adversarial candidate block & Chains of equal length |      3.14 % |
+| At least one adversarial candidate block & Honest chain longer    |     78.64 % |
+| No adversary candidate block                                      |     15.15 % |
+
+Hence, there is a 3% chance that some voters in the new round would prefer the block on one fork while others would prefer the block on the other fork.
+
+Additional findings:
+
+- The symbolic computations are much slower than the numeric ones when the number of slots is high.
+- Convolution of probability densities can be used to convert from simulations that use a block-based clock to an equivalent simulation that uses a slot-based clock.
+    - A block-based clock uses fewer computing resources.
+    - A block-based clock also makes scenario initialization easier.
+    - Some analyses are easier with a slot-based clock.
+
 ### Formal specification in Agda
 
 The IOG Agda prelude provides syntax for writing inference rules in the following style:
