@@ -12,8 +12,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Data.IORef
 import Data.Function
 import Prelude hiding (round)
 import Control.Monad
@@ -47,13 +49,15 @@ import Test.QuickCheck.Monadic
 import Control.Concurrent.STM.TVar qualified as IO
 import Text.PrettyPrint hiding ((<>))
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
+import Peras.Abstract.Protocol.Trace (PerasLog)
 
 data NodeModel = MkNodeModel
-  { modelSUT  :: Party
-  , clock     :: SlotNumber
-  , protocol  :: PerasParams
-  , allChains :: [(RoundNumber, Chain)]
-  , allCerts  :: Map Certificate SlotNumber
+  { modelSUT         :: Party
+  , clock            :: SlotNumber
+  , protocol         :: PerasParams
+  , allChains        :: [(RoundNumber, Chain)]
+  , allAcceptedCerts :: Set Certificate
+  , allSeenCerts     :: Map Certificate SlotNumber
   }
   deriving (Eq, Show)
 
@@ -103,10 +107,6 @@ preferredChain :: PerasParams -> Set Certificate -> [Chain] -> Chain
 preferredChain MkPerasParams{..} certs chains =
   maximumBy (compare `on` chainWeight perasB certs) (Set.insert genesisChain $ Set.fromList chains)
 
-lastSeenCert :: [Chain] -> Certificate
-lastSeenCert chains = maximumBy (comparing round) $ [ cert | c <- chains, MkBlock{certificate = Just cert} <- c ]
-                                                 ++ [genesisCert]
-
 votesInState :: NodeModel -> Set Vote
 votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
   | Just vote <- getVote = Set.singleton vote
@@ -115,17 +115,26 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
     getVote = do
       let r = inRound clock protocol
           chains' = map snd $ filter ((< r) . fst) allChains
-          -- TODO: the issue here might have something to do with certificates only
-          -- being valid after seeing a quorum??
-          pref  = preferredChain protocol (Map.keysSet allCerts) chains'
-          cert' = fst $ maximumBy (comparing snd)
-                                  -- Filtering out things that arrived before pre-agreement
-                                  (Map.toList $ Map.filter ((< fromIntegral r * perasU) . fromIntegral) allCerts)
+          -- This is to deal with the fact that the information
+          -- available is out of step
+          allSeenAcceptedCerts = Set.fromList
+                                  [ c
+                                  | c <- Set.toList allAcceptedCerts
+                                  , s <- maybeToList (Map.lookup c allSeenCerts)
+                                  , fromIntegral s < fromIntegral r * perasU
+                                  ]
+          pref  = preferredChain protocol allSeenAcceptedCerts chains'
+          (cert', cert'Slot) = maximumBy (comparing snd)
+                                  [ (c, s)
+                                  | c <- Set.toList allSeenAcceptedCerts
+                                  , s <- maybeToList (Map.lookup c allSeenCerts)
+                                  ]
           certS = maximumBy (comparing round) $ [ c | MkBlock{certificate=Just c} <- pref ] ++ [genesisCert]
           party = mkCommitteeMember modelSUT protocol (clock - fromIntegral perasT) True
       guard $ mod (getSlotNumber clock) perasU == perasT
-      block <- listToMaybe $ dropWhile (not . oldEnough) pref
-      let vr1A = round cert' + 1 == r  -- VR-1A
+      block <- listToMaybe $ dropWhile (not . blockOldEnough) pref
+      let vr1A = round cert' + 1 == r
+                 && fromIntegral cert'Slot + perasΔ <= fromIntegral (r - 1) * perasU + perasU - 1
           vr1B = extends block cert' chains' -- VR-1B
           vr2A = r >= round cert' + fromIntegral perasR
           vr2B = r > round certS &&
@@ -135,17 +144,21 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
       Right proof <- createMembershipProof r (Set.singleton party)
       Right vote  <- createSignedVote party r (hash block) proof 1
       pure vote
-    oldEnough MkBlock{..} = getSlotNumber slotNumber + perasL <= getSlotNumber clock - perasT
+    blockOldEnough MkBlock{..} = getSlotNumber slotNumber + perasL <= getSlotNumber clock - perasT
 
 transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
   Tick -> Just (votesInState s', s')
+    -- TODO: here we need to turn vote quorums into certs.
     where s' = s { clock = clock s + 1 }
   NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
-                                    -- TODO: the problem with this is that it ignores the fact that we
-                                    -- need to get votes for the certs to be accepted! Something is off here...
-                                    , allCerts = Map.fromList [ (c, clock s) | MkBlock{certificate = Just c} <- chain ]
-                                               <> allCerts s
+                                    , allSeenCerts =
+                                        Map.unionWith min
+                                          (Map.fromList [ (c, clock s) | MkBlock{certificate = Just c} <- chain ])
+                                          (allSeenCerts s)
+                                    , allAcceptedCerts = allAcceptedCerts s <>
+                                        Set.fromList [ c | MkBlock{certificate = Just c} <- chain ]
+
                                     })
   _ -> Just (mempty, s)
 
@@ -163,7 +176,8 @@ instance StateModel NodeModel where
                                              , perasΔ = 1
                                              }
                             , allChains = [(0, genesisChain)]
-                            , allCerts = Map.singleton genesisCert 0
+                            , allAcceptedCerts = Set.singleton genesisCert
+                            , allSeenCerts = Map.singleton genesisCert 0
                             }
 
   arbitraryAction _ MkNodeModel{modelSUT, clock, allChains, protocol} =
@@ -226,6 +240,7 @@ instance StateModel NodeModel where
 data RunState m =
   RunState { stateVar        :: TVar m PerasState
            , diffuserVar     :: TVar m Diffuser
+           , tracer          :: Tracer m PerasLog
            , unfetchedChains :: Set Chain
            , unfetchedVotes  :: Set Vote
            }
@@ -240,11 +255,11 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       lift $ do
         let clock' = clock + 1
         -- TODO: also invoke blockCreation
-        _ <- fetching nullTracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
+        _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
         let party = mkCommitteeMember modelSUT protocol clock' True
             preagreement' = preagreement nullTracer
             diffuser = diffuseVote diffuserVar
-        _ <- voting nullTracer protocol party stateVar (inRound clock' protocol) preagreement' diffuser
+        _ <- voting tracer protocol party stateVar (inRound clock' protocol) preagreement' diffuser
         snd <$> popChainsAndVotes diffuserVar clock'
     NewChain c -> do
       modify $ \ rs -> rs { unfetchedChains = Set.insert c (unfetchedChains rs) }
@@ -267,11 +282,19 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
     pure ok
 
 prop_node :: Blind (Actions NodeModel) -> Property
-prop_node (Blind as) = monadicIO $ do
-  stateVar <- lift $ IO.newTVarIO initialPerasState
-  diffuserVar <- lift $ IO.newTVarIO def
+prop_node (Blind as) = ioProperty $ do
+  stateVar <- IO.newTVarIO initialPerasState
+  diffuserVar <- IO.newTVarIO def
+  traceRef <- newIORef []
   let unfetchedChains = mempty
       unfetchedVotes = mempty
-  monitor $ counterexample "do"
-  _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
-  pure True
+      tracer = Tracer $ emit $ \ a -> modifyIORef traceRef (a:)
+      printTrace = do
+        putStrLn "-- Trace:"
+        trace <- readIORef traceRef
+        mapM_ print $ reverse trace
+  pure $ whenFail printTrace
+       $ monadicIO $ do
+          monitor $ counterexample "do"
+          _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
+          pure True
