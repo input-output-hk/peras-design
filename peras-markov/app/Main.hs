@@ -31,7 +31,7 @@ main =
         q = 1 % 3
         result' = evaluate p q result
     print' ""
-    print $ pretty "Now substitute p =" <+> pretty p <+> pretty "and q =" <+> pretty q <+> pretty "pretty into the result."
+    print $ pretty "Now substitute p =" <+> pretty p <+> pretty "and q =" <+> pretty q <+> pretty "into the result."
     print' ""
     print' result'
 
