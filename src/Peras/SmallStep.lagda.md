@@ -605,21 +605,22 @@ Figure 2)
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
-      honest : ∀ {p} {t} {M} {prf} {sig}
+      honest : ∀ {p} {t} {M} {π} {σ}
         → let
             open State M
             open IsTreeType
             Cpref = valid is-TreeType t
             pr = proj₂ (uncons Cpref)
-            b = createBlock clock p prf sig t
+            b = createBlock clock p π σ t
           in
           blockTrees ⁉ p ≡ just t
-        → (σ : IsBlockSignature b sig)
-        → (π : IsSlotLeader p clock prf)
-          -----------------------------------------
+        → (sig : IsBlockSignature b σ)
+        → (prf : IsSlotLeader p clock π)
+          --------------------------------------
         → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (Cons σ π refl pr Cpref)
+                  ChainMsg
+                    (Cons sig prf refl pr Cpref)
                 , 𝟘
                 , p) to t
                 diffuse M
