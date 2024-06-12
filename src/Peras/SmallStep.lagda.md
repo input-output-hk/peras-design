@@ -601,7 +601,8 @@ Figure 2)
                    }
         ; signature = sig
         }
-
+```
+```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {prf} {sig}
