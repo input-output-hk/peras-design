@@ -108,7 +108,7 @@ instance Pretty Trace.PerasLog where
   pPrint = \case
     Trace.Protocol{} -> "Protocol"
     Trace.Tick {} -> "Tick"
-    Trace.NewChainAndVotes {partyId, newChains, newVotes} ->
+    Trace.NewChainAndVotes {newChains, newVotes} ->
       hang "NewChainAndVotes" 2 $ vcat $
         [ hang "Chains:" 2 $ vcat (map pPrint $ Set.toList newChains) | not $ null newChains ] ++
         [ hang "Votes:" 2 $ vcat (map pPrint $ Set.toList newVotes) | not $ null newVotes ]
@@ -116,11 +116,12 @@ instance Pretty Trace.PerasLog where
     Trace.NewCertificatesReceived {newCertificates} ->
       hang "NewCerts:" 2 $
         vcat [ pPrint (getSlotNumber slot) <+> ":" <+> pPrint cert | (cert, slot) <- newCertificates ]
-    Trace.NewCertificatesFromQuorum {partyId , newQuorums } -> "NewQuorum"
-    Trace.NewCertPrime {partyId , newCertPrime } -> hang "NewCertPrime:" 2 (pPrint newCertPrime)
-    Trace.NewCertStar {partyId , newCertStar } -> hang "NewCertStar:" 2 (pPrint newCertStar)
-    Trace.CastVote {partyId , vote } -> hang "CastVote:" 2 (pPrint vote)
-    Trace.PreagreementBlock {partyId , weight } -> "PreagreementBlock"
+    Trace.NewCertificatesFromQuorum {newQuorums} ->
+      hang "NewQuorums:" 2 $ pPrint newQuorums
+    Trace.NewCertPrime {newCertPrime} -> hang "NewCertPrime:" 2 (pPrint newCertPrime)
+    Trace.NewCertStar {newCertStar} -> hang "NewCertStar:" 2 (pPrint newCertStar)
+    Trace.CastVote {vote} -> hang "CastVote:" 2 (pPrint vote)
+    Trace.PreagreementBlock {block} -> hang "PreagreementBlock:" 2 $ pPrint block
     Trace.PreagreementNone {} -> "PreagreementNone"
     Trace.ForgingLogic {} -> "ForgingLogic"
     Trace.VotingLogic {vr1a, vr1b, vr2a, vr2b } ->
@@ -200,11 +201,12 @@ instance StateModel NodeModel where
   initialState = MkNodeModel{ modelSUT = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
                             , clock = systemStart + 1
                             , protocol = def { perasU = 5
-                                             , perasR = 2
-                                             , perasK = 4
+                                             , perasR = 1
+                                             , perasK = 1
                                              , perasL = 1
-                                             , perasT = 4
+                                             , perasT = 1
                                              , perasΔ = 1
+                                             , perasτ = 1
                                              }
                             , allChains = [(0, genesisChain)]
                             , allAcceptedCerts = Set.singleton genesisCert
