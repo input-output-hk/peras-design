@@ -515,7 +515,7 @@ is added to be consumed immediately.
 
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
-      honest : ∀ {p} {t} {M} {prf} {sig} {vote}
+      honest : ∀ {p} {t} {M} {prf} {sig}
         → let open State M
               r = v-round clock
               v = record
@@ -528,14 +528,13 @@ is added to be consumed immediately.
                     ; signature = sig
                     }
           in
-          vote ≡ v
-        → blockTrees ⁉ p ≡ just t
-        → IsVoteSignature v sig
-        → StartOfRound clock r
-        → IsCommitteeMember p r prf
-        → VoteInRound r t
-          -----------------------------------
-        → Honest {p} ⊢
+        ∙ blockTrees ⁉ p ≡ just t
+        ∙ IsVoteSignature v sig
+        ∙ StartOfRound clock r
+        ∙ IsCommitteeMember p r prf
+        ∙ VoteInRound r t
+          ───────────────────────────────────
+          Honest {p} ⊢
             M ⇉ add (VoteMsg v , 𝟘 , p) to t
                 diffuse M
 ```
@@ -573,7 +572,7 @@ Figure 2)
 ```agda
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Set where
 
-      honest : ∀ {p} {t} {M} {prf} {sig} {block}
+      honest : ∀ {p} {t} {M} {prf} {sig}
         → let open State M
               open IsTreeType
               Cpref = valid is-TreeType t
@@ -596,8 +595,7 @@ Figure 2)
                     ; signature = sig
                     }
           in
-          block ≡ b
-        → blockTrees ⁉ p ≡ just t
+          blockTrees ⁉ p ≡ just t
         → (σ : IsBlockSignature b sig)
         → (π : IsSlotLeader p clock prf)
           -----------------------------------------
