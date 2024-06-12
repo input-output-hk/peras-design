@@ -8,7 +8,7 @@ open import Data.Bool using (Bool; true; false; _∧_; _∨_; not; if_then_else_
 open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes; any)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any using (Any; _─_; _∷=_; any?)
+open import Data.List.Relation.Unary.Any as L using (Any; _─_; any?)
 open import Data.Maybe using (Maybe; just; nothing; fromMaybe)
 open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_;_<ᵇ_)
 open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
@@ -24,10 +24,6 @@ open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
 
-open import Prelude.InferenceRules
-open import Prelude.AssocList hiding (_∈_)
-open Decidable _≟_
-
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
@@ -42,6 +38,12 @@ open MembershipProof public
 open Signature public
 open RoundNumber public
 open Party
+
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
+open import Prelude.InferenceRules
 ```
 -->
 
@@ -318,6 +320,10 @@ following parameters
            where
 
     open TreeType blockTree
+
+    instance
+      Default-T : Default T
+      Default-T .def = tree₀
 ```
 #### Block-tree update
 
@@ -442,7 +448,7 @@ history. "add and diffuse" from the paper
     _,_,_,_⇑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ⇑ M =
       record M
-        { blockTrees = (p , l) ↑ blockTrees
+        { blockTrees = set p l blockTrees
         ; messages =
             map (uncurry ⦅_,_, m , d ⦆)
               (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
@@ -470,13 +476,13 @@ the local state
 ```agda
       honest : ∀ {p} {t t′} {m} {N}
         → let open State N in
-          p ‼ blockTrees ≡ just t
+          blockTrees ⁉ p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
         → t [ m ]→ t′
           ------------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N
-            { blockTrees = (p , t′) ↑ blockTrees
+            { blockTrees = set p t′ blockTrees
             ; messages = messages ─ m∈ms
             }
 ```
@@ -488,7 +494,7 @@ An adversarial party might delay a message
           -------------------------------------------------
         → Corrupt {p} ⊢
           N [ m ]⇀ record N
-            { messages = m∈ms ∷= ⦅ p , Corrupt , m , suc zero ⦆
+            { messages = m∈ms L.∷= ⦅ p , Corrupt , m , suc zero ⦆
             ; adversarialState = as
             }
 ```
@@ -530,7 +536,7 @@ is added to be consumed immediately.
                     }
           in
           vote ≡ v
-        → p ‼ blockTrees ≡ just t
+        → blockTrees ⁉ p ≡ just t
         → IsVoteSignature v sig
         → StartOfRound clock r
         → IsCommitteeMember p r prf
@@ -598,7 +604,7 @@ Figure 2)
                     }
           in
           block ≡ b
-        → p ‼ blockTrees ≡ just t
+        → blockTrees ⁉ p ≡ just t
         → (σ : IsBlockSignature b sig)
         → (π : IsSlotLeader p clock prf)
           -----------------------------------------

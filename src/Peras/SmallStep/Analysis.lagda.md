@@ -36,8 +36,10 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
-open import Prelude.AssocList hiding (_∈_)
-open Decidable _≟_
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
 ```
 -->
 ## Protocol Analysis

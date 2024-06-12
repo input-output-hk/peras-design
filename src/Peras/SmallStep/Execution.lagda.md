@@ -21,11 +21,13 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
 
-open import Prelude.AssocList hiding (_∈_)
-open Decidable _≟_
-
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
+
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
 ```
 -->
 ```agda

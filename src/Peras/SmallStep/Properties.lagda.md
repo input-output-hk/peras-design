@@ -10,7 +10,7 @@ open import Data.List.Membership.Propositional using (_∈_; _∉_)
 open import Data.List.Membership.Propositional.Properties using (∈-map⁺; ∈-++⁺ʳ; ∈-++⁺ˡ; ∈-resp-≋)
 
 open import Data.List.Relation.Binary.Subset.Propositional.Properties
-open import Data.List.Relation.Unary.Any as Any using (Any; _─_; _∷=_; here; there)
+open import Data.List.Relation.Unary.Any as Any using (Any; _─_; here; there)
 open import Data.List.Relation.Unary.Any.Properties as Any using (¬Any[])
 open import Data.List.Relation.Unary.All as All using (All)
 open import Data.List.Relation.Unary.All.Properties as All using (¬All⇒Any¬; All¬⇒¬Any; ─⁺; ─⁻)
@@ -31,9 +31,6 @@ open import Function.Base using (_∘_; id; _$_; flip)
 open import Relation.Nullary using (yes; no; ¬_)
 open import Relation.Nullary.Decidable using (¬?)
 open import Relation.Nullary.Negation using (contradiction)
-
-open import Prelude.AssocList hiding (_∈_)
-open Decidable ℕ._≟_
 
 open import Peras.Block
 open import Peras.Chain
@@ -57,6 +54,11 @@ open import Level using (Level)
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
+
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
 ```
 -->
 
@@ -142,7 +144,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       → All P xs
       → (x∈xs : x ∈ xs)
       → P y
-      → All P (x∈xs ∷= y)
+      → All P (x∈xs Any.∷= y)
     All-∷= (_ All.∷ x₁) (here refl) x₂ = x₂ All.∷ x₁
     All-∷= (px All.∷ x₁) (there x∈xs) x₂ = px All.∷ (All-∷= x₁ x∈xs x₂)
 ```
@@ -218,7 +220,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
       e∈m′∈ms∷=m′ : ∀ {e : Envelope} {m : Message} {p} {ms}
         → e ∈ ms
         → (m′∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms )
-        → e ∈ (m′∈ms ∷= (⦅ p , Corrupt , m , suc zero ⦆))
+        → e ∈ (m′∈ms Any.∷= (⦅ p , Corrupt , m , suc zero ⦆))
 
       m′∈ms─m∈ms : ∀ {m m′ : Envelope} {ms}
         → (m∈ms : m ∈ ms)
@@ -373,8 +375,8 @@ The lemma describes how knowledge is propagated between honest parties in the sy
         → (p₂ , honesty₂) ∈ parties
         → N₀ ↝⋆ N₁
         → N₁ ↝⋆ N₂
-        → p₁ ‼ blockTrees N₁ ≡ just t₁
-        → p₂ ‼ blockTrees N₂ ≡ just t₂
+        → blockTrees N₁ ⁉ p₁ ≡ just t₁
+        → blockTrees N₂ ⁉ p₂ ≡ just t₂
         → Fetched N₂
         → clock N₁ ≡ clock N₂
         → allBlocks t₁ ⊆ allBlocks t₂
@@ -561,8 +563,8 @@ that period.
         → h₂ ≡ Honest {p₂}
         → N₀ ↝⋆ N₁
         → N₁ ↝⋆ N₂
-        → p₁ ‼ blockTrees N₁ ≡ just t₁
-        → p₂ ‼ blockTrees N₂ ≡ just t₂
+        → blockTrees N₁ ⁉ p₁ ≡ just t₁
+        → blockTrees N₂ ⁉ p₂ ≡ just t₂
         → getSlotNumber (luckySlots (clock N₁ , clock N₂)) ≥ w
         → let c₁ = preferredChain′ (MkSlotNumber $ (clock' N₁) ∸ 1) t₁
               c₂ = preferredChain′ (MkSlotNumber $ (clock' N₂) ∸ 1) t₂
