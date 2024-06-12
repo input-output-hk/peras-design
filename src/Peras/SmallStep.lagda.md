@@ -4,25 +4,20 @@ module Peras.SmallStep where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false; _∧_; _∨_; not; if_then_else_)
-open import Data.List as List using (List; all; foldr; _∷_; []; _++_; filter; filterᵇ; map; cartesianProduct; length; head; catMaybes; any)
-open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any as L using (Any; _─_; any?)
-open import Data.Maybe using (Maybe; just; nothing; fromMaybe)
-open import Data.Nat using (suc; pred; _≤_; _<_; _≤ᵇ_; _≤?_; _<?_; _≥_; _≥?_; ℕ; _+_; _*_; _∸_; _≟_; _>_;_<ᵇ_)
-open import Data.Fin using (Fin; zero; suc) renaming (pred to decr)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂; curry; uncurry)
-open import Data.Sum using (_⊎_; inj₁; inj₂)
-open import Data.Unit using (⊤)
-
-open import Function using (_∘_; id; _$_; flip)
-open import Relation.Binary.Bundles using (StrictTotalOrder)
-import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
-open import Relation.Nullary using (yes; no; ¬_; Dec)
 open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
 open import Relation.Nullary.Negation using (contradiction; contraposition)
+open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Unary.Any as L using (Any; _─_; any?)
+open import Data.Nat using (_≟_; _≤?_; _≤ᵇ_)
+open import Data.Fin using (pred)
+open import Data.List using (catMaybes; head; any)
+
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
+open import Prelude.InferenceRules
+open import Prelude.Init hiding (_⊆_)
 
 open import Peras.Block
 open import Peras.Chain
@@ -38,12 +33,6 @@ open MembershipProof public
 open Signature public
 open RoundNumber public
 open Party
-
-open import Prelude.AssocList
-open import Prelude.DecEq using (DecEq)
-open import Prelude.Default using (Default)
-open Default ⦃...⦄
-open import Prelude.InferenceRules
 ```
 -->
 
@@ -132,6 +121,10 @@ system.
 Messages can be delayed by a number of slots
 ```agda
   Delay = Fin (suc (suc Δ))
+
+  pattern 𝟘 = fzero
+  pattern 𝟙 = fsuc fzero
+  pattern 𝟚 = fsuc (fsuc fzero)
 ```
 Messages are put into an envelope and assigned to a party. The message can be
 delayed.
@@ -405,7 +398,7 @@ messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
     Fetched : State → Set
-    Fetched = All (λ { z → delay z ≢ zero }) ∘ messages
+    Fetched = All (λ { z → delay z ≢ 𝟘 }) ∘ messages
       where open State
 ```
 ```agda
@@ -436,7 +429,7 @@ all the messages in the message buffer.
       record M
         { clock = next clock
         ; messages =
-            map (λ where e → record e { delay = decr (delay e) })
+            map (λ where e → record e { delay = pred (delay e) })
               messages
         }
       where open State M
@@ -477,9 +470,9 @@ the local state
       honest : ∀ {p} {t t′} {m} {N}
         → let open State N in
           blockTrees ⁉ p ≡ just t
-        → (m∈ms : ⦅ p , Honest , m , zero ⦆ ∈ messages)
+        → (m∈ms : ⦅ p , Honest , m , 𝟘 ⦆ ∈ messages)
         → t [ m ]→ t′
-          ------------------------------------------------
+          ---------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N
             { blockTrees = set p t′ blockTrees
@@ -490,11 +483,11 @@ An adversarial party might delay a message
 ```agda
       corrupt : ∀ {p} {as} {m} {N}
         → let open State N in
-          (m∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ messages)
-          -------------------------------------------------
+          (m∈ms : ⦅ p , Corrupt , m , 𝟘 ⦆ ∈ messages)
+          ----------------------------------------------
         → Corrupt {p} ⊢
           N [ m ]⇀ record N
-            { messages = m∈ms L.∷= ⦅ p , Corrupt , m , suc zero ⦆
+            { messages = m∈ms L.∷= ⦅ p , Corrupt , m , 𝟙 ⦆
             ; adversarialState = as
             }
 ```
@@ -520,7 +513,7 @@ is added to be consumed immediately.
 ```agda
     infix 2 _⊢_⇉_
 
-    data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Set where
+    data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {prf} {sig} {vote}
         → let open State M
@@ -541,9 +534,9 @@ is added to be consumed immediately.
         → StartOfRound clock r
         → IsCommitteeMember p r prf
         → VoteInRound r t
-          -------------------------------------
+          -----------------------------------
         → Honest {p} ⊢
-            M ⇉ add (VoteMsg v , zero , p) to t
+            M ⇉ add (VoteMsg v , 𝟘 , p) to t
                 diffuse M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
@@ -571,7 +564,7 @@ Figure 2)
     needCert (MkRoundNumber r) t =
       let cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
-      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
+      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t))  -- (a)
           ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
           ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
         then just cert′
@@ -611,7 +604,7 @@ Figure 2)
         → Honest {p} ⊢
             M ↷ add (
                   ChainMsg (Cons σ π refl pr Cpref)
-                , zero
+                , 𝟘
                 , p) to t
                 diffuse M
 ```
