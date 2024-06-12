@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -49,7 +50,7 @@ import Test.QuickCheck.Monadic
 import Control.Concurrent.STM.TVar qualified as IO
 import Text.PrettyPrint hiding ((<>))
 import Text.PrettyPrint.HughesPJClass hiding ((<>))
-import Peras.Abstract.Protocol.Trace (PerasLog)
+import Peras.Abstract.Protocol.Trace qualified as Trace
 
 data NodeModel = MkNodeModel
   { modelSUT         :: Party
@@ -77,7 +78,7 @@ data EnvAction = Tick | NewChain Chain | NewVote Vote
 instance Pretty EnvAction where
   pPrint Tick = "Tick"
   pPrint (NewChain chain) =
-    "NewChain" <+> vcat [ pPrint b | b <- chain ]
+    "NewChain" <+> pPrint chain
   pPrint (NewVote vote) = "NewVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where
@@ -102,6 +103,36 @@ instance Pretty Vote where
                                                   , "signature =" <+> text (show signature)
                                                   ])
 
+
+instance Pretty Trace.PerasLog where
+  pPrint = \case
+    Trace.Protocol{} -> "Protocol"
+    Trace.Tick {} -> "Tick"
+    Trace.NewChainAndVotes {partyId, newChains, newVotes} ->
+      hang "NewChainAndVotes" 2 $ vcat $
+        [ hang "Chains:" 2 $ vcat (map pPrint $ Set.toList newChains) | not $ null newChains ] ++
+        [ hang "Votes:" 2 $ vcat (map pPrint $ Set.toList newVotes) | not $ null newVotes ]
+    Trace.NewChainPref {newChainPref} -> hang "NewChainPref:" 2 $ pPrint newChainPref
+    Trace.NewCertificatesReceived {newCertificates} ->
+      hang "NewCerts:" 2 $
+        vcat [ pPrint (getSlotNumber slot) <+> ":" <+> pPrint cert | (cert, slot) <- newCertificates ]
+    Trace.NewCertificatesFromQuorum {partyId , newQuorums } -> "NewQuorum"
+    Trace.NewCertPrime {partyId , newCertPrime } -> hang "NewCertPrime:" 2 (pPrint newCertPrime)
+    Trace.NewCertStar {partyId , newCertStar } -> hang "NewCertStar:" 2 (pPrint newCertStar)
+    Trace.CastVote {partyId , vote } -> hang "CastVote:" 2 (pPrint vote)
+    Trace.PreagreementBlock {partyId , weight } -> "PreagreementBlock"
+    Trace.PreagreementNone {} -> "PreagreementNone"
+    Trace.ForgingLogic {} -> "ForgingLogic"
+    Trace.VotingLogic {vr1a, vr1b, vr2a, vr2b } ->
+      hang "VotingLogic:" 2 $ vcat [ "VR-1A =" <+> pPrint vr1a
+                                   , "VR-1B =" <+> pPrint vr1b
+                                   , "VR-2A =" <+> pPrint vr2a
+                                   , "VR-2B =" <+> pPrint vr2b
+                                   ]
+    Trace.DiffuseChain {chain} ->
+      hang "DiffuseChain:" 2 $ pPrint chain
+    Trace.DiffuseVote {vote } ->
+      hang "DiffuseVote" 2 $ pPrint vote
 
 preferredChain :: PerasParams -> Set Certificate -> [Chain] -> Chain
 preferredChain MkPerasParams{..} certs chains =
@@ -240,7 +271,7 @@ instance StateModel NodeModel where
 data RunState m =
   RunState { stateVar        :: TVar m PerasState
            , diffuserVar     :: TVar m Diffuser
-           , tracer          :: Tracer m PerasLog
+           , tracer          :: Tracer m Trace.PerasLog
            , unfetchedChains :: Set Chain
            , unfetchedVotes  :: Set Vote
            }
@@ -292,7 +323,7 @@ prop_node (Blind as) = ioProperty $ do
       printTrace = do
         putStrLn "-- Trace:"
         trace <- readIORef traceRef
-        mapM_ print $ reverse trace
+        print $ vcat . map pPrint $ reverse trace
   pure $ whenFail printTrace
        $ monadicIO $ do
           monitor $ counterexample "do"
