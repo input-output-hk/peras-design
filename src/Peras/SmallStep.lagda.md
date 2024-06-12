@@ -353,8 +353,8 @@ cool-down phase.
           pref  = preferredChain t
           cert′ = latestCertSeen t
         in
-        ∙ r ≡ (roundNumber cert′) + 1       -- VR-1A
-        ∙ cert′ PointsInto pref             -- VR-1B
+        ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
+        ∙ cert′ PointsInto pref           -- VR-1B
           ───────────────────────────────
           VoteInRound (MkRoundNumber r) t
 
@@ -364,9 +364,9 @@ cool-down phase.
           cert′ = latestCertSeen t
         in
         ∙ c > 0
-        ∙ r ≥ (roundNumber cert′) + R       -- VR-2A
-        ∙ r ≡ (roundNumber cert⋆) + (c * K) -- VR-2B
-          ─────────────────────────────────
+        ∙ r ≥ roundNumber cert′ + R       -- VR-2A
+        ∙ r ≡ roundNumber cert⋆ + c * K   -- VR-2B
+          ───────────────────────────────
           VoteInRound (MkRoundNumber r) t
 ```
 ### State
