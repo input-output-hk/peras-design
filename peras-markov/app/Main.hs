@@ -6,8 +6,9 @@ import NumericPrelude.Base
 import NumericPrelude.Numeric
 
 import Data.Default (def)
-import Peras.Markov.Adversary (evaluate, lookupDelta, separatedChains, splitChains, sumProbabilities, transitions)
-import Prettyprinter
+import Peras.Markov.Adversary.TwoChain (evaluate, lookupDelta, separatedChains, splitChains, sumProbabilities, transitions)
+import Peras.Markov.Orphans ()
+import Prettyprinter (Pretty (pretty), (<+>))
 
 import qualified Peras.Markov.Polynomial as Var (p, q)
 
