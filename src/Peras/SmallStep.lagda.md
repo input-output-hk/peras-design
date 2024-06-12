@@ -211,8 +211,9 @@ as proposed in the paper.
         → ValidChain (preferredChain t)
 
       optimal : ∀ (c : Chain) (t : T)
-        → let b = preferredChain t
-              cts = certs t
+        → let
+            b = preferredChain t
+            cts = certs t
           in
           ValidChain c
         → c ⊆ allBlocks t
@@ -496,8 +497,9 @@ TODO: Needs to be finalized in the Peras paper
 ```agda
     Preagreement : SlotNumber → T → Block
     Preagreement (MkSlotNumber s) t =
-      let Cpref = preferredChain t
-          bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
+      let
+        Cpref = preferredChain t
+        bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
        in fromMaybe block₀ (head bs)
 ```
 A party can vote for a block, if
@@ -565,8 +567,9 @@ Figure 2)
 ```agda
     needCert : RoundNumber → T → Maybe Certificate
     needCert (MkRoundNumber r) t =
-      let cert⋆ = latestCertOnChain t
-          cert′ = latestCertSeen t
+      let
+        cert⋆ = latestCertOnChain t
+        cert′ = latestCertSeen t
       in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
           ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
           ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
@@ -574,30 +577,40 @@ Figure 2)
         else nothing
 ```
 ```agda
+    createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
+    createBlock s p prf sig t =
+      let
+        open IsTreeType
+        Cpref = valid is-TreeType t
+        h = proj₁ (proj₁ (uncons Cpref))
+      in
+      record
+        { slotNumber = s
+        ; creatorId = p
+        ; parentBlock = hash h
+        ; certificate =
+            let r = v-round s
+            in needCert r t
+        ; leadershipProof = prf
+        ; bodyHash =
+            let txs = txSelection s p
+            in blockHash
+                 record
+                   { blockHash = hash txs
+                   ; payload = txs
+                   }
+        ; signature = sig
+        }
+
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {prf} {sig}
-        → let open State M
-              open IsTreeType
-              Cpref = valid is-TreeType t
-              (h , _) , pr = uncons Cpref
-              b = record
-                    { slotNumber = clock
-                    ; creatorId = p
-                    ; parentBlock = hash h
-                    ; certificate =
-                        let r = v-round clock
-                        in needCert r t
-                    ; leadershipProof = prf
-                    ; bodyHash =
-                        let txs = txSelection clock p
-                        in blockHash
-                             record
-                               { blockHash = hash txs
-                               ; payload = txs
-                               }
-                    ; signature = sig
-                    }
+        → let
+            open State M
+            open IsTreeType
+            Cpref = valid is-TreeType t
+            pr = proj₂ (uncons Cpref)
+            b = createBlock clock p prf sig t
           in
           blockTrees ⁉ p ≡ just t
         → (σ : IsBlockSignature b sig)
