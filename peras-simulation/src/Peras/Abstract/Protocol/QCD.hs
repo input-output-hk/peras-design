@@ -16,6 +16,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 module Peras.Abstract.Protocol.QCD where
 
+import Control.Monad.Identity
 import Data.IORef
 import Data.Function
 import Prelude hiding (round)
@@ -75,6 +76,19 @@ instance HasVariables (Action NodeModel a) where
 
 data EnvAction = Tick | NewChain Chain | NewVote Vote
   deriving (Show, Eq, Generic)
+
+instance Pretty NodeModel where
+  pPrint MkNodeModel{..} =
+    hang "NodeModel" 2 $ braces $ vcat
+      [ hang "clock =" 2 $ pPrint (getSlotNumber clock)
+      , hang "allChains =" 2 $ vcat [ pPrint (getRoundNumber r) <+> ":" <+> pPrint c
+                                    | (r, c) <- allChains
+                                    ]
+      , hang "allVotes =" 2 $ pPrint (Set.toList allVotes)
+      , hang "allAcceptedCerts =" 2 $ pPrint (Set.toList allAcceptedCerts)
+      , hang "allSeenCerts =" 2 $ vcat [ pPrint (getSlotNumber s) <+> ":" <+> pPrint c
+                                       | (c, s) <- Map.toList allSeenCerts ]
+      ]
 
 instance Pretty EnvAction where
   pPrint Tick = "Tick"
@@ -181,9 +195,17 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
 
 transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
-  Tick -> Just (votes, s' { allVotes = allVotes s' <> votes } )
+  Tick -> Just (sutVotes, s' { allVotes = votes'
+                             , allSeenCerts = Map.unionWith min (allSeenCerts s')
+                                                                (Map.fromList (map (,clock s') newCerts))
+                             , allAcceptedCerts = allAcceptedCerts s' <> Set.fromList newCerts
+                             } )
     where s' = s { clock = clock s + 1 }
-          votes = votesInState s'
+          sutVotes = votesInState s'
+          votes' = allVotes s' <> sutVotes
+          newQuora = findNewQuora (fromIntegral $ perasτ $ protocol s) (Map.keysSet $ allSeenCerts s) (allVotes s')
+          Identity newCertsResults = mapM (createSignedCertificate $ modelSUT s) newQuora
+          newCerts = [ c | Right c <- newCertsResults ]
   NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
                                     , allSeenCerts =
                                         Map.unionWith min
@@ -201,6 +223,9 @@ instance StateModel NodeModel where
 
   initialState = MkNodeModel{ modelSUT = mkParty 1 mempty [0..10_000] -- Never the slot leader, always a committee member
                             , clock = systemStart + 1
+                            -- NOTE: this model tends to break as you change these. That's an interesting
+                            -- piece of information that we should deal with later. Important focus now is
+                            -- connecting this to agda.
                             , protocol = def { perasU = 5
                                              , perasR = 1
                                              , perasK = 1
@@ -219,7 +244,7 @@ instance StateModel NodeModel where
     fmap (Some . Step) $
       frequency $ [ (1, pure Tick) ] ++
                   [ (1, NewChain <$> genChain) ] ++
-                  [ (1, NewVote  <$> genVote) | canGenVotes, False ]
+                  [ (1, NewVote  <$> genVote) | canGenVotes ]
     where
       genChain =
         do
@@ -312,8 +337,8 @@ instance (Realized m (Set Vote) ~ Set Vote, MonadSTM m) => RunModel NodeModel (R
       monitorPost . counterexample $ "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
     unless (null r) $ do
       monitorPost . counterexample . show $ "  --      got:" <+> pPrint (Set.toList r)
-    unless ok $ do
-      monitorPost . counterexample . show $ "  -- expected:" <+> pPrint (Set.toList expected)
+    counterexamplePost . show $ "  -- expected:" <+> pPrint (Set.toList expected)
+    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
     pure ok
 
 prop_node :: Blind (Actions NodeModel) -> Property

@@ -5,6 +5,7 @@
 module Peras.Abstract.Protocol.Fetching (
   fetching,
   chainWeight,
+  findNewQuora,
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar', readTVarIO)
