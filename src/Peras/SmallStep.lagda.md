@@ -330,7 +330,7 @@ Updating the block-tree upon receiving a message for vote and block messages.
           t [ VoteMsg v ]→ addVote t v
 
       ChainReceived : ∀ {c t} →
-          ───────────────────────────────────────
+          ──────────────────────────────
           t [ ChainMsg c ]→ newChain t c
 ```
 #### Vote in round
@@ -608,16 +608,15 @@ Figure 2)
       honest : ∀ {p} {t} {M} {π} {σ}
         → let
             open State M
+            pref = preferredChain t
             b = createBlock clock p π σ t
           in
         ∙ blockTrees ⁉ p ≡ just t
-        ∙ IsBlockSignature b σ
-        ∙ IsSlotLeader p clock π
-          ────────────────────────────────
+        ∙ ValidChain (b ∷ pref)
+          ───────────────────────────────
           Honest {p} ⊢
             M ↷ add (
-                  ChainMsg
-                    (b ∷ preferredChain t)
+                  ChainMsg (b ∷ pref)
                 , 𝟘
                 , p) to t
                 diffuse M
