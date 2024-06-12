@@ -57,6 +57,7 @@ data NodeModel = MkNodeModel
   , clock            :: SlotNumber
   , protocol         :: PerasParams
   , allChains        :: [(RoundNumber, Chain)]
+  , allVotes         :: Set Vote
   , allAcceptedCerts :: Set Certificate
   , allSeenCerts     :: Map Certificate SlotNumber
   }
@@ -153,7 +154,7 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
                                   [ c
                                   | c <- Set.toList allAcceptedCerts
                                   , s <- maybeToList (Map.lookup c allSeenCerts)
-                                  , fromIntegral s < fromIntegral r * perasU
+                                  , fromIntegral s <= fromIntegral r * perasU
                                   ]
           pref  = preferredChain protocol allSeenAcceptedCerts chains'
           (cert', cert'Slot) = maximumBy (comparing snd)
@@ -166,7 +167,7 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
       guard $ mod (getSlotNumber clock) perasU == perasT
       block <- listToMaybe $ dropWhile (not . blockOldEnough) pref
       let vr1A = round cert' + 1 == r
-                 && fromIntegral cert'Slot + perasΔ <= fromIntegral (r - 1) * perasU + perasU - 1
+                 && fromIntegral cert'Slot + perasΔ <= fromIntegral r * perasU - 1
           vr1B = extends block cert' chains' -- VR-1B
           vr2A = r >= round cert' + fromIntegral perasR
           vr2B = r > round certS &&
@@ -180,19 +181,19 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
 
 transition :: NodeModel -> EnvAction -> Maybe (Set Vote, NodeModel)
 transition s a = case a of
-  Tick -> Just (votesInState s', s')
-    -- TODO: here we need to turn vote quorums into certs.
+  Tick -> Just (votes, s' { allVotes = allVotes s' <> votes } )
     where s' = s { clock = clock s + 1 }
+          votes = votesInState s'
   NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
                                     , allSeenCerts =
                                         Map.unionWith min
-                                          (Map.fromList [ (c, clock s) | MkBlock{certificate = Just c} <- chain ])
+                                          (Map.fromList [ (c, clock s + 1) | MkBlock{certificate = Just c} <- chain ])
                                           (allSeenCerts s)
                                     , allAcceptedCerts = allAcceptedCerts s <>
                                         Set.fromList [ c | MkBlock{certificate = Just c} <- chain ]
 
                                     })
-  _ -> Just (mempty, s)
+  NewVote v -> Just (mempty, s { allVotes = Set.insert v $ allVotes s })
 
 instance StateModel NodeModel where
   data Action NodeModel a where
@@ -209,6 +210,7 @@ instance StateModel NodeModel where
                                              , perasτ = 1
                                              }
                             , allChains = [(0, genesisChain)]
+                            , allVotes = mempty
                             , allAcceptedCerts = Set.singleton genesisCert
                             , allSeenCerts = Map.singleton genesisCert 0
                             }
