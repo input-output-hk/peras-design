@@ -45,3 +45,19 @@ executable peras-server
                       warp,
     hs-source-dirs:   app
     default-language: Haskell2010
+
+executable peras-app
+    import:           warnings
+    ghc-options:  -threaded -rtsopts
+    main-is:          App.hs
+    other-modules:    Paths_peras_server
+    build-depends:    aeson,
+                      base ^>=4.18.1.0,
+                      bytestring,
+                      data-default,
+                      io-classes,
+                      optparse-applicative,
+                      peras-simulation,
+                      yaml,
+    hs-source-dirs:   app
+    default-language: Haskell2010

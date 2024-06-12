@@ -1,0 +1,14 @@
+duration: 900
+parties: 7
+u: 20
+a: 200
+r: 10
+k: 17
+l: 10
+tau: 3
+b: 10
+t: 15
+committee: 5
+delta: 0
+activeSlots: 0.1
+rngSeed: 42
