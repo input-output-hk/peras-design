@@ -563,7 +563,7 @@ Figure 2)
     needCert (MkRoundNumber r) t =
       let cert⋆ = latestCertOnChain t
           cert′ = latestCertSeen t
-      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t))  -- (a)
+      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
           ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
           ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
         then just cert′
