@@ -27,7 +27,7 @@ Delta      Probability
 8          10⋅p⁹⋅q
 10         p¹⁰
 
-Now substitute p = 2/3 and q = 1/3 pretty into the result.
+Now substitute p = 2/3 and q = 1/3 into the result.
 
 Delta      Probability
 -----      -----------
