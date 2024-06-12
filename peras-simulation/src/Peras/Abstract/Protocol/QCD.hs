@@ -323,11 +323,12 @@ prop_node (Blind as) = ioProperty $ do
       unfetchedVotes = mempty
       tracer = Tracer $ emit $ \ a -> modifyIORef traceRef (a:)
       printTrace = do
-        putStrLn "-- Trace:"
+        putStrLn "-- Trace from node:"
         trace <- readIORef traceRef
         print $ vcat . map pPrint $ reverse trace
   pure $ whenFail printTrace
        $ monadicIO $ do
+          monitor $ counterexample "-- Actions:"
           monitor $ counterexample "do"
           _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
           pure True
