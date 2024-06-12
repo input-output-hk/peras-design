@@ -1,3 +1,34 @@
+## 2024-06-12
+
+### Formal specification in Agda
+
+The IOG Agda prelude provides syntax for writing inference rules in the following style:
+
+```agda
+    data VoteInRound : RoundNumber → T → Type where
+
+      Regular : ∀ {r t} →
+        let
+          pref  = preferredChain t
+          cert′ = latestCertSeen t
+        in
+        ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
+        ∙ cert′ PointsInto pref           -- VR-1B
+          ───────────────────────────────
+          VoteInRound (MkRoundNumber r) t
+
+      AfterCooldown : ∀ {r c t} →
+        let
+          cert⋆ = latestCertOnChain t
+          cert′ = latestCertSeen t
+        in
+        ∙ c > 0
+        ∙ r ≥ roundNumber cert′ + R       -- VR-2A
+        ∙ r ≡ roundNumber cert⋆ + c * K   -- VR-2B
+          ───────────────────────────────
+          VoteInRound (MkRoundNumber r) t
+```
+
 ## 2024-06-11
 
 ### Haskell code for voting probabilities
