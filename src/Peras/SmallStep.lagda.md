@@ -466,8 +466,7 @@ the global state.
 An honest party consumes a message from the global message buffer and updates
 the local state
 ```agda
-      honest : ∀ {p} {t t′} {m} {N}
-        → let open State N in
+      honest : ∀ {p} {t t′} {m} {N} → let open State N in
           blockTrees ⁉ p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , 𝟘 ⦆ ∈ messages)
         → t [ m ]→ t′
@@ -480,11 +479,10 @@ the local state
 ```
 An adversarial party might delay a message
 ```agda
-      corrupt : ∀ {p} {as} {m} {N}
-        → let open State N in
+      corrupt : ∀ {p} {as} {m} {N} → let open State N in
           (m∈ms : ⦅ p , Corrupt , m , 𝟘 ⦆ ∈ messages)
           ----------------------------------------------
-        → Corrupt {p} ⊢
+        →  Corrupt {p} ⊢
           N [ m ]⇀ record N
             { messages = m∈ms L.∷= ⦅ p , Corrupt , m , 𝟙 ⦆
             ; adversarialState = as
@@ -510,26 +508,33 @@ A party can vote for a block, if
 Voting updates the party's local state and for all other parties a message
 is added to be consumed immediately.
 ```agda
+    createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
+    createVote s p prf sig t =
+      record
+        { votingRound = v-round s
+        ; creatorId = p
+        ; proofM = prf
+        ; blockHash =
+            let b = Preagreement s t
+            in hash b
+        ; signature = sig
+        }
+```
+```agda
     infix 2 _⊢_⇉_
 
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {prf} {sig}
-        → let open State M
-              r = v-round clock
-              v = record
-                    { votingRound = r
-                    ; creatorId = p
-                    ; proofM = prf
-                    ; blockHash =
-                        let b = Preagreement clock t
-                        in hash b
-                    ; signature = sig
-                    }
+        → let
+            open State M
+            s = clock
+            r = v-round s
+            v = createVote s p prf sig t
           in
         ∙ blockTrees ⁉ p ≡ just t
         ∙ IsVoteSignature v sig
-        ∙ StartOfRound clock r
+        ∙ StartOfRound s r
         ∙ IsCommitteeMember p r prf
         ∙ VoteInRound r t
           ───────────────────────────────────
