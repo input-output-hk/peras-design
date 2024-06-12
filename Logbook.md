@@ -1,5 +1,9 @@
 ## 2024-06-11
 
+### Haskell code for voting probabilities
+
+See [analytics/voting.ipynb](../c98dfcbf0207f7a55ae1c74aa7dd16e88caa6cdc/analytics/voting.ipynb) for details of how to compute the probability that a party will be allocated a given number of votes.
+
 ### Markov-chain computations of adversarial scenarios
 
 The new [peras-markov](../a6f9560b791bbae56595f063fb814d6e58669366/peras-markov/ReadMe.md) implements a framework for Markov-chain computations of adversarial scenarios. Two scenarios are included so far:
