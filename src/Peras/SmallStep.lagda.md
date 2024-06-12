@@ -97,7 +97,7 @@ certificates are not diffused explicitly with the exception of bootstraping the
 system.
 ```agda
   data Message : Type where
-    ChainMsg : ∀ {c : Chain} → ValidChain c → Message
+    ChainMsg : Chain → Message
     VoteMsg : Vote → Message
 ```
 <!--
@@ -172,7 +172,7 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Type}
                     (tree₀ : T)
-                    (newChain : ∀ {c : Chain} → T → ValidChain c → T)
+                    (newChain : T → Chain → T)
                     (allBlocks : T → List Block)
                     (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
@@ -204,8 +204,8 @@ as proposed in the paper.
       extendable-votes : ∀ (t : T) (v : Vote)
         → allBlocks (addVote t v) ≐ allBlocks t
 
-      extendable-chain : ∀ (t : T) {c : Chain} (v : ValidChain c)
-        → certsFromChain c ⊆ᶜ certs (newChain t v)
+      extendable-chain : ∀ (t : T) (c : Chain)
+        → certsFromChain c ⊆ᶜ certs (newChain t c)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
@@ -253,7 +253,7 @@ The block tree type is defined as follows:
 
     field
       tree₀ : T
-      newChain : ∀ {c : Chain} → T → ValidChain c → T
+      newChain : T → Chain → T
       allBlocks : T → List Block
       preferredChain : T → Chain
 
@@ -329,7 +329,7 @@ Updating the block-tree upon receiving a message for vote and block messages.
           ────────────────────────────
           t [ VoteMsg v ]→ addVote t v
 
-      ChainReceived : ∀ {b t} {c : ValidChain b} →
+      ChainReceived : ∀ {c t} →
           ───────────────────────────────────────
           t [ ChainMsg c ]→ newChain t c
 ```
@@ -608,19 +608,16 @@ Figure 2)
       honest : ∀ {p} {t} {M} {π} {σ}
         → let
             open State M
-            open IsTreeType
-            Cpref = valid is-TreeType t
-            pr = proj₂ (uncons Cpref)
             b = createBlock clock p π σ t
           in
-          blockTrees ⁉ p ≡ just t
-        → (sig : IsBlockSignature b σ)
-        → (prf : IsSlotLeader p clock π)
-          --------------------------------------
-        → Honest {p} ⊢
+        ∙ blockTrees ⁉ p ≡ just t
+        ∙ IsBlockSignature b σ
+        ∙ IsSlotLeader p clock π
+          ────────────────────────────────
+          Honest {p} ⊢
             M ↷ add (
                   ChainMsg
-                    (Cons sig prf refl pr Cpref)
+                    (b ∷ preferredChain t)
                 , 𝟘
                 , p) to t
                 diffuse M
@@ -647,19 +644,19 @@ The small-step semantics describe the evolution of the global state.
 
       Fetch : ∀ {m} →
         ∙ h ⊢ M [ m ]⇀ N
-          ────────────────
+          ──────────────
           M ↝ N
 
       CreateVote :
         ∙ Fetched M
         ∙ h ⊢ M ⇉ N
-          ───────────
+          ─────────
           M ↝ N
 
       CreateBlock :
         ∙ Fetched M
         ∙ h ⊢ M ↷ N
-          ───────────
+          ─────────
           M ↝ N
 
       NextSlot :

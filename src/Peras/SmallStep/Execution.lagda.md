@@ -80,45 +80,35 @@ This is a very simple example of the execution of the protocol in the small-step
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
-      createBlock : PartyId → SlotNumber → Block → Block
-      createBlock p s b = record
-            { slotNumber = s
-            ; creatorId = p
-            ; parentBlock = hash b
-            ; certificate = nothing
-            ; leadershipProof = createLeadershipProof s p
-            ; bodyHash = bodyHash′
-            ; signature = createBlockSignature p
-            }
-        where
-          txs = txSelection s p
-          bodyHash′ = blockHash record
-                       { blockHash = hash txs
-                       ; payload = txs
-                       }
+      createBlock' : SlotNumber → PartyId → T → Block
+      createBlock' s p t =
+        let
+          π = createLeadershipProof s p
+          σ = createBlockSignature p
+        in createBlock {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
 ```
 ```agda
-      createVote : PartyId → RoundNumber → Block → Vote
-      createVote p r b = record
-            { votingRound = r
-            ; creatorId = p
-            ; proofM = createMembershipProof r p
-            ; blockHash = hash b
-            ; signature = createVoteSignature p
-            }
+      createVote' : SlotNumber → PartyId → T → Vote
+      createVote' s p t =
+        let
+          r = v-round s
+          π = createMembershipProof r p
+          σ = createVoteSignature p
+        in createVote {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
 ```
 Blocks and Votes
 ```agda
-{-
       block₁ : Block
-      block₁ = createBlock party₁ (MkSlotNumber 1) (tipBest (MkSlotNumber 1) tree₀) -- TODO: block₀
+      block₁ = createBlock' (MkSlotNumber 1) party₁ tree₀
+
+      chain₁ : Chain
+      chain₁ = block₁ ∷ block₀ ∷ []
 
       vote₁ : Vote
-      vote₁ = createVote party₁ (MkRoundNumber 1) (tipBest (MkSlotNumber 1) (extendTree tree₀ block₁)) -- TODO: block₁
+      vote₁ = createVote' (MkSlotNumber 2) party₁ (newChain tree₀ chain₁)
 
       block₃ : Block
-      block₃ = createBlock party₂ (MkSlotNumber 3) (tipBest (MkSlotNumber 3) (addVote (extendTree tree₀ block₁) vote₁)) -- TODO: block₁
-      -}
+      block₃ = createBlock' (MkSlotNumber 3) party₂ (addVote (newChain tree₀ chain₁) vote₁)
 ```
 Initial state
 ```agda
@@ -129,16 +119,14 @@ Initial state
 ```
 Final state after the execution of all the steps
 ```agda
-{-
       finalState : GlobalState
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
-          finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
-          finalTree = addVote (extendTree tree₀ block₁) vote₁
+          finalMsg = VoteMsg vote₁ ∷ ChainMsg chain₁ ∷ []
+          finalTree = addVote (newChain tree₀ chain₁) vote₁
           finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
--}
 ```
 Properties of cert₀
 ```agda
@@ -150,7 +138,7 @@ Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
 {-
-      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (extendTree t b) ≡ latestCertSeen t
+      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (newChain t b) ≡ latestCertSeen t
       latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
 
       latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
@@ -193,7 +181,7 @@ Trace dependent properties
 ```agda
 {-
           where
-            latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
+            latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
             latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
 
             vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ block₁)) + 1
