@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Peras.Markov.Class where
+module Peras.Markov.Class (
+  Half (..),
+) where
 
 import NumericPrelude.Base (($))
 import NumericPrelude.Numeric

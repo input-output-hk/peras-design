@@ -13,7 +13,8 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  Peras.Markov.Adversary.CommonCandidate
+    exposed-modules:  Peras.Markov.Adversary
+                      Peras.Markov.Adversary.CommonCandidate
                       Peras.Markov.Adversary.TwoChain
                       Peras.Markov.Class
                       Peras.Markov.Orphans
@@ -23,7 +24,7 @@ library
                       data-default,
                       numeric-prelude,
                       prettyprinter,
-                      statistics,
+--                    statistics,
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -38,4 +39,4 @@ executable  peras-markov
                       numeric-prelude,
                       peras-markov,
                       prettyprinter,
-                      statistics,
+--                    statistics,

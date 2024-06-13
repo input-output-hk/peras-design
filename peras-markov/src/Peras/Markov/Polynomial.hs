@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -8,6 +9,7 @@ module Peras.Markov.Polynomial (
   p,
   q,
   eval,
+  evaluate,
 ) where
 
 import NumericPrelude.Base
@@ -20,7 +22,7 @@ import Prettyprinter (Pretty (pretty), concatWith, (<+>), (<>))
 
 import qualified Algebra.Additive as Additive (C)
 import qualified Algebra.Ring as Ring (C)
-import qualified Data.Map.Strict as Map (empty, filter, foldrWithKey', map, mapKeys, null, singleton, toList, unionWith)
+import qualified Data.Map.Strict as Map (empty, filter, foldlWithKey', map, mapKeys, null, singleton, toList, unionWith)
 
 data Monomial = MkMonomial
   { pDegree :: Int
@@ -81,7 +83,10 @@ instance (Eq a, Ring.C a, Pretty a) => Pretty (Term a) where
 newtype Polynomial a = MkPolynomial
   { terms :: Map Monomial a
   }
-  deriving (Eq, Ord, Read, Show)
+  deriving stock (Eq, Ord, Read, Show)
+
+instance Functor Polynomial where
+  fmap f = MkPolynomial . Map.map f . terms
 
 instance (Eq a, Additive.C a) => Additive.C (Polynomial a) where
   zero = canonical Map.empty
@@ -91,7 +96,7 @@ instance (Eq a, Additive.C a) => Additive.C (Polynomial a) where
 instance (Eq a, Ring.C a) => Ring.C (Polynomial a) where
   one = num one
   fromInteger = canonical . Map.singleton zero . fromInteger
-  (*) x = canonical . Map.foldrWithKey' ((Map.unionWith (+) .) . mul) Map.empty . terms
+  (*) x = canonical . Map.foldlWithKey' (flip (flip . (Map.unionWith (+) .) . mul)) Map.empty . terms
    where
     mul ym yc = Map.mapKeys (ym +) . Map.map (yc *) $ terms x
 
@@ -113,6 +118,9 @@ q :: Ring.C a => Polynomial a
 q = MkPolynomial $ MkMonomial zero one `Map.singleton` one
 
 eval :: Ring.C a => a -> a -> Polynomial a -> a
-eval p' q' = Map.foldrWithKey' (((+) .) . eval') zero . terms
+eval p' q' = Map.foldlWithKey' (((+) .) . flip eval') zero . terms
  where
   eval' k v = v * p' ^ toInteger (pDegree k) * q' ^ toInteger (qDegree k)
+
+evaluate :: (Functor t, Ring.C a) => a -> a -> t (Polynomial a) -> t a
+evaluate = (fmap .) . eval
