@@ -1,47 +1,56 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Exception (IOException, try)
-import Control.Monad (forM, forM_)
+import Control.Monad (forM, forM_, void)
 import Data.Bifunctor (bimap)
 import Data.Ratio
 import Data.Traversable (for)
-import DeltaQ.Algebra.Class
-import DeltaQ.Algebra.DelayModel.SimpleUniform
-import DeltaQ.Algebra.Simplification (normaliseDeltaQ)
-import DeltaQ.Numeric.CDF
-import DeltaQ.QTA.Support
-import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), toFile)
-import Graphics.Rendering.Chart.Easy (axis_labels, def, laxis_title, layout_title, layout_x_axis, layout_y_axis, line, plot, (.=))
+import DeltaQ.Class (Convolvable, ImproperRandomVariable, NonConcurrentCombination, probabilisticChoice)
+import DeltaQ.Model.DeltaQ (DeltaQOps (..), convolve)
+import DeltaQ.Model.Utilities (DeltaQVisualisation (fromEmpirical), plotCDF, plotCDFs)
+import DeltaQ.PWPs (DeltaQOps, IRV, asDiscreteCDF, fromQTA, uniform0)
+import GHC.Stack (HasCallStack)
+import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), renderableToFile, toFile)
+import Graphics.Rendering.Chart.Easy (axis_labels, def, laxis_title, layoutToRenderable, layout_title, layout_x_axis, layout_y_axis, line, plot, (.=))
 import System.IO (IOMode (ReadMode), hGetLine, withFile)
 import System.Process
 import System.Random.MWC
 
+main :: IO ()
 main = do
-  oneHop
-  hopsDistribution 5
-  hopsProbability
-  networkWithCertsProbability
+  -- oneHop
+  -- hopsDistribution 5
+  -- hopsProbability
+  void networkWithCertsProbability
+
+(⊕) :: (HasCallStack, DeltaQOps a) => a -> a -> a
+(⊕) = convolve
+
+(⇋) = choice
 
 oneMTU =
-  fromQTA @SimpleUniform
-    [(0, 0), (1 % 3, 0.012), (2 % 3, 0.069), (3 % 3, 0.268)]
+  fromQTA @(IRV Double)
+    [(fromRational $ 1 % 3, 0.012), (fromRational $ 2 % 3, 0.069), (fromRational $ 3 % 3, 0.268)]
 blockBody64K =
-  fromQTA @SimpleUniform
-    [(0, 0), (1 % 3, 0.024), (2 % 3, 0.143), (3 % 3, 0.531)]
+  fromQTA
+    [(fromRational $ 1 % 3, 0.024), (fromRational $ 2 % 3, 0.143), (fromRational $ 3 % 3, 0.531)]
 headerRequestReply = oneMTU ⊕ oneMTU -- request/reply
 bodyRequestReply = oneMTU ⊕ blockBody64K -- request/reply
 oneBlockDiffusion = headerRequestReply ⊕ bodyRequestReply
 
 certRequestReply = oneMTU ⊕ oneMTU -- request/reply
-certValidation = uniform0 @SimpleUniform (0.050 :: Double)
+certValidation = uniform0 0.050
 certHandling = certRequestReply ⊕ certValidation
-headerWithCert = (⇋) (1 % 3) (headerRequestReply ⊕ certHandling) headerRequestReply
+headerWithCert = (⇋) (fromRational $ 1 % 3) (headerRequestReply ⊕ certHandling) headerRequestReply
 certBlockOneThird = headerWithCert ⊕ bodyRequestReply
 certBlockAll = headerRequestReply ⊕ certHandling ⊕ bodyRequestReply
 
-combine [(p, dq), (_, dq')] = (⇋) (toRational $ p / 100) dq dq'
-combine ((p, dq) : rest) = (⇋) (toRational $ p / 100) dq (combine rest)
+combine [(p, dq), (_, dq')] = (⇋) (p / 100) dq dq'
+combine ((p, dq) : rest) = (⇋) (p / 100) dq (combine rest)
+
+multiHop n dq = nWayConvolve $ replicate n dq
 
 multihops = (`multiHop` oneBlockDiffusion) <$> [1 ..]
 
@@ -63,72 +72,67 @@ certOneThirdDeltaQ15 =
   combine $ zip (scanl1 (+) pathLengthsDistributionDegree10 <> [0]) $ (`multiHop` certBlockOneThird) <$> [1 ..]
 
 networkWithCertsProbability = do
-  gen <- createSystemRandom
-  cdf15 <- empiricalCDF gen 500 deltaq15
-  certAllCdf <- empiricalCDF gen 500 certAllDeltaQ15
-  let samples = fromRational . (% 1000) <$> [0 .. 6000]
-      cdf15Data = zip samples (fromRational @Double . _ecdf cdf15 <$> samples)
-      certAllData = zip samples (fromRational @Double . _ecdf certAllCdf <$> samples)
+  let cdf15 = concatMap (either (: []) id) $ asDiscreteCDF deltaq15 1000
+      certAllCdf = concatMap (either (: []) id) $ asDiscreteCDF certAllDeltaQ15 1000
 
-  toFile def{_fo_format = SVG} "network-with-cert.svg" $ do
-    layout_title .= "Peras Network Diffusion (δ=15)"
-    layout_x_axis . laxis_title .= "time (seconds)"
-    layout_y_axis . laxis_title .= "probability (cumul.)"
-    plot (line "block diffusion w/o cert" [cdf15Data])
-    plot (line "block diffusion w/ cert" [certAllData])
-    plot (line "95%" [[(0.0, 0.95), (6.0, 0.95)]])
+  renderableToFile def{_fo_format = SVG} "network-with-cert.svg" $ do
+    layoutToRenderable $ plotCDFs "Peras Network Diffusion (δ=15)" [("block diffusion w/o cert", deltaq15), ("block diffusion w/ cert", certAllDeltaQ15)]
 
-hopsProbability = do
-  gen <- createSystemRandom
-  cdf15 <- empiricalCDF gen 500 deltaq15
-  cdf10 <- empiricalCDF gen 500 deltaq10
-  let samples = fromRational . (% 1000) <$> [0 .. 5000]
-      cdf15Data = zip samples (fromRational @Double . _ecdf cdf15 <$> samples)
-      cdf10Data = zip samples (fromRational @Double . _ecdf cdf10 <$> samples)
+-- -- layout_title .= "Peras Network Diffusion (δ=15)"
+-- -- layout_x_axis . laxis_title .= "time (seconds)"
+-- -- layout_y_axis . laxis_title .= "probability (cumul.)"
+-- -- plot (line "block diffusion w/o cert" [cdf15Data])
+-- -- plot (line "block diffusion w/ cert" [certAllData])
+-- -- plot (line "95%" [[(0.0, 0.95), (6.0, 0.95)]])
 
-  toFile def{_fo_format = SVG} "peras.svg" $ do
-    layout_title .= "Praos Network Diffusion"
-    plot (line "block diffusion (δ=15)" [cdf15Data])
-    plot (line "block diffusion (δ=10)" [cdf10Data])
-    plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
+-- hopsProbability = do
+--   gen <- createSystemRandom
+--   cdf15 <- empiricalCDF gen 500 deltaq15
+--   cdf10 <- empiricalCDF gen 500 deltaq10
+--   let samples = fromRational . (% 1000) <$> [0 .. 5000]
+--       cdf15Data = zip samples (fromRational @Double . _ecdf cdf15 <$> samples)
+--       cdf10Data = zip samples (fromRational @Double . _ecdf cdf10 <$> samples)
 
-hopsDistribution n = do
-  let hops = [1 .. n]
-  gen <- createSystemRandom
-  hopsCDF <- forM hops $ \n -> empiricalCDF gen 500 (n `multiHop` oneBlockDiffusion)
-  let samples = fromRational . (% 1000) <$> [0 .. 5000]
+--   toFile def{_fo_format = SVG} "peras.svg" $ do
+--     layout_title .= "Praos Network Diffusion"
+--     plot (line "block diffusion (δ=15)" [cdf15Data])
+--     plot (line "block diffusion (δ=10)" [cdf10Data])
+--     plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
 
-      loop acc h =
-        try (hGetLine h) >>= \case
-          Left (_ :: IOException) -> pure $ reverse acc
-          Right line ->
-            let l = bimap ((/ 100) . read) read $ break (== '\t') line
-             in loop (l : acc) h
+-- hopsDistribution n = do
+--   let hops = [1 .. n]
+--   gen <- createSystemRandom
+--   hopsCDF <- forM hops $ \n -> empiricalCDF gen 500 (n `multiHop` oneBlockDiffusion)
+--   let samples = fromRational . (% 1000) <$> [0 .. 5000]
 
-  mainnet :: [(Double, Double)] <- withFile "block-diffusion" ReadMode $ loop []
+--       loop acc h =
+--         try (hGetLine h) >>= \case
+--           Left (_ :: IOException) -> pure $ reverse acc
+--           Right line ->
+--             let l = bimap ((/ 100) . read) read $ break (== '\t') line
+--              in loop (l : acc) h
 
-  toFile def{_fo_format = SVG} "praos-multi-hops.svg" $ do
-    layout_title .= "Praos Multi-Hops Block diffusion"
-    forM_ hops $ \n ->
-      plot (line ("block diffusion hops=" <> show n) [zip samples (fromRational @Double . _ecdf (hopsCDF !! (n - 1)) <$> samples)])
-    plot (line "mainnet (1 mo)" [filter ((<= 5) . fst) mainnet])
-    plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
+--   mainnet :: [(Double, Double)] <- withFile "block-diffusion" ReadMode $ loop []
 
-multiHop n dq =
-  iterate (dq ⊕) dq !! max 0 (n - 1)
+--   toFile def{_fo_format = SVG} "praos-multi-hops.svg" $ do
+--     layout_title .= "Praos Multi-Hops Block diffusion"
+--     forM_ hops $ \n ->
+--       plot (line ("block diffusion hops=" <> show n) [zip samples (fromRational @Double . _ecdf (hopsCDF !! (n - 1)) <$> samples)])
+--     plot (line "mainnet (1 mo)" [filter ((<= 5) . fst) mainnet])
+--     plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
 
-oneHop = do
-  gen <- createSystemRandom
-  certified_block_all_cdf <- empiricalCDF gen 500 (multiHop 4 certBlockAll)
-  plain_block_cdf <- empiricalCDF gen 500 (multiHop 4 oneBlockDiffusion)
-  let samples = fromRational . (% 1000) <$> [0 .. 5000]
-      cert_block_all_data = zip samples (fromRational @Double . _ecdf certified_block_all_cdf <$> samples)
-      plain_block_data = zip samples (fromRational @Double . _ecdf plain_block_cdf <$> samples)
+-- oneHop = do
+--   gen <- createSystemRandom
+--   certified_block_all_cdf <- empiricalCDF gen 500 (multiHop 4 certBlockAll)
+--   plain_block_cdf <- empiricalCDF gen 500 (multiHop 4 oneBlockDiffusion)
+--   let samples = fromRational . (% 1000) <$> [0 .. 5000]
+--       cert_block_all_data = zip samples (fromRational @Double . _ecdf certified_block_all_cdf <$> samples)
+--       plain_block_data = zip samples (fromRational @Double . _ecdf plain_block_cdf <$> samples)
 
-  toFile def{_fo_format = SVG} "block-with-cert.svg" $ do
-    layout_title .= "4-Hops Block Diffusion w/ Certificate"
-    layout_x_axis . laxis_title .= "time (seconds)"
-    layout_y_axis . laxis_title .= "probability (cumul.)"
-    plot (line "certified block" [cert_block_all_data])
-    plot (line "plain block" [plain_block_data])
-    plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
+--   toFile def{_fo_format = SVG} "block-with-cert.svg" $ do
+--     layout_title .= "4-Hops Block Diffusion w/ Certificate"
+--     layout_x_axis . laxis_title .= "time (seconds)"
+--     layout_y_axis . laxis_title .= "probability (cumul.)"
+--     plot (line "certified block" [cert_block_all_data])
+--     plot (line "plain block" [plain_block_data])
+--     plot (line "95%" [[(0.0, 0.95), (5.0, 0.95)]])
