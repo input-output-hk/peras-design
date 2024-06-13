@@ -19,7 +19,7 @@ open import Peras.Crypto hiding (isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
-open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
+open import Peras.SmallStep
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)

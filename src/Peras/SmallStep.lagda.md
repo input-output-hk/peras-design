@@ -500,7 +500,7 @@ TODO: Needs to be finalized in the Peras paper
       let
         Cpref = preferredChain t
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
-       in fromMaybe block₀ (head bs)
+      in fromMaybe block₀ (head bs)
 ```
 ```agda
     createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
@@ -676,31 +676,35 @@ The small-step semantics describe the evolution of the global state.
 
 ```agda
     infix  2 _↝⋆_
-    infixr 2 _∷′_
-    infix  3 []′
+    infixr 2 _↣_
+    infix  3 ∎
 
     data _↝⋆_ : State → State → Type where
-      []′ : M ↝⋆ M
-      _∷′_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
+      ∎ : M ↝⋆ M
+      _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
 ```
 <!--
 ### Composition
 ```agda
+{-
     ↝⋆∘↝⋆ :
         M ↝⋆ N
       → N ↝⋆ O
       → M ↝⋆ O
-    ↝⋆∘↝⋆ []′ M↝⋆O = M↝⋆O
-    ↝⋆∘↝⋆ (M↝M₁ ∷′ M₁↝⋆N) N↝⋆O = M↝M₁ ∷′ ↝⋆∘↝⋆ M₁↝⋆N N↝⋆O
+    ↝⋆∘↝⋆ ∎ M↝⋆O = M↝⋆O
+    ↝⋆∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝⋆O = M↝M₁ ↣ ↝⋆∘↝⋆ M₁↝⋆N N↝⋆O
+-}
 ```
 ### Post-composition
 ```agda
+{-
     ↝∘↝⋆ :
         M ↝⋆ N
       → N ↝ O
       → M ↝⋆ O
-    ↝∘↝⋆ []′ N↝O =  N↝O ∷′ []′
-    ↝∘↝⋆ (M↝M₁ ∷′ M₁↝⋆N) N↝O = M↝M₁ ∷′ ↝∘↝⋆ M₁↝⋆N N↝O
+    ↝∘↝⋆ ∎ N↝O =  N↝O ↣ ∎
+    ↝∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝O = M↝M₁ ↣ ↝∘↝⋆ M₁↝⋆N N↝O
+-}
 ```
 -->
 Transitions of voting rounds
@@ -850,8 +854,8 @@ When the current state is collision free, previous states were so too
 <!--
 ```agda
 {-
-    ↝⋆-collision-free ([]′) N = N
-    ↝⋆-collision-free (M↝N ∷′ N↝⋆O) O =
+    ↝⋆-collision-free ∎ N = N
+    ↝⋆-collision-free (M↝N ↣ N↝⋆O) O =
       ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
 -}
 ```
