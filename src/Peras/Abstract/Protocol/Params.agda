@@ -1,6 +1,8 @@
 
 module Peras.Abstract.Protocol.Params where
 
+open import Data.Nat
+
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -19,27 +21,35 @@ open import Haskell.Prelude
 record PerasParams : Set where
   constructor MkPerasParams
   field
-    perasU : Integer
+    perasU : ℕ
     -- ^ Round length, in slots
-    perasA : Integer
+    perasA : ℕ
     -- ^ Certificate expiration age, in slots
-    perasR : Integer
+    perasR : ℕ
     -- ^ Length of chain-ignorance period, in rounds
-    perasK : Integer
+    perasK : ℕ
     -- ^ Length of cool-down period, in rounds
-    perasL : Integer
+    perasL : ℕ
     -- ^ Minimum age for voted block, in slots
-    perasτ : Integer
+    perasτ : ℕ
     -- ^ Quorum size, as a percentage of total expected votes
-    perasB : Integer
+    perasB : ℕ
     -- ^ Certificate boost, in blocks
-    perasT : Integer
+    perasT : ℕ
     -- ^ Termination bound for preagreement, in slots
-    perasΔ : Integer
+    perasΔ : ℕ
     -- ^ Delivery guarantee for diffusion, in slots
+    @0 perasNonZeroU : NonZero perasU
+
+{-# FOREIGN AGDA2HS
+data PerasParams = MkPerasParams{perasU :: Integer,
+                                 perasA :: Integer, perasR :: Integer, perasK :: Integer,
+                                 perasL :: Integer, perasτ :: Integer, perasB :: Integer,
+                                 perasT :: Integer, perasΔ :: Integer}
+  deriving (Eq, Generic, Show)
+#-}
 
 open PerasParams public
-{-# COMPILE AGDA2HS PerasParams deriving (Eq, Generic, Show) #-}
 
 defaultPerasParams : PerasParams
 defaultPerasParams =
