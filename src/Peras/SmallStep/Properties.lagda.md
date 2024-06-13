@@ -128,7 +128,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateVote _ (honest _ _ _ _ _)) = ≤-refl
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (CreateBlock _ (honest _ _)) = ≤-refl
     clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
-    clock-incr {M} (NextSlotNewRound _ _) = n≤1+n (clock' M)
+    clock-incr {M} (NextSlotNewRound _ _ _) = n≤1+n (clock' M)
 
     clock-incr⋆ : ∀ {M N : GlobalState}
       → M ↝⋆ N

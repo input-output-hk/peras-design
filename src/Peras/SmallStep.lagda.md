@@ -397,18 +397,27 @@ must hold before transitioning to the next slot.
     Fetched = All (λ { z → delay z ≢ 𝟘 }) ∘ messages
       where open State
 ```
+Predicate for a global state stating that the current slot is the last slot of
+a voting round.
 ```agda
     LastSlotInRound : State → Type
     LastSlotInRound M =
       suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
       where open State M
 ```
+Predicate for a global state stating that the next slot will be in a new voting
+round.
 ```agda
     NextSlotInSameRound : State → Type
     NextSlotInSameRound M =
       rnd (getSlotNumber clock) ≡ rnd (suc (getSlotNumber clock))
       where open State M
 ```
+Predicate for a global state asserting that parties of the voting committee for
+a the current voting round have voted. This is needed as a condition when
+transitioning from one voting round to another.
+
+TODO: Properly define the condition for required votes
 ```agda
     RequiredVotes : State → Type
     RequiredVotes M =
@@ -487,9 +496,7 @@ An adversarial party might delay a message
 ```
 ## Voting
 #### Preagreement
-
-TODO: Needs to be finalized in the Peras paper
-
+*TODO*: Needs to be finalized in the Peras paper
 ```agda
     Preagreement : SlotNumber → T → Block
     Preagreement (MkSlotNumber s) t =
@@ -498,6 +505,7 @@ TODO: Needs to be finalized in the Peras paper
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
       in fromMaybe block₀ (head bs)
 ```
+Helper function for creating a vote
 ```agda
     createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
     createVote s p prf sig t =
@@ -545,6 +553,9 @@ delay the message.
 
 ## Block creation
 
+Certificates are conditionally added to a block. The following function deterimes
+if there needs to be a certificate provided for a given voting round and a local
+block-tree. The conditions (a) - (c) are reflected in the Peras paper.
 ```agda
     needCert : RoundNumber → T → Maybe Certificate
     needCert (MkRoundNumber r) t =
@@ -557,6 +568,7 @@ delay the message.
         then just cert′
         else nothing
 ```
+Helper function for creating a block
 ```agda
     createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
     createBlock s p π σ t =
@@ -664,7 +676,7 @@ The small-step semantics describe the evolution of the global state.
       NextSlotNewRound :
         ∙ Fetched M
         ∙ LastSlotInRound M
---TODO  ∙ RequiredVotes M
+        ∙ RequiredVotes M
           ─────────────────
           M ↝ tick M
 ```
