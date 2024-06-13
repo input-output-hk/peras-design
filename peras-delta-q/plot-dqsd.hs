@@ -1,22 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 
-import Control.Exception (IOException, try)
-import Control.Monad (forM, forM_, void)
-import Data.Bifunctor (bimap)
+import Control.Monad (void)
 import Data.Ratio
-import Data.Traversable (for)
-import DeltaQ.Class (Convolvable, ImproperRandomVariable, NonConcurrentCombination, probabilisticChoice)
+import Debug.Trace (trace)
 import DeltaQ.Model.DeltaQ (DeltaQOps (..), convolve)
-import DeltaQ.Model.Utilities (DeltaQVisualisation (fromEmpirical), plotCDF, plotCDFs)
-import DeltaQ.PWPs (DeltaQOps, IRV, asDiscreteCDF, fromQTA, uniform0)
+import DeltaQ.Model.Utilities (plotCDFs)
+import DeltaQ.PWPs (IRV, asDiscreteCDF, fromQTA, uniform0)
 import GHC.Stack (HasCallStack)
-import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), renderableToFile, toFile)
-import Graphics.Rendering.Chart.Easy (axis_labels, def, laxis_title, layoutToRenderable, layout_title, layout_x_axis, layout_y_axis, line, plot, (.=))
-import System.IO (IOMode (ReadMode), hGetLine, withFile)
-import System.Process
-import System.Random.MWC
+import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), renderableToFile)
+import Graphics.Rendering.Chart.Easy (def, layoutToRenderable)
 
 main :: IO ()
 main = do
@@ -36,9 +31,9 @@ oneMTU =
 blockBody64K =
   fromQTA
     [(fromRational $ 1 % 3, 0.024), (fromRational $ 2 % 3, 0.143), (fromRational $ 3 % 3, 0.531)]
-headerRequestReply = oneMTU ⊕ oneMTU -- request/reply
+headerRequestReply = trace ("oneMTU = " <> show oneMTU) $ oneMTU ⊕ oneMTU -- request/reply
 bodyRequestReply = oneMTU ⊕ blockBody64K -- request/reply
-oneBlockDiffusion = headerRequestReply ⊕ bodyRequestReply
+oneBlockDiffusion = trace ("header = " <> show headerRequestReply <> "\nbody = " <> show bodyRequestReply) $ headerRequestReply ⊕ bodyRequestReply
 
 certRequestReply = oneMTU ⊕ oneMTU -- request/reply
 certValidation = uniform0 0.050
@@ -50,6 +45,7 @@ certBlockAll = headerRequestReply ⊕ certHandling ⊕ bodyRequestReply
 combine [(p, dq), (_, dq')] = (⇋) (p / 100) dq dq'
 combine ((p, dq) : rest) = (⇋) (p / 100) dq (combine rest)
 
+multiHop :: (DeltaQOps icdf, Show icdf) => Int -> icdf -> icdf
 multiHop n dq = nWayConvolve $ replicate n dq
 
 multihops = (`multiHop` oneBlockDiffusion) <$> [1 ..]
@@ -71,12 +67,14 @@ certAllDeltaQ15 =
 certOneThirdDeltaQ15 =
   combine $ zip (scanl1 (+) pathLengthsDistributionDegree10 <> [0]) $ (`multiHop` certBlockOneThird) <$> [1 ..]
 
-networkWithCertsProbability = do
-  let cdf15 = concatMap (either (: []) id) $ asDiscreteCDF deltaq15 1000
-      certAllCdf = concatMap (either (: []) id) $ asDiscreteCDF certAllDeltaQ15 1000
-
+networkWithCertsProbability =
   renderableToFile def{_fo_format = SVG} "network-with-cert.svg" $ do
-    layoutToRenderable $ plotCDFs "Peras Network Diffusion (δ=15)" [("block diffusion w/o cert", deltaq15), ("block diffusion w/ cert", certAllDeltaQ15)]
+    layoutToRenderable $
+      plotCDFs
+        "Peras Network Diffusion (δ=15)"
+        [ ("block diffusion w/o cert", deltaq15)
+        , ("block diffusion w/ cert", certAllDeltaQ15)
+        ]
 
 -- -- layout_title .= "Peras Network Diffusion (δ=15)"
 -- -- layout_x_axis . laxis_title .= "time (seconds)"
