@@ -203,9 +203,6 @@ deriving via Bytes instance ToJSONKey UniqueId
 
 -- Orphans for `Peras.Numbering`.
 
-deriving stock instance Ord RoundNumber
-deriving stock instance Read RoundNumber
-deriving stock instance Show RoundNumber
 deriving anyclass instance H.Hashable RoundNumber
 deriving newtype instance FromJSON RoundNumber
 deriving newtype instance ToJSON RoundNumber
@@ -228,9 +225,6 @@ instance Num RoundNumber where
 instance Real RoundNumber where
   toRational (MkRoundNumber i) = toRational i
 
-deriving stock instance Ord SlotNumber
-deriving stock instance Read SlotNumber
-deriving stock instance Show SlotNumber
 deriving anyclass instance H.Hashable SlotNumber
 deriving newtype instance FromJSON SlotNumber
 deriving newtype instance ToJSON SlotNumber

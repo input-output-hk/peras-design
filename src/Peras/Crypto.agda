@@ -6,7 +6,7 @@
 module Peras.Crypto where
 
 open import Data.Bool using (Bool)
-open import Haskell.Prelude using (Eq; _==_)
+open import Haskell.Prelude using (Eq; Int; _==_)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Binary using (StrictTotalOrder)
 
@@ -16,13 +16,17 @@ postulate
   emptyBS : ByteString
   eqBS : ByteString → ByteString → Bool
   _isInfixOf_ : ByteString → ByteString → Bool
+  replicateBS : Int → Int → ByteString
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
-import Data.ByteString
+import Data.ByteString as BS
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 eqBS :: ByteString -> ByteString -> Bool
 eqBS = (==)
+replicateBS :: Int -> Word8 -> ByteString
+replicateBS = BS.replicate
 #-}
 
 {-# FOREIGN GHC

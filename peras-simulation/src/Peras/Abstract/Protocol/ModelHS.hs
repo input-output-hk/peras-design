@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TupleSections #-}
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
@@ -48,7 +49,6 @@ data NodeModel = MkNodeModel
   , protocol         :: PerasParams
   , allChains        :: [(RoundNumber, Chain)]
   , allVotes         :: Set Vote
-  , allAcceptedCerts :: Set Certificate
   , allSeenCerts     :: Map Certificate SlotNumber
   }
   deriving (Eq, Show)
@@ -72,8 +72,7 @@ votesInState MkNodeModel{protocol = protocol@MkPerasParams{..}, ..}
           -- available is out of step
           allSeenAcceptedCerts = Set.fromList
                                   [ c
-                                  | c <- Set.toList allAcceptedCerts
-                                  , s <- maybeToList (Map.lookup c allSeenCerts)
+                                  | (c, s) <- Map.toList allSeenCerts
                                   , fromIntegral s <= fromIntegral r * perasU
                                   ]
           pref  = preferredChain protocol allSeenAcceptedCerts chains'
@@ -104,12 +103,11 @@ transition s a = case a of
   Tick -> Just (sutVotes, s' { allVotes = votes'
                              , allSeenCerts = Map.unionWith min (allSeenCerts s')
                                                                 (Map.fromList (map (,clock s') newCerts))
-                             , allAcceptedCerts = allAcceptedCerts s' <> Set.fromList newCerts
                              } )
     where s' = s { clock = clock s + 1 }
           sutVotes = votesInState s'
           votes' = allVotes s' <> sutVotes
-          newQuora = findNewQuora (fromIntegral $ perasτ $ protocol s) (allAcceptedCerts s) (allVotes s')
+          newQuora = findNewQuora (fromIntegral $ perasτ $ protocol s) (Map.keysSet $ allSeenCerts s) (allVotes s')
           Identity newCertsResults = mapM (createSignedCertificate $ modelSUT s) newQuora
           newCerts = [ c | Right c <- newCertsResults ]
   NewChain chain -> Just (mempty, s { allChains = (inRound (clock s) (protocol s), chain) : allChains s
@@ -117,9 +115,6 @@ transition s a = case a of
                                         Map.unionWith min
                                           (Map.fromList [ (c, clock s + 1) | MkBlock{certificate = Just c} <- chain ])
                                           (allSeenCerts s)
-                                    , allAcceptedCerts = allAcceptedCerts s <>
-                                        Set.fromList [ c | MkBlock{certificate = Just c} <- chain ]
-
                                     })
   NewVote v -> Just (mempty, s { allVotes = Set.insert v $ allVotes s })
 
@@ -140,6 +135,5 @@ initialModelState =
                               }
              , allChains = [(0, genesisChain)]
              , allVotes = mempty
-             , allAcceptedCerts = Set.singleton genesisCert
              , allSeenCerts = Map.singleton genesisCert 0
              }

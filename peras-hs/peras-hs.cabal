@@ -24,6 +24,8 @@ library
     Peras.Numbering
     Peras.Orphans
     Peras.SmallStep
+    Peras.Abstract.Protocol.Model
+    Peras.Abstract.Protocol.Params
   other-modules:
   hs-source-dirs:   src
   build-depends:
@@ -32,6 +34,7 @@ library
                 , base >=4.9 && <5
                 , base16-bytestring
                 , bytestring
+                , data-default
                 , generic-random
                 , hashable
                 , io-classes

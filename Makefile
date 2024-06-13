@@ -1,6 +1,6 @@
 # Inspired by https://git.app.uib.no/hott/agda-unimath/-/blob/6f6a48c92912da3f1245b846c5439c63d1461792/Makefile
-AGDAFILES := $(wildcard src/**/*.agda)
-LAGDAFILES := $(wildcard src/**/*.lagda.md)
+AGDAFILES := $(shell find src -name *.agda)
+LAGDAFILES := $(shell find src -name *.lagda.md)
 HSDIR=peras-hs
 HSFILES := $(patsubst %.agda,$(HSDIR)/%.hs,$(AGDAFILES))
 LHSFILES := $(patsubst %.lagda.md,$(HSDIR)/%.hs,$(LAGDAFILES))

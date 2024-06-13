@@ -68,7 +68,6 @@ instance Pretty NodeModel where
                                     | (r, c) <- allChains
                                     ]
       , hang "allVotes =" 2 $ pPrint (Set.toList allVotes)
-      , hang "allAcceptedCerts =" 2 $ pPrint (Set.toList allAcceptedCerts)
       , hang "allSeenCerts =" 2 $ vcat [ pPrint (getSlotNumber s) <+> ":" <+> pPrint c
                                        | (c, s) <- Map.toList allSeenCerts ]
       ]
