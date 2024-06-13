@@ -46,7 +46,7 @@ data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
-{-# COMPILE AGDA2HS EnvAction #-}
+{-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
 genesisHash : Hash Block
 genesisHash = MkHash (replicateBS 8 0)

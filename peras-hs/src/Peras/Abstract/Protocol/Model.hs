@@ -17,6 +17,7 @@ data NodeModel = NodeModel{clock :: SlotNumber,
 data EnvAction = Tick
                | NewChain Chain
                | NewVote Vote
+               deriving (Eq, Show)
 
 genesisHash :: Hash Block
 genesisHash = MkHash (replicateBS 8 0)

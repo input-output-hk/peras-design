@@ -23,7 +23,6 @@ import Prelude hiding (round)
 import Control.Monad
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Map qualified as Map
 import Control.Tracer
 import Control.Concurrent.Class.MonadSTM
 import Control.Monad.State hiding (state)
