@@ -417,7 +417,7 @@ Predicate for a global state asserting that parties of the voting committee for
 a the current voting round have voted. This is needed as a condition when
 transitioning from one voting round to another.
 
-TODO: Properly define the condition for required votes
+**TODO**: Properly define the condition for required votes
 ```agda
     RequiredVotes : State → Type
     RequiredVotes M =
@@ -496,7 +496,7 @@ An adversarial party might delay a message
 ```
 ## Voting
 #### Preagreement
-*TODO*: Needs to be finalized in the Peras paper
+**TODO**: Needs to be finalized in the Peras paper
 ```agda
     Preagreement : SlotNumber → T → Block
     Preagreement (MkSlotNumber s) t =
@@ -636,17 +636,23 @@ delay the message.
 ## Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
-
 ```agda
     variable
       M N O : State
       p : PartyId
       h : Honesty p
 ```
+The relation allows
 * Fetching messages at the beginning of each slot
 * Block creation
 * Voting
-* Transition to next slot
+* Transitioning to next slot in the same voting round
+* Transitioning to next slot in a new voting round
+
+Note, when transitioning to the next slot we need to distinguish whether the
+next slot is in the same or a new voting round. This is necessary in order to
+detect adversarial behaviour with respect to voting (adversarialy not voting
+in a voting round)
 ```agda
     data _↝_ : State → State → Type where
 
@@ -681,6 +687,7 @@ The small-step semantics describe the evolution of the global state.
           M ↝ tick M
 ```
 #### Reflexive, transitive closure
+List-like structure for defining execution paths.
 ```agda
     infix  2 _↝⋆_
     infixr 2 _↣_
@@ -715,6 +722,8 @@ The small-step semantics describe the evolution of the global state.
 ```
 -->
 ### Transitions of voting rounds
+Transitioning of voting rounds can be described with respect of the small-step
+semantics.
 ```agda
     data _↦_ : State → State → Type where
 
@@ -724,6 +733,7 @@ The small-step semantics describe the evolution of the global state.
         → M ↦ N
 ```
 #### Reflexive, transitive closure
+List-like structure for executions for voting round transitions
 ```agda
     infix  2 _↦⋆_
     infixr 2 _⨾_
