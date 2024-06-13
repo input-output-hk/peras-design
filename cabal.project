@@ -21,6 +21,8 @@ packages:
   peras-server
   peras-delta-q
   test-demo
+  -- vendored
+  dqsd-piecewise-poly
 
 tests: True
 test-show-details: direct
