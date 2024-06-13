@@ -1,31 +1,39 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Peras.Markov.Adversary.TwoChain where
+module Peras.Markov.Adversary.TwoChain (
+  Deltas (..),
+  lookupDelta,
+  separatedChains,
+  splitChains,
+) where
 
 import NumericPrelude.Base
 import NumericPrelude.Numeric
 
 import Data.Default (Default (def))
-import Data.Foldable (toList)
-import Data.Function (on)
+import Data.Foldable (Foldable)
 import Data.Functor ((<$>))
 import Data.IntMap (IntMap)
-import Data.List (sortBy)
 import Peras.Markov.Class (Half (half))
-import Peras.Markov.Polynomial (Polynomial, eval)
 import Prettyprinter (Pretty (pretty), fill, vsep, (<+>), (<>))
 
-import qualified Algebra.Absolute as Absolute (C)
 import qualified Algebra.Additive as Additive (C)
 import qualified Algebra.Ring as Ring (C)
-import qualified Data.IntMap.Strict as Map (empty, foldrWithKey', fromList, lookup, map, singleton, toList, unionWith)
+import qualified Data.IntMap.Strict as Map (empty, foldlWithKey', foldr', fromList, lookup, map, singleton, toList, unionWith)
 
 newtype Deltas a = MkDeltas
   { -- FIXME: Also track the total number of transitions.
     deltas :: IntMap a
   }
-  deriving (Eq, Ord, Read, Show)
+  deriving stock (Eq, Ord, Read, Show)
+
+instance Functor Deltas where
+  fmap f = MkDeltas . Map.map f . deltas
+
+instance Foldable Deltas where
+  foldr = flip flip deltas . ((.) .) . Map.foldr'
 
 instance (Eq a, Ring.C a) => Default (Deltas a) where
   def = MkDeltas $ Map.singleton 0 one
@@ -43,25 +51,8 @@ instance (Eq a, Ring.C a, Pretty a) => Pretty (Deltas a) where
 lookupDelta :: Int -> Deltas a -> Maybe a
 lookupDelta = (. deltas) . Map.lookup
 
-type DoubleDeltas = Deltas Double
-
-type RationalDeltas = Deltas Rational
-
-type DoublePolynomialDeltas = Deltas (Polynomial Double)
-
-type RationalPolynomialDeltas = Deltas (Polynomial Rational)
-
-transitions :: a -> a -> Int -> (a -> a -> Deltas a -> Deltas a) -> Deltas a -> Deltas a
-transitions p q n transition' initial = foldr id initial . replicate n $ transition' p q
-
 transitionImpl :: Additive.C a => (a -> a -> Int -> a -> IntMap a) -> a -> a -> Deltas a -> Deltas a
-transitionImpl transition' p q = MkDeltas . Map.foldrWithKey' ((Map.unionWith (+) .) . transition' p q) Map.empty . deltas
-
-evaluate :: Ring.C a => a -> a -> Deltas (Polynomial a) -> Deltas a
-evaluate p q = MkDeltas . Map.map (eval p q) . deltas
-
-sumProbabilities :: (Absolute.C a, Additive.C a, Ord a) => Deltas a -> a
-sumProbabilities = sum . sortBy (compare `on` abs) . toList . deltas
+transitionImpl transition' p q = MkDeltas . Map.foldlWithKey' (flip (flip . (Map.unionWith (+) .) . transition' p q)) Map.empty . deltas
 
 separatedChains :: Ring.C a => a -> a -> Deltas a -> Deltas a
 separatedChains =

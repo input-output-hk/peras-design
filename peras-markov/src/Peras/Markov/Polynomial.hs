@@ -1,26 +1,33 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Peras.Markov.Polynomial (
-  Polynomial,
+  Monomial (..),
+  Term (..),
+  Polynomial (..),
   num,
   p,
   q,
   eval,
+  evalMonomial,
+  evalTerm,
+  evaluate,
 ) where
 
 import NumericPrelude.Base
 import NumericPrelude.Numeric
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import Prettyprinter (Pretty (pretty), concatWith, (<+>), (<>))
+import Test.QuickCheck
 
 import qualified Algebra.Additive as Additive (C)
 import qualified Algebra.Ring as Ring (C)
-import qualified Data.Map.Strict as Map (empty, filter, foldrWithKey', map, mapKeys, null, singleton, toList, unionWith)
+import qualified Data.Map.Strict as Map (empty, filter, foldlWithKey', fromList, map, mapKeys, null, singleton, toList, unionWith)
 
 data Monomial = MkMonomial
   { pDegree :: Int
@@ -35,6 +42,9 @@ instance Additive.C Monomial where
   zero = MkMonomial 0 0
   x + y = MkMonomial (on (+) pDegree x y) (on (+) qDegree x y)
   x - y = MkMonomial (on (-) pDegree x y) (on (-) qDegree x y)
+
+instance Arbitrary Monomial where
+  arbitrary = MkMonomial <$> choose (0, 5) <*> choose (0, 5)
 
 instance Pretty Monomial where
   pretty = \case
@@ -78,10 +88,16 @@ instance (Eq a, Ring.C a, Pretty a) => Pretty (Term a) where
     | coefficient == one = pretty monomial
     | otherwise = pretty coefficient <> pretty "⋅" <> pretty monomial
 
+instance Arbitrary a => Arbitrary (Term a) where
+  arbitrary = MkTerm <$> arbitrary <*> arbitrary
+
 newtype Polynomial a = MkPolynomial
   { terms :: Map Monomial a
   }
-  deriving (Eq, Ord, Read, Show)
+  deriving stock (Eq, Ord, Read, Show)
+
+instance Functor Polynomial where
+  fmap f = MkPolynomial . Map.map f . terms
 
 instance (Eq a, Additive.C a) => Additive.C (Polynomial a) where
   zero = canonical Map.empty
@@ -91,9 +107,12 @@ instance (Eq a, Additive.C a) => Additive.C (Polynomial a) where
 instance (Eq a, Ring.C a) => Ring.C (Polynomial a) where
   one = num one
   fromInteger = canonical . Map.singleton zero . fromInteger
-  (*) x = canonical . Map.foldrWithKey' ((Map.unionWith (+) .) . mul) Map.empty . terms
+  (*) x = canonical . Map.foldlWithKey' (flip (flip . (Map.unionWith (+) .) . mul)) Map.empty . terms
    where
     mul ym yc = Map.mapKeys (ym +) . Map.map (yc *) $ terms x
+
+instance Arbitrary a => Arbitrary (Polynomial a) where
+  arbitrary = MkPolynomial . Map.fromList <$> arbitrary
 
 instance (Eq a, Ring.C a, Pretty a) => Pretty (Polynomial a) where
   pretty MkPolynomial{terms}
@@ -112,7 +131,14 @@ p = MkPolynomial $ MkMonomial one zero `Map.singleton` one
 q :: Ring.C a => Polynomial a
 q = MkPolynomial $ MkMonomial zero one `Map.singleton` one
 
+evalMonomial :: Ring.C a => a -> a -> Monomial -> a
+evalMonomial p' q' MkMonomial{pDegree, qDegree} = p' ^ toInteger pDegree * q' ^ toInteger qDegree
+
+evalTerm :: Ring.C a => a -> a -> Term a -> a
+evalTerm p' q' MkTerm{monomial, coefficient} = coefficient * evalMonomial p' q' monomial
+
 eval :: Ring.C a => a -> a -> Polynomial a -> a
-eval p' q' = Map.foldrWithKey' (((+) .) . eval') zero . terms
- where
-  eval' k v = v * p' ^ toInteger (pDegree k) * q' ^ toInteger (qDegree k)
+eval p' q' = sum . fmap (\kv -> evalTerm p' q' $ uncurry MkTerm kv) . Map.toList . terms
+
+evaluate :: (Functor t, Ring.C a) => a -> a -> t (Polynomial a) -> t a
+evaluate = (fmap .) . eval

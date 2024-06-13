@@ -2,7 +2,9 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.Markov.Orphans where
+module Peras.Markov.Orphans (
+
+) where
 
 import Number.Ratio (T ((:%)))
 import NumericPrelude.Base (Show (show), ($))
