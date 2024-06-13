@@ -1,3 +1,6 @@
 [submodule "PoS-NSB"]
 	path = PoS-NSB
 	url = git@github.com:AU-COBRA/PoS-NSB.git
+[submodule "dqsd-piecewise-poly"]
+	path = dqsd-piecewise-poly
+	url = git@github.com:abailly-iohk/dqsd-piecewise-poly.git
