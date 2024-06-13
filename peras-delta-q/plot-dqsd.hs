@@ -42,9 +42,7 @@ headerWithCert = (⇋) (fromRational $ 1 % 3) (headerRequestReply ⊕ certHandli
 certBlockOneThird = headerWithCert ⊕ bodyRequestReply
 certBlockAll = headerRequestReply ⊕ certHandling ⊕ bodyRequestReply
 
-combine [(p, dq), (_, dq')] = (⇋) (p / 100) dq dq'
-combine ((p, dq) : rest) = (⇋) (p / 100) dq (combine rest)
-
+combine = nWayChoice
 multiHop :: (DeltaQOps icdf, Show icdf) => Int -> icdf -> icdf
 multiHop n dq = nWayConvolve $ replicate n dq
 
@@ -53,19 +51,19 @@ multihops = (`multiHop` oneBlockDiffusion) <$> [1 ..]
 -- model for average degree 15
 pathLengthsDistributionDegree15 =
   [0.60, 8.58, 65.86, 24.95]
-hopsProba15 = zip (scanl1 (+) pathLengthsDistributionDegree15 <> [0]) multihops
-deltaq15 = combine hopsProba15
+hopsProba15 = zip (scanl1 (+) pathLengthsDistributionDegree15) multihops
+deltaq15 = trace ("multihops = " <> show hopsProba15) $ combine hopsProba15
 
 -- model for average degree 10
 pathLengthsDistributionDegree10 =
   [0.40, 3.91, 31.06, 61.85, 2.78]
-hopsProba10 = zip (scanl1 (+) pathLengthsDistributionDegree10 <> [0]) multihops
+hopsProba10 = zip (scanl1 (+) pathLengthsDistributionDegree10) multihops
 deltaq10 = combine hopsProba10
 
 certAllDeltaQ15 =
-  combine $ zip (scanl1 (+) pathLengthsDistributionDegree10 <> [0]) $ (`multiHop` certBlockAll) <$> [1 ..]
+  combine $ zip (scanl1 (+) pathLengthsDistributionDegree10) $ (`multiHop` certBlockAll) <$> [1 ..]
 certOneThirdDeltaQ15 =
-  combine $ zip (scanl1 (+) pathLengthsDistributionDegree10 <> [0]) $ (`multiHop` certBlockOneThird) <$> [1 ..]
+  combine $ zip (scanl1 (+) pathLengthsDistributionDegree10) $ (`multiHop` certBlockOneThird) <$> [1 ..]
 
 networkWithCertsProbability =
   renderableToFile def{_fo_format = SVG} "network-with-cert.svg" $ do
