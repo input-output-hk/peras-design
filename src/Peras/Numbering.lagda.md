@@ -9,7 +9,7 @@ open import Data.Nat using (ℕ; pred; suc; _∸_; _*_)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Unit using (⊤)
 open import Function.Base using (_∘_)
-open import Haskell.Prelude using (Eq; _==_;  cong)
+open import Haskell.Prelude using (Eq; Ord; ordFromCompare; compare; _==_;  cong)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Nullary using (¬_; yes; no)
 
@@ -43,6 +43,9 @@ instance
   iSlotNumberEq : Eq SlotNumber
   iSlotNumberEq ._==_ x y = getSlotNumber x == getSlotNumber y
 
+  iSlotNumberOrd : Ord SlotNumber
+  iSlotNumberOrd = ordFromCompare λ x y → compare (getSlotNumber x) (getSlotNumber y)
+
   iNumberSlotNumber : Number SlotNumber
   iNumberSlotNumber .Number.Constraint _ = ⊤
   iNumberSlotNumber .fromNat n = MkSlotNumber n
@@ -75,6 +78,9 @@ open RoundNumber public
 instance
   iRoundNumberEq : Eq RoundNumber
   iRoundNumberEq ._==_ x y = getRoundNumber x == getRoundNumber y
+
+  iRoundNumberOrd : Ord RoundNumber
+  iRoundNumberOrd = ordFromCompare λ x y → compare (getRoundNumber x) (getRoundNumber y)
 
   iNumberRoundNumber : Number RoundNumber
   iNumberRoundNumber .Number.Constraint _ = ⊤

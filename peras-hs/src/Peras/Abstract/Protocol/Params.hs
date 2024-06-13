@@ -13,7 +13,7 @@ data PerasParams = MkPerasParams{perasU :: Integer,
                                  perasA :: Integer, perasR :: Integer, perasK :: Integer,
                                  perasL :: Integer, perasτ :: Integer, perasB :: Integer,
                                  perasT :: Integer, perasΔ :: Integer}
-                     deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show)
 
 defaultPerasParams :: PerasParams
 defaultPerasParams = MkPerasParams 20 200 10 17 10 3 10 15 5
