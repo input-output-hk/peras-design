@@ -298,7 +298,7 @@ The voting string of every execution of the protocol is built according to the H
            in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
       theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
         rewrite σ′
-        rewrite knowledge-prop {m} (proj₂ (prevRound M) ∷″ M↦N ∷″ []″)
+        rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
         rewrite lastIsHead {blockTrees' N} st″
         with c
 

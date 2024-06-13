@@ -672,8 +672,7 @@ The small-step semantics describe the evolution of the global state.
           ─────────────────
           M ↝ tick M
 ```
-### Reflexive, transitive closure
-
+#### Reflexive, transitive closure
 ```agda
     infix  2 _↝⋆_
     infixr 2 _↣_
@@ -707,7 +706,7 @@ The small-step semantics describe the evolution of the global state.
 -}
 ```
 -->
-Transitions of voting rounds
+### Transitions of voting rounds
 ```agda
     data _↦_ : State → State → Type where
 
@@ -716,14 +715,15 @@ Transitions of voting rounds
         → M ↝⋆ N
         → M ↦ N
 ```
+#### Reflexive, transitive closure
 ```agda
     infix  2 _↦⋆_
-    infixr 2 _∷″_
-    infix  3 []″
+    infixr 2 _⨾_
+    infix  3 ρ
 
     data _↦⋆_ : State → State → Type where
-      []″ : M ↦⋆ M
-      _∷″_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
+      ρ : M ↦⋆ M
+      _⨾_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
 ```
 <!--
 ## Collision free predicate
