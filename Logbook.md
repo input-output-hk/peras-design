@@ -4,6 +4,118 @@
 
 Full-coverage property-based tests we added for the Markov-chain simulations. In particular, the simulation results are now checked against extact analytic results for the expected probability distributions.
 
+## 2024-06-13
+
+### ΔQ Upgrade & Debugging
+
+We want to model the votes diffusion and certificates construction impact using ΔQ, particularly to understand how long we can expect reaching a quorum would take. The [dqsd-piecewise-poly](https://github.com/DeltaQ-SD/dqsd-piecewise-poly) library is expected to provide a more accurate way of modeling and computing CDF from ΔQ model, so I wanted to upgrade the existing code (in [peras-delta-q](peras-delta-q)) to this new version.
+
+The library actually depends on (https://github.com/DeltaQ-SD/dqsd-classes) which supposedly provide an interface while keeping the piecewise polynomial implementation "hidden". As working with 2 foreign unpublished and unfinished libraries is cumbersome, I decided to
+
+1. Fork the [ΔQ polynomial](https://github.com/abailly-iohk/dqsd-piecewise-poly) based computation from Peter Thompson.
+2. Incorporate the dqsd-classes package in order to make it self-standing, and implement Peras' model there
+3. "Vendor" the library in peras repository to be able to iterate faster
+4. Remove old copy-pasted code from peras-delta-q and only keep the Peras-relevant part
+
+It's really unclear what's the relationship between the various modules and packages is. The interface has changed, there's no more funny symbols which is good, but the classes seeem a bit disconnected from the implementaiton.
+
+I should probably use the `plotCDF` et al. functions from https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/16d2c2f6913ffb85153d6cc6be0107d2c379342d/src/DeltaQ/Model/Utilities.hs#L62 which provides a higher-level interface than trying to do it myself?
+
+I finally manage to get old ΔQ models (eg. basic diffusion of headers w/ and w/o certs) to compile with newest version of dqsd-poly but I got an error:
+
+```
+plot-dqsd: Invalid polynomial interval width
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:175:34 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+```
+
+Added some more details about the error (eg. textual description of the problem) to understand where it comes from, input data should probably be sanitized. So the problem stemmed from initial `(0,0)` in the QTA list which is not needed anymore.
+
+I managed to get a better callstack, sprinkling `HasCallStack` constraints up the call tree, and I have another error:
+
+```
+plot-dqsd: Invalid polynomial interval width: (0.0,2.0,4.05,4.05)
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:172:32 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolvePolyDeltas, called at src/PWPs/PolyDeltas.hs:194:23 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolveIntervals, called at src/PWPs/Piecewise.hs:259:43 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.Piecewise
+  <+>, called at src/PWPs/IRVs.hs:317:26 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.IRVs
+  <+>, called at src/DeltaQ/PWPs.hs:58:14 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  convolve, called at plot-dqsd.hs:29:7 in main:Main
+  ⊕, called at plot-dqsd.hs:54:15 in main:Main
+```
+
+We spend some time with BB and JC debugging the error, going deeper
+into the library.
+
+* The error happens because the input to the `convolvePolyDeltas` function are 2 polynomials with one of them over a zero-length interval, which should not be possible
+* We investigate various functions related to this computation
+* It seems like a candidate for our troubles is https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/59d8b6b51c9b2fd951a5fcf29a0cfdb7f61cfed9/src/PWPs/Piecewise.hs#L67 which should recursively compute a fixpoint where no more pairwise merges are possible
+* IT would be a good idea to test that!
+
+I finally get a failing test for `mergePieces` when one has more than 2 mergeable pieces in a row
+
+The test says:
+
+```haskell
+    it "keeps merging mergeable pieces" $ do
+      let pieces :: Pieces Double (PolyDelta Double)
+          pieces =
+            Pieces
+              [ Piece 1 (Pd (Poly [1]))
+              , Piece 2 (Pd (Poly [1]))
+              , Piece 3 (Pd (Poly [1]))
+              , Piece 4 (Pd (Poly [2]))
+              ]
+      mergePieces pieces `shouldBe` Pieces [Piece 1 (Pd (Poly [1])), Piece 4 (Pd (Poly [2]))]
+```
+
+and of course it fails:
+
+```
+PWPs.Piecewise
+  Merge pieces
+    keeps merging mergeable pieces [✘]
+
+Failures:
+
+  test/PWPs/PiecewiseSpec.hs:14:26:
+  1) PWPs.Piecewise, Merge pieces, keeps merging mergeable pieces
+       expected: Pieces {
+                   getPieces = [Piece {
+                   basepoint = 1.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 4.0,
+                   object = Pd (Poly [2.0])
+                 }]
+                 }
+        but got: Pieces {
+                   getPieces = [Piece {
+                   basepoint = 1.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 3.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 4.0,
+                   object = Pd (Poly [2.0])
+                 }]
+                 }
+
+  To rerun use: --match "/PWPs.Piecewise/Merge pieces/keeps merging mergeable pieces/" --seed 1252471448
+```
+
+I fixed the code to make the test pass, but the code still crashes.
+
+I end up handling the zero-width interval case for polynomial segments
+explicitly in the code. This fixes the issue but lead to further
+errors down the line when displaying the CDF. I fixed those issues
+too, simplify replacing a `>=` sign with `>` and it finally generated
+a graph, which does not make sense.
+
+![](peras-delta-q/network-with-cert-wrong.svg)
+
 ## 2024-06-12
 
 ### Discussing details of votes and certificates
