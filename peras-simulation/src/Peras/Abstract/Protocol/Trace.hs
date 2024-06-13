@@ -11,7 +11,8 @@ import Data.Set (Set)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LE
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Types (PerasParams, VotingWeight)
+import Peras.Abstract.Protocol.Types (VotingWeight)
+import Peras.Abstract.Protocol.Params (PerasParams)
 import Peras.Block (Block, Certificate, PartyId)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Crypto (Hash)

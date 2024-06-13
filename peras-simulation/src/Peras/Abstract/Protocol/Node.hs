@@ -19,7 +19,6 @@ import Peras.Abstract.Protocol.Preagreement (preagreement)
 import Peras.Abstract.Protocol.Trace (PerasLog (..))
 import Peras.Abstract.Protocol.Types (
   Payload,
-  PerasParams (perasΔ),
   PerasResult,
   PerasState,
   inRound,
@@ -27,6 +26,7 @@ import Peras.Abstract.Protocol.Types (
   newRound,
   systemStart,
  )
+import Peras.Abstract.Protocol.Params (PerasParams (perasΔ))
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)

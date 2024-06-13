@@ -57,7 +57,6 @@ import Peras.Abstract.Protocol.Preagreement (preagreement)
 import Peras.Abstract.Protocol.Types (
   Payload,
   PerasError (MultipleItemsDiffused),
-  PerasParams,
   PerasState (..),
   hashTip,
   inRound,
@@ -65,6 +64,7 @@ import Peras.Abstract.Protocol.Types (
   newRound,
   systemStart,
  )
+import Peras.Abstract.Protocol.Params (PerasParams)
 import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries ()
 import Peras.Block (
@@ -413,7 +413,7 @@ instance Monad m => RunModel NodeModel (RunMonad m) where
       BlockCreation isLeader payload -> check $ blockCreationModeled isLeader payload
       Voting isMember -> check $ votingModeled isMember
    where
-    check :: forall m' a. (Monad m', Eq a) => (NodeModel -> (a, NodeModel)) -> a -> m' Bool
+    check :: (Monad m', Eq a) => (NodeModel -> (a, NodeModel)) -> a -> m' Bool
     check action' actual =
       pure $ fst (action' prior) == actual
 

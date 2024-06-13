@@ -36,6 +36,7 @@ import Peras.Crypto
 import Peras.Numbering
 import Peras.Arbitraries ()
 import Peras.Abstract.Protocol.Types
+import Peras.Abstract.Protocol.Params
 import Peras.Abstract.Protocol.Fetching
 import Peras.Abstract.Protocol.Crypto
 import Peras.Abstract.Protocol.Voting
