@@ -102,7 +102,7 @@ Blocks and Votes
       block₁ = createBlock' (MkSlotNumber 1) party₁ tree₀
 
       chain₁ : Chain
-      chain₁ = block₁ ∷ block₀ ∷ []
+      chain₁ = block₁ ∷ preferredChain tree₀
 
       vote₁ : Vote
       vote₁ = createVote' (MkSlotNumber 2) party₁ (newChain tree₀ chain₁)
@@ -126,24 +126,13 @@ Final state after the execution of all the steps
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
           finalMsg = VoteMsg vote₁ ∷ ChainMsg chain₁ ∷ []
           finalTree = addVote (newChain tree₀ chain₁) vote₁
-          finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
+          finalMap = (party₁ , finalTree) ∷ (party₂ , finalTree) ∷ []
 ```
 Properties of cert₀
 ```agda
       cert₀PointsIntoValidChain : ∀ {c} → ValidChain c → cert₀ PointsInto c
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
-```
-Based on properties of the blocktree we can show the following
-```agda
-      open IsTreeType
-{-
-      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (newChain t b) ≡ latestCertSeen t
-      latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
-
-      latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
-      latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
--}
 ```
 Execution trace of the protocol
 ```agda
@@ -155,22 +144,21 @@ Execution trace of the protocol
 
         where
 {-
+        open IsTreeType
+
+        validChain₁ : ValidChain chain₁
+        validChain₁ = Cons {c₁ = []} {b₁ = block₁} isBlockSignature isSlotLeader refl _ (valid is-TreeType tree₀)
+
         _ : initialState ↝⋆ finalState
-        _ =  NextSlot empty refl -- slot 1
-          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
-          ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlotNewRound empty refl ? -- slot 2
-          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
-          ↣ Deliver (honest refl (here refl) VoteReceived)
-          ↣ NextSlot empty refl -- slot 3
+        _ = NextSlot empty refl                           -- slot 1
+          ↣ CreateBlock empty (honest refl validChain₁)
+          ↣ Fetch (honest refl (here refl) ChainReceived)
+          ↣ NextSlotNewRound empty refl                   -- slot 2
+          ↣ CreateVote empty (honest refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Fetch (honest refl (here refl) VoteReceived)
+          ↣ NextSlot empty refl                           -- slot 3
 --          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
---          ↣ Deliver (honest refl (here refl) BlockReceived)
---
--- Checking Peras.SmallStep.Execution (/build/zz1xvsqhxyydv60s1wr35yx8wpib5h1x-source/src/Peras/SmallStep/Execution.lagda.md).
--- agda: Heap exhausted;
--- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
--- agda: Use `+RTS -M<size>' to increase it.
---
+--          ↣ Deliver (honest refl (here refl) ChainReceived)
 --          ↣ NextSlotNewRound empty refl ?  -- slot 4
 --          ↣ NextSlot empty refl -- slot 5
 --          ↣ NextSlotNewRound empty refl ? -- slot 6
@@ -181,15 +169,12 @@ Trace dependent properties
 ```agda
 {-
           where
-            latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
-            latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
-
-            vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ block₁)) + 1
+            vr-1a : 1 ≡ roundNumber (latestCertSeen (newChain tree₀ chain₁)) + 1
             vr-1a rewrite latestCert≡cert₀ = refl
 
-            vr-1b : (latestCertSeen (extendTree tree₀ block₁))
-              PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
+            vr-1b : (latestCertSeen (newChain tree₀ chain₁))
+              PointsInto (preferredChain (newChain tree₀ chain₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-              valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
+              valid is-TreeType (newChain tree₀ chain₁)
 -}
 ```

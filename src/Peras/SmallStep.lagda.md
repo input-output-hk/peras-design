@@ -607,13 +607,14 @@ Figure 2)
 
       honest : ∀ {p} {t} {M} {π} {σ}
         → let
-            open State M
+            open State
+            s = clock M
+            b = createBlock s p π σ t
             pref = preferredChain t
-            b = createBlock clock p π σ t
           in
-        ∙ blockTrees ⁉ p ≡ just t
+        ∙ blockTrees M ⁉ p ≡ just t
         ∙ ValidChain (b ∷ pref)
-          ───────────────────────────────
+          ───────────────────────────
           Honest {p} ⊢
             M ↷ add (
                   ChainMsg (b ∷ pref)
@@ -667,7 +668,7 @@ The small-step semantics describe the evolution of the global state.
       NextSlotNewRound :
         ∙ Fetched M
         ∙ LastSlotInRound M
-        ∙ RequiredVotes M
+--TODO  ∙ RequiredVotes M
           ─────────────────
           M ↝ tick M
 ```
