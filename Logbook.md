@@ -1,5 +1,28 @@
 ## 2024-06-12
 
+### Discussing details of votes and certificates
+
+* ALBAs is current best choice for Certificates
+  * Main question is Committee size, we can assume it will be in the order of the number of SPOs
+  * Next step: Benchmark certificates size and proving/verifying time with different committee size and quorums
+* Votes
+  * Stick with header-like construction
+  * We should use a special prefix for VRF
+  * $nonce = epoch nonce || "vote" || round$
+  * we could change for blocks signing (nakamoto) = epoch nonce || "block" || slot number, but it is probably fine to keep it as is
+* ΔQ discussion
+  * instead of a generic scenario, hardwire a particular scenario to get started
+  * how to model a global behaviour?
+  * model the impact of stake w/ distance -> define a scenario where we have different distribution of stakes for some number of upstream nodes with their distance as a random variable
+
+* We want to simulate _preagreement_ step and the behaviour of the network with various "L common prefix" situations
+  * assume validity and consistency in the preagreement
+  * define adversarial strategy with private chain attack -> have a chain without L common prefix with positive margin
+  * L ~ 60 slots (~ 3 blocks)
+  * BA takes time, requires multiple rounds
+  * T ~ 100s
+  * U => 120-150
+
 ### Markov-chain scenario for ambiguous candidate blocks
 
 We began analyzing [the scenario](../c8043ab71e2bfa17ccbcc58db4dd7c551f67b823/peras-markov/src/Peras/Markov/Adversary/CommonCandidate.hs) where an adversary maintains a fork that contains a candidate block for voting (i.e., at least $L$ slots old on its preferred chain). We use the Markov-chain simulation to examine the situation where, at the start of a new round, a block of age $L + U$ contains a certificate and an adversary builds their own chain upon that. If the adversary succeeds in building a block in the next $U$ slots, then there would be a candidate-block proposal both on the honest chain and the adversarial one.
@@ -84,6 +107,27 @@ The example below is for the scenario where the adversary builds a chain separat
 | 10  | p¹⁰        |
 
 This framework can be extended with scenarios to compute finality probabilities, in order to compare Praos vs Peras. Boosts can be included in the analyses, too.
+
+## 2024-06-11
+
+### Quviq Meeting
+
+There are currently 3, slight incompatible, references:
+
+* Agda specification
+* Haskell Reference implementation
+* Research Paper -> underspecification, simplifying assumption
+
+How to connect all? this can be done in 3 different ways:
+
+1. QC model (paper) -> align spec + code
+2. QC model aligned with code -> align spec
+3. QC model aligned with spec -> align code
+
+* Quviq team is going for 2, as it makes more sense than trying to understand the paper which should be the job of the R&D team
+* Current implementation is in Haskell for simplicity's sake, but it will be ported to Agda once mature enough
+* What's hard is not the Agda side, it is to have a runnable QC model
+* Focusing on the "node should vote right now", feeding it blocks and ticks
 
 ## 2024-06-10
 
