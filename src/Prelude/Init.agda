@@ -40,7 +40,7 @@ module Fi where
   open import Data.Fin public
   open import Data.Fin.Properties public
 open Fi public
-  using (Fin; fromℕ<)
+  using (Fin; fromℕ<; pred)
   renaming (zero to fzero; suc to fsuc)
 
 module Fl where
@@ -108,7 +108,8 @@ module L where
     open import Data.List.Relation.Unary.Unique.Propositional public
     open import Data.List.Relation.Unary.Unique.Propositional.Properties public
 open L public
-  using (List; []; _∷_; _++_; map; filter; length; sum; and; or; _[_]∷=_)
+  using (List; []; _∷_; _++_; map; catMaybes; head; filter; length; sum; and; or
+        ; any; _[_]∷=_)
 open L.NE public
   using (List⁺; _∷_; _∷⁺_)
 open L.All public
@@ -131,8 +132,10 @@ open import Relation.Nullary public
   using (¬_; Dec; yes; no; Irrelevant)
 open import Relation.Nullary.Decidable public
   using ( ⌊_⌋; True; False; toWitness; toWitnessFalse; fromWitness
-        ; dec-yes; dec-no; dec-true; dec-false )
+        ; dec-yes; dec-no; dec-true; dec-false ; ¬?; _⊎-dec_; _×-dec_)
   renaming (map′ to mapDec)
+open import Relation.Nullary.Negation public
+  using (contradiction; contraposition)
 open import Relation.Unary public
   using (Pred)
   renaming (Decidable to Decidable¹; Irrelevant to Irrelevant¹)

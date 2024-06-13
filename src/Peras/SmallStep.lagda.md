@@ -1,23 +1,19 @@
 ```agda
 module Peras.SmallStep where
 ```
-
 <!--
 ```agda
-open import Relation.Nullary.Decidable using (⌊_⌋; ¬?; _⊎-dec_; _×-dec_)
-open import Relation.Nullary.Negation using (contradiction; contraposition)
-open import Data.List.Relation.Unary.All using (All)
-open import Data.List.Relation.Unary.Any as L using (Any; _─_; any?)
-open import Data.Nat using (_≟_; _≤?_; _≤ᵇ_)
-open import Data.Fin using (pred)
-open import Data.List using (catMaybes; head; any)
-
 open import Prelude.AssocList
 open import Prelude.DecEq using (DecEq)
 open import Prelude.Default using (Default)
 open Default ⦃...⦄
+
 open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
+
+open Nat using (_≟_; _≤?_; _≤ᵇ_)
+open L.All using (All)
+open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
@@ -485,7 +481,7 @@ An adversarial party might delay a message
           ----------------------------------------------
         →  Corrupt {p} ⊢
           N [ m ]⇀ record N
-            { messages = m∈ms L.∷= ⦅ p , Corrupt , m , 𝟙 ⦆
+            { messages = m∈ms ∷ˡ= ⦅ p , Corrupt , m , 𝟙 ⦆
             ; adversarialState = as
             }
 ```
