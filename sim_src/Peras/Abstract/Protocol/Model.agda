@@ -121,6 +121,10 @@ initialModelState = record
   }
 {-# COMPILE AGDA2HS initialModelState #-}
 
+sutId : PartyId
+sutId = 1
+{-# COMPILE AGDA2HS sutId #-}
+
 slotToRound : PerasParams → SlotNumber → RoundNumber
 slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol))
 {-# COMPILE AGDA2HS slotToRound #-}
@@ -234,7 +238,6 @@ newQuora quorum priorCerts votes = newCerts
     quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
     Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
     newCerts = [ c | Right c <- newCertsResults ]
-
 #-}
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)

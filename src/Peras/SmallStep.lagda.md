@@ -309,7 +309,8 @@ following parameters
   * The list of parties
 
 ```agda
-  module _ {T : Set} {blockTree : TreeType T}
+  module Semantics
+           {T : Set} {blockTree : TreeType T}
            {S : Set} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
@@ -858,4 +859,7 @@ already in the block history.
             → m ∈ history M }) (history N)
         → ForgingFree N
 -}
+```
+```agda
+  open Semantics public
 ```
