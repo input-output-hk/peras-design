@@ -57,29 +57,31 @@ transitionImpl transition' p q = MkDeltas . Map.foldlWithKey' (flip (flip . (Map
 separatedChains :: Ring.C a => a -> a -> Deltas a -> Deltas a
 separatedChains =
   transitionImpl $ \p q delta weight ->
-    -- FIXME: Handle case where both honest and adversarial parties produce a block in the same slot.
     Map.fromList
-      [ (delta + 1, p * weight) -- Honest party builds their own chain.
-      , (delta - 1, q * weight) -- Adversary builds their own separate chain.
+      [ (delta + 1, p * (one - q) * weight) -- Honest party builds their own chain.
+      , (delta - 1, (one - p) * q * weight) -- Adversary builds their own separate chain.
+      , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither builds their chain.
       ]
 
 splitChains :: (Half a, Ring.C a) => a -> a -> Deltas a -> Deltas a
 splitChains =
   transitionImpl $ \p q delta weight ->
-    -- FIXME: Handle case where both honest and adversarial parties produce a block in the same slot.
     case compare delta zero of
       LT ->
         Map.fromList
-          [ (delta - 1, p * weight) -- Honest party lengthens the longer chain.
-          , (delta + 1, q * weight) -- Adversary lengthens the shorter chain.
+          [ (delta - 1, p * (one - q) * weight) -- Honest party lengthens the longer chain.
+          , (delta + 1, (one - p) * q * weight) -- Adversary lengthens the shorter chain.
+          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
           ]
       GT ->
         Map.fromList
-          [ (delta + 1, p * weight) -- Honest party lengthens the longer chain.
-          , (delta - 1, q * weight) -- Adversary lengthens the shorter chain.
+          [ (delta + 1, p * (one - q) * weight) -- Honest party lengthens the longer chain.
+          , (delta - 1, (one - p) * q * weight) -- Adversary lengthens the shorter chain.
+          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
           ]
       EQ ->
         Map.fromList
-          [ (delta + 1, half * weight) -- No preference by either party.
-          , (delta - 1, half * weight) -- No preference by either party.
+          [ (delta + 1, half * (p * (one - q) + (one - p) * q) * weight) -- No preference by either party.
+          , (delta - 1, half * (p * (one - q) + (one - p) * q) * weight) -- No preference by either party.
+          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
           ]
