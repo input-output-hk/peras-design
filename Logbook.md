@@ -1,3 +1,9 @@
+## 2024-06-14
+
+### Markov-chain simuations
+
+Full-coverage property-based tests we added for the Markov-chain simulations. In particular, the simulation results are now checked against extact analytic results for the expected probability distributions.
+
 ## 2024-06-12
 
 ### Discussing details of votes and certificates
