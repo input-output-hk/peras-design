@@ -91,6 +91,7 @@ genPQ :: Gen (Double, Double)
 genPQ =
   do
     p <- choose (0, 1)
+    q <- choose (0, 1 - p)
     pure (p, 1 - p)
 
 genLimit :: Gen Int
