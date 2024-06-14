@@ -21,7 +21,7 @@ import Peras.Markov.Polynomial (
   evalMonomial,
   evalTerm,
  )
-import Prettyprinter (Pretty (pretty), (<>))
+import Prettyprinter (Pretty (pretty), (<+>), (<>))
 import Test.Hspec (Expectation, Spec, describe, it, shouldBe, shouldSatisfy)
 import Test.QuickCheck (
   Arbitrary (arbitrary),
@@ -56,6 +56,20 @@ spec = do
           forAll ((,) <$> genRationalPQ <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
             counterexample ("Polynomial: " <> show (pretty symbolic)) $
               eval p q symbolic `shouldBe` concrete p q
+      it "Addition" $
+        property $
+          forAll ((,,) <$> genRationalPQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+              let actual = eval p q $ symbolic + symbolic'
+                  expected = concrete p q + concrete' p q
+               in actual `shouldBe` expected
+      it "Multiplication" $
+        property $
+          forAll ((,,) <$> genRationalPQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+              let actual = eval p q $ symbolic * symbolic'
+                  expected = concrete p q * concrete' p q
+               in actual `shouldBe` expected
   describe "Polynomial arithmetic identical to floating-point arithmetic" $
     do
       it "Monomials" $
@@ -73,6 +87,20 @@ spec = do
           forAll ((,) <$> genDoublePQ <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
             counterexample ("Polynomial: " <> show (pretty symbolic)) $
               eval p q symbolic `shouldBeApproximately` concrete p q
+      it "Addition" $
+        property $
+          forAll ((,,) <$> genDoublePQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+              let actual = eval p q $ symbolic + symbolic'
+                  expected = concrete p q + concrete' p q
+               in actual `shouldBeApproximately` expected
+      it "Multiplication" $
+        property $
+          forAll ((,,) <$> genDoublePQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+              let actual = eval p q $ symbolic * symbolic'
+                  expected = concrete p q * concrete' p q
+               in actual `shouldBeApproximately` expected
 
 shouldBeApproximately :: Double -> Double -> Expectation
 shouldBeApproximately x y = abs (x - y) `shouldSatisfy` (< 1e-9)
