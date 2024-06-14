@@ -115,7 +115,7 @@ Initial state
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
-          initialMap = ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
+          initialMap = (party₁ , tree₀) ∷ (party₂ , tree₀) ∷ []
 ```
 Final state after the execution of all the steps
 ```agda
@@ -154,7 +154,7 @@ Based on properties of the blocktree we can show the following
         rewrite prop2
         rewrite genesis-block-no-certificate is-TreeType = refl
 
-      noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
+      noNewCert : certs (newChain tree₀ chain₁) ≡ []
       noNewCert =
         let
           s₁ = extendable-chain' is-TreeType tree₀ chain₁

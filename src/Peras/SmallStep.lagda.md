@@ -192,7 +192,7 @@ as proposed in the paper.
         allBlocks tree₀ ≡ block₀ ∷ []
 
       instantiated-certs :
-        certs tree₀ ≡ cert₀ ∷ []
+        certs tree₀ ≡ []
 
       genesis-block-slotnumber :
         getSlotNumber (slotNumber block₀) ≡ 0
