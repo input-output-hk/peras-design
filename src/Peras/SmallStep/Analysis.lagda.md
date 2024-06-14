@@ -36,8 +36,10 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
-open import Prelude.AssocList hiding (_∈_)
-open Decidable _≟_
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
 ```
 -->
 ## Protocol Analysis
@@ -296,7 +298,7 @@ The voting string of every execution of the protocol is built according to the H
            in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
       theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
         rewrite σ′
-        rewrite knowledge-prop {m} (proj₂ (prevRound M) ∷″ M↦N ∷″ []″)
+        rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
         rewrite lastIsHead {blockTrees' N} st″
         with c
 

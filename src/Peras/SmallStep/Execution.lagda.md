@@ -19,13 +19,15 @@ open import Peras.Crypto hiding (isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
-open import Peras.SmallStep renaming (_∷′_ to _↣_; []′ to ∎)
-
-open import Prelude.AssocList hiding (_∈_)
-open Decidable _≟_
+open import Peras.SmallStep
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; _≢_; refl; cong; sym; subst; trans)
+
+open import Prelude.AssocList
+open import Prelude.DecEq using (DecEq)
+open import Prelude.Default using (Default)
+open Default ⦃...⦄
 ```
 -->
 ```agda
@@ -78,65 +80,53 @@ This is a very simple example of the execution of the protocol in the small-step
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
-      createBlock : PartyId → SlotNumber → Block → Block
-      createBlock p s b = record
-            { slotNumber = s
-            ; creatorId = p
-            ; parentBlock = hash b
-            ; certificate = nothing
-            ; leadershipProof = createLeadershipProof s p
-            ; bodyHash = bodyHash′
-            ; signature = createBlockSignature p
-            }
-        where
-          txs = txSelection s p
-          bodyHash′ = blockHash record
-                       { blockHash = hash txs
-                       ; payload = txs
-                       }
+      createBlock' : SlotNumber → PartyId → T → Block
+      createBlock' s p t =
+        let
+          π = createLeadershipProof s p
+          σ = createBlockSignature p
+        in createBlock {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
 ```
 ```agda
-      createVote : PartyId → RoundNumber → Block → Vote
-      createVote p r b = record
-            { votingRound = r
-            ; creatorId = p
-            ; proofM = createMembershipProof r p
-            ; blockHash = hash b
-            ; signature = createVoteSignature p
-            }
+      createVote' : SlotNumber → PartyId → T → Vote
+      createVote' s p t =
+        let
+          r = v-round s
+          π = createMembershipProof r p
+          σ = createVoteSignature p
+        in createVote {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
 ```
 Blocks and Votes
 ```agda
-{-
       block₁ : Block
-      block₁ = createBlock party₁ (MkSlotNumber 1) (tipBest (MkSlotNumber 1) tree₀) -- TODO: block₀
+      block₁ = createBlock' (MkSlotNumber 1) party₁ tree₀
+
+      chain₁ : Chain
+      chain₁ = block₁ ∷ preferredChain tree₀
 
       vote₁ : Vote
-      vote₁ = createVote party₁ (MkRoundNumber 1) (tipBest (MkSlotNumber 1) (extendTree tree₀ block₁)) -- TODO: block₁
+      vote₁ = createVote' (MkSlotNumber 2) party₁ (newChain tree₀ chain₁)
 
       block₃ : Block
-      block₃ = createBlock party₂ (MkSlotNumber 3) (tipBest (MkSlotNumber 3) (addVote (extendTree tree₀ block₁) vote₁)) -- TODO: block₁
-      -}
+      block₃ = createBlock' (MkSlotNumber 3) party₂ (addVote (newChain tree₀ chain₁) vote₁)
 ```
 Initial state
 ```agda
       initialState : GlobalState
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
-          initialMap = ((party₁ , tree₀) ∷ (party₂ , tree₀) ∷ [])
+          initialMap = (party₁ , tree₀) ∷ (party₂ , tree₀) ∷ []
 ```
 Final state after the execution of all the steps
 ```agda
-{-
       finalState : GlobalState
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
           -- finalTree = extendTree (addVote (extendTree tree₀ block₁) vote₁) block₃
-          finalMsg = VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
-          finalTree = addVote (extendTree tree₀ block₁) vote₁
-          finalMap = ((party₁ , finalTree) ∷ (party₂ , finalTree) ∷ [])
--}
+          finalMsg = VoteMsg vote₁ ∷ ChainMsg chain₁ ∷ []
+          finalTree = addVote (newChain tree₀ chain₁) vote₁
+          finalMap = (party₁ , finalTree) ∷ (party₂ , finalTree) ∷ []
 ```
 Properties of cert₀
 ```agda
@@ -147,13 +137,65 @@ Properties of cert₀
 Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
-{-
-      latestCert-extendTree≡latestCert : ∀ {t b} → latestCertSeen (extendTree t b) ≡ latestCertSeen t
-      latestCert-extendTree≡latestCert {t} {b} = cong (latestCert cert₀) $ extendable-certs is-TreeType t b
+      open import Data.Bool using (true; false; _∧_; not)
+      open import Data.Nat using (_<ᵇ_)
+      open import Data.List using (_++_; catMaybes; any)
+      open import Haskell.Prim.List using (map)
+      open import Relation.Nullary.Decidable hiding (map)
 
-      latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
-      latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
--}
+      -- TODO: Do we need to adjust the block-tree for proving those properties?
+      postulate
+        pref-tree₀≡block₀∷[] : preferredChain tree₀ ≡ block₀ ∷ [] -- or: preferredChain tree₀ ≐ block₀ ∷ []
+
+      latestCertSeen-tree₀≡cert₀ : latestCertSeen tree₀ ≡ cert₀
+      latestCertSeen-tree₀≡cert₀ rewrite instantiated-certs is-TreeType = refl
+
+      latestCertOnChain-tree₀≡cert₀ : latestCertOnChain tree₀ ≡ cert₀
+      latestCertOnChain-tree₀≡cert₀
+        rewrite pref-tree₀≡block₀∷[]
+        rewrite genesis-block-no-certificate is-TreeType = refl
+
+      roundNumber-latestCertSeen-tree₀≡0 : roundNumber (latestCertSeen tree₀) ≡ 0
+      roundNumber-latestCertSeen-tree₀≡0 rewrite latestCertSeen-tree₀≡cert₀ = refl
+
+      x∧false≡false : ∀ {x} → x ∧ false ≡ false
+      x∧false≡false {false} = refl
+      x∧false≡false {true} = refl
+
+      needCert-tree₀≡nothing : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+                (MkRoundNumber 0) tree₀ ≡ nothing
+      needCert-tree₀≡nothing
+        rewrite roundNumber-latestCertSeen-tree₀≡0
+        rewrite x∧false≡false {not (any (λ {c → ⌊ roundNumber c + 2 ≟ 0 ⌋}) (certs tree₀))}
+        = refl
+
+      catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
+      catMaybes≡[]
+        rewrite pref-tree₀≡block₀∷[]
+        rewrite genesis-block-no-certificate is-TreeType = refl
+
+      noNewCert : certs (newChain tree₀ chain₁) ≡ []
+      noNewCert =
+        let
+          s₁ = extendable-chain' is-TreeType tree₀ chain₁
+          s₂ = instantiated-certs is-TreeType
+          s₃ = trans s₁ (cong (_++ certs tree₀) r₂)
+        in trans s₃ s₂
+        where
+          r₁ : catMaybes (map certificate chain₁) ≡ []
+          r₁ rewrite needCert-tree₀≡nothing rewrite catMaybes≡[] = refl
+
+          r₂ : certsFromChain chain₁ ≡ []
+          r₂ rewrite r₁ = refl
+
+      latestCert-newChain≡latestCert : latestCertSeen (newChain tree₀ chain₁) ≡ latestCertSeen tree₀
+      latestCert-newChain≡latestCert = trans r (sym latestCertSeen-tree₀≡cert₀)
+        where
+          r : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
+          r rewrite noNewCert = refl
+
+      latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
+      latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCertSeen-tree₀≡cert₀
 ```
 Execution trace of the protocol
 ```agda
@@ -164,23 +206,23 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
+        validChain₁ : ValidChain chain₁
+        validChain₁ =
+          let v = valid is-TreeType tree₀
+              ((_ , d), pr) = uncons v
+          in Cons {c₁ = d} isBlockSignature isSlotLeader refl pr v
+
 {-
         _ : initialState ↝⋆ finalState
-        _ =  NextSlot empty refl -- slot 1
-          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
-          ↣ Deliver (honest refl (here refl) BlockReceived)
-          ↣ NextSlotNewRound empty refl ? -- slot 2
-          ↣ CastVote (honest refl refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
-          ↣ Deliver (honest refl (here refl) VoteReceived)
-          ↣ NextSlot empty refl -- slot 3
+        _ = NextSlot empty refl                           -- slot 1
+          ↣ CreateBlock empty (honest refl validChain₁)
+          ↣ Fetch (honest refl (here refl) ChainReceived)
+          ↣ NextSlotNewRound empty refl {!!}              -- slot 2
+          ↣ CreateVote empty (honest refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
+          ↣ Fetch (honest refl (here refl) VoteReceived)
+          ↣ NextSlot empty refl                           -- slot 3
 --          ↣ CreateBlock (honest refl refl isBlockSignature isSlotLeader)
---          ↣ Deliver (honest refl (here refl) BlockReceived)
---
--- Checking Peras.SmallStep.Execution (/build/zz1xvsqhxyydv60s1wr35yx8wpib5h1x-source/src/Peras/SmallStep/Execution.lagda.md).
--- agda: Heap exhausted;
--- agda: Current maximum heap size is 3758096384 bytes (3584 MB).
--- agda: Use `+RTS -M<size>' to increase it.
---
+--          ↣ Deliver (honest refl (here refl) ChainReceived)
 --          ↣ NextSlotNewRound empty refl ?  -- slot 4
 --          ↣ NextSlot empty refl -- slot 5
 --          ↣ NextSlotNewRound empty refl ? -- slot 6
@@ -191,15 +233,12 @@ Trace dependent properties
 ```agda
 {-
           where
-            latestCert≡cert₀ : latestCertSeen (extendTree tree₀ block₁) ≡ cert₀
-            latestCert≡cert₀ = trans latestCert-extendTree≡latestCert latestCert≡cert₀'
-
-            vr-1a : 1 ≡ roundNumber (latestCertSeen (extendTree tree₀ block₁)) + 1
+            vr-1a : 1 ≡ roundNumber (latestCertSeen (newChain tree₀ chain₁)) + 1
             vr-1a rewrite latestCert≡cert₀ = refl
 
-            vr-1b : (latestCertSeen (extendTree tree₀ block₁))
-              PointsInto (bestChain (MkSlotNumber 2) (extendTree tree₀ block₁))
+            vr-1b : (latestCertSeen (newChain tree₀ chain₁))
+              PointsInto (preferredChain (newChain tree₀ chain₁))
             vr-1b rewrite latestCert≡cert₀ = cert₀PointsIntoValidChain $
-              valid is-TreeType (extendTree tree₀ block₁) (MkSlotNumber 2)
+              valid is-TreeType (newChain tree₀ chain₁)
 -}
 ```

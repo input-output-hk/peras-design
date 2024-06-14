@@ -1,48 +1,59 @@
+-- Finite maps as association lists
 module Prelude.AssocList where
 
-open import Agda.Builtin.List using (List; _∷_)
-open import Data.Product using (_×_; _,_; proj₁; proj₂)
-open import Data.Maybe using (Maybe; just; nothing; fromMaybe)
-open import Data.List.Relation.Unary.Any using (Any; any?; lookup; _∷=_; _─_)
-open import Data.List.Relation.Unary.All using (All)
-open import Function using (_∘_)
-open import Relation.Binary using (Decidable; DecidableEquality)
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
-open import Relation.Nullary using (yes; no)
+open import Prelude.Init
+open import Prelude.DecEq
+open import Prelude.Decidable
+open import Prelude.Irrelevance
+open import Prelude.Default
 
--- see also: https://stackoverflow.com/questions/58705398/is-there-an-associative-list-in-the-standard-library
-AssocList : Set → Set → Set
-AssocList A B = List (A × B)
+AssocList : Type → Type → Type
+AssocList K V = List (K × V)
 
-private
-  variable
-    A B : Set
+mapValues : ∀ {K V V′} → (V → V′) → AssocList K V → AssocList K V′
+mapValues f = map (map₂ f)
 
-_∈_ : A → AssocList A B → Set
-a ∈ abs = Any ((a ≡_) ∘ proj₁) abs
+module _ {K V : Type} where
+  _∈ᵐ_ _∉ᵐ_ : K → AssocList K V → Type
+  k ∈ᵐ m = AnyFirst ((k ≡_) ∘ proj₁) m
+  k ∉ᵐ m = ·¬ (k ∈ᵐ m)
 
-_∉_ : A → AssocList A B → Set
-a ∉ abs = All ((a ≢_) ∘ proj₁) abs
+  ∈ᵐ-irrelevant : ∀ {k m} → Irrelevant (k ∈ᵐ m)
+  ∈ᵐ-irrelevant = AnyFirst-irrelevant λ where refl refl → refl
 
-module Decidable {A : Set} (_≟_ : DecidableEquality A) where
+  _∪_ : Op₂ (AssocList K V)
+  _∪_ = _++_
 
-  _∈?_ : Decidable (_∈_ {A} {B})
-  a ∈? abs = any? ((a ≟_) ∘ proj₁) abs
+  module _ ⦃ _ : DecEq K ⦄ where
 
-  _‼_ : (a : A) (abs : AssocList A B) → Maybe B
-  a ‼ abs with a ∈? abs
-  ... | yes p = just (proj₂ (lookup p))
-  ... | no _ = nothing
+    _∈ᵐ?_ = ¿ _∈ᵐ_ ¿²
+    _∉ᵐ?_ = ¿ _∉ᵐ_ ¿²
 
-  _‼_default_ : (a : A) (abs : AssocList A B) → (b : B) → B
-  a ‼ abs default b = fromMaybe b (a ‼ abs)
+    _‼_ : ∀ {k : K} (m : AssocList K V) → k ∈ᵐ m → V
+    m ‼ p = L.First.satisfied p .proj₁ .proj₂
 
-  _↑_ : (p : A × B) (abs : AssocList A B) → AssocList A B
-  (a , b) ↑ abs with a ∈? abs
-  ... | yes p = p ∷= (a , b)
-  ... | no _ = (a , b) ∷ abs
+    _⁉_ : AssocList K V → K → Maybe V
+    m ⁉ k with k ∈ᵐ? m
+    ... | yes p = just (m ‼ p)
+    ... | no  _ = nothing
 
-  _↓_ : (a : A) (abs : AssocList A B) → AssocList A B
-  a ↓ abs with a ∈? abs
-  ... | yes p = abs ─ p
-  ... | no _ = abs
+    module _ {k : K} {m : AssocList K V} where
+      _∷~_ : k ∈ᵐ m → (V → V) → AssocList K V
+      p ∷~ f = m [ L.First.index p ]∷= (k , f (m ‼ p))
+
+      _∷=_ : k ∈ᵐ m → V → AssocList K V
+      p ∷= v = p ∷~ const v
+
+    module _ ⦃ _ : Default V ⦄ where
+      modify : K → (V → V) → Op₁ (AssocList K V)
+      modify k f m = case k ∈ᵐ? m of λ where
+        (no _)  → (k , f def) ∷ m
+        (yes p) → p ∷= f (m ‼ p)
+
+      set : K → V → Op₁ (AssocList K V)
+      set k v = modify k (const v)
+
+      _‼d_ : AssocList K V → K → V
+      m ‼d k with m ⁉ k
+      ... | nothing = def
+      ... | just v  = v
