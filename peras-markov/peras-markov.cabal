@@ -45,7 +45,8 @@ test-suite peras-simulation-test
     import:           warnings
     hs-source-dirs:   test
     main-is:          Main.hs
-    other-modules:    Peras.Markov.PolynomialSpec
+    other-modules:    Peras.Markov.Adversary.TwoChainSpec
+                      Peras.Markov.PolynomialSpec
     build-depends:    QuickCheck,
                       base ^>=4.18.1.0,
                       containers,
