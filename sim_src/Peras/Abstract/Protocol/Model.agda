@@ -161,15 +161,28 @@ chainWeight boost certs blocks =
       + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
 #-}
 
+postulate
+  makeVote : RoundNumber → Block → Maybe Vote
+
+{-# FOREIGN AGDA2HS
+makeVote :: RoundNumber -> Block -> Maybe Vote
+makeVote r block = do
+  let party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (clock - fromIntegral perasT) True
+  Right proof <- createMembershipProof r (Set.singleton party)
+  Right vote  <- createSignedVote party r (hash block) proof 1
+  pure vote
+#-}
+
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
+{-# COMPILE AGDA2HS blockOldEnough #-}
 
-votesInState : NodeModel → List (RoundNumber × Block)
+votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
   guard (slotInRound params slot == MkSlotNumber (perasT params))
   block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
   -- guard VR-1A and friends
-  pure (r , block)
+  makeVote r block
   where
     params = protocol s
     slot   = clock s
@@ -192,7 +205,7 @@ votesInState s = maybeToList do
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-transition : NodeModel → EnvAction → Maybe (List (RoundNumber × Block) × NodeModel)
+transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
                              ; allSeenCerts = foldr (insertCert (clock s')) (allSeenCerts s') certsFromQuorum

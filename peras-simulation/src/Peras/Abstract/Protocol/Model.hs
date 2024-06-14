@@ -3,8 +3,8 @@
 module Peras.Abstract.Protocol.Model where
 
 import Control.Monad (guard)
-import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasT, perasU), defaultPerasParams)
-import Peras.Block (Block, Certificate(MkCertificate))
+import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasL, perasT, perasU), defaultPerasParams)
+import Peras.Block (Block(MkBlock), Certificate(MkCertificate))
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash(MkHash), replicateBS)
 import Peras.Numbering (RoundNumber(MkRoundNumber, getRoundNumber), SlotNumber(MkSlotNumber, getSlotNumber))
@@ -89,16 +89,41 @@ chainWeight boost certs blocks =
     fromIntegral (length blocks)
       + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
 
+makeVote :: RoundNumber -> Block -> Maybe Vote
+makeVote r block = do
+  let party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (clock - fromIntegral perasT) True
+  Right proof <- createMembershipProof r (Set.singleton party)
+  Right vote  <- createSignedVote party r (hash block) proof 1
+  pure vote
+
+blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
+blockOldEnough params clock (MkBlock slot _ _ _ _ _ _)
+  = getSlotNumber slot + perasL params + perasT params <=
+      getSlotNumber clock
+
 votesInState :: NodeModel -> [Vote]
 votesInState s
   = maybeToList
       (do guard (slotInRound params slot == MkSlotNumber (perasT params))
-          Nothing)
+          listToMaybe (dropWhile (not . blockOldEnough params slot) pref) >>=
+            makeVote r)
   where
     params :: PerasParams
     params = protocol s
     slot :: SlotNumber
     slot = clock s
+    r :: RoundNumber
+    r = slotToRound params slot
+    allChains' :: [Chain]
+    allChains'
+      = map (\ r -> snd r) $ filter ((< r) . \ r -> fst r) (allChains s)
+    allSeenCerts' :: [(Certificate, SlotNumber)]
+    allSeenCerts'
+      = filter (seenBeforeStartOfRound params r) (allSeenCerts s)
+    pref :: Chain
+    pref
+      = preferredChain params (map (\ r -> fst r) allSeenCerts')
+          allChains'
 
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick

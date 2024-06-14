@@ -33,7 +33,9 @@ library
                      Peras.Abstract.Protocol.Preagreement
                      Peras.Abstract.Protocol.QCD
                      Peras.Abstract.Protocol.QCDAgda
+                     Peras.Abstract.Protocol.Model
                      Peras.Abstract.Protocol.ModelHS
+                     Peras.Abstract.Protocol.Params
                      Peras.Abstract.Protocol.Trace
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Visualizer

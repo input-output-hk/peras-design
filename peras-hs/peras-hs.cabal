@@ -24,8 +24,6 @@ library
     Peras.Numbering
     Peras.Orphans
     Peras.SmallStep
-    Peras.Abstract.Protocol.Model
-    Peras.Abstract.Protocol.Params
   other-modules:
   hs-source-dirs:   src
   build-depends:
