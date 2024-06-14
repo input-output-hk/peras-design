@@ -12,6 +12,7 @@ import DeltaQ.PWPs (IRV, asDiscreteCDF, fromQTA, uniform0)
 import GHC.Stack (HasCallStack)
 import Graphics.Rendering.Chart.Backend.Cairo (FileFormat (SVG), FileOptions (_fo_format), renderableToFile)
 import Graphics.Rendering.Chart.Easy (def, layoutToRenderable)
+import PWPs.IRVs (makeCDF)
 
 main :: IO ()
 main = do
@@ -27,13 +28,13 @@ main = do
 
 oneMTU =
   fromQTA @(IRV Double)
-    [(fromRational $ 1 % 3, 0.012), (fromRational $ 2 % 3, 0.069), (fromRational $ 3 % 3, 0.268)]
+    [(0.012, fromRational $ 1 % 3), (0.069, fromRational $ 2 % 3), (0.268, fromRational $ 3 % 3)]
 blockBody64K =
   fromQTA
-    [(fromRational $ 1 % 3, 0.024), (fromRational $ 2 % 3, 0.143), (fromRational $ 3 % 3, 0.531)]
-headerRequestReply = trace ("oneMTU = " <> show oneMTU) $ oneMTU ⊕ oneMTU -- request/reply
+    [(0.024, fromRational $ 1 % 3), (0.143, fromRational $ 2 % 3), (0.531, fromRational $ 3 % 3)]
+headerRequestReply = oneMTU ⊕ oneMTU -- request/reply
 bodyRequestReply = oneMTU ⊕ blockBody64K -- request/reply
-oneBlockDiffusion = trace ("header = " <> show headerRequestReply <> "\nbody = " <> show bodyRequestReply) $ headerRequestReply ⊕ bodyRequestReply
+oneBlockDiffusion = headerRequestReply ⊕ bodyRequestReply
 
 certRequestReply = oneMTU ⊕ oneMTU -- request/reply
 certValidation = uniform0 0.050
@@ -70,9 +71,7 @@ networkWithCertsProbability =
     layoutToRenderable $
       plotCDFs
         "Peras Network Diffusion (δ=15)"
-        [ ("block diffusion w/o cert", deltaq15)
-        , ("block diffusion w/ cert", certAllDeltaQ15)
-        ]
+        [("diffusion", oneBlockDiffusion)]
 
 -- -- layout_title .= "Peras Network Diffusion (δ=15)"
 -- -- layout_x_axis . laxis_title .= "time (seconds)"

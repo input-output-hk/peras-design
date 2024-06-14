@@ -4,6 +4,109 @@
 
 Full-coverage property-based tests we added for the Markov-chain simulations. In particular, the simulation results are now checked against extact analytic results for the expected probability distributions.
 
+### More investigations into ΔQ upgrade
+
+Trying to plot a simple graph for the block diffusion which combines header + block diffusions, yields something which does not make sense either
+Even the `oneMTU` simple distribution is wrongly plotted: The y scale stops below 0.3 and the x-scale goes up to 1.2 while the
+
+The CDF is computed correctly:
+
+```
+  CDF
+    ( Pieces
+        { getPieces =
+            [ Piece{basepoint = 0.0, object = Ph (Poly [0.0])}
+            , Piece{basepoint = 0.3333333333333333, object = H 0.0 1.2e-2}
+            , Piece{basepoint = 0.3333333333333333, object = Ph (Poly [1.2e-2])}
+            , Piece{basepoint = 0.6666666666666666, object = H 1.2e-2 6.9e-2}
+            , Piece{basepoint = 0.6666666666666666, object = Ph (Poly [6.9e-2])}
+            , Piece{basepoint = 1.0, object = H 6.9e-2 0.268}
+            , Piece{basepoint = 1.0, object = Ph (Poly [0.268])}
+            ]
+        }
+    )
+```
+
+so the problem seems to be in the plotting functions?
+
+Looking at [asDiscreteCDF](https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/3fdab53911386c1641cf0acc1c8e4afda416a672/src/PWPs/IRVs.hs#L238) function which is used in the plotting to compute points. The CDF I get from it as a last sequence which goes beyond 1 and has constant value.
+
+It feels like if the sequence of pairs are inverted: The x value should be the (accumulated) time whereas the y value should the probability mass, but it looks like `makeCDF` is doing the opposite:
+
+```
+cd =
+  Pieces
+    { getPieces =
+        [ Piece{basepoint = 0.0, object = Ph (Poly [0.0])}
+        , Piece{basepoint = 0.3333333333333333, object = H 0.0 1.2e-2}
+        , Piece{basepoint = 0.3333333333333333, object = Ph (Poly [1.2e-2])}
+        , Piece{basepoint = 0.6666666666666666, object = H 1.2e-2 6.9e-2}
+        , Piece{basepoint = 0.6666666666666666, object = Ph (Poly [6.9e-2])}
+        , Piece{basepoint = 1.0, object = H 6.9e-2 0.268}
+        , Piece{basepoint = 1.0, object = Ph (Poly [0.268])}
+        ]
+    }
+```
+
+Turns out the way to compute a distribution `fromQTA` has swapped the two components of the pair: It's the time first and then probability.
+This makes sense but of course lead to confusion when upgrading.
+
+Computing the distribution for a complicated expression does not crash after swapping x/y but it loops.
+
+OK, the problem is still there but with different values:
+
+```
+plot-dqsd: Invalid polynomial interval width: (0.0,8.4e-2,0.367,0.367)
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:167:32 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolvePolyDeltas, called at src/PWPs/PolyDeltas.hs:189:23 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolveIntervals, called at src/PWPs/Piecewise.hs:276:43 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.Piecewise
+  <+>, called at src/PWPs/IRVs.hs:317:26 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.IRVs
+  <+>, called at src/DeltaQ/PWPs.hs:58:14 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  convolve, called at src/DeltaQ/Model/DeltaQ.hs:202:28 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.Model.DeltaQ
+  $dmnWayConvolve, called at src/DeltaQ/PWPs.hs:54:10 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  nWayConvolve, called at plot-dqsd.hs:48:17 in main:Main
+```
+
+Feels like the `disaggregate` function might the actual culprit, where it creates a zero-length interval for a `Pd` polynomial?
+the problem is in the interplay of `disaggregate` and `convolveIntervals`
+In the latter, I added some trace and assertions that show we can produce a sequence of `Pd` for the same point, leading to this 0 interval issue
+
+https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/3fdab53911386c1641cf0acc1c8e4afda416a672/src/PWPs/PolyDeltas.hs#L183
+
+Here is the data that's causing the duplicate points:
+
+```
+plot-dqsd: Duplicate basepoints generated in convolution: [(0.0,Pd (Poly [0.0])),(0.367,Pd (Poly [5.486968449931412e-2])),(0.367,Pd (Poly [0.0]))], lg=0.155, ug=0.15500000000000003, lf=0.212, uf=0.212
+```
+
+So it indeed seems this is a case of rounding issues with `Double`s: The two sums should not be the same, but they end up being because some minute number gets dropped.
+
+Tried to fix the issue in the `aggregate` function by removing duplications for the `Pd` case:
+
+```
+  describe "Aggregate" $ do
+    it "discard 0 polynomial when points are equal" $ do
+      let deltas1 =
+            [ (1.0 :: Double, Pd (Poly [0.0]))
+            , (2.0, Pd (Poly [1.0]))
+            , (2.0, Pd (Poly [0.0]))
+            ]
+          deltas2 =
+            [ (1.0 :: Double, Pd (Poly [0.0]))
+            , (1.5 :: Double, Pd (Poly [2.0]))
+            , (2.0, Pd (Poly [0.0]))
+            , (2.0, Pd (Poly [1.0]))
+            ]
+
+      aggregate deltas1
+        `shouldBe` [(1.0, Pd (Poly [0.0])), (2.0, Pd (Poly [1.0]))]
+      aggregate deltas2
+        `shouldBe` [(1.0, Pd (Poly [0.0])), (1.5 :: Double, Pd (Poly [2.0])), (2.0, Pd (Poly [1.0]))]
+```
+
+No more crash but it now loops.
+
 ## 2024-06-13
 
 ### ΔQ Upgrade & Debugging
