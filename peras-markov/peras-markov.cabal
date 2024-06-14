@@ -40,12 +40,13 @@ executable  peras-markov
                       prettyprinter,
     default-language: Haskell2010
 
-test-suite peras-simulation-test
+test-suite peras-markov-test
     type:             exitcode-stdio-1.0
     import:           warnings
     hs-source-dirs:   test
     main-is:          Main.hs
-    other-modules:    Peras.Markov.Adversary.TwoChainSpec
+    other-modules:    Peras.Markov.Adversary.CommonCandidateSpec
+                      Peras.Markov.Adversary.TwoChainSpec
                       Peras.Markov.PolynomialSpec
     build-depends:    QuickCheck,
                       base ^>=4.18.1.0,

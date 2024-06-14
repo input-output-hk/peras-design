@@ -44,29 +44,29 @@ spec = do
           do
             it "Monomials" $
               property $
-                forAll ((,) <$> generator <*> genMonomial) $ \((p, q), (concrete, symbolic)) -> do
+                forAll ((,) <$> generator <*> genMonomial) $ \((p, q), (concrete, symbolic)) ->
                   counterexample ("Polynomial: " <> show (pretty symbolic)) $
                     evalMonomial p q symbolic `comparator` concrete p q
             it "Terms" $
               property $
-                forAll ((,) <$> generator <*> (second (uncurry MkTerm) <$> genTerm)) $ \((p, q), (concrete, symbolic)) -> do
+                forAll ((,) <$> generator <*> (second (uncurry MkTerm) <$> genTerm)) $ \((p, q), (concrete, symbolic)) ->
                   counterexample ("Polynomial: " <> show (pretty symbolic)) $
                     evalTerm p q symbolic `comparator` concrete p q
             it "Polynomials" $
               property $
-                forAll ((,) <$> generator <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
+                forAll ((,) <$> generator <*> genPolynomial) $ \((p, q), (concrete, symbolic)) ->
                   counterexample ("Polynomial: " <> show (pretty symbolic)) $
                     eval p q symbolic `comparator` concrete p q
             it "Addition" $
               property $
-                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) ->
                   counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
                     let actual = eval p q $ symbolic + symbolic'
                         expected = concrete p q + concrete' p q
                      in actual `comparator` expected
             it "Multiplication" $
               property $
-                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) ->
                   counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
                     let actual = eval p q $ symbolic * symbolic'
                         expected = concrete p q * concrete' p q

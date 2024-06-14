@@ -70,10 +70,10 @@ separatedChains :: Ring.C a => a -> a -> Divergence a -> Divergence a
 separatedChains =
   transitionImpl $ \p q (lHonest, lAdversary) ->
     Map.fromList
-      [ ((lHonest + 1, lAdversary), p * (one - q))
-      , ((lHonest, lAdversary + 1), (one - p) * q)
-      , ((lHonest + 1, lAdversary + 1), p * q)
-      , ((lHonest, lAdversary), (one - p) * (one - q))
+      [ ((lHonest + 1, lAdversary), p * (one - q)) -- Honest party lengthens their chain.
+      , ((lHonest, lAdversary + 1), (one - p) * q) -- Adversary lengthens their chain.
+      , ((lHonest + 1, lAdversary + 1), p * q) -- Both parties lengthen their chains.
+      , ((lHonest, lAdversary), (one - p) * (one - q)) -- Neither party lengthens their chain.
       ]
 
 -- | Find the distribution of chain lengths after U + L slots, given

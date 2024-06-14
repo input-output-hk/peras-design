@@ -138,7 +138,7 @@ evalTerm :: Ring.C a => a -> a -> Term a -> a
 evalTerm p' q' MkTerm{monomial, coefficient} = coefficient * evalMonomial p' q' monomial
 
 eval :: Ring.C a => a -> a -> Polynomial a -> a
-eval p' q' = sum . fmap (\kv -> evalTerm p' q' $ uncurry MkTerm kv) . Map.toList . terms
+eval p' q' = sum . fmap (evalTerm p' q' . uncurry MkTerm) . Map.toList . terms
 
 evaluate :: (Functor t, Ring.C a) => a -> a -> t (Polynomial a) -> t a
 evaluate = (fmap .) . eval

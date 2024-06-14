@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Peras.Markov.Adversary.TwoChainSpec where
 
 import NumericPrelude.Base
-import NumericPrelude.Numeric
+import NumericPrelude.Numeric hiding (sum)
+import Prelude (sum)
 
 import Control.Applicative (pure, (<*>))
 import Control.Arrow (Arrow (second, (***)))
@@ -14,10 +14,9 @@ import Control.Monad (zipWithM_)
 import Data.Default (def)
 import Data.Functor ((<$>))
 import Data.Maybe (fromMaybe)
-import Debug.Trace
 import Number.Ratio ((%))
-import Peras.Markov.Adversary
-import Peras.Markov.Adversary.TwoChain
+import Peras.Markov.Adversary (transitions)
+import Peras.Markov.Adversary.TwoChain (lookupDelta, separatedChains, splitChains)
 import Peras.Markov.Orphans ()
 import Peras.Markov.Polynomial (
   Monomial (MkMonomial),
@@ -28,8 +27,8 @@ import Peras.Markov.Polynomial (
   evalTerm,
  )
 import Prettyprinter (Pretty (pretty), (<+>), (<>))
-import Statistics.Distribution
-import Statistics.Distribution.Binomial
+import Statistics.Distribution (probability)
+import Statistics.Distribution.Binomial (binomial)
 import Test.Hspec (Expectation, Spec, describe, it, shouldBe, shouldSatisfy)
 import Test.QuickCheck (
   Arbitrary (arbitrary),
@@ -53,8 +52,7 @@ spec = do
         property $
           forAll ((,) <$> genLimit <*> genPQ) $ \(n, (p, q)) -> do
             let result = transitions p q n separatedChains def
-                actual = [fromMaybe 0 $ lookupDelta delta result | delta <- [-n .. n]]
-            sum actual `shouldBeApproximately` 1
+            sum result `shouldBeApproximately` 1
       it "Probabilities match theory" $
         property $
           forAll ((,) <$> genLimit <*> genPQ) $ \(n, (p, q)) -> do
@@ -76,16 +74,15 @@ spec = do
               . counterexample ("Actual: " <> show actual)
               $ zipWithM_ shouldBeApproximately actual expected
   describe "Split chains" $
-    do
-      it "Probabilities sum to unity" $
-        property $
-          forAll ((,) <$> genLimit <*> genPQ) $ \(n, (p, q)) -> do
-            let result = transitions p q n splitChains def
-                actual = [fromMaybe 0 $ lookupDelta delta result | delta <- [-n .. n]]
-            sum actual `shouldBeApproximately` 1
+    it "Probabilities sum to unity" $
+      property $
+        forAll ((,) <$> genLimit <*> genPQ) $ \(n, (p, q)) -> do
+          let result = transitions p q n splitChains def
+              actual = [fromMaybe 0 $ lookupDelta delta result | delta <- [-n .. n]]
+          sum actual `shouldBeApproximately` 1
 
 shouldBeApproximately :: Double -> Double -> Expectation
-shouldBeApproximately x y = abs (x - y) `shouldSatisfy` (< (1e-9 * abs (x + y)))
+shouldBeApproximately x y = abs (x - y) `shouldSatisfy` (<= (1e-9 * abs (x + y)))
 
 genPQ :: Gen (Double, Double)
 genPQ =
