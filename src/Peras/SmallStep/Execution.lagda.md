@@ -137,21 +137,41 @@ Properties of cert₀
 Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
-      open import Data.List using (_++_; catMaybes)
+      open import Data.Bool using (true; false; _∧_; not)
+      open import Data.Nat using (_<ᵇ_)
+      open import Data.List using (_++_; catMaybes; any)
       open import Haskell.Prim.List using (map)
-
-      latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
-      latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
+      open import Relation.Nullary.Decidable hiding (map)
 
       -- TODO: Do we need to adjust the block-tree for proving those properties?
       postulate
-        prop1 : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-                  (MkRoundNumber 0) tree₀ ≡ nothing
-        prop2 : preferredChain tree₀ ≡ block₀ ∷ [] -- or: preferredChain tree₀ ≐ block₀ ∷ []
+        pref-tree₀≡block₀∷[] : preferredChain tree₀ ≡ block₀ ∷ [] -- or: preferredChain tree₀ ≐ block₀ ∷ []
+
+      latestCertSeen-tree₀≡cert₀ : latestCertSeen tree₀ ≡ cert₀
+      latestCertSeen-tree₀≡cert₀ rewrite instantiated-certs is-TreeType = refl
+
+      latestCertOnChain-tree₀≡cert₀ : latestCertOnChain tree₀ ≡ cert₀
+      latestCertOnChain-tree₀≡cert₀
+        rewrite pref-tree₀≡block₀∷[]
+        rewrite genesis-block-no-certificate is-TreeType = refl
+
+      roundNumber-latestCertSeen-tree₀≡0 : roundNumber (latestCertSeen tree₀) ≡ 0
+      roundNumber-latestCertSeen-tree₀≡0 rewrite latestCertSeen-tree₀≡cert₀ = refl
+
+      x∧false≡false : ∀ {x} → x ∧ false ≡ false
+      x∧false≡false {false} = refl
+      x∧false≡false {true} = refl
+
+      needCert-tree₀≡nothing : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+                (MkRoundNumber 0) tree₀ ≡ nothing
+      needCert-tree₀≡nothing
+        rewrite roundNumber-latestCertSeen-tree₀≡0
+        rewrite x∧false≡false {not (any (λ {c → ⌊ roundNumber c + 2 ≟ 0 ⌋}) (certs tree₀))}
+        = refl
 
       catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
       catMaybes≡[]
-        rewrite prop2
+        rewrite pref-tree₀≡block₀∷[]
         rewrite genesis-block-no-certificate is-TreeType = refl
 
       noNewCert : certs (newChain tree₀ chain₁) ≡ []
@@ -163,19 +183,19 @@ Based on properties of the blocktree we can show the following
         in trans s₃ s₂
         where
           r₁ : catMaybes (map certificate chain₁) ≡ []
-          r₁ rewrite prop1 rewrite catMaybes≡[] = refl
+          r₁ rewrite needCert-tree₀≡nothing rewrite catMaybes≡[] = refl
 
           r₂ : certsFromChain chain₁ ≡ []
           r₂ rewrite r₁ = refl
 
       latestCert-newChain≡latestCert : latestCertSeen (newChain tree₀ chain₁) ≡ latestCertSeen tree₀
-      latestCert-newChain≡latestCert = trans r (sym latestCert≡cert₀')
+      latestCert-newChain≡latestCert = trans r (sym latestCertSeen-tree₀≡cert₀)
         where
           r : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
           r rewrite noNewCert = refl
 
       latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
-      latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCert≡cert₀'
+      latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCertSeen-tree₀≡cert₀
 ```
 Execution trace of the protocol
 ```agda
