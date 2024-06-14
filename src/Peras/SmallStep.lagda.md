@@ -49,6 +49,7 @@ protocol)
   * [Voting](SmallStep.lagda.md#voting)
 
 References:
+
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 <!--
@@ -653,6 +654,7 @@ The small-step semantics describe the evolution of the global state.
       h : Honesty p
 ```
 The relation allows
+
 * Fetching messages at the beginning of each slot
 * Block creation
 * Voting
