@@ -19,7 +19,6 @@ import Data.IntMap (IntMap)
 import Peras.Markov.Class (Half (half))
 import Prettyprinter (Pretty (pretty), fill, vsep, (<+>), (<>))
 
-import qualified Algebra.Additive as Additive (C)
 import qualified Algebra.Ring as Ring (C)
 import qualified Data.IntMap.Strict as Map (empty, foldlWithKey', foldr', fromList, lookup, map, singleton, toList, unionWith)
 
@@ -51,37 +50,40 @@ instance (Eq a, Ring.C a, Pretty a) => Pretty (Deltas a) where
 lookupDelta :: Int -> Deltas a -> Maybe a
 lookupDelta = (. deltas) . Map.lookup
 
-transitionImpl :: Additive.C a => (a -> a -> Int -> a -> IntMap a) -> a -> a -> Deltas a -> Deltas a
-transitionImpl transition' p q = MkDeltas . Map.foldlWithKey' (flip (flip . (Map.unionWith (+) .) . transition' p q)) Map.empty . deltas
+transitionImpl :: Ring.C a => (a -> a -> Int -> IntMap a) -> a -> a -> Deltas a -> Deltas a
+transitionImpl transition' p q =
+  MkDeltas
+    . Map.foldlWithKey' (\acc delta weight -> Map.unionWith (+) (Map.map (* weight) $ transition' p q delta) acc) Map.empty
+    . deltas
 
 separatedChains :: Ring.C a => a -> a -> Deltas a -> Deltas a
 separatedChains =
-  transitionImpl $ \p q delta weight ->
+  transitionImpl $ \p q delta ->
     Map.fromList
-      [ (delta + 1, p * (one - q) * weight) -- Honest party builds their own chain.
-      , (delta - 1, (one - p) * q * weight) -- Adversary builds their own separate chain.
-      , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither builds their chain.
+      [ (delta + 1, p * (one - q)) -- Honest party builds their own chain.
+      , (delta - 1, (one - p) * q) -- Adversary builds their own separate chain.
+      , (delta, p * q + (one - p) * (one - q)) -- Both or neither builds their chain.
       ]
 
 splitChains :: (Half a, Ring.C a) => a -> a -> Deltas a -> Deltas a
 splitChains =
-  transitionImpl $ \p q delta weight ->
+  transitionImpl $ \p q delta ->
     case compare delta zero of
       LT ->
         Map.fromList
-          [ (delta - 1, p * (one - q) * weight) -- Honest party lengthens the longer chain.
-          , (delta + 1, (one - p) * q * weight) -- Adversary lengthens the shorter chain.
-          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
+          [ (delta - 1, p * (one - q)) -- Honest party lengthens the longer chain.
+          , (delta + 1, (one - p) * q) -- Adversary lengthens the shorter chain.
+          , (delta, p * q + (one - p) * (one - q)) -- Both or neither lengthen their chain.
           ]
       GT ->
         Map.fromList
-          [ (delta + 1, p * (one - q) * weight) -- Honest party lengthens the longer chain.
-          , (delta - 1, (one - p) * q * weight) -- Adversary lengthens the shorter chain.
-          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
+          [ (delta + 1, p * (one - q)) -- Honest party lengthens the longer chain.
+          , (delta - 1, (one - p) * q) -- Adversary lengthens the shorter chain.
+          , (delta, p * q + (one - p) * (one - q)) -- Both or neither lengthen their chain.
           ]
       EQ ->
         Map.fromList
-          [ (delta + 1, half * (p * (one - q) + (one - p) * q) * weight) -- No preference by either party.
-          , (delta - 1, half * (p * (one - q) + (one - p) * q) * weight) -- No preference by either party.
-          , (delta, (p * q + (one - p) * (one - q)) * weight) -- Both or neither lengthen their chain.
+          [ (delta + 1, half * (p * (one - q) + (one - p) * q)) -- No preference by either party.
+          , (delta - 1, half * (p * (one - q) + (one - p) * q)) -- No preference by either party.
+          , (delta, p * q + (one - p) * (one - q)) -- Both or neither lengthen their chain.
           ]

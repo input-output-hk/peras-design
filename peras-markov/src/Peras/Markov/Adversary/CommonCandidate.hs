@@ -60,17 +60,20 @@ summarize MkDivergence{lengths} =
    in
     vsep $ header <> rows
 
-transitionImpl :: Additive.C a => (a -> a -> (Int, Int) -> a -> Map (Int, Int) a) -> a -> a -> Divergence a -> Divergence a
-transitionImpl transition' p q = MkDivergence . Map.foldrWithKey' ((Map.unionWith (+) .) . transition' p q) Map.empty . lengths
+transitionImpl :: Ring.C a => (a -> a -> (Int, Int) -> Map (Int, Int) a) -> a -> a -> Divergence a -> Divergence a
+transitionImpl transition' p q =
+  MkDivergence
+    . Map.foldlWithKey' (\acc delta weight -> Map.unionWith (+) (Map.map (* weight) $ transition' p q delta) acc) Map.empty
+    . lengths
 
 separatedChains :: Ring.C a => a -> a -> Divergence a -> Divergence a
 separatedChains =
-  transitionImpl $ \p q (lHonest, lAdversary) weight ->
+  transitionImpl $ \p q (lHonest, lAdversary) ->
     Map.fromList
-      [ ((lHonest + 1, lAdversary), p * (one - q) * weight)
-      , ((lHonest, lAdversary + 1), (one - p) * q * weight)
-      , ((lHonest + 1, lAdversary + 1), p * q * weight)
-      , ((lHonest, lAdversary), (one - p) * (one - q) * weight)
+      [ ((lHonest + 1, lAdversary), p * (one - q))
+      , ((lHonest, lAdversary + 1), (one - p) * q)
+      , ((lHonest + 1, lAdversary + 1), p * q)
+      , ((lHonest, lAdversary), (one - p) * (one - q))
       ]
 
 -- | Find the distribution of chain lengths after U + L slots, given
