@@ -197,6 +197,9 @@ as proposed in the paper.
       genesis-block-slotnumber :
         getSlotNumber (slotNumber block₀) ≡ 0
 
+      genesis-block-no-certificate :
+        certificate block₀ ≡ nothing
+
       genesis-cert-roundnumber :
         getRoundNumber (round cert₀) ≡ 0
 

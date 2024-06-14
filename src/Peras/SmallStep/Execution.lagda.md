@@ -146,18 +146,24 @@ Based on properties of the blocktree we can show the following
       -- TODO: Do we need to adjust the block-tree for proving those properties?
       postulate
         prop1 : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-               (MkRoundNumber 0) tree₀ ≡ nothing
-        prop2 : catMaybes (map certificate (preferredChain tree₀)) ≡ []
+                  (MkRoundNumber 0) tree₀ ≡ nothing
+        prop2 : preferredChain tree₀ ≡ block₀ ∷ [] -- or: preferredChain tree₀ ≐ block₀ ∷ []
+
+      catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
+      catMaybes≡[]
+        rewrite prop2
+        rewrite genesis-block-no-certificate is-TreeType = refl
 
       noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
       noNewCert =
-        let s₁ = extendable-chain' is-TreeType tree₀ chain₁
-            s₂ = instantiated-certs is-TreeType
-            s₃ = trans s₁ (cong (_++ certs tree₀) r₂)
+        let
+          s₁ = extendable-chain' is-TreeType tree₀ chain₁
+          s₂ = instantiated-certs is-TreeType
+          s₃ = trans s₁ (cong (_++ certs tree₀) r₂)
         in trans s₃ s₂
         where
           r₁ : catMaybes (map certificate chain₁) ≡ []
-          r₁ rewrite prop1 rewrite prop2 = refl
+          r₁ rewrite prop1 rewrite catMaybes≡[] = refl
 
           r₂ : certsFromChain chain₁ ≡ []
           r₂ rewrite r₁ = refl
