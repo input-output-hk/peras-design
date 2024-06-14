@@ -206,6 +206,9 @@ as proposed in the paper.
       extendable-chain : ∀ (t : T) (c : Chain)
         → certsFromChain c ⊆ᶜ certs (newChain t c)
 
+      extendable-chain' : ∀ (t : T) (c : Chain)
+        → certs (newChain t c) ≡ certsFromChain c ++ certs t
+
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
 
@@ -565,9 +568,10 @@ block-tree. The conditions (a) - (c) are reflected in the Peras paper.
       let
         cert⋆ = latestCertOnChain t
         cert′ = latestCertSeen t
-      in if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
-          ∧ (r ≤ᵇ A + roundNumber cert′)                            -- (b)
-          ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)                -- (c)
+      in
+        if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
+           ∧ (r ≤ᵇ A + roundNumber cert′)                          -- (b)
+           ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)              -- (c)
         then just cert′
         else nothing
 ```

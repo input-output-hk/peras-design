@@ -134,28 +134,43 @@ Properties of cert₀
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
 ```
-<!--
 Based on properties of the blocktree we can show the following
 ```agda
       open IsTreeType
-{-
+      open import Data.List using (_++_; catMaybes)
+      open import Haskell.Prim.List using (map)
+
       latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
       latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
 
-      latestCert-newChain≡latestCert : latestCertSeen (newChain tree₀ chain₁) ≡ latestCertSeen tree₀
-      latestCert-newChain≡latestCert = trans xx (sym latestCert≡cert₀')
-        where
-          aa : certs (newChain tree₀ chain₁) ≡ []
-          aa = {!!}
+      -- TODO: Do we need to adjust the block-tree for proving those properties?
+      postulate
+        prop1 : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+               (MkRoundNumber 0) tree₀ ≡ nothing
+        prop2 : catMaybes (map certificate (preferredChain tree₀)) ≡ []
 
-          xx : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
-          xx rewrite aa = refl
+      noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
+      noNewCert =
+        let s₁ = extendable-chain' is-TreeType tree₀ chain₁
+            s₂ = instantiated-certs is-TreeType
+            s₃ = trans s₁ (cong (_++ certs tree₀) r₂)
+        in trans s₃ s₂
+        where
+          r₁ : catMaybes (map certificate chain₁) ≡ []
+          r₁ rewrite prop1 rewrite prop2 = refl
+
+          r₂ : certsFromChain chain₁ ≡ []
+          r₂ rewrite r₁ = refl
+
+      latestCert-newChain≡latestCert : latestCertSeen (newChain tree₀ chain₁) ≡ latestCertSeen tree₀
+      latestCert-newChain≡latestCert = trans r (sym latestCert≡cert₀')
+        where
+          r : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
+          r rewrite noNewCert = refl
 
       latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
       latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCert≡cert₀'
--}
 ```
--->
 Execution trace of the protocol
 ```agda
       module _
