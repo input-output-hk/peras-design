@@ -134,6 +134,28 @@ Properties of cert₀
       cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
 ```
+<!--
+Based on properties of the blocktree we can show the following
+```agda
+      open IsTreeType
+{-
+      latestCert≡cert₀' : latestCertSeen tree₀ ≡ cert₀
+      latestCert≡cert₀' rewrite instantiated-certs is-TreeType = refl
+
+      latestCert-newChain≡latestCert : latestCertSeen (newChain tree₀ chain₁) ≡ latestCertSeen tree₀
+      latestCert-newChain≡latestCert = trans xx (sym latestCert≡cert₀')
+        where
+          aa : certs (newChain tree₀ chain₁) ≡ []
+          aa = {!!}
+
+          xx : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
+          xx rewrite aa = refl
+
+      latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
+      latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCert≡cert₀'
+-}
+```
+-->
 Execution trace of the protocol
 ```agda
       module _
@@ -143,17 +165,18 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
-{-
-        open IsTreeType
-
         validChain₁ : ValidChain chain₁
-        validChain₁ = Cons {c₁ = []} {b₁ = block₁} isBlockSignature isSlotLeader refl _ (valid is-TreeType tree₀)
+        validChain₁ =
+          let v = valid is-TreeType tree₀
+              ((_ , d), pr) = uncons v
+          in Cons {c₁ = d} isBlockSignature isSlotLeader refl pr v
 
+{-
         _ : initialState ↝⋆ finalState
         _ = NextSlot empty refl                           -- slot 1
           ↣ CreateBlock empty (honest refl validChain₁)
           ↣ Fetch (honest refl (here refl) ChainReceived)
-          ↣ NextSlotNewRound empty refl                   -- slot 2
+          ↣ NextSlotNewRound empty refl {!!}              -- slot 2
           ↣ CreateVote empty (honest refl isVoteSignature refl isCommitteeMember (Regular vr-1a vr-1b))
           ↣ Fetch (honest refl (here refl) VoteReceived)
           ↣ NextSlot empty refl                           -- slot 3

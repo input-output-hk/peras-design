@@ -55,6 +55,9 @@ References:
 ```agda
 -- We introduce the relation ≐ to denote that two lists have the same elements
 open import Relation.Binary.Core using (Rel)
+
+infix 2 _≐_
+
 _≐_ : Rel (List Block) _
 P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
 ```
