@@ -39,68 +39,40 @@ import qualified Data.Map.Strict as Map
 
 spec :: Spec
 spec = do
-  describe "Polynomial arithmetic identical to rational arithmetic" $
-    do
-      it "Monomials" $
-        property $
-          forAll ((,) <$> genRationalPQ <*> genMonomial) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              evalMonomial p q symbolic `shouldBe` concrete p q
-      it "Terms" $
-        property $
-          forAll ((,) <$> genRationalPQ <*> (second (uncurry MkTerm) <$> genTerm)) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              evalTerm p q symbolic `shouldBe` concrete p q
-      it "Polynomials" $
-        property $
-          forAll ((,) <$> genRationalPQ <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              eval p q symbolic `shouldBe` concrete p q
-      it "Addition" $
-        property $
-          forAll ((,,) <$> genRationalPQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
-            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
-              let actual = eval p q $ symbolic + symbolic'
-                  expected = concrete p q + concrete' p q
-               in actual `shouldBe` expected
-      it "Multiplication" $
-        property $
-          forAll ((,,) <$> genRationalPQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
-            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
-              let actual = eval p q $ symbolic * symbolic'
-                  expected = concrete p q * concrete' p q
-               in actual `shouldBe` expected
-  describe "Polynomial arithmetic identical to floating-point arithmetic" $
-    do
-      it "Monomials" $
-        property $
-          forAll ((,) <$> genDoublePQ <*> genMonomial) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              evalMonomial p q symbolic `shouldBeApproximately` concrete p q
-      it "Terms" $
-        property $
-          forAll ((,) <$> genDoublePQ <*> (second (uncurry MkTerm) <$> genTerm)) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              evalTerm p q symbolic `shouldBeApproximately` concrete p q
-      it "Polynomials" $
-        property $
-          forAll ((,) <$> genDoublePQ <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
-            counterexample ("Polynomial: " <> show (pretty symbolic)) $
-              eval p q symbolic `shouldBeApproximately` concrete p q
-      it "Addition" $
-        property $
-          forAll ((,,) <$> genDoublePQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
-            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
-              let actual = eval p q $ symbolic + symbolic'
-                  expected = concrete p q + concrete' p q
-               in actual `shouldBeApproximately` expected
-      it "Multiplication" $
-        property $
-          forAll ((,,) <$> genDoublePQ <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
-            counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
-              let actual = eval p q $ symbolic * symbolic'
-                  expected = concrete p q * concrete' p q
-               in actual `shouldBeApproximately` expected
+  let check description generator comparator =
+        describe description $
+          do
+            it "Monomials" $
+              property $
+                forAll ((,) <$> generator <*> genMonomial) $ \((p, q), (concrete, symbolic)) -> do
+                  counterexample ("Polynomial: " <> show (pretty symbolic)) $
+                    evalMonomial p q symbolic `comparator` concrete p q
+            it "Terms" $
+              property $
+                forAll ((,) <$> generator <*> (second (uncurry MkTerm) <$> genTerm)) $ \((p, q), (concrete, symbolic)) -> do
+                  counterexample ("Polynomial: " <> show (pretty symbolic)) $
+                    evalTerm p q symbolic `comparator` concrete p q
+            it "Polynomials" $
+              property $
+                forAll ((,) <$> generator <*> genPolynomial) $ \((p, q), (concrete, symbolic)) -> do
+                  counterexample ("Polynomial: " <> show (pretty symbolic)) $
+                    eval p q symbolic `comparator` concrete p q
+            it "Addition" $
+              property $
+                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+                  counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+                    let actual = eval p q $ symbolic + symbolic'
+                        expected = concrete p q + concrete' p q
+                     in actual `comparator` expected
+            it "Multiplication" $
+              property $
+                forAll ((,,) <$> generator <*> genPolynomial <*> genPolynomial) $ \((p, q), (concrete, symbolic), (concrete', symbolic')) -> do
+                  counterexample ("Polynomials: " <> show (pretty symbolic <+> pretty "&" <+> pretty symbolic')) $
+                    let actual = eval p q $ symbolic * symbolic'
+                        expected = concrete p q * concrete' p q
+                     in actual `comparator` expected
+  check "Polynomial arithmetic identical to rational arithmetic" genRationalPQ shouldBe
+  check "Polynomial arithmetic identical to floating-point arithmetic" genDoublePQ shouldBeApproximately
 
 shouldBeApproximately :: Double -> Double -> Expectation
 shouldBeApproximately x y = abs (x - y) `shouldSatisfy` (< 1e-9)
