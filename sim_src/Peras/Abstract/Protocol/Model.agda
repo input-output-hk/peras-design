@@ -15,30 +15,37 @@ open import Protocol.Peras using ()
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 #-}
 
 {-# FOREIGN AGDA2HS
-  import Peras.Orphans
+  import Prelude hiding (round)
+  import Control.Monad.Identity
   import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
   import Data.Maybe (catMaybes, listToMaybe, maybeToList)
   import Data.List (maximumBy)
+  import Data.Ord (comparing)
   import Data.Function (on)
   import qualified Data.Set as Set
   import Data.Set (Set)
+  import Peras.Abstract.Protocol.Crypto (mkCommitteeMember, createMembershipProof, createSignedVote, mkParty, createSignedCertificate)
+  import Peras.Abstract.Protocol.Voting (extends)
+  import Peras.Abstract.Protocol.Fetching (findNewQuora)
 #-}
 
 -- Hoop-jumping ---
 
-div : ℕ → (n : ℕ) → .⦃ NonZero n ⦄ → ℕ
-div = _/_
-
-mod : ℕ → (n : ℕ) → .⦃ NonZero n ⦄ → ℕ
-mod = _%_
-
 uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
 uneraseNonZero {zero} ()
 uneraseNonZero {suc n} _ = _
+
+div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
+
+mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
 certificate : Block → Maybe Certificate
 certificate record{certificate = just c}  = Just c
@@ -107,7 +114,6 @@ initialModelState = record
                        ; perasT = 1
                        ; perasΔ = 1
                        ; perasτ = 1
-                       ; perasNonZeroU = _
                        }
   ; allChains        = (0 , genesisChain) ∷ []
   ; allVotes         = []
@@ -116,16 +122,20 @@ initialModelState = record
 {-# COMPILE AGDA2HS initialModelState #-}
 
 slotToRound : PerasParams → SlotNumber → RoundNumber
-slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol) ⦃ uneraseNonZero (perasNonZeroU protocol) ⦄)
+slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol))
 {-# COMPILE AGDA2HS slotToRound #-}
 
 slotInRound : PerasParams → SlotNumber → SlotNumber
-slotInRound protocol slot = MkSlotNumber (mod (getSlotNumber slot) (perasU protocol) ⦃ uneraseNonZero (perasNonZeroU protocol) ⦄)
+slotInRound protocol slot = MkSlotNumber (mod (getSlotNumber slot) (perasU protocol))
 {-# COMPILE AGDA2HS slotInRound #-}
 
 nextSlot : SlotNumber → SlotNumber
 nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
 {-# COMPILE AGDA2HS nextSlot #-}
+
+nextRound : RoundNumber → RoundNumber
+nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
+{-# COMPILE AGDA2HS nextRound #-}
 
 insertCert : SlotNumber → Certificate → List (Certificate × SlotNumber) → List (Certificate × SlotNumber)
 insertCert slot cert [] = (cert , slot) ∷ []
@@ -146,7 +156,7 @@ postulate
 {-# FOREIGN AGDA2HS
 preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
 preferredChain MkPerasParams{..} certs chains =
-  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (genesisChain : chains)
+  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (Set.fromList $ genesisChain : chains)
 
 chainWeight :: Integer -> Set Certificate -> Chain -> Integer
 chainWeight boost certs blocks =
@@ -162,12 +172,13 @@ chainWeight boost certs blocks =
 #-}
 
 postulate
-  makeVote : RoundNumber → Block → Maybe Vote
+  makeVote : PerasParams -> SlotNumber → Block → Maybe Vote
 
 {-# FOREIGN AGDA2HS
-makeVote :: RoundNumber -> Block -> Maybe Vote
-makeVote r block = do
-  let party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (clock - fromIntegral perasT) True
+makeVote :: PerasParams -> SlotNumber -> Block -> Maybe Vote
+makeVote protocol@MkPerasParams{perasT} slot block = do
+  let r = slotToRound protocol slot
+      party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (slot - fromIntegral perasT) True
   Right proof <- createMembershipProof r (Set.singleton party)
   Right vote  <- createSignedVote party r (hash block) proof 1
   pure vote
@@ -177,12 +188,20 @@ blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
+postulate
+  -- TODO: we need to implement this on the Agda side for the proofs
+  extends : Block → Certificate → List Chain → Bool
+
 votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
   guard (slotInRound params slot == MkSlotNumber (perasT params))
   block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
-  -- guard VR-1A and friends
-  makeVote r block
+  let vr1A = nextRound (round cert') == r && getSlotNumber cert'Slot + perasΔ params + 1 <= getRoundNumber r * perasU params
+      vr1B = extends block cert' allChains'
+      vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
+      vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
+  guard (vr1A && vr1B || vr2A && vr2B)
+  makeVote params slot block
   where
     params = protocol s
     slot   = clock s
@@ -205,6 +224,19 @@ votesInState s = maybeToList do
 
 {-# COMPILE AGDA2HS votesInState #-}
 
+postulate
+  -- TODO: this need to be in Agda for the proofs
+  newQuora : ℕ → List Certificate → List Vote → List Certificate
+{-# FOREIGN AGDA2HS
+newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
+newQuora quorum priorCerts votes = newCerts
+  where
+    quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
+    Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
+    newCerts = [ c | Right c <- newCertsResults ]
+
+#-}
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
@@ -212,7 +244,7 @@ transition s Tick =
                              })
   where s' = record s { clock = nextSlot (clock s) }
         sutVotes = votesInState s'
-        certsFromQuorum = []
+        certsFromQuorum = newQuora (perasτ (protocol s)) (map fst (allSeenCerts s)) (allVotes s)
 transition s (NewChain chain) =
   Just ([] , record s
              { allChains = (slotToRound (protocol s) (clock s) , chain) ∷ allChains s

@@ -39,7 +39,8 @@ record PerasParams : Set where
     -- ^ Termination bound for preagreement, in slots
     perasΔ : ℕ
     -- ^ Delivery guarantee for diffusion, in slots
-    @0 perasNonZeroU : NonZero perasU
+    @0 ⦃ perasNonZeroU ⦄ : NonZero perasU
+    @0 ⦃ perasNonZeroK ⦄ : NonZero perasK
 
 {-# FOREIGN AGDA2HS
 data PerasParams = MkPerasParams{perasU :: Integer,

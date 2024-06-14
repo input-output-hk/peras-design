@@ -1,22 +1,29 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 
 module Peras.Abstract.Protocol.Model where
 
 import Control.Monad (guard)
-import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasL, perasT, perasU), defaultPerasParams)
-import Peras.Block (Block(MkBlock), Certificate(MkCertificate))
+import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasΔ, perasτ), defaultPerasParams)
+import Peras.Block (Block(MkBlock), Certificate(MkCertificate, round))
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash(MkHash), replicateBS)
 import Peras.Numbering (RoundNumber(MkRoundNumber, getRoundNumber), SlotNumber(MkSlotNumber, getSlotNumber))
 
-import Peras.Orphans
+import Prelude hiding (round)
+import Control.Monad.Identity
 import Peras.Block (certificate, blockRef)
 import Peras.Crypto (hash)
 import Data.Maybe (catMaybes, listToMaybe, maybeToList)
 import Data.List (maximumBy)
+import Data.Ord (comparing)
 import Data.Function (on)
 import qualified Data.Set as Set
 import Data.Set (Set)
+import Peras.Abstract.Protocol.Crypto (mkCommitteeMember, createMembershipProof, createSignedVote, mkParty, createSignedCertificate)
+import Peras.Abstract.Protocol.Voting (extends)
+import Peras.Abstract.Protocol.Fetching (findNewQuora)
 
 data NodeModel = NodeModel{clock :: SlotNumber,
                            protocol :: PerasParams, allChains :: [(RoundNumber, Chain)],
@@ -59,6 +66,9 @@ slotInRound protocol slot
 nextSlot :: SlotNumber -> SlotNumber
 nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
 
+nextRound :: RoundNumber -> RoundNumber
+nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
+
 insertCert ::
            SlotNumber ->
              Certificate ->
@@ -75,7 +85,7 @@ seenBeforeStartOfRound params r (c, s)
 
 preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
 preferredChain MkPerasParams{..} certs chains =
-  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (genesisChain : chains)
+  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (Set.fromList $ genesisChain : chains)
 
 chainWeight :: Integer -> Set Certificate -> Chain -> Integer
 chainWeight boost certs blocks =
@@ -89,9 +99,10 @@ chainWeight boost certs blocks =
     fromIntegral (length blocks)
       + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
 
-makeVote :: RoundNumber -> Block -> Maybe Vote
-makeVote r block = do
-  let party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (clock - fromIntegral perasT) True
+makeVote :: PerasParams -> SlotNumber -> Block -> Maybe Vote
+makeVote protocol@MkPerasParams{perasT} slot block = do
+  let r = slotToRound protocol slot
+      party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (slot - fromIntegral perasT) True
   Right proof <- createMembershipProof r (Set.singleton party)
   Right vote  <- createSignedVote party r (hash block) proof 1
   pure vote
@@ -105,8 +116,19 @@ votesInState :: NodeModel -> [Vote]
 votesInState s
   = maybeToList
       (do guard (slotInRound params slot == MkSlotNumber (perasT params))
-          listToMaybe (dropWhile (not . blockOldEnough params slot) pref) >>=
-            makeVote r)
+          block <- listToMaybe
+                     (dropWhile (not . blockOldEnough params slot) pref)
+          guard
+            ((nextRound (round cert') == r &&
+                getSlotNumber cert'Slot + perasΔ params + 1 <=
+                  getRoundNumber r * perasU params)
+               && extends block cert' allChains'
+               ||
+               getRoundNumber r >= getRoundNumber (round cert') + perasR params &&
+                 r > round certS &&
+                   mod (getRoundNumber r) (perasK params) ==
+                     mod (getRoundNumber (round certS)) (perasK params))
+          makeVote params slot block)
   where
     params :: PerasParams
     params = protocol s
@@ -124,6 +146,23 @@ votesInState s
     pref
       = preferredChain params (map (\ r -> fst r) allSeenCerts')
           allChains'
+    certAndSlot' :: (Certificate, SlotNumber)
+    certAndSlot' = maximumBy (comparing (\ r -> snd r)) allSeenCerts'
+    cert' :: Certificate
+    cert' = fst certAndSlot'
+    cert'Slot :: SlotNumber
+    cert'Slot = snd certAndSlot'
+    certS :: Certificate
+    certS
+      = maximumBy (comparing (\ r -> round r))
+          (genesisCert : catMaybes (map certificate pref))
+
+newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
+newQuora quorum priorCerts votes = newCerts
+  where
+    quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
+    Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
+    newCerts = [ c | Right c <- newCertsResults ]
 
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick
@@ -141,7 +180,10 @@ transition s Tick
     sutVotes :: [Vote]
     sutVotes = votesInState s'
     certsFromQuorum :: [Certificate]
-    certsFromQuorum = []
+    certsFromQuorum
+      = newQuora (perasτ (protocol s))
+          (map (\ r -> fst r) (allSeenCerts s))
+          (allVotes s)
 transition s (NewChain chain)
   = Just
       ([],
