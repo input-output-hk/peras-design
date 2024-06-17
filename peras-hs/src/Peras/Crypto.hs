@@ -4,10 +4,14 @@ module Peras.Crypto where
 
 import Data.ByteString (ByteString)
 
+import Data.ByteString as BS
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 
 eqBS :: ByteString -> ByteString -> Bool
 eqBS = (==)
+replicateBS :: Int -> Word8 -> ByteString
+replicateBS = BS.replicate
 
 newtype Hash a = MkHash {hashBytes :: ByteString}
   deriving (Generic)
