@@ -1,3 +1,80 @@
+## 2024-06-17
+
+#### Troubleshooting ΔQ
+
+Plotting ΔQ distribution for Peras currently takes forever, seemingly when computing `nWayConvolve` for a "large" number of different possible degrees. Reducing the number to 2 produces a graph, going to try with increasing number of iteams.
+
+Computing ΔQ basic diffusion model with 3 hops takes 20s. With 4 hops, it goes up to:
+
+```
+cabal run
+553,97s user 237,95s system 46% cpu 28:39,40 total
+```
+
+Sampling size in `Utilities` plotting module does not have an impact on execution time.
+
+Trying to run ΔQ plotting with profiling on to see if there's something obvious we could fix relatively easily.
+Unsurprisingly, most of the time is spent in constructing polynomials during convolution: It blows up as we need to construct cartesian product of lists multiple times.
+
+```
+  multihops                         Main                                                      plot-dqsd.hs:45:1-53                                                          973           1    0.0    0.0    99.8   99.9
+   multiHop                         Main                                                      plot-dqsd.hs:43:1-45                                                         1011           3    0.0    0.0    99.8   99.9
+    <+>                             PWPs.IRVs                                                 src/PWPs/IRVs.hs:317:1-54                                                    1129           3    0.0    0.0    99.8   99.9
+     makePDF                        PWPs.IRVs                                                 src/PWPs/IRVs.hs:(114,1)-(115,33)                                            1131           6    0.0    0.0     0.0    0.0
+     <+>                            PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(271,1)-(276,35)                                       1130           3   37.4   51.8    99.8   99.9
+      object                        PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1136    85592371    1.3    0.0     1.3    0.0
+      basepoint                     PWPs.Piecewise                                            src/PWPs/Piecewise.hs:56:5-13                                                1137    70365240    2.8    0.0     2.8    0.0
+      plusPD                        PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(60,1)-(63,32)                                        1154    59194673   34.0   28.1    34.0   28.1
+      getPieces                     PWPs.Piecewise                                            src/PWPs/Piecewise.hs:68:30-38                                               1132      146481    0.0    0.0     0.0    0.0
+      convolvePolyDeltas            PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(168,1)-(190,80)                                      1135       61137    0.1    0.1     0.8    0.9
+       aggregate                    PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(150,1)-(156,50)                                      1138      128436    0.0    0.1     0.0    0.1
+       zeroPoly                     PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1148       72798    0.0    0.0     0.0    0.0
+        makePoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1149       72798    0.0    0.0     0.0    0.0
+       scalePD                      PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(116,1)-(117,27)                                      1147       24411    0.0    0.0     0.0    0.0
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1150       24411    0.0    0.0     0.0    0.0
+       shiftPoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:(197,1)-(204,64)                               1151       24411    0.1    0.1     0.1    0.1
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1152       24411    0.0    0.0     0.0    0.0
+       convolvePolys                PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:(154,1)-(192,121)                              1139       16400    0.5    0.5     0.6    0.6
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1141      121416    0.0    0.0     0.0    0.0
+        zeroPoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1142       85557    0.0    0.0     0.0    0.0
+         makePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1143       85557    0.0    0.0     0.0    0.0
+        makeMonomial                PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:66:1-82                                        1144       79592    0.0    0.0     0.0    0.0
+         zeroPoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1145       11911    0.0    0.0     0.0    0.0
+          makePoly                  PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1146       11911    0.0    0.0     0.0    0.0
+      mergePieces                   PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(77,1)-(85,64)                                         1133       48825   17.4   19.2    23.5   19.2
+       object                       PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1153   118291696    6.1    0.0     6.1    0.0
+       getPieces                    PWPs.Piecewise                                            src/PWPs/Piecewise.hs:68:30-38                                               1134       48825    0.0    0.0     0.0    0.0
+      makePoly                      PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1156           3    0.0    0.0     0.0    0.0
+```
+
+
+Refining the profiling to get more details on `plusPD`, gives:
+
+```
+     <+>                                        PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(271,1)-(276,35)                                       1160           3   36.9   51.8    99.8   99.9
+      object                                    PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1166    85592371    1.2    0.0     1.2    0.0
+      basepoint                                 PWPs.Piecewise                                            src/PWPs/Piecewise.hs:56:5-13                                                1167    70365240    2.8    0.0     2.8    0.0
+      plusPD                                    PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(60,1)-(63,32)                                        1194    59194673    5.7    5.6    34.3   28.1
+       PWPs.SimplePolynomials.addPolys          PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:100:1-8                                        1196    29621749   16.9   13.1    28.6   22.5
+        PWPs.SimplePolynomials.trimPoly         PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:57:1-8                                         1197    29621749   11.8    9.4    11.8    9.4
+```
+
+Top cost centres are
+
+```
+COST CENTRE                     MODULE                 SRC                                     %time %alloc
+
+<+>                             PWPs.Piecewise         src/PWPs/Piecewise.hs:(271,1)-(276,35)   36.9   51.8
+mergePieces                     PWPs.Piecewise         src/PWPs/Piecewise.hs:(77,1)-(85,64)     17.2   19.2
+PWPs.SimplePolynomials.addPolys PWPs.SimplePolynomials src/PWPs/SimplePolynomials.hs:100:1-8    16.9   13.2
+PWPs.SimplePolynomials.trimPoly PWPs.SimplePolynomials src/PWPs/SimplePolynomials.hs:57:1-8     11.9    9.4
+object                          PWPs.Piecewise         src/PWPs/Piecewise.hs:57:5-10             7.6    0.0
+plusPD                          PWPs.PolyDeltas        src/PWPs/PolyDeltas.hs:(60,1)-(63,32)     5.7    5.6
+basepoint                       PWPs.Piecewise         src/PWPs/Piecewise.hs:56:5-13             2.8    0.0
+```
+
+It seems clear that polynomials computation are the bottleneck so a more efficient library like [poly](https://hackage.haskell.org/package/poly) would perhaps help?
+
 ## 2024-06-14
 
 ### Markov-chain simuations

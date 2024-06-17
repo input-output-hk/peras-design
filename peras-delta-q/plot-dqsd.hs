@@ -21,27 +21,22 @@ main = do
   -- hopsProbability
   void networkWithCertsProbability
 
-(⊕) :: (HasCallStack, DeltaQOps a) => a -> a -> a
-(⊕) = convolve
-
-(⇋) = choice
-
 oneMTU =
   fromQTA @(IRV Double)
     [(0.012, fromRational $ 1 % 3), (0.069, fromRational $ 2 % 3), (0.268, fromRational $ 3 % 3)]
 blockBody64K =
   fromQTA
     [(0.024, fromRational $ 1 % 3), (0.143, fromRational $ 2 % 3), (0.531, fromRational $ 3 % 3)]
-headerRequestReply = oneMTU ⊕ oneMTU -- request/reply
-bodyRequestReply = oneMTU ⊕ blockBody64K -- request/reply
-oneBlockDiffusion = headerRequestReply ⊕ bodyRequestReply
+headerRequestReply = oneMTU `convolve` oneMTU -- request/reply
+bodyRequestReply = oneMTU `convolve` blockBody64K -- request/reply
+oneBlockDiffusion = headerRequestReply `convolve` bodyRequestReply
 
-certRequestReply = oneMTU ⊕ oneMTU -- request/reply
+certRequestReply = oneMTU `convolve` oneMTU -- request/reply
 certValidation = uniform0 0.050
-certHandling = certRequestReply ⊕ certValidation
-headerWithCert = (⇋) (fromRational $ 1 % 3) (headerRequestReply ⊕ certHandling) headerRequestReply
-certBlockOneThird = headerWithCert ⊕ bodyRequestReply
-certBlockAll = headerRequestReply ⊕ certHandling ⊕ bodyRequestReply
+certHandling = certRequestReply `convolve` certValidation
+headerWithCert = choice (fromRational $ 1 % 3) (headerRequestReply `convolve` certHandling) headerRequestReply
+certBlockOneThird = headerWithCert `convolve` bodyRequestReply
+certBlockAll = headerRequestReply `convolve` certHandling `convolve` bodyRequestReply
 
 combine = nWayChoice
 multiHop :: (DeltaQOps icdf, Show icdf) => Int -> icdf -> icdf
@@ -51,9 +46,9 @@ multihops = (`multiHop` oneBlockDiffusion) <$> [1 ..]
 
 -- model for average degree 15
 pathLengthsDistributionDegree15 =
-  [0.60, 8.58, 65.86, 24.95]
+  [0.60, 8.58, 65.86 + 24.95]
 hopsProba15 = zip (scanl1 (+) pathLengthsDistributionDegree15) multihops
-deltaq15 = trace ("multihops = " <> show hopsProba15) $ combine hopsProba15
+deltaq15 = combine hopsProba15
 
 -- model for average degree 10
 pathLengthsDistributionDegree10 =
@@ -71,7 +66,7 @@ networkWithCertsProbability =
     layoutToRenderable $
       plotCDFs
         "Peras Network Diffusion (δ=15)"
-        [("diffusion", oneBlockDiffusion)]
+        [("diffusion", deltaq15)]
 
 -- -- layout_title .= "Peras Network Diffusion (δ=15)"
 -- -- layout_x_axis . laxis_title .= "time (seconds)"
