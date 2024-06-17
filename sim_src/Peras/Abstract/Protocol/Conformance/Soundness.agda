@@ -12,7 +12,7 @@ open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
 open import Prelude.AssocList
-open Decidable _≟_
+open import Prelude.DecEq using (DecEq)
 import Peras.SmallStep as SmallStep
 
 open import Peras.Abstract.Protocol.Params
@@ -59,24 +59,24 @@ module _ ⦃ _ : Hashable Block ⦄
   modelState s = record
     { clock        = State.clock s
     ; protocol     = modelParams
-    ; allChains    = maybe′ (buildChains ∘ allBlocks) [] (sutId ‼ State.blockTrees s)
-    ; allVotes     = maybe′ votes                     [] (sutId ‼ State.blockTrees s)
-    ; allSeenCerts = maybe′ (seenCerts ∘ certs)       [] (sutId ‼ State.blockTrees s)
+    ; allChains    = maybe′ (buildChains ∘ allBlocks) [] (State.blockTrees s ⁉ sutId)
+    ; allVotes     = maybe′ votes                     [] (State.blockTrees s ⁉ sutId)
+    ; allSeenCerts = maybe′ (seenCerts ∘ certs)       [] (State.blockTrees s ⁉ sutId)
     }
 
   sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
   sutVotesInStep (Fetch _) = []
-  sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p = p} {vote = vote} _ _ _ _ _ _)) =
+  sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} _ _ _ _ _)) =
     case p ≟ sutId of λ where
-      (yes _) → (State.clock s₀ , vote) ∷ []
+      (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ t) ∷ []
       (no _)  → []
   sutVotesInStep (CreateBlock _ _) = []
   sutVotesInStep (NextSlot _ _) = []
   sutVotesInStep (NextSlotNewRound _ _ _) = []
 
   sutVotesInTrace : ∀ {s₀ s₁} → s₀ ↝⋆ s₁ → List (SlotNumber × Vote)
-  sutVotesInTrace []′             = []
-  sutVotesInTrace (step ∷′ trace) = sutVotesInStep step ++ sutVotesInTrace trace
+  sutVotesInTrace ∎              = []
+  sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
   record Invariant (s : State) : Set where
 
@@ -101,9 +101,9 @@ module _ ⦃ _ : Hashable Block ⦄
     ; invariant₁  = {!!}
     ; trace       = CreateVote {h = Honest {p = Vote.creatorId vote}}
                                {!!} -- Fetched s₀ (needs to go in the invariant?)
-                               (honest {!!} {!!} {!!} {!!} {!!} {!!})
+                               (honest {!!} {!!} {!!} {!!} {!!})
                                     -- TODO: here we need preconditions on the vote
-                  ∷′ []′
+                  ↣ ∎
     ; s₁-agrees   = {!!}
     ; votes-agree = {!!}
     }
