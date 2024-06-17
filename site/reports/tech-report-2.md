@@ -39,3 +39,31 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 ![Proof size vs. λ and honest votes ratio](../diagrams/alba-proof-size-lambda.svg)
 
 ## Votes
+
+
+# Analyses of adversarial scenarios
+
+## Adversarial chain receives boost
+
+***Question.*** What is the probability that an adversarial chain receives the next boost?
+
+***Scenario.*** It currently is round $r$ and a certificate was created in round $r - 1$ for a block at least $U + L$ slots in the past that is also in the common prefix of the honest and adversarial chains. The honest parties lengthen one fork by $m \ge 0$ blocks to the next candidate for voting (i.e., the newest block on that fork that is at least $L$ slots old) and the adversarial parties similarly lengthen a separate fork by $n \ge 0$ blocks. If the adversarial chain is revealed to the honest parties before the start of the new round $r$ and if the adversarial chain is longer (i.e., $n \gt m$), then the voting committee will vote to boost the adversarial chain. The per-slot probability of adding a block to the honest or adversarial chain is $p$ or $q$, respectively.
+
+![Adversarial chain receives boost](../diagrams/adversarial-chain-receives-boost.png)
+
+***Analysis.*** Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. (Note that this neglects the probability that the adversary will privately extend the last boosted block before slot $r \cdot U - U - L$.) Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). The probability of $m < n$ is
+
+$$
+P = \sum_{0 \le m \lt n \le U} {U\choose{m}} p^m (1-p)^{U-m} {U\choose{n}} q^n (1-q)^{U-n}
+$$
+and the following R function implements this computation:
+
+```R
+prob <- function(U, p, q) {
+  sum(pbinom(1:U-1, U, p) * dbinom(1:U, U, q))
+}
+```
+
+***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
+
+![Per-round probability of dishonest boost when the active-slot coeffficient is 10%.](adversarial-chain-receives-boost.plot.png)
