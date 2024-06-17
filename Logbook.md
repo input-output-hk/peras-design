@@ -1,8 +1,306 @@
+## 2024-06-17
+
+#### ΔQ Modeling for Votes
+
+Quickly tried to replace custom `SimplePolynomials` with [poly](https://hackage.haskell.org/package/poly) package but of course it does not have `convolve` function that does the core of the logic to compute the convolution of polynomials over 2 intervals in 3 pieces.  It has however DFT computations that could be useful as it seems more efficient to compute convolution of polynomials with FFT but I am out of my depth here and would need more research.
+
+**Decision**: For the time being, we are going to use the existing [numerical MC approximation based library](https://github.com/abailly-iohk/pnsol-deltaq-clone).
+
+#### Troubleshooting ΔQ
+
+Plotting ΔQ distribution for Peras currently takes forever, seemingly when computing `nWayConvolve` for a "large" number of different possible degrees. Reducing the number to 2 produces a graph, going to try with increasing number of iteams.
+
+Computing ΔQ basic diffusion model with 3 hops takes 20s. With 4 hops, it goes up to:
+
+```
+cabal run
+553,97s user 237,95s system 46% cpu 28:39,40 total
+```
+
+Sampling size in `Utilities` plotting module does not have an impact on execution time.
+
+Trying to run ΔQ plotting with profiling on to see if there's something obvious we could fix relatively easily.
+Unsurprisingly, most of the time is spent in constructing polynomials during convolution: It blows up as we need to construct cartesian product of lists multiple times.
+
+```
+  multihops                         Main                                                      plot-dqsd.hs:45:1-53                                                          973           1    0.0    0.0    99.8   99.9
+   multiHop                         Main                                                      plot-dqsd.hs:43:1-45                                                         1011           3    0.0    0.0    99.8   99.9
+    <+>                             PWPs.IRVs                                                 src/PWPs/IRVs.hs:317:1-54                                                    1129           3    0.0    0.0    99.8   99.9
+     makePDF                        PWPs.IRVs                                                 src/PWPs/IRVs.hs:(114,1)-(115,33)                                            1131           6    0.0    0.0     0.0    0.0
+     <+>                            PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(271,1)-(276,35)                                       1130           3   37.4   51.8    99.8   99.9
+      object                        PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1136    85592371    1.3    0.0     1.3    0.0
+      basepoint                     PWPs.Piecewise                                            src/PWPs/Piecewise.hs:56:5-13                                                1137    70365240    2.8    0.0     2.8    0.0
+      plusPD                        PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(60,1)-(63,32)                                        1154    59194673   34.0   28.1    34.0   28.1
+      getPieces                     PWPs.Piecewise                                            src/PWPs/Piecewise.hs:68:30-38                                               1132      146481    0.0    0.0     0.0    0.0
+      convolvePolyDeltas            PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(168,1)-(190,80)                                      1135       61137    0.1    0.1     0.8    0.9
+       aggregate                    PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(150,1)-(156,50)                                      1138      128436    0.0    0.1     0.0    0.1
+       zeroPoly                     PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1148       72798    0.0    0.0     0.0    0.0
+        makePoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1149       72798    0.0    0.0     0.0    0.0
+       scalePD                      PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(116,1)-(117,27)                                      1147       24411    0.0    0.0     0.0    0.0
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1150       24411    0.0    0.0     0.0    0.0
+       shiftPoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:(197,1)-(204,64)                               1151       24411    0.1    0.1     0.1    0.1
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1152       24411    0.0    0.0     0.0    0.0
+       convolvePolys                PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:(154,1)-(192,121)                              1139       16400    0.5    0.5     0.6    0.6
+        scalePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:78:1-43                                        1141      121416    0.0    0.0     0.0    0.0
+        zeroPoly                    PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1142       85557    0.0    0.0     0.0    0.0
+         makePoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1143       85557    0.0    0.0     0.0    0.0
+        makeMonomial                PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:66:1-82                                        1144       79592    0.0    0.0     0.0    0.0
+         zeroPoly                   PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:47:1-21                                        1145       11911    0.0    0.0     0.0    0.0
+          makePoly                  PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1146       11911    0.0    0.0     0.0    0.0
+      mergePieces                   PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(77,1)-(85,64)                                         1133       48825   17.4   19.2    23.5   19.2
+       object                       PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1153   118291696    6.1    0.0     6.1    0.0
+       getPieces                    PWPs.Piecewise                                            src/PWPs/Piecewise.hs:68:30-38                                               1134       48825    0.0    0.0     0.0    0.0
+      makePoly                      PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:44:1-21                                        1156           3    0.0    0.0     0.0    0.0
+```
+
+
+Refining the profiling to get more details on `plusPD`, gives:
+
+```
+     <+>                                        PWPs.Piecewise                                            src/PWPs/Piecewise.hs:(271,1)-(276,35)                                       1160           3   36.9   51.8    99.8   99.9
+      object                                    PWPs.Piecewise                                            src/PWPs/Piecewise.hs:57:5-10                                                1166    85592371    1.2    0.0     1.2    0.0
+      basepoint                                 PWPs.Piecewise                                            src/PWPs/Piecewise.hs:56:5-13                                                1167    70365240    2.8    0.0     2.8    0.0
+      plusPD                                    PWPs.PolyDeltas                                           src/PWPs/PolyDeltas.hs:(60,1)-(63,32)                                        1194    59194673    5.7    5.6    34.3   28.1
+       PWPs.SimplePolynomials.addPolys          PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:100:1-8                                        1196    29621749   16.9   13.1    28.6   22.5
+        PWPs.SimplePolynomials.trimPoly         PWPs.SimplePolynomials                                    src/PWPs/SimplePolynomials.hs:57:1-8                                         1197    29621749   11.8    9.4    11.8    9.4
+```
+
+Top cost centres are
+
+```
+COST CENTRE                     MODULE                 SRC                                     %time %alloc
+
+<+>                             PWPs.Piecewise         src/PWPs/Piecewise.hs:(271,1)-(276,35)   36.9   51.8
+mergePieces                     PWPs.Piecewise         src/PWPs/Piecewise.hs:(77,1)-(85,64)     17.2   19.2
+PWPs.SimplePolynomials.addPolys PWPs.SimplePolynomials src/PWPs/SimplePolynomials.hs:100:1-8    16.9   13.2
+PWPs.SimplePolynomials.trimPoly PWPs.SimplePolynomials src/PWPs/SimplePolynomials.hs:57:1-8     11.9    9.4
+object                          PWPs.Piecewise         src/PWPs/Piecewise.hs:57:5-10             7.6    0.0
+plusPD                          PWPs.PolyDeltas        src/PWPs/PolyDeltas.hs:(60,1)-(63,32)     5.7    5.6
+basepoint                       PWPs.Piecewise         src/PWPs/Piecewise.hs:56:5-13             2.8    0.0
+```
+
+It seems clear that polynomials computation are the bottleneck so a more efficient library like [poly](https://hackage.haskell.org/package/poly) would perhaps help?
+
 ## 2024-06-14
 
 ### Markov-chain simuations
 
 Full-coverage property-based tests we added for the Markov-chain simulations. In particular, the simulation results are now checked against extact analytic results for the expected probability distributions.
+
+### More investigations into ΔQ upgrade
+
+Trying to plot a simple graph for the block diffusion which combines header + block diffusions, yields something which does not make sense either
+Even the `oneMTU` simple distribution is wrongly plotted: The y scale stops below 0.3 and the x-scale goes up to 1.2 while the
+
+The CDF is computed correctly:
+
+```
+  CDF
+    ( Pieces
+        { getPieces =
+            [ Piece{basepoint = 0.0, object = Ph (Poly [0.0])}
+            , Piece{basepoint = 0.3333333333333333, object = H 0.0 1.2e-2}
+            , Piece{basepoint = 0.3333333333333333, object = Ph (Poly [1.2e-2])}
+            , Piece{basepoint = 0.6666666666666666, object = H 1.2e-2 6.9e-2}
+            , Piece{basepoint = 0.6666666666666666, object = Ph (Poly [6.9e-2])}
+            , Piece{basepoint = 1.0, object = H 6.9e-2 0.268}
+            , Piece{basepoint = 1.0, object = Ph (Poly [0.268])}
+            ]
+        }
+    )
+```
+
+so the problem seems to be in the plotting functions?
+
+Looking at [asDiscreteCDF](https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/3fdab53911386c1641cf0acc1c8e4afda416a672/src/PWPs/IRVs.hs#L238) function which is used in the plotting to compute points. The CDF I get from it as a last sequence which goes beyond 1 and has constant value.
+
+It feels like if the sequence of pairs are inverted: The x value should be the (accumulated) time whereas the y value should the probability mass, but it looks like `makeCDF` is doing the opposite:
+
+```
+cd =
+  Pieces
+    { getPieces =
+        [ Piece{basepoint = 0.0, object = Ph (Poly [0.0])}
+        , Piece{basepoint = 0.3333333333333333, object = H 0.0 1.2e-2}
+        , Piece{basepoint = 0.3333333333333333, object = Ph (Poly [1.2e-2])}
+        , Piece{basepoint = 0.6666666666666666, object = H 1.2e-2 6.9e-2}
+        , Piece{basepoint = 0.6666666666666666, object = Ph (Poly [6.9e-2])}
+        , Piece{basepoint = 1.0, object = H 6.9e-2 0.268}
+        , Piece{basepoint = 1.0, object = Ph (Poly [0.268])}
+        ]
+    }
+```
+
+Turns out the way to compute a distribution `fromQTA` has swapped the two components of the pair: It's the time first and then probability.
+This makes sense but of course lead to confusion when upgrading.
+
+Computing the distribution for a complicated expression does not crash after swapping x/y but it loops.
+
+OK, the problem is still there but with different values:
+
+```
+plot-dqsd: Invalid polynomial interval width: (0.0,8.4e-2,0.367,0.367)
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:167:32 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolvePolyDeltas, called at src/PWPs/PolyDeltas.hs:189:23 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolveIntervals, called at src/PWPs/Piecewise.hs:276:43 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.Piecewise
+  <+>, called at src/PWPs/IRVs.hs:317:26 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.IRVs
+  <+>, called at src/DeltaQ/PWPs.hs:58:14 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  convolve, called at src/DeltaQ/Model/DeltaQ.hs:202:28 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.Model.DeltaQ
+  $dmnWayConvolve, called at src/DeltaQ/PWPs.hs:54:10 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  nWayConvolve, called at plot-dqsd.hs:48:17 in main:Main
+```
+
+Feels like the `disaggregate` function might the actual culprit, where it creates a zero-length interval for a `Pd` polynomial?
+the problem is in the interplay of `disaggregate` and `convolveIntervals`
+In the latter, I added some trace and assertions that show we can produce a sequence of `Pd` for the same point, leading to this 0 interval issue
+
+https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/3fdab53911386c1641cf0acc1c8e4afda416a672/src/PWPs/PolyDeltas.hs#L183
+
+Here is the data that's causing the duplicate points:
+
+```
+plot-dqsd: Duplicate basepoints generated in convolution: [(0.0,Pd (Poly [0.0])),(0.367,Pd (Poly [5.486968449931412e-2])),(0.367,Pd (Poly [0.0]))], lg=0.155, ug=0.15500000000000003, lf=0.212, uf=0.212
+```
+
+So it indeed seems this is a case of rounding issues with `Double`s: The two sums should not be the same, but they end up being because some minute number gets dropped.
+
+Tried to fix the issue in the `aggregate` function by removing duplications for the `Pd` case:
+
+```
+  describe "Aggregate" $ do
+    it "discard 0 polynomial when points are equal" $ do
+      let deltas1 =
+            [ (1.0 :: Double, Pd (Poly [0.0]))
+            , (2.0, Pd (Poly [1.0]))
+            , (2.0, Pd (Poly [0.0]))
+            ]
+          deltas2 =
+            [ (1.0 :: Double, Pd (Poly [0.0]))
+            , (1.5 :: Double, Pd (Poly [2.0]))
+            , (2.0, Pd (Poly [0.0]))
+            , (2.0, Pd (Poly [1.0]))
+            ]
+
+      aggregate deltas1
+        `shouldBe` [(1.0, Pd (Poly [0.0])), (2.0, Pd (Poly [1.0]))]
+      aggregate deltas2
+        `shouldBe` [(1.0, Pd (Poly [0.0])), (1.5 :: Double, Pd (Poly [2.0])), (2.0, Pd (Poly [1.0]))]
+```
+
+No more crash but it now loops.
+
+## 2024-06-13
+
+### ΔQ Upgrade & Debugging
+
+We want to model the votes diffusion and certificates construction impact using ΔQ, particularly to understand how long we can expect reaching a quorum would take. The [dqsd-piecewise-poly](https://github.com/DeltaQ-SD/dqsd-piecewise-poly) library is expected to provide a more accurate way of modeling and computing CDF from ΔQ model, so I wanted to upgrade the existing code (in [peras-delta-q](peras-delta-q)) to this new version.
+
+The library actually depends on (https://github.com/DeltaQ-SD/dqsd-classes) which supposedly provide an interface while keeping the piecewise polynomial implementation "hidden". As working with 2 foreign unpublished and unfinished libraries is cumbersome, I decided to
+
+1. Fork the [ΔQ polynomial](https://github.com/abailly-iohk/dqsd-piecewise-poly) based computation from Peter Thompson.
+2. Incorporate the dqsd-classes package in order to make it self-standing, and implement Peras' model there
+3. "Vendor" the library in peras repository to be able to iterate faster
+4. Remove old copy-pasted code from peras-delta-q and only keep the Peras-relevant part
+
+It's really unclear what's the relationship between the various modules and packages is. The interface has changed, there's no more funny symbols which is good, but the classes seeem a bit disconnected from the implementaiton.
+
+I should probably use the `plotCDF` et al. functions from https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/16d2c2f6913ffb85153d6cc6be0107d2c379342d/src/DeltaQ/Model/Utilities.hs#L62 which provides a higher-level interface than trying to do it myself?
+
+I finally manage to get old ΔQ models (eg. basic diffusion of headers w/ and w/o certs) to compile with newest version of dqsd-poly but I got an error:
+
+```
+plot-dqsd: Invalid polynomial interval width
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:175:34 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+```
+
+Added some more details about the error (eg. textual description of the problem) to understand where it comes from, input data should probably be sanitized. So the problem stemmed from initial `(0,0)` in the QTA list which is not needed anymore.
+
+I managed to get a better callstack, sprinkling `HasCallStack` constraints up the call tree, and I have another error:
+
+```
+plot-dqsd: Invalid polynomial interval width: (0.0,2.0,4.05,4.05)
+CallStack (from HasCallStack):
+  error, called at src/PWPs/PolyDeltas.hs:172:32 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolvePolyDeltas, called at src/PWPs/PolyDeltas.hs:194:23 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.PolyDeltas
+  convolveIntervals, called at src/PWPs/Piecewise.hs:259:43 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.Piecewise
+  <+>, called at src/PWPs/IRVs.hs:317:26 in dqsd-piecewise-poly-4.0.0.0-inplace:PWPs.IRVs
+  <+>, called at src/DeltaQ/PWPs.hs:58:14 in dqsd-piecewise-poly-4.0.0.0-inplace:DeltaQ.PWPs
+  convolve, called at plot-dqsd.hs:29:7 in main:Main
+  ⊕, called at plot-dqsd.hs:54:15 in main:Main
+```
+
+We spend some time with BB and JC debugging the error, going deeper
+into the library.
+
+* The error happens because the input to the `convolvePolyDeltas` function are 2 polynomials with one of them over a zero-length interval, which should not be possible
+* We investigate various functions related to this computation
+* It seems like a candidate for our troubles is https://github.com/abailly-iohk/dqsd-piecewise-poly/blob/59d8b6b51c9b2fd951a5fcf29a0cfdb7f61cfed9/src/PWPs/Piecewise.hs#L67 which should recursively compute a fixpoint where no more pairwise merges are possible
+* IT would be a good idea to test that!
+
+I finally get a failing test for `mergePieces` when one has more than 2 mergeable pieces in a row
+
+The test says:
+
+```haskell
+    it "keeps merging mergeable pieces" $ do
+      let pieces :: Pieces Double (PolyDelta Double)
+          pieces =
+            Pieces
+              [ Piece 1 (Pd (Poly [1]))
+              , Piece 2 (Pd (Poly [1]))
+              , Piece 3 (Pd (Poly [1]))
+              , Piece 4 (Pd (Poly [2]))
+              ]
+      mergePieces pieces `shouldBe` Pieces [Piece 1 (Pd (Poly [1])), Piece 4 (Pd (Poly [2]))]
+```
+
+and of course it fails:
+
+```
+PWPs.Piecewise
+  Merge pieces
+    keeps merging mergeable pieces [✘]
+
+Failures:
+
+  test/PWPs/PiecewiseSpec.hs:14:26:
+  1) PWPs.Piecewise, Merge pieces, keeps merging mergeable pieces
+       expected: Pieces {
+                   getPieces = [Piece {
+                   basepoint = 1.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 4.0,
+                   object = Pd (Poly [2.0])
+                 }]
+                 }
+        but got: Pieces {
+                   getPieces = [Piece {
+                   basepoint = 1.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 3.0,
+                   object = Pd (Poly [1.0])
+                 }, Piece {
+                   basepoint = 4.0,
+                   object = Pd (Poly [2.0])
+                 }]
+                 }
+
+  To rerun use: --match "/PWPs.Piecewise/Merge pieces/keeps merging mergeable pieces/" --seed 1252471448
+```
+
+I fixed the code to make the test pass, but the code still crashes.
+
+I end up handling the zero-width interval case for polynomial segments
+explicitly in the code. This fixes the issue but lead to further
+errors down the line when displaying the CDF. I fixed those issues
+too, simplify replacing a `>=` sign with `>` and it finally generated
+a graph, which does not make sense.
+
+![](peras-delta-q/network-with-cert-wrong.svg)
 
 ## 2024-06-12
 
