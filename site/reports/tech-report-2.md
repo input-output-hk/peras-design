@@ -56,6 +56,7 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 $$
 P = \sum_{0 \le m \lt n \le U} {U\choose{m}} p^m (1-p)^{U-m} {U\choose{n}} q^n (1-q)^{U-n}
 $$
+
 and the following R function implements this computation:
 
 ```R
