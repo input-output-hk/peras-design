@@ -12,6 +12,7 @@ open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
 
 open Nat using (_≟_; _≤?_; _≤ᵇ_)
+open L using (concat)
 open L.All using (All)
 open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
@@ -52,17 +53,6 @@ References:
 
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
-<!--
-```agda
--- We introduce the relation ≐ to denote that two lists have the same elements
-open import Relation.Binary.Core using (Rel)
-
-infix 2 _≐_
-
-_≐_ : Rel (List Block) _
-P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
-```
--->
 
 ### Parameters
 
@@ -173,7 +163,7 @@ has to fulfil all the properties mentioned below:
   record IsTreeType {T : Type}
                     (tree₀ : T)
                     (newChain : T → Chain → T)
-                    (allBlocks : T → List Block)
+                    (allChains : T → List Chain)
                     (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
@@ -190,10 +180,13 @@ as proposed in the paper.
 
 ```agda
       instantiated :
-        allBlocks tree₀ ≡ block₀ ∷ []
+        preferredChain tree₀ ≡ block₀ ∷ []
 
       instantiated-certs :
         certs tree₀ ≡ []
+
+      instantiated-votes :
+        votes tree₀ ≡ []
 
       genesis-block-slotnumber :
         getSlotNumber (slotNumber block₀) ≡ 0
@@ -201,16 +194,7 @@ as proposed in the paper.
       genesis-block-no-certificate :
         certificate block₀ ≡ nothing
 
-      genesis-cert-roundnumber :
-        getRoundNumber (round cert₀) ≡ 0
-
-      extendable-votes : ∀ (t : T) (v : Vote)
-        → allBlocks (addVote t v) ≐ allBlocks t
-
       extendable-chain : ∀ (t : T) (c : Chain)
-        → certsFromChain c ⊆ᶜ certs (newChain t c)
-
-      extendable-chain' : ∀ (t : T) (c : Chain)
         → certs (newChain t c) ≡ certsFromChain c ++ certs t
 
       valid : ∀ (t : T)
@@ -222,11 +206,11 @@ as proposed in the paper.
             cts = certs t
           in
           ValidChain c
-        → c ⊆ allBlocks t
+        → c ∈ allChains t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
       self-contained : ∀ (t : T)
-        → preferredChain t ⊆ allBlocks t
+        → preferredChain t ∈ allChains t
 
       valid-votes : ∀ (t : T)
         → All ValidVote (votes t)
@@ -260,7 +244,7 @@ The block tree type is defined as follows:
     field
       tree₀ : T
       newChain : T → Chain → T
-      allBlocks : T → List Block
+      allChains : T → List Chain
       preferredChain : T → Chain
 
       addVote : T → Vote → T
@@ -273,7 +257,7 @@ The block tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ newChain allBlocks preferredChain
+                      tree₀ newChain allChains preferredChain
                       addVote votes certs cert₀
 
     latestCertOnChain : T → Certificate
@@ -299,6 +283,9 @@ The block tree type is defined as follows:
     preferredChain′ (MkSlotNumber sl) =
       let cond = (_≤? sl) ∘ slotNumber'
       in filter cond ∘ preferredChain
+
+    allBlocks : T → List Block
+    allBlocks = concat ∘ allChains
 ```
 ### Additional parameters
 
