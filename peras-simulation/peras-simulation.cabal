@@ -23,6 +23,8 @@ library
     import:           warnings
     exposed-modules: Peras.Abstract.Protocol.BlockCreation
                      Peras.Abstract.Protocol.Crypto
+                     Peras.Abstract.Protocol.Conformance.Model
+                     Peras.Abstract.Protocol.Conformance.Test
                      Peras.Abstract.Protocol.Diffusion
                      Peras.Abstract.Protocol.Environment
                      Peras.Abstract.Protocol.Fetching
@@ -53,6 +55,8 @@ library
                       peras-hs,
                       quickcheck-dynamic,
                       text,
+                      stm,
+                      pretty
     hs-source-dirs:   src
     default-language: Haskell2010
 
