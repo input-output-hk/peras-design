@@ -1,12 +1,18 @@
 ## 2024-06-17
 
-#### ΔQ Modeling for Votes
+### New adversarial scenario
+
+The new adversarial scenario in the 2nd tech report partially answers the question "What is the probability that an adversarial chain receives the next boost?". (Work is in progress on a more sophisticated analysis.)
+
+![Per-round probability of dishonest boost when the active-slot coeffficient is 10%.](../0c1e1ac76258cdcbc7c5c78c3cf03b13ad2d67f5/site/diagrams/adversarial-chain-receives-boost.plot.png)
+
+### ΔQ Modeling for Votes
 
 Quickly tried to replace custom `SimplePolynomials` with [poly](https://hackage.haskell.org/package/poly) package but of course it does not have `convolve` function that does the core of the logic to compute the convolution of polynomials over 2 intervals in 3 pieces.  It has however DFT computations that could be useful as it seems more efficient to compute convolution of polynomials with FFT but I am out of my depth here and would need more research.
 
 **Decision**: For the time being, we are going to use the existing [numerical MC approximation based library](https://github.com/abailly-iohk/pnsol-deltaq-clone).
 
-#### Troubleshooting ΔQ
+### Troubleshooting ΔQ
 
 Plotting ΔQ distribution for Peras currently takes forever, seemingly when computing `nWayConvolve` for a "large" number of different possible degrees. Reducing the number to 2 produces a graph, going to try with increasing number of iteams.
 

@@ -66,4 +66,4 @@ prob <- function(U, p, q) {
 
 ***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
 
-![Per-round probability of dishonest boost when the active-slot coeffficient is 10%.](adversarial-chain-receives-boost.plot.png)
+![Per-round probability of dishonest boost when the active-slot coeffficient is 10%.](../diagrams/adversarial-chain-receives-boost.plot.png)
