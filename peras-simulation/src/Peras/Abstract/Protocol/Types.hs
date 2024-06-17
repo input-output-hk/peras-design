@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
-module Peras.Abstract.Protocol.Types where
+module Peras.Abstract.Protocol.Types
+  ( module Peras.Abstract.Protocol.Types
+  , module Peras.Abstract.Protocol.Params
+  ) where
 
 import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
@@ -19,72 +20,7 @@ import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
-
-data PerasParams = MkPerasParams
-  { perasU :: Integer
-  -- ^ Round length, in slots
-  , perasA :: Integer
-  -- ^ Certificate expiration age, in slots
-  , perasR :: Integer
-  -- ^ Length of chain-ignorance period, in rounds
-  , perasK :: Integer
-  -- ^ Length of cool-down period, in rounds
-  , perasL :: Integer
-  -- ^ Minimum age for voted block, in slots
-  , perasτ :: Integer
-  -- ^ Quorum size, as a percentage of total expected votes
-  , perasB :: Integer
-  -- ^ Certificate boost, in blocks
-  , perasT :: Integer
-  -- ^ Termination bound for preagreement, in slots
-  , perasΔ :: Integer
-  -- ^ Delivery guarantee for diffusion, in slots
-  }
-  deriving (Eq, Generic, Show)
-
-instance FromJSON PerasParams where
-  parseJSON =
-    A.withObject "PerasParams" $ \o -> do
-      perasU <- o A..: "U"
-      perasA <- o A..: "A"
-      perasR <- o A..: "R"
-      perasK <- o A..: "K"
-      perasL <- o A..: "L"
-      perasτ <- o A..: "τ"
-      perasB <- o A..: "B"
-      perasT <- o A..: "T"
-      perasΔ <- o A..: "Δ"
-      pure MkPerasParams{..}
-
-instance ToJSON PerasParams where
-  toJSON MkPerasParams{..} =
-    A.object
-      [ "U" A..= perasU
-      , "A" A..= perasA
-      , "R" A..= perasR
-      , "K" A..= perasK
-      , "L" A..= perasL
-      , "τ" A..= perasτ
-      , "B" A..= perasB
-      , "T" A..= perasT
-      , "Δ" A..= perasΔ
-      ]
-
--- FIXME: What are the actual values of T_heal, T_CQ, and T_CP?
--- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
-instance Default PerasParams where
-  def =
-    MkPerasParams
-      { perasU = 20
-      , perasA = 200
-      , perasR = 10
-      , perasK = 17
-      , perasL = 10
-      , perasτ = 3
-      , perasB = 10
-      , perasT = 15
-      , perasΔ = 5
-      }
+import Peras.Abstract.Protocol.Params
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
 data PerasState = MkPerasState

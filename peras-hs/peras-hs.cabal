@@ -23,7 +23,6 @@ library
     Peras.Message
     Peras.Numbering
     Peras.Orphans
-    Peras.SmallStep
   other-modules:
   hs-source-dirs:   src
   build-depends:
