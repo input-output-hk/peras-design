@@ -19,7 +19,7 @@ record Params : Set where
         B : ℕ -- FIXME: Float
         W : ℕ
 
-        T-nonZero : NonZero U
+        ⦃ T-nonZero ⦄ : NonZero U
 
 ```
 #### U
