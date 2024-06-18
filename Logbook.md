@@ -43,6 +43,14 @@
 
 ![Vote diffusion & validation](peras-delta-q/path.svg)
 
+### New adversarial scenarios
+
+- No honest quorum in round
+- Adversarial quorum
+- No certificate in honest block
+- Adversarial chain receives boost
+    - Variant 2
+
 ## 2024-06-17
 
 ### New adversarial scenario
