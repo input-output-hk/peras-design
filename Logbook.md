@@ -21,6 +21,28 @@
 - Adversarial chain receives boost
     - Variant 2
 
+### Votes details
+
+* Started working on detailing the voting algorithm, data structures, and certificates process.
+* Interestingly, things are more complicated when one looks at them closely enough.
+* I want to provide some detailed code and benchmarks, so I had to look at how VRF voting is done within the node, and import actual VRF and KES functions from `cardano-base`
+* Currently a bit confused by the committee election (sortition) algorithm, but I found a good and simple explanation in the [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) paper so will just use that for the time being
+* Also need to detail the stake-based certificate construction algorithm in ALBA
+
+### Modeling vote diffusion
+
+* Worked w/ Brian on modeling vote diffusion with old version of ΔQ library.
+* We reused the data from previous model about the 1-hop delay and distance distribution in small graph assuming degree distribution of 15
+* Assume a vote fits in a single MTU so there's a single transmission for each vote
+* Also assumes that verifying a single vote (VRF + KES) takes 1.3ms (from [cardano-base](https://github.com/input-output-hk/cardano-base/blob/a9bfdf50b7794c962f73f06763546dc65257720e/cardano-crypto-tests/README.md#L1) benchmarks), so verifying 1000 votes takes 1.3s and on average a vote is verified after 0.65s
+* We consider the delay probability distribution function to represent the fraction of votes that are available after some delay, taking into account the topology of the network and validation time.
+* We assume that network contention does not impact votes diffusion
+* This model (see picture) below seems to demonstrate vote diffusion and validation can happen quite quickly. The 75% line represents the expected time to reach a quorum which is around 1.5s.
+* We note that given round length will be in the order of 120-150 seconds, which provides ample time for voting to happend and quorum to be reached
+  * Note that it could quite interesting to validate this empirically using _netsim_ or _PeerNet_
+
+![Vote diffusion & validation](peras-delta-q/path.svg)
+
 ## 2024-06-17
 
 ### New adversarial scenario
