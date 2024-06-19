@@ -321,16 +321,16 @@ in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 ```agda
     IsVR-1A : RoundNumber → T → Set
-    IsVR-1A r t = (getRoundNumber r) ≡ roundNumber (latestCertSeen t) + 1
+    IsVR-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
 
     IsVR-1A? : (r : RoundNumber) → (t : T) → Dec (IsVR-1A r t)
-    IsVR-1A? r t = (getRoundNumber r) ≟ roundNumber (latestCertSeen t) + 1
+    IsVR-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
 
-    IsVR-1B : RoundNumber → T → Set
-    IsVR-1B r t = (latestCertSeen t) PointsInto (preferredChain t)
+    IsVR-1B : T → Set
+    IsVR-1B t = (latestCertSeen t) PointsInto (preferredChain t)
 
-    IsVR-1B? : (r : RoundNumber) → (t : T) → Dec (IsVR-1B r t)
-    IsVR-1B? r t = (latestCertSeen t) PointsInto? (preferredChain t)
+    IsVR-1B? : (t : T) → Dec (IsVR-1B t)
+    IsVR-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
 
     IsVR-2A : RoundNumber → T → Set
     IsVR-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
@@ -353,7 +353,7 @@ cool-down phase.
 
       Regular : ∀ {r t} →
         ∙ IsVR-1A r t
-        ∙ IsVR-1B r t
+        ∙ IsVR-1B t
           ───────────────
           VoteInRound r t
 
@@ -364,17 +364,35 @@ cool-down phase.
           VoteInRound r t
 ```
 ```agda
+    vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1A r t) × (¬ IsVR-2A r t)  → ¬ VoteInRound r t
+    vr-1a-2a (x , _) (Regular x₁ x₂) = contradiction x₁ x
+    vr-1a-2a (_ , y) (AfterCooldown x₁ x₂) = contradiction x₁ y
+
+    vr-1a-2b : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1A r t) × (¬ IsVR-2B r t)  → ¬ VoteInRound r t
+    vr-1a-2b (x , _) (Regular x₁ x₂) = contradiction x₁ x
+    vr-1a-2b (_ , y) (AfterCooldown x₁ x₂) = contradiction x₂ y
+
+    vr-1b-2a : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1B t) × (¬ IsVR-2A r t)  → ¬ VoteInRound r t
+    vr-1b-2a (x , _) (Regular x₁ x₂) = contradiction x₂ x
+    vr-1b-2a (_ , y) (AfterCooldown x₁ x₂) = contradiction x₁ y
+
+    vr-1b-2b : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1B t) × (¬ IsVR-2B r t)  → ¬ VoteInRound r t
+    vr-1b-2b (x , _) (Regular x₁ x₂) = contradiction x₂ x
+    vr-1b-2b (_ , y) (AfterCooldown x₁ x₂) = contradiction x₂ y
+```
+```agda
     VoteInRound? : (r : RoundNumber) → (t : T) → Dec (VoteInRound r t)
     VoteInRound? r t
       with IsVR-1A? r t
-      with IsVR-1B? r t
+      with IsVR-1B? t
       with IsVR-2A? r t
       with IsVR-2B? r t
     ... | yes p | yes q | _     | _     = yes (Regular p q)
     ... | _     | _     | yes p | yes q = yes (AfterCooldown p q)
-    ... | no p  | yes q | _     | _     = no {!!}
-    ... | yes p | no q  | _     | _     = no {!!}
-    ... | no p  | no q  | _     | _     = no {!!}
+    ... | no p  | _     | no q  | _     = no (vr-1a-2a (p , q))
+    ... | no p  | _     | _     | no q  = no (vr-1a-2b (p , q))
+    ... | _     | no p  | no q  | _     = no (vr-1b-2a (p , q))
+    ... | _     | no p  | _     | no q  = no (vr-1b-2b (p , q))
 ```
 ### State
 
