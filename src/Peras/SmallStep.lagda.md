@@ -544,7 +544,16 @@ delay the message.
 
 Certificates are conditionally added to a block. The following function deterimes
 if there needs to be a certificate provided for a given voting round and a local
-block-tree. The conditions (a) - (c) are reflected in the Peras paper.
+block-tree.
+
+The conditions (a) - (c) are reflected in Figure 2 in the *Peras*
+paper
+
+a) There is no certificate from 2 rounds ago in certs
+b) The last seen certificate is not expired
+c) The last seen certificate is from a later round than
+   the last certificate on chain
+
 ```agda
     needCert : RoundNumber → T → Maybe Certificate
     needCert (MkRoundNumber r) t =
@@ -586,21 +595,17 @@ Helper function for creating a block
         }
 ```
 A party can create a new block by adding it to the local block tree and
-gossiping the block creation messages to the other parties. Block creation is
-possible, if
+diffuse the block creation messages to the other parties. Block creation is
+possible, if as in *Praos*
+
   * the block signature is correct
   * the party is the slot leader
 
 Block creation updates the party's local state and for all other parties a
-message is added to be consumed immediately.
+message is added to the message buffer
 ```agda
     infix 2 _⊢_↷_
-```
-During regular execution of the protocol, i.e. not in cool-down phase, no
-certificate reference is included in the block. The exact conditions to
-decide wheter a certificate has to be included are (see: Block creation in
-Figure 2)
-```agda
+
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {π} {σ}
@@ -620,9 +625,6 @@ Figure 2)
                 , p) to t
                 diffuse M
 ```
-Rather than creating a delayed block, an adversary can honestly create it and
-delay the message.
-
 ## Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
