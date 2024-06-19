@@ -37,7 +37,6 @@ open Party
 
 The small-step semantics of the **Peras** protocol define the evolution of the
 global state of the system modelling *honest* and *adversarial* parties. The
-number of parties is fixed during the execution of the protocol. In addition the
 model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
 adversarial parties share adversarial state, which is generic state.
@@ -119,10 +118,9 @@ Messages are put into an envelope and assigned to a party. The message can be
 delayed.
 ```agda
   record Envelope : Type where
-    constructor ⦅_,_,_,_⦆
+    constructor ⦅_,_,_⦆
     field
       partyId : PartyId
-      honesty : Honesty partyId
       message : Message
       delay : Delay
 
@@ -295,13 +293,11 @@ following parameters
   * The type of the block-tree
   * adversarialState₀ is the initial adversarial state
   * Tx selection function per party and slot number
-  * The list of parties
 
 ```agda
   module _ {T : Type} {blockTree : TreeType T}
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
-           {parties : Parties} -- TODO: use parties from blockTrees
 
            where
 
@@ -445,8 +441,8 @@ history. "add and diffuse" from the paper
       record M
         { blockTrees = set p l blockTrees
         ; messages =
-            map (uncurry ⦅_,_, m , d ⦆)
-              (filter (¬? ∘ (p ≟_) ∘ proj₁) parties)
+            map ⦅_, m , d ⦆
+              (filter (¬? ∘ (p ≟_)) $ map proj₁ blockTrees)
             ++ messages
         ; history = m ∷ history
         }
@@ -471,7 +467,7 @@ the local state
 ```agda
       honest : ∀ {p} {t t′} {m} {N} → let open State N in
           blockTrees ⁉ p ≡ just t
-        → (m∈ms : ⦅ p , Honest , m , 𝟘 ⦆ ∈ messages)
+        → (m∈ms : ⦅ p , m , 𝟘 ⦆ ∈ messages)
         → t [ m ]→ t′
           ---------------------------------------------
         → Honest {p} ⊢
@@ -483,11 +479,11 @@ the local state
 An adversarial party might delay a message
 ```agda
       corrupt : ∀ {p} {as} {m} {N} → let open State N in
-          (m∈ms : ⦅ p , Corrupt , m , 𝟘 ⦆ ∈ messages)
+          (m∈ms : ⦅ p , m , 𝟘 ⦆ ∈ messages)
           ----------------------------------------------
         →  Corrupt {p} ⊢
           N [ m ]⇀ record N
-            { messages = m∈ms ∷ˡ= ⦅ p , Corrupt , m , 𝟙 ⦆
+            { messages = m∈ms ∷ˡ= ⦅ p , m , 𝟙 ⦆
             ; adversarialState = as
             }
 ```

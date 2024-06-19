@@ -77,7 +77,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (party₁ , Honest) ∷ (party₂ , Honest) ∷ []
 
-      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection}
 ```
 ```agda
       createBlock' : SlotNumber → PartyId → T → Block
@@ -85,7 +85,7 @@ This is a very simple example of the execution of the protocol in the small-step
         let
           π = createLeadershipProof s p
           σ = createBlockSignature p
-        in createBlock {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
+        in createBlock {T} {blockTree} {S} {adversarialState₀} {txSelection} s p π σ t
 ```
 ```agda
       createVote' : SlotNumber → PartyId → T → Vote
@@ -94,7 +94,7 @@ This is a very simple example of the execution of the protocol in the small-step
           r = v-round s
           π = createMembershipProof r p
           σ = createVoteSignature p
-        in createVote {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
+        in createVote {T} {blockTree} {S} {adversarialState₀} {txSelection} s p π σ t
 ```
 Blocks and Votes
 ```agda
@@ -158,7 +158,7 @@ Based on properties of the blocktree we can show the following
       x∧false≡false {false} = refl
       x∧false≡false {true} = refl
 
-      needCert-tree₀≡nothing : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      needCert-tree₀≡nothing : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection}
                 (MkRoundNumber 0) tree₀ ≡ nothing
       needCert-tree₀≡nothing
         rewrite roundNumber-latestCertSeen-tree₀≡0

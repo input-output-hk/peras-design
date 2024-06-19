@@ -204,18 +204,17 @@ Reflexive, transitive closure
 -->
 ### Theorem: The voting string in any execution is valid
 ```agda
-    module _ {parties : Parties}
-             {S : Set} (adversarialState₀ : S)
+    module _ {S : Set} (adversarialState₀ : S)
              (txSelection : SlotNumber → PartyId → List Tx)
              where
 
       open State
       open IsTreeType
 
-      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection}
 
       states₀ : AssocList PartyId T
-      states₀ = map (λ where (p , _) → (p , tree₀)) parties
+      states₀ = L.[]
 
       N₀ : GlobalState
       N₀ = ⟦ MkSlotNumber 0

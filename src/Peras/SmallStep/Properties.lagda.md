@@ -94,7 +94,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
     open TreeType blockTree
 
-    GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+    GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection}
 
     states₀ : AssocList PartyId T
     states₀ = map (λ where (p , _) → (p , tree₀)) parties
@@ -219,8 +219,8 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     postulate
       e∈m′∈ms∷=m′ : ∀ {e : Envelope} {m : Message} {p} {ms}
         → e ∈ ms
-        → (m′∈ms : ⦅ p , Corrupt , m , zero ⦆ ∈ ms )
-        → e ∈ (m′∈ms Any.∷= (⦅ p , Corrupt , m , suc zero ⦆))
+        → (m′∈ms : ⦅ p , m , zero ⦆ ∈ ms )
+        → e ∈ (m′∈ms Any.∷= (⦅ p , m , suc zero ⦆))
 
       m′∈ms─m∈ms : ∀ {m m′ : Envelope} {ms}
         → (m∈ms : m ∈ ms)
