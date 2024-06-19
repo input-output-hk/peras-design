@@ -45,15 +45,18 @@ module _ ⦃ _ : Hashable Block ⦄
 
   modelParams : PerasParams
   modelParams = record
-    { perasA = A
+    { perasU = U
+    ; perasA = A
     ; perasR = R
     ; perasL = L
     ; perasτ = τ
     ; perasB = B
     ; perasT = 1      -- TODO: Missing from Params
-    ; perasΔ = 1      -- TODO: Missing from Params
+    ; perasΔ = Δ
     }
-    where open Params params
+    where
+      open Params params
+      open Network network
 
   modelState : State → NodeModel
   modelState s = record
