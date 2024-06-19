@@ -19,6 +19,11 @@ monofont: Monaco
 >     - The proposed block for voting is simply the youngest block at least L slots old on the locally preferred chain.
 > - Do not track certificate arrival time: Δ ≡ 0
 > - The initial set of certificates is the genesis certificate, not the empty set.
+> - Clarified ambiguities.
+> - Omit irrelevant details.
+
+> [!Question]
+> In the sections below, should we specify how equivocation is handled?
 
 ## Variables
 
@@ -33,6 +38,9 @@ The protocol keeps track of the following variables, initialized to the values b
 
 ## Fetching
 
+> [!Question]
+> In `Fe4`, do we want to specify that a new preferred chain is chosen only if the previously preferred chain is less weightier? As it stands now, a node might keep switching its preferred chain if there is a tie.
+
 At the beginning of each slot:
 - `Fe1`: Fetch new chains $\mathcal{C}_\text{new}$ and votes $\mathcal{V}_\text{new}$.
 - `Fe2`: Add any new chains in $\mathcal{C}_\text{new}$ to $\mathcal{C}$, add any new certificates contained in chains in $\mathcal{C}_\text{new}$ to $\mathsf{Certs}$.
@@ -42,9 +50,12 @@ At the beginning of each slot:
     - `CW1`: Let $\mathsf{certCount}_\mathsf{P}(C)$ denote the number of such certificates, i.e., $\mathsf{certCount}_\mathsf{P}(C) := \left| \left\{ \mathsf{cert} \in \mathsf{Certs} : \mathsf{cert} \text{ votes for a block on } C \right\} \right|$.
     - `CW2`: Then, the weight of the chain $C$ in $\mathsf{P}$'s view is $\mathsf{Wt}_\mathsf{P}(C) := \mathsf{len}(C) + B \cdot \mathsf{certCount}_\mathsf{P}(C)$ for a protocol parameter $B$.
 - `Fe5`: Set $\mathsf{cert}^\prime$ to the certificate with the highest round number in $\mathsf{Certs}$.
-- `Fe6`: Set $\mathsf{cert}^*$ to the certificate with the highest round number on $C_\text{pref}$.
+- `Fe6`: Set $\mathsf{cert}^*$ to the certificate with the highest round number on (i.e., included in) $C_\text{pref}$.
 
 ## Block creation
+
+> [!Question]
+> Do we want to specify that block creation occurs after fetching?
 
 Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some round $r$:
 
@@ -57,7 +68,10 @@ Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some roun
         - `BC7`: and to $\bot$ otherwise,
 - `BC8` Extend $C_\text{pref}$ by $\mathsf{block}$, add the new $C_\text{pref}$ to $\mathcal{C}$ and diffuse it.
 
-# Voting
+## Voting
+
+> [!Question]
+> Do we want to specify that voting occurs after fetching and block creation?
 
 Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
@@ -65,7 +79,7 @@ Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 - `Vo2`: If party $\mathsf{P}$ is (voting) committee member in a round $r$,
     - either
         - `VR-1A`: $\mathsf{round}(\mathsf{cert}^\prime) = r-1$ and $\mathsf{cert}^\prime$ was received before the end of round $r-1$, and
-        - `VR-1B`: $\mathsf{block}$ extends the block certified by $\mathsf{cert}^\prime$,
+        - `VR-1B`: $\mathsf{block}$ extends (i.e., has the ancestor or is identical to) the block certified by $\mathsf{cert}^\prime$,
     - or
         - `VR-2A`: $r \geq \mathsf{round}(\mathsf{cert}^\prime) + R$, and
         - `VR-2B`: $r = \mathsf{round}(\mathsf{cert}^*) + c \cdot K$ for some $c > 0$,
