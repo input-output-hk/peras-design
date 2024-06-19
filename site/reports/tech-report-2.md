@@ -134,9 +134,9 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 | Preagreement termination | $T$ | slots | The maximum number of slots needed for preagreement. | $T \lt U$ | Preagreement must complete before the round ends. |
 | Network diffusion time | $\Delta$ | slots | Upper limit on the time needed to diffuse a message to all nodes. | $\Delta \gt 0$ | Messages have a finite delay. |
 | Active slot coefficient | $\alpha$ | 1/slots | The probability that a party will be the slot leader for a particular slot. | $0 \lt \alpha \leq 1$ | Blocks must be produced. |
-| Healing time | $T_\text{heal}$ | slots | Healing period to mitigate a strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |
-| Chain-quality time | $T_\text{CQ}$ | slots | Ensure the presence of at least one honest block on the chain. | $T_\text{CQ} ≟ \mathcal{O} \left( \left( \log (1 - \alpha) \right)^{-1} \right)$ | A least one honest block must be produced. |
-| Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} ≟ \mathcal{O} \left( k / \alpha \right)$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
+| Healing time | $T_\text{heal}$ | slots | Healing period to mitigate a strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B^2 / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |
+| Chain-quality time | $T_\text{CQ}$ | slots | Ensure the presence of at least one honest block on the chain. | $T_\text{CQ} ≟ \mathcal{O} \left( \alpha^{-1} \right)$ | A least one honest block must be produced. |
+| Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} \approx k / \alpha$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
 | Security parameter | $k$ | blocks | The Ouroboros Praos security parameter. | $k = 2160$ | Value for the Cardano mainnet. |
 
 *Note that parameters $T$ and $\Delta$ are not used in this initial specification of the Peras protocol.*
@@ -161,7 +161,10 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 # Analyses of adversarial scenarios
 
 > [!CAUTION]
-> Several correctly-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
+> Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
+
+> [!CAUTION]
+> Check all of the mathematical derivations in this section.
 
 In this section we use the following notation:
 
@@ -356,7 +359,74 @@ function (U, p, q) {
 
 ![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](../diagrams/adversarial-chain-receives-boost-variant.plot.png)
 
-# Recommendations for Peras Parameters
+## Healing from adversarial boost
+
+***Question:*** How long does it take to neutralize the adversarial advantage of a certificate?
+
+***Relevance:*** "During the initial “healing” phase of the cooldown period, parties continue with standard Nakamoto block creation until the potential advantage of B that the adversary could gain with a certificate is neutralized." This healing time helps determine the value of the certificate-expiration time $A$ and the chain-ignorance period $R$.
+
+***Risk:*** An adversary can cause their fork to be preferred for an extended period if it has a certificate.
+
+***Scenario:*** The honest chain must grow at least $B$ blocks longer than the adversarial chain if it is to resist the adversarial chain's receiving a boost from a certificate.
+
+***Analysis:*** During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \lt n + B$ at slot $s$ is
+
+$$
+P = \sum_{0 \le m \lt n + B \le s} \mathbf{p}_\text{binom}(m, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q) = \sum_{n=0}^s \mathbf{P}_\text{binom}(n+B-1, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q)
+$$
+
+and can be computed by the following R function:
+
+```R
+function(s, B, p, q)
+  sum(pbinom((B-1):(s+B-1), s, p) * dbinom(0:s, s, q))
+```
+
+***Example:*** Plot the probability of the honest chain not healing from an adversarial boost, as a function of the healing time $s$ and the boost $B$, under the assumption that the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ a.
+
+![Probability of not healing from an adversarial boost, given 5% active slots.](../diagrams/healing-from-adversarial-boost.plot.png)
+
+## No honest block
+
+***Question:*** What is the probability of not having an honest block during a given period of time?
+
+***Relevance:*** "In the subsequent phase, parties are required to submit the latest certificate they are aware of to the chain." This chain-quality time helps determine the value of the certificate-expiration time $A$ and the chain-ignorance period $R$.
+
+***Risk:*** The registration of a certificate during cooldown might require waiting for an honest block where it can be included.
+
+***Scenario, Analysis, Example:*** The scenario, analysis, and example are identical to the case "No certificate in honest block".
+
+![Probability of not producing an honest block within the chain-quality time, given 5% active slots](../diagrams/no-honest-block.plot.png)
+
+## No common prefix
+
+***Question:***
+
+***Relevance:***
+
+***Risk:***
+
+***Scenario:***
+
+***Analysis:***
+
+***Example:***
+
+## Block rolled back
+
+***Question:***
+
+***Relevance:***
+
+***Risk:***
+
+***Scenario:***
+
+***Analysis:***
+
+***Example:***
+
+# Recommendations for Peras parameters
 
 > [!IMPORTANT]
 > List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.

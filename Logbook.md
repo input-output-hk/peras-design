@@ -1,3 +1,10 @@
+## 2024-06-19
+
+### New adversarial scenarios
+
+- No healing from adversarial boost (i.e., "healing time")
+- No honest block (i.e. "chain-quality time")
+
 ## 2024-06-18
 
 ### New adversarial scenarios
