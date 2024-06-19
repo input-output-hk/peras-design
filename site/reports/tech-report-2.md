@@ -139,7 +139,7 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 | Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} ≟ \mathcal{O} \left( k / \alpha \right)$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
 | Security parameter | $k$ | blocks | The Ouroboros Praos security parameter. | $k = 2160$ | Value for the Cardano mainnet. |
 
-*Note that parameters $T$ and $\Delta$ are not used in this initial specification of the Peras protocol.
+*Note that parameters $T$ and $\Delta$ are not used in this initial specification of the Peras protocol.*
 
 # Simulating Peras
 
@@ -169,9 +169,9 @@ In this section we use the following notation:
 - Round length: $U$
 - Block-selection offset: $L$
 - Certificate expiration: $A$
-- Quorum for creating a certificate: $\tau = \frac{3}{4} C$
+- Quorum for creating a certificate: $\tau = \frac{3}{4} n$
 - Fraction of adversarial stake: $f$
-- Mean size of the voting committee: $C$
+- Mean size of the voting committee: $n$
 - Per-slot probability of a block:
 	- Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
 	- Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
@@ -204,17 +204,17 @@ $$
 P = \mathbf{P}_\text{binom} (\lfloor\tau\rfloor, H, \beta) \approx \mathbf{P}_\text{normal} \left( \tau, H \cdot \beta, \sqrt{H \cdot \beta \cdot (1 - \beta)} \right) \approx \mathbf{P}_\text{normal} \left( \tau, H \cdot \beta, \sqrt{H \cdot \beta} \right)
 $$
 
-Now set the quorum size to the recommended value $\tau = \frac{3}{4} C$ to discover a simple relationship:
+Now set the quorum size to the recommended value $\tau = \frac{3}{4} n$ to discover a simple relationship:
 
 $$
-P \approx \mathbf{P}_\text{normal} \left( f , \frac{1}{4} , \sqrt{\frac{1 - f}{C}} \right)
+P \approx \mathbf{P}_\text{normal} \left( f , \frac{1}{4} , \sqrt{\frac{1 - f}{n}} \right)
 $$
 
 The following R function performs this computation:
 
 ```R
-function(f, C)
-  pnorm(f, 1 / 4, sqrt((1 - f) / C))
+function(f, n)
+  pnorm(f, 1 / 4, sqrt((1 - f) / n))
 ```
 
 ***Example:*** Plot the probability of not having an honest quorum as a function of the adversarial fraction of stake, for various mean sizes of the voting committee.
@@ -234,20 +234,20 @@ function(f, C)
 ***Analysis:*** The analysis proceeds similarly to the "no honest quorum" scenario, but for adversaries having at least a quorum of votes.
 
 $$
-P = 1 - \mathbf{P}_\text{binom} (\lceil\tau\rceil, S - H, \beta) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, (S - H) \cdot \beta, \sqrt{(S - H) \cdot \beta \cdot (1 - \beta)} \right) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, f \cdot C, \sqrt{f \cdot C} \right)
+P = 1 - \mathbf{P}_\text{binom} (\lceil\tau\rceil, S - H, \beta) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, (S - H) \cdot \beta, \sqrt{(S - H) \cdot \beta \cdot (1 - \beta)} \right) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, f \cdot n, \sqrt{f \cdot n} \right)
 $$
 
 Now set the quorum size to the recommended value $\tau = \frac{3}{4} C$ to discover a simple relationship:
 
 $$
-P \approx \mathbf{P}_\text{normal} \left( f , \frac{3}{4} , \sqrt{\frac{f}{C}} \right)
+P \approx \mathbf{P}_\text{normal} \left( f , \frac{3}{4} , \sqrt{\frac{f}{n}} \right)
 $$
 
 The following R function performs this computation:
 
 ```R
-function(f, C)
-  pnorm(f, 3 / 4, sqrt(f / C))
+function(f, n)
+  pnorm(f, 3 / 4, sqrt(f / n))
 ```
 
 ***Example:*** Plot the probability of having an adversarial quorum as a function of the adversarial fraction of stake, for various mean sizes of the voting committee.
