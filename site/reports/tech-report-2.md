@@ -8,6 +8,8 @@ date: 2024-04-17
 monofont: Monaco
 ---
 
+> [!IMPORTANT]
+> Unlike for the first tech report, we should only include analyses that conform to the latest version of the protocol.
 
 # Protocol definition
 
@@ -22,7 +24,7 @@ monofont: Monaco
 > - Clarified ambiguities.
 > - Omit irrelevant details.
 
-> [!Question]
+> [!TIP]
 > In the sections below, should we specify how equivocation is handled?
 
 ## Variables
@@ -38,7 +40,7 @@ The protocol keeps track of the following variables, initialized to the values b
 
 ## Fetching
 
-> [!Question]
+> [!TIP]
 > In `Fe4`, do we want to specify that a new preferred chain is chosen only if the previously preferred chain is less weightier? As it stands now, a node might keep switching its preferred chain if there is a tie.
 
 At the beginning of each slot:
@@ -54,7 +56,7 @@ At the beginning of each slot:
 
 ## Block creation
 
-> [!Question]
+> [!TIP]
 > Do we want to specify that block creation occurs after fetching?
 
 Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some round $r$:
@@ -70,7 +72,7 @@ Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some roun
 
 ## Voting
 
-> [!Question]
+> [!TIP]
 > Do we want to specify that voting occurs after fetching and block creation?
 
 Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
@@ -132,31 +134,33 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 | Preagreement termination | $T$ | slots | The maximum number of slots needed for preagreement. | $T \lt U$ | Preagreement must complete before the round ends. |
 | Network diffusion time | $\Delta$ | slots | Upper limit on the time needed to diffuse a message to all nodes. | $\Delta \gt 0$ | Messages have a finite delay. |
 | Active slot coefficient | $\alpha$ | 1/slots | The probability that a party will be the slot leader for a particular slot. | $0 \lt \alpha \leq 1$ | Blocks must be produced. |
-| Healing time | $T_\text{heal}$ | slots | Healing period to mitigate strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |
+| Healing time | $T_\text{heal}$ | slots | Healing period to mitigate a strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |
 | Chain-quality time | $T_\text{CQ}$ | slots | Ensure the presence of at least one honest block on the chain. | $T_\text{CQ} ≟ \mathcal{O} \left( \left( \log (1 - \alpha) \right)^{-1} \right)$ | A least one honest block must be produced. |
 | Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} ≟ \mathcal{O} \left( k / \alpha \right)$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
 | Security parameter | $k$ | blocks | The Ouroboros Praos security parameter. | $k = 2160$ | Value for the Cardano mainnet. |
+
+*Note that parameters $T$ and $\Delta$ are not used in this initial specification of the Peras protocol.
 
 # Simulating Peras
 
 ## Protocol simulation
 
-> [!TODO]
+> [!IMPORTANT]
 > Discuss the protocol simulation
 
 ## Protocol visualization
 
-> [!TODO]
+> [!IMPORTANT]
 > Write up a description of the Peras visualizer.
 
 ## Markov-chain simulation
 
-> [!TODO]
+> [!IMPORTANT]
 > Discuss the Markov-chain simulation and results
 
 # Analyses of adversarial scenarios
 
-> [!FIXME]
+> [!CAUTION]
 > Several correctly-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
 
 In this section we use the following notation:
@@ -178,10 +182,10 @@ In this section we use the following notation:
 	- Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
 	- Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
 
-> [!TODO]
+> [!IMPORTANT]
 > Discuss the relationship between per-slot probabilities and per-block probabilities.
 
-> [!TODO]
+> [!IMPORTANT]
 > Add paragraphs discussing how to interpret probabilities in terms of the security of a long-running blockchain.
 
 ## No honest quorum in round
@@ -279,12 +283,12 @@ function(A, f, alpha)
 
 ## Adversarial chain receives boost
 
-> [!TODO]
+> [!IMPORTANT]
 > Discuss why there are several variants here.
 
 ### Variant 1
 
-> [!FIXME]
+> [!CAUTION]
 > This variant needs reworking!
 
 ***Question.*** What is the probability that an adversarial chain receives the next boost?
@@ -354,7 +358,7 @@ function (U, p, q) {
 
 # Recommendations for Peras Parameters
 
-> [!TODO]
+> [!IMPORTANT]
 > List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
 
 ## Conclusion
