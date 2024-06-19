@@ -168,7 +168,6 @@ has to fulfil all the properties mentioned below:
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
                     (certs : T → List Certificate)
-                    (cert₀ : Certificate)
          : Type₁ where
 
     field
@@ -258,7 +257,7 @@ The block tree type is defined as follows:
     field
       is-TreeType : IsTreeType
                       tree₀ newChain allChains preferredChain
-                      addVote votes certs cert₀
+                      addVote votes certs
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
