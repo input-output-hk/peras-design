@@ -1,4 +1,5 @@
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Peras.Voting.VoteSpec where
 
@@ -15,15 +16,16 @@ spec :: Spec
 spec = do
   -- voters <- runIO $ generate $ genVoters 3000
   -- prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
-  prop "sortition selects voter according to weight" prop_sortitionSelectsVoterAccordingToWeight
+  prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
 
 prop_sortitionSelectsVoterAccordingToWeight :: Property
 prop_sortitionSelectsVoterAccordingToWeight =
   forAll (choose (1_000_000, 100_000_000)) $ \committeeSize ->
     forAll (choose (1, 50)) $ \flipped ->
       let weight = selectVote committeeSize (flipped % 100) 10_000_000 200_000_000
-       in property True
-            & tabulate "weight" [show (fromIntegral weight `div` 1_000_000)]
+          actual = fromIntegral weight % committeeSize
+       in abs (actual - 5 % 100) <= 2 % 10000
+            & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10000 * actual) / 100)]
 
 -- genVoters :: Int -> Gen [Voter]
 -- genVoters n = vectorOf n arbitrary
