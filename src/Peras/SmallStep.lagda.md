@@ -569,15 +569,13 @@ Helper function for creating a block
 ```agda
     createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
     createBlock s p π σ t =
-      let
-        open IsTreeType
-        Cpref = valid is-TreeType t
-        h = proj₁ (proj₁ (uncons Cpref))
-      in
       record
         { slotNumber = s
         ; creatorId = p
-        ; parentBlock = hash h
+        ; parentBlock =
+            let open IsTreeType
+                (h , _) , _ = uncons (is-TreeType .valid t)
+            in hash h
         ; certificate =
             let r = v-round s
             in needCert r t
