@@ -22,7 +22,7 @@ open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
 import Relation.Binary.PropositionalEquality as Equ
-open Equ using (_≡_; _≢_)
+open Equ using (_≡_; _≢_; cong)
 
 open import Peras.Crypto
 open import Peras.Numbering
@@ -166,9 +166,10 @@ record Block where
   
 open Block public
 
-postulate
-  _≟-Block_ : DecidableEquality Block
-  _≟-BlockHash_ : DecidableEquality (Hash Block)
+_≟-BlockHash_ : DecidableEquality (Hash Block)
+(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟ b₂
+... | yes p = yes (cong MkHash p)
+... | no ¬p =  no (¬p ∘ cong hashBytes)
 
 record BlockBody where
   constructor MkBlockBody
