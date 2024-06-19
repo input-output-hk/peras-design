@@ -35,9 +35,10 @@ open Party
 
 # Small-step semantics
 
-The small-step semantics of the **Ouroboros Peras** protocol define the evolution of the
-global state of the system modelling *honest* and *adversarial* parties. The
-number of parties is fixed during the execution of the protocol. In addition the
+The small-step semantics of the **Ouroboros Peras** protocol define the
+evolution of the global state of the system modelling *honest* and *adversarial*
+parties. The number of parties is fixed during the execution of the protocol and
+the list of parties has to be provided as a module parameter. In addition the
 model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
 adversarial parties share generic, adversarial state.
@@ -49,12 +50,8 @@ References:
 
 ### Parameters
 
-The model takes a couple of parameters: `block₀` denotes the genesis block,
-`cert₀` is certificate for the first voting round referencing the genesis block.
-In addition there are the following relations abstracting the lotteries (slot
-leadership and voting committee membership) and the cryptographic signatures.
-The parameters for the Peras protocol and hash functions are defined as instance
-arguments of the module.
+The parameters for the *Peras* protocol and hash functions are defined as
+instance arguments of the module.
 
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
@@ -75,9 +72,8 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 #### Messages
 
-Messages for sending and receiving blocks and votes. In the `Peras` protocol
-certificates are not diffused explicitly with the exception of bootstraping the
-system.
+Messages for sending and receiving chains and votes. Note, in the *Peras* protocol
+certificates are not diffused explicitly.
 ```agda
   data Message : Type where
     ChainMsg : Chain → Message
@@ -166,7 +162,7 @@ has to fulfil all the properties mentioned below:
 
     field
 ```
-Properties that must hold with respect to blocks and votes.
+Properties that must hold with respect to chains, certificates and votes.
 
 **TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
 as proposed in the paper.
@@ -229,8 +225,8 @@ as proposed in the paper.
             (getRoundNumber (round c) ≡ r)
           × (blockRef c ≡ hash b) }) (certs t)
 ```
-In addition to blocks the block-tree manages votes and certificates as well.
-The block tree type is defined as follows:
+In addition to chains the block-tree manages votes and certificates as well.
+The block-tree type is defined as follows:
 ```agda
   record TreeType (T : Type) : Type₁ where
 
@@ -282,8 +278,8 @@ The block tree type is defined as follows:
 ```
 ### Additional parameters
 
-In addition to the parameters already introduced above we introduce the
-following parameters
+In order to define the semantics the following parameters are required
+additionally:
 
   * The type of the block-tree
   * adversarialState₀ is the initial adversarial state
@@ -295,6 +291,7 @@ following parameters
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
+                               -- i.e. allow dynamic participation
 
            where
 
@@ -330,7 +327,9 @@ cool-down phase.
       Regular : ∀ {r t} →
         let
           pref  = preferredChain t
-          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and include Δ in VR-1A (move history to blocktree...?)
+          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and
+                                   --       include the Δ-condition in VR-1A
+                                   --       (move history to block-tree...?)
         in
         ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
         ∙ cert′ PointsInto pref           -- VR-1B
