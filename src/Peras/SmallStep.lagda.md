@@ -35,19 +35,12 @@ open Party
 
 # Small-step semantics
 
-The small-step semantics of the **Peras** protocol define the evolution of the
+The small-step semantics of the **Ouroboros Peras** protocol define the evolution of the
 global state of the system modelling *honest* and *adversarial* parties. The
 number of parties is fixed during the execution of the protocol. In addition the
 model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
-adversarial parties share adversarial state, which is generic state.
-
-The following sub-sections cover the Peras protocol (see Figure 2: The Peras
-protocol)
-
-  * [Fetching](SmallStep.lagda.md#fetching)
-  * [Block creation](SmallStep.lagda.md#block-creation)
-  * [Voting](SmallStep.lagda.md#voting)
+adversarial parties share generic, adversarial state.
 
 References:
 
@@ -337,7 +330,7 @@ cool-down phase.
       Regular : ∀ {r t} →
         let
           pref  = preferredChain t
-          cert′ = latestCertSeen t
+          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and include Δ in VR-1A (move history to blocktree...?)
         in
         ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
         ∙ cert′ PointsInto pref           -- VR-1B
@@ -386,7 +379,7 @@ The small-step semantics rely on a global state, which consists of the following
 ```
 #### Progress
 
-Rather that keeping track of progress, we introduce a predicate stating that all
+Rather than keeping track of progress, we introduce a predicate stating that all
 messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
