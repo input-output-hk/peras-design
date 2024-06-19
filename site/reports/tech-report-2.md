@@ -9,6 +9,69 @@ monofont: Monaco
 ---
 
 
+# Protocol definition
+
+> [!WARNING]
+> The following is a near-verbatim copy of Figure 2 of the draft Peras paper. The only signficant alterations are the following:
+>
+> - Omit preagreement
+>     - Set the termination bound to zero: T ≡ 0
+>     - The proposed block for voting is simply the youngest block at least L slots old on the locally preferred chain.
+> - Do not track certificate arrival time: Δ ≡ 0
+> - The initial set of certificates is the genesis certificate, not the empty set.
+
+## Variables
+
+The protocol keeps track of the following variables, initialized to the values below:
+
+- `In1`: $C_\text{pref} \gets C_\text{genesis}$: preferred chain;
+- `In2`: $\mathcal{C} \gets \{C_\text{genesis}\}$: set of chains;
+- `In3`: $\mathcal{V} \gets \emptyset$: set of votes;
+- `In4`: $\mathsf{Certs} \gets \{\mathsf{cert}_\text{genesis}\}$: set of certificates;
+- `In5`: $\mathsf{cert}^\prime \gets \mathsf{cert}_\text{genesis}$: the latest certificate seen;
+- `In6`: $\mathsf{cert}^* \gets \mathsf{cert}_\text{genesis}$: the latest certificate on chain.
+
+## Fetching
+
+At the beginning of each slot:
+- `Fe1`: Fetch new chains $\mathcal{C}_\text{new}$ and votes $\mathcal{V}_\text{new}$.
+- `Fe2`: Add any new chains in $\mathcal{C}_\text{new}$ to $\mathcal{C}$, add any new certificates contained in chains in $\mathcal{C}_\text{new}$ to $\mathsf{Certs}$.
+- `Fe3`: Add $\mathcal{V}_\text{new}$ to $\mathcal{V}$ and turn any new quorum in $\mathcal{V}$ into a certificate $\mathsf{cert}$ and add $\mathsf{cert}$ to $\mathsf{Certs}$.
+- `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t.\ $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
+    - Each party $\mathsf{P}$ assigns a certain weight to every chain $C$, based on $C$'s length and all certificates that vote for blocks in $C$ that $\mathsf{P}$ has seen so far (and thus stored in a local list $\mathsf{Certs}$).
+    - `CW1`: Let $\mathsf{certCount}_\mathsf{P}(C)$ denote the number of such certificates, i.e., $\mathsf{certCount}_\mathsf{P}(C) := \left| \left\{ \mathsf{cert} \in \mathsf{Certs} : \mathsf{cert} \text{ votes for a block on } C \right\} \right|$.
+    - `CW2`: Then, the weight of the chain $C$ in $\mathsf{P}$'s view is $\mathsf{Wt}_\mathsf{P}(C) := \mathsf{len}(C) + B \cdot \mathsf{certCount}_\mathsf{P}(C)$ for a protocol parameter $B$.
+- `Fe5`: Set $\mathsf{cert}^\prime$ to the certificate with the highest round number in $\mathsf{Certs}$.
+- `Fe6`: Set $\mathsf{cert}^*$ to the certificate with the highest round number on $C_\text{pref}$.
+
+## Block creation
+
+Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some round $r$:
+
+- `BC1`: Create a new block $\mathsf{block} = (s, \mathsf{P}, h, \mathsf{cert}, ...)$, where
+    - `BC2`: $h$ is the hash of the last block in $C_\text{pref}$,
+    - `BC3`: $\mathsf{cert}$ is set to $\mathsf{cert}^\prime$ if
+        - `BC4`: there is no round-$(r-2)$ certificate in $\mathsf{Certs}$, and
+        - `BC5`: $r - \mathsf{round}(\mathsf{cert}^\prime) \leq A$, and
+        - `BC6`: $\mathsf{round}(\mathsf{cert}^\prime) > \mathsf{round}(\mathsf{cert}^*)$,
+        - `BC7`: and to $\bot$ otherwise,
+- `BC8` Extend $C_\text{pref}$ by $\mathsf{block}$, add the new $C_\text{pref}$ to $\mathcal{C}$ and diffuse it.
+
+# Voting
+
+Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
+
+- `Vo1`: Let $\mathsf{block}$ be the youngest block at least $L$ slots old on $C_\text{pref}$.
+- `Vo2`: If party $\mathsf{P}$ is (voting) committee member in a round $r$,
+    - either
+        - `VR-1A`: $\mathsf{round}(\mathsf{cert}^\prime) = r-1$ and $\mathsf{cert}^\prime$ was received before the end of round $r-1$, and
+        - `VR-1B`: $\mathsf{block}$ extends the block certified by $\mathsf{cert}^\prime$,
+    - or
+        - `VR-2A`: $r \geq \mathsf{round}(\mathsf{cert}^\prime) + R$, and
+        - `VR-2B`: $r = \mathsf{round}(\mathsf{cert}^*) + c \cdot K$ for some $c > 0$,
+    - `Vo3`: then create a vote $v = (r, \mathsf{P}, h,...)$,
+    - `Vo4`: Add $v$ to $\mathcal{V}$ and diffuse it.
+
 # Votes & Certificates
 
 ## ALBA Certificates
@@ -40,7 +103,7 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 ## Votes
 
-## Constraints on Peras Parameters
+# Constraints on Peras Parameters
 
 | Parameter | Symbol | Units | Description | Constraints | Rationale |
 | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -60,6 +123,23 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 | Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} ≟ \mathcal{O} \left( k / \alpha \right)$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
 | Security parameter | $k$ | blocks | The Ouroboros Praos security parameter. | $k = 2160$ | Value for the Cardano mainnet. |
 
+# Simulating Peras
+
+## Protocol simulation
+
+> [!TODO]
+> Discuss the protocol simulation
+
+## Protocol visualization
+
+> [!TODO]
+> Write up a description of the Peras visualizer.
+
+## Markov-chain simulation
+
+> [!TODO]
+> Discuss the Markov-chain simulation and results
+
 # Analyses of adversarial scenarios
 
 > [!FIXME]
@@ -74,18 +154,21 @@ In this section we use the following notation:
 - Quorum for creating a certificate: $\tau = \frac{3}{4} C$
 - Fraction of adversarial stake: $f$
 - Mean size of the voting committee: $C$
-- Per-slot probability of a block
+- Per-slot probability of a block:
 	- Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
 	- Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
-- Binomial distribution of $n$ trials each with probability $p$ 
+- Binomial distribution of $n$ trials each with probability $p$ :
 	- Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
 	- Cumulative probability function: $\mathbf{P}_\text{binom}(m,n,p) = \sum_{k=0}^m \mathbf{p}(k,n,p)$
-- Normal distribution with mean $\mu$ and standard deviation $\sigma$
+- Normal distribution with mean $\mu$ and standard deviation $\sigma$:
 	- Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
 	- Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
 
 > [!TODO]
 > Discuss the relationship between per-slot probabilities and per-block probabilities.
+
+> [!TODO]
+> Add paragraphs discussing how to interpret probabilities in terms of the security of a long-running blockchain.
 
 ## No honest quorum in round
 
@@ -255,7 +338,7 @@ function (U, p, q) {
 
 ![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](../diagrams/adversarial-chain-receives-boost-variant.plot.png)
 
-## Recommendations for Peras Parameters
+# Recommendations for Peras Parameters
 
 > [!TODO]
 > List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
