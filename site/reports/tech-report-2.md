@@ -90,6 +90,22 @@ Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
 # Votes & Certificates
 
+This section details the Peras voting process, from the casting and detailed structure of votes, to the creation, diffusion, and storage of certificates.
+
+## Votes
+
+### Algorithms
+
+Voting in Peras is mimicked after the _sortition_ algorithm used in Praos, e.g it is based on the use of a _Verifiable Random Function_ by each stake-pool operator guaranteeing the following properties:
+
+* The probability for each voter to cast their vote in a given round is correlated to their share of total stake,
+* It should be computationally impossible to predict a given SPO's schedule without access to their secret key VRF key,
+* Verification of a voter's right to vote in a round should be efficiently computable,
+* Vote should be unique and non-malleable (this is a requirement for the use of efficient certificates aggregation, see [below](#alba-certificates)),
+* Voting should require minimal additional configuration (ie. key management) for SPOs.
+
+Here is
+
 ## ALBA Certificates
 
 * [ALBAs](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) appears to provide a good basis for Peras certificates
@@ -105,7 +121,7 @@ We can observe that even in some extreme cases proving time stays consistently u
 
 It's worth considering whether or not this dependency on the ordering of the items could be an attack vector as proving time could easily explode in case we need to explore more than a small fraction of the tree.
 
-Verification time has not been plotted but is lower than 1ms in all the cases considered as it is tied to the number of hash computation one has to make which is $O(u + s_p)$.
+Verification time has not been plotted but is lower than 1ms in all the cases considered as it is tied to the number of hash computation one has to make which is $O(u)$.
 
 ### Certificate size
 
@@ -116,8 +132,6 @@ For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{r
 Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
 ![Proof size vs. λ and honest votes ratio](../diagrams/alba-proof-size-lambda.svg)
-
-## Votes
 
 # Constraints on Peras Parameters
 
@@ -477,4 +491,3 @@ Restrictions:
 ## Formally verified properties from the research paper
 
 ## Formally verified test executions
-
