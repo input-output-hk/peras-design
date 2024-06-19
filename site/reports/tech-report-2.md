@@ -62,7 +62,8 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 # Analyses of adversarial scenarios
 
-**FIXME:** Several correctly-formatted equations are not rendered correctly by GitHub's MathJAX.
+> [!FIXME]
+> Several correctly-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
 
 In this section we use the following notation:
 
@@ -75,7 +76,6 @@ In this section we use the following notation:
 - Mean size of the voting committee: $C$
 - Per-slot probability of a block
 	- Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
-		- **FIXME:** add note here
 	- Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
 - Binomial distribution of $n$ trials each with probability $p$ 
 	- Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
@@ -83,6 +83,9 @@ In this section we use the following notation:
 - Normal distribution with mean $\mu$ and standard deviation $\sigma$
 	- Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
 	- Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
+
+> [!TODO]
+> Discuss the relationship between per-slot probabilities and per-block probabilities.
 
 ## No honest quorum in round
 
@@ -179,9 +182,13 @@ function(A, f, alpha)
 
 ## Adversarial chain receives boost
 
+> [!TODO]
+> Discuss why there are several variants here.
+
 ### Variant 1
 
-**FIXME:** This variant needs reworking!
+> [!FIXME]
+> This variant needs reworking!
 
 ***Question.*** What is the probability that an adversarial chain receives the next boost?
 
@@ -247,3 +254,10 @@ function (U, p, q) {
 ***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
 
 ![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](../diagrams/adversarial-chain-receives-boost-variant.plot.png)
+
+## Recommendations for Peras Parameters
+
+> [!TODO]
+> List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
+
+## Conclusion
