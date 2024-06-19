@@ -35,19 +35,13 @@ open Party
 
 # Small-step semantics
 
-The small-step semantics of the **Peras** protocol define the evolution of the
-global state of the system modelling *honest* and *adversarial* parties. The
-number of parties is fixed during the execution of the protocol. In addition the
+The small-step semantics of the **Ouroboros Peras** protocol define the
+evolution of the global state of the system modelling *honest* and *adversarial*
+parties. The number of parties is fixed during the execution of the protocol and
+the list of parties has to be provided as a module parameter. In addition the
 model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
-adversarial parties share adversarial state, which is generic state.
-
-The following sub-sections cover the Peras protocol (see Figure 2: The Peras
-protocol)
-
-  * [Fetching](SmallStep.lagda.md#fetching)
-  * [Block creation](SmallStep.lagda.md#block-creation)
-  * [Voting](SmallStep.lagda.md#voting)
+adversarial parties share generic, adversarial state.
 
 References:
 
@@ -56,12 +50,8 @@ References:
 
 ### Parameters
 
-The model takes a couple of parameters: `block₀` denotes the genesis block,
-`cert₀` is certificate for the first voting round referencing the genesis block.
-In addition there are the following relations abstracting the lotteries (slot
-leadership and voting committee membership) and the cryptographic signatures.
-The parameters for the Peras protocol and hash functions are defined as instance
-arguments of the module.
+The parameters for the *Peras* protocol and hash functions are defined as
+instance arguments of the module.
 
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
@@ -82,9 +72,8 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 #### Messages
 
-Messages for sending and receiving blocks and votes. In the `Peras` protocol
-certificates are not diffused explicitly with the exception of bootstraping the
-system.
+Messages for sending and receiving chains and votes. Note, in the *Peras* protocol
+certificates are not diffused explicitly.
 ```agda
   data Message : Type where
     ChainMsg : Chain → Message
@@ -172,7 +161,7 @@ has to fulfil all the properties mentioned below:
 
     field
 ```
-Properties that must hold with respect to blocks and votes.
+Properties that must hold with respect to chains, certificates and votes.
 
 **TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
 as proposed in the paper.
@@ -235,8 +224,8 @@ as proposed in the paper.
             (getRoundNumber (round c) ≡ r)
           × (blockRef c ≡ hash b) }) (certs t)
 ```
-In addition to blocks the block-tree manages votes and certificates as well.
-The block tree type is defined as follows:
+In addition to chains the block-tree manages votes and certificates as well.
+The block-tree type is defined as follows:
 ```agda
   record TreeType (T : Type) : Type₁ where
 
@@ -287,8 +276,8 @@ The block tree type is defined as follows:
 ```
 ### Additional parameters
 
-In addition to the parameters already introduced above we introduce the
-following parameters
+In order to define the semantics the following parameters are required
+additionally:
 
   * The type of the block-tree
   * adversarialState₀ is the initial adversarial state
@@ -300,6 +289,7 @@ following parameters
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
+                               -- i.e. allow dynamic participation
 
            where
 
@@ -335,7 +325,9 @@ cool-down phase.
       Regular : ∀ {r t} →
         let
           pref  = preferredChain t
-          cert′ = latestCertSeen t
+          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and
+                                   --       include the Δ-condition in VR-1A
+                                   --       (move history to block-tree...?)
         in
         ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
         ∙ cert′ PointsInto pref           -- VR-1B
@@ -384,7 +376,7 @@ The small-step semantics rely on a global state, which consists of the following
 ```
 #### Progress
 
-Rather that keeping track of progress, we introduce a predicate stating that all
+Rather than keeping track of progress, we introduce a predicate stating that all
 messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
@@ -550,7 +542,16 @@ delay the message.
 
 Certificates are conditionally added to a block. The following function deterimes
 if there needs to be a certificate provided for a given voting round and a local
-block-tree. The conditions (a) - (c) are reflected in the Peras paper.
+block-tree.
+
+The conditions (a) - (c) are reflected in Figure 2 in the *Peras*
+paper
+
+a) There is no certificate from 2 rounds ago in certs
+b) The last seen certificate is not expired
+c) The last seen certificate is from a later round than
+   the last certificate on chain
+
 ```agda
     needCert : RoundNumber → T → Maybe Certificate
     needCert (MkRoundNumber r) t =
@@ -592,21 +593,17 @@ Helper function for creating a block
         }
 ```
 A party can create a new block by adding it to the local block tree and
-gossiping the block creation messages to the other parties. Block creation is
-possible, if
+diffuse the block creation messages to the other parties. Block creation is
+possible, if as in *Praos*
+
   * the block signature is correct
   * the party is the slot leader
 
 Block creation updates the party's local state and for all other parties a
-message is added to be consumed immediately.
+message is added to the message buffer
 ```agda
     infix 2 _⊢_↷_
-```
-During regular execution of the protocol, i.e. not in cool-down phase, no
-certificate reference is included in the block. The exact conditions to
-decide wheter a certificate has to be included are (see: Block creation in
-Figure 2)
-```agda
+
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {π} {σ}
@@ -626,9 +623,6 @@ Figure 2)
                 , p) to t
                 diffuse M
 ```
-Rather than creating a delayed block, an adversary can honestly create it and
-delay the message.
-
 ## Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
