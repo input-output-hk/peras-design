@@ -11,7 +11,7 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
 
-open Nat using (_≟_; _≤?_; _≤ᵇ_)
+open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _mod_; _%_; _>?_)
 open L using (concat)
 open L.All using (All)
 open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
@@ -320,30 +320,61 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 ```agda
+    IsVR-1A : RoundNumber → T → Set
+    IsVR-1A r t = (getRoundNumber r) ≡ roundNumber (latestCertSeen t) + 1
+
+    IsVR-1A? : (r : RoundNumber) → (t : T) → Dec (IsVR-1A r t)
+    IsVR-1A? r t = (getRoundNumber r) ≟ roundNumber (latestCertSeen t) + 1
+
+    IsVR-1B : RoundNumber → T → Set
+    IsVR-1B r t = (latestCertSeen t) PointsInto (preferredChain t)
+
+    IsVR-1B? : (r : RoundNumber) → (t : T) → Dec (IsVR-1B r t)
+    IsVR-1B? r t = (latestCertSeen t) PointsInto? (preferredChain t)
+
+    IsVR-2A : RoundNumber → T → Set
+    IsVR-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
+
+    IsVR-2A? : (r : RoundNumber) → (t : T) → Dec (IsVR-2A r t)
+    IsVR-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
+
+    IsVR-2B : RoundNumber → T → Set
+    IsVR-2B (MkRoundNumber r) t =
+      (r > roundNumber (latestCertOnChain t))
+      × ((_%_ r K ⦃ K-nonZero ⦄ ) ≡ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
+
+    IsVR-2B? : (r : RoundNumber) → (t : T) → Dec (IsVR-2B r t)
+    IsVR-2B? (MkRoundNumber r) t =
+      (r >? roundNumber (latestCertOnChain t))
+      ×-dec ((_%_ r K ⦃ K-nonZero ⦄) ≟ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
+```
+```agda
     data VoteInRound : RoundNumber → T → Type where
 
       Regular : ∀ {r t} →
-        let
-          pref  = preferredChain t
-          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and
-                                   --       include the Δ-condition in VR-1A
-                                   --       (move history to block-tree...?)
-        in
-        ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
-        ∙ cert′ PointsInto pref           -- VR-1B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
+        ∙ IsVR-1A r t
+        ∙ IsVR-1B r t
+          ───────────────
+          VoteInRound r t
 
-      AfterCooldown : ∀ {r c t} →
-        let
-          cert⋆ = latestCertOnChain t
-          cert′ = latestCertSeen t
-        in
-        ∙ c > 0
-        ∙ r ≥ roundNumber cert′ + R       -- VR-2A
-        ∙ r ≡ roundNumber cert⋆ + c * K   -- VR-2B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
+      AfterCooldown : ∀ {r t} →
+        ∙ IsVR-2A r t
+        ∙ IsVR-2B r t
+          ───────────────
+          VoteInRound r t
+```
+```agda
+    VoteInRound? : (r : RoundNumber) → (t : T) → Dec (VoteInRound r t)
+    VoteInRound? r t
+      with IsVR-1A? r t
+      with IsVR-1B? r t
+      with IsVR-2A? r t
+      with IsVR-2B? r t
+    ... | yes p | yes q | _     | _     = yes (Regular p q)
+    ... | _     | _     | yes p | yes q = yes (AfterCooldown p q)
+    ... | no p  | yes q | _     | _     = no {!!}
+    ... | yes p | no q  | _     | _     = no {!!}
+    ... | no p  | no q  | _     | _     = no {!!}
 ```
 ### State
 
