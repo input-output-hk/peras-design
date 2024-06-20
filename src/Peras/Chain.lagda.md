@@ -190,13 +190,6 @@ module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Params ⦄
          where
 ```
-<!--
-```agda
-  instance
-    nonZero : NonZero U -- TODO: why is this needed..?
-    nonZero = T-nonZero
-```
--->
 ```agda
   open Hashable ⦃...⦄
 ```

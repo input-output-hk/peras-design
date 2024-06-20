@@ -11,14 +11,14 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
 
-open Nat using (_≟_; _≤?_; _≤ᵇ_)
+open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _%_; _>?_; NonZero)
 open L using (concat)
 open L.All using (All)
 open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto
+open import Peras.Crypto hiding (_≟_)
 open import Peras.Numbering
 open import Peras.Params
 
@@ -319,31 +319,99 @@ Updating the block-tree upon receiving a message for vote and block messages.
 When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
+
+#### Voting rules
+
+VR-1A: A party has seen a certificate cert-r−1 for round r−1
+```agda
+    VotingRule-1A : RoundNumber → T → Set
+    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
+
+    VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
+    VotingRule-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
+```
+VR-1B: The  extends the block certified by cert-r−1,
+```agda
+    VotingRule-1B : T → Set
+    VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
+
+    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
+    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+```
+VR-2A: The last certificate a party has seen is from a round at least R rounds back
+```agda
+    VotingRule-2A : RoundNumber → T → Set
+    VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
+
+    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
+    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
+```
+VR-2B: The last certificate included in a party's current chain is from a round exactly
+c⋆K rounds ago for some integer c ≥ 0
+<!--
+```agda
+    _mod_ : ℕ → (n : ℕ) → ⦃ NonZero n ⦄ → ℕ
+    _mod_ a b ⦃ prf ⦄ = _%_ a b ⦃ prf ⦄
+```
+-->
+```agda
+    VotingRule-2B : RoundNumber → T → Set
+    VotingRule-2B (MkRoundNumber r) t =
+        r > roundNumber (latestCertOnChain t)
+      × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
+
+    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
+    VotingRule-2B? (MkRoundNumber r) t =
+            r >? roundNumber (latestCertOnChain t)
+      ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
+```
+If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
     data VoteInRound : RoundNumber → T → Type where
 
       Regular : ∀ {r t} →
-        let
-          pref  = preferredChain t
-          cert′ = latestCertSeen t -- TODO: lookup slotnumber from history and
-                                   --       include the Δ-condition in VR-1A
-                                   --       (move history to block-tree...?)
-        in
-        ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
-        ∙ cert′ PointsInto pref           -- VR-1B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
+        ∙ VotingRule-1A r t
+        ∙ VotingRule-1B t
+          ─────────────────
+          VoteInRound r t
 
-      AfterCooldown : ∀ {r c t} →
-        let
-          cert⋆ = latestCertOnChain t
-          cert′ = latestCertSeen t
-        in
-        ∙ c > 0
-        ∙ r ≥ roundNumber cert′ + R       -- VR-2A
-        ∙ r ≡ roundNumber cert⋆ + c * K   -- VR-2B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
+      AfterCooldown : ∀ {r t} →
+        ∙ VotingRule-2A r t
+        ∙ VotingRule-2B r t
+          ─────────────────
+          VoteInRound r t
+```
+Decidablity for the `VotingInRound` relation
+```agda
+    vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
+    vr-1a-2a (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
+    vr-1a-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
+
+    vr-1a-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
+    vr-1a-2b (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
+    vr-1a-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
+
+    vr-1b-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
+    vr-1b-2a (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
+    vr-1b-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
+
+    vr-1b-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
+    vr-1b-2b (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
+    vr-1b-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
+```
+```agda
+    VoteInRound? : (r : RoundNumber) → (t : T) → Dec (VoteInRound r t)
+    VoteInRound? r t
+      with VotingRule-1A? r t
+         | VotingRule-1B? t
+         | VotingRule-2A? r t
+         | VotingRule-2B? r t
+    ... | yes p | yes q | _     | _     = yes $ Regular p q
+    ... | _     | _     | yes p | yes q = yes $ AfterCooldown p q
+    ... | no p  | _     | no q  | _     = no  $ vr-1a-2a (p , q)
+    ... | no p  | _     | _     | no q  = no  $ vr-1a-2b (p , q)
+    ... | _     | no p  | no q  | _     = no  $ vr-1b-2a (p , q)
+    ... | _     | no p  | _     | no q  = no  $ vr-1b-2b (p , q)
 ```
 ### State
 
@@ -569,15 +637,13 @@ Helper function for creating a block
 ```agda
     createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
     createBlock s p π σ t =
-      let
-        open IsTreeType
-        Cpref = valid is-TreeType t
-        h = proj₁ (proj₁ (uncons Cpref))
-      in
       record
         { slotNumber = s
         ; creatorId = p
-        ; parentBlock = hash h
+        ; parentBlock =
+            let open IsTreeType
+                (h , _) , _ = uncons (is-TreeType .valid t)
+            in hash h
         ; certificate =
             let r = v-round s
             in needCert r t
