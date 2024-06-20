@@ -157,6 +157,7 @@ has to fulfil all the properties mentioned below:
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
                     (certs : T → List Certificate)
+                    (cert₀ : Certificate)
          : Type₁ where
 
     field
@@ -171,7 +172,7 @@ as proposed in the paper.
         preferredChain tree₀ ≡ block₀ ∷ []
 
       instantiated-certs :
-        certs tree₀ ≡ []
+        certs tree₀ ≡ cert₀ ∷ []
 
       instantiated-votes :
         votes tree₀ ≡ []
@@ -240,12 +241,13 @@ The block-tree type is defined as follows:
       votes : T → List Vote
       certs : T → List Certificate
 
-      is-TreeType : IsTreeType
-                      tree₀ newChain allChains preferredChain
-                      addVote votes certs
-
     cert₀ : Certificate
     cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
+
+    field
+      is-TreeType : IsTreeType
+                      tree₀ newChain allChains preferredChain
+                      addVote votes certs cert₀
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =

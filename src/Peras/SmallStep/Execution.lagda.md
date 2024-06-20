@@ -170,7 +170,7 @@ Based on properties of the blocktree we can show the following
         rewrite is-TreeType .instantiated
         rewrite is-TreeType .genesis-block-no-certificate = refl
 
-      noNewCert : certs (newChain tree₀ chain₁) ≡ []
+      noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
       noNewCert =
         let
           s₁ = is-TreeType .extendable-chain tree₀ chain₁
