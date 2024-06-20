@@ -362,8 +362,8 @@ c⋆K rounds ago for some integer c ≥ 0
 
     VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
     VotingRule-2B? (MkRoundNumber r) t =
-             r >? roundNumber (latestCertOnChain t)
-      ×-dec (r mod K ) ≟ ((roundNumber (latestCertOnChain t)) mod K)
+            r >? roundNumber (latestCertOnChain t)
+      ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
 ```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is exprected
 ```agda
