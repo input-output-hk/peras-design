@@ -149,6 +149,9 @@ newQuora quorum priorCerts votes = newCerts
     Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
     newCerts = [ c | Right c <- newCertsResults ]
 
+checkVoteSignature :: Vote -> Bool
+checkVoteSignature _ = True -- TODO: could do actual crypto here
+
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick
   = Just
@@ -174,8 +177,10 @@ transition s (NewChain chain)
          (foldr insertCert (allSeenCerts s)
             (catMaybes $ map certificate chain)))
 transition s (NewVote v)
-  = Just
-      ([],
-       NodeModel (clock s) (protocol s) (allChains s) (v : allVotes s)
-         (allSeenCerts s))
+  = do guard (slotInRound (protocol s) (clock s) == 0)
+       guard (checkVoteSignature v)
+       Just
+         ([],
+          NodeModel (clock s) (protocol s) (allChains s) (v : allVotes s)
+            (allSeenCerts s))
 

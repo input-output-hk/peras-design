@@ -20,6 +20,7 @@ record Params : Set where
         W : ℕ
 
         ⦃ T-nonZero ⦄ : NonZero U
+        ⦃ K-nonZero ⦄ : NonZero K
 
 ```
 #### U

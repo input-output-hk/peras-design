@@ -230,6 +230,13 @@ newQuora quorum priorCerts votes = newCerts
     newCerts = [ c | Right c <- newCertsResults ]
 #-}
 
+postulate
+  checkVoteSignature : Vote → Bool
+{-# FOREIGN AGDA2HS
+checkVoteSignature :: Vote -> Bool
+checkVoteSignature _ = True -- TODO: could do actual crypto here
+#-}
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
@@ -243,5 +250,8 @@ transition s (NewChain chain) =
              { allChains = chain ∷ allChains s
              ; allSeenCerts = foldr insertCert (allSeenCerts s) (catMaybes $ map certificate chain)
              })
-transition s (NewVote v) = Just ([] , record s { allVotes = v ∷ allVotes s })
+transition s (NewVote v) = do
+  guard (slotInRound (protocol s) (clock s) == 0)
+  guard (checkVoteSignature v)
+  Just ([] , record s { allVotes = v ∷ allVotes s })
 {-# COMPILE AGDA2HS transition #-}

@@ -141,7 +141,7 @@ instance StateModel NodeModel where
     fmap (Some . Step) $
       frequency $ [ (1, pure Tick) ] ++
                   [ (1, NewChain <$> genChain) ] ++
-                  [ (1, NewVote  <$> genVote) | canGenVotes ]
+                  [ (8, NewVote  <$> genVote) | canGenVotes ]
     where
       genChain =
         do
