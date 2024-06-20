@@ -15,7 +15,7 @@ open import Data.Nat.Properties using (+-identityˡ; +-identityʳ)
 open import Function using (_∘_; id; _$_; flip)
 
 open import Peras.Chain
-open import Peras.Crypto hiding (isCommitteeMember)
+open import Peras.Crypto hiding (_≟_; isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params

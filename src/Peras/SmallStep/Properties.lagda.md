@@ -39,7 +39,7 @@ open import Peras.Numbering
 open import Peras.Params using (Params)
 open import Peras.SmallStep
 
-open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
+-- open import Data.List.Membership.DecPropositional _≟-Block_ using (_∈?_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 
 open import Data.List.Relation.Binary.Equality.Propositional using (_≋_; ≡⇒≋; ≋⇒≡)

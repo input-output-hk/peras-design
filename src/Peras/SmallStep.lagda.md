@@ -11,14 +11,14 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
 
-open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _mod_; _%_; _>?_)
+open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _%_; _>?_; NonZero)
 open L using (concat)
 open L.All using (All)
 open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto
+open import Peras.Crypto hiding (_≟_)
 open import Peras.Numbering
 open import Peras.Params
 
@@ -320,7 +320,7 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
-#### Voting rule
+#### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
@@ -348,16 +348,22 @@ VR-2A: The last certificate a party has seen is from a round at least R rounds b
 ```
 VR-2B: The last certificate included in a party's current chain is from a round exactly
 c⋆K rounds ago for some integer c ≥ 0
+<!--
+```agda
+    _mod_ : ℕ → (n : ℕ) → ⦃ NonZero n ⦄ → ℕ
+    _mod_ a b ⦃ prf ⦄ = _%_ a b ⦃ prf ⦄
+```
+-->
 ```agda
     VotingRule-2B : RoundNumber → T → Set
     VotingRule-2B (MkRoundNumber r) t =
-      (r > roundNumber (latestCertOnChain t))
-      × ((_%_ r K ⦃ K-nonZero ⦄ ) ≡ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
+        r > roundNumber (latestCertOnChain t)
+      × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
 
     VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
     VotingRule-2B? (MkRoundNumber r) t =
-      (r >? roundNumber (latestCertOnChain t))
-      ×-dec ((_%_ r K ⦃ K-nonZero ⦄) ≟ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
+             r >? roundNumber (latestCertOnChain t)
+      ×-dec (r mod K ) ≟ ((roundNumber (latestCertOnChain t)) mod K)
 ```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is exprected
 ```agda
@@ -375,7 +381,7 @@ If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is exprected
           ─────────────────
           VoteInRound r t
 ```
-Decidablity for the `VotingInRond` relation
+Decidablity for the `VotingInRound` relation
 ```agda
     vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
     vr-1a-2a (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
