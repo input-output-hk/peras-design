@@ -1,10 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Peras.Voting.Vote where
 
@@ -12,15 +14,18 @@ import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256, Hash)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
+import Cardano.Crypto.KES.Class (genKeyKES)
+import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF.Class as VRF
 import qualified Cardano.Crypto.VRF.Praos as VRF
-import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Data (Proxy (..))
+import Data.Maybe (fromJust)
 import Data.Ratio ((%))
+import Data.Serialize (getWord64le, runGet)
 import Data.Word (Word64)
-import Numeric.Natural (Natural)
 import Statistics.Distribution (cumulative)
 import Statistics.Distribution.Binomial (binomial)
 
@@ -41,6 +46,9 @@ newtype VotingWeight = VotingWeight {unVotingWeight :: Word64}
 newtype PartyId = MkPartyId {unPartyId :: Hash Blake2b_256 (VRF.VerKeyVRF VRF.PraosVRF)}
   deriving stock (Eq, Ord, Show)
 
+mkPartyId :: BS.ByteString -> PartyId
+mkPartyId = MkPartyId . fromJust . Hash.hashFromBytes
+
 -- | A round number is just a natural number.
 newtype RoundNumber = RoundNumber {unRoundNumber :: Word64}
   deriving stock (Eq, Ord, Show)
@@ -53,6 +61,9 @@ type Signature = KES.SignedKES (KES.Sum6KES Ed25519DSIGN Blake2b_256) Membership
 data MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 MembershipInput}
   deriving (Eq, Ord, Show)
 
+fromBytes :: BS.ByteString -> MembershipInput
+fromBytes = MkMembershipInput . fromJust . Hash.hashFromBytes
+
 data Voter = MkVoter
   { voterId :: PartyId
   , voterStake :: Integer
@@ -60,34 +71,53 @@ data Voter = MkVoter
   , kesPeriod :: KES.Period
   , kesSignKey :: KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
   }
+  deriving (Show)
+
+newVRFSigningKey :: BS.ByteString -> VRF.SignKeyVRF VRF.PraosVRF
+newVRFSigningKey = fst . VRF.genKeyPairVRF . mkSeedFromBytes
+
+newKESSigningKey :: BS.ByteString -> KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
+newKESSigningKey = genKeyKES . mkSeedFromBytes
 
 newtype CommitteeSize = CommitteeSize Integer
-  deriving (Eq, Show)
+  deriving newtype (Eq, Show, Num, Integral, Real, Ord, Enum)
+
+instance SignableRepresentation MembershipInput where
+  getSignableRepresentation (MkMembershipInput x) = Hash.hashToBytes x
+
+instance SignableRepresentation (VRF.CertifiedVRF VRF.PraosVRF v) where
+  getSignableRepresentation = VRF.getOutputVRFBytes . VRF.certifiedOutput
 
 castVote :: a -> Integer -> MembershipInput -> CommitteeSize -> RoundNumber -> Voter -> Maybe (Vote a)
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
-  undefined -- let nonce = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
-  --     certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
-  --     certKES = KES.signedKES () kesPeriod certVRF kesSignKey
-  --     ratio = toInteger nonce % toInteger (2 ^ (8 * VRF.sizeOutputVRF (Proxy @VRF.PraosVRF)))
-  --  in case selectVote committeeSize ratio voterStake totalStake of
-  --       0 -> Nothing
-  --       n ->
-  --         Just
-  --           MkVote
-  --             { creatorId = voterId
-  --             , votingRound = roundNumber
-  --             , blockHash
-  --             , membershipProof = certVRF
-  --             , votingWeight = n
-  --             , signature = certKES
-  --             }
+  let nonce = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
+      certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
+      certKES = KES.signedKES () kesPeriod certVRF kesSignKey
+      ratio = asInteger nonce % toInteger (maxBound @Word64)
+   in case selectVote committeeSize ratio voterStake totalStake of
+        0 -> Nothing
+        n ->
+          Just
+            MkVote
+              { creatorId = voterId
+              , votingRound = roundNumber
+              , blockHash
+              , membershipProof = certVRF
+              , votingWeight = n
+              , signature = certKES
+              }
+
+asInteger :: MembershipInput -> Integer
+asInteger (MkMembershipInput h) = fromIntegral $ fromBytesLE $ Hash.hashToBytes h
+ where
+  fromBytesLE = either error id . runGet getWord64le . BS.take 8
 
 -- stolen from https://github.com/algorand/sortition/blob/main/sortition.cpp
 selectVote ::
   -- | Expected committee size
   Integer ->
   -- | Outcome of "random" function, used to find voter's resulting weight
+  -- Should be < 1
   Rational ->
   -- | Voter's stake
   Integer ->
