@@ -1,3 +1,9 @@
+## 2024-06-20
+
+### New adversarial scenarios
+
+- Attack on common-prefix
+
 ## 2024-06-19
 
 ### New adversarial scenarios
