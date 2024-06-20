@@ -63,12 +63,9 @@ instance Pretty NodeModel where
   pPrint NodeModel{..} =
     hang "NodeModel" 2 $ braces $ vcat
       [ hang "clock =" 2 $ pPrint (getSlotNumber clock)
-      , hang "allChains =" 2 $ vcat [ pPrint (getRoundNumber r) <+> ":" <+> pPrint c
-                                    | (r, c) <- allChains
-                                    ]
+      , hang "allChains =" 2 $ vcat (map pPrint allChains)
       , hang "allVotes =" 2 $ pPrint allVotes
-      , hang "allSeenCerts =" 2 $ vcat [ pPrint (getSlotNumber s) <+> ":" <+> pPrint c
-                                       | (c, s) <- allSeenCerts ]
+      , hang "allSeenCerts =" 2 $ vcat (map pPrint allSeenCerts)
       ]
 
 instance Pretty EnvAction where
@@ -148,7 +145,7 @@ instance StateModel NodeModel where
     where
       genChain =
         do
-          tip' <- elements $ map snd allChains
+          tip' <- elements allChains
           n <- choose (0, length tip' - 1)
           let tip = drop n tip'
           let minSlot =
@@ -167,11 +164,11 @@ instance StateModel NodeModel where
 
       genVote =
         do
-          block <- elements (concat $ map snd allChains)
+          block <- elements (concat allChains)
           MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
       canGenVotes =
         newRound clock protocol -- Voting is only allowed in the first slot of a round.
-          && not (all (null . snd) allChains) -- There must be some block to vote for.
+          && not (all null allChains) -- There must be some block to vote for.
           && r > 0 -- No voting is allowed in the zeroth round.
       genCertificate chain =
         frequency

@@ -32,16 +32,9 @@ module _ ⦃ _ : Hashable Block ⦄
   open SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
   open SmallStep.TreeType blockTree
 
-  buildChains : List Block → List (RoundNumber × Chain)
+  buildChains : List Block → List Chain
   buildChains bs = {!!}
-  -- TODO: We can't implement this right now, because the spec doesn't
-  -- keep track of when we received a particular chain. The test model
-  -- also shouldn't need to track this once the proper preagreement
-  -- logic is in place.
-
-  seenCerts : List Certificate → List (Certificate × SlotNumber)
-  seenCerts certs = {!!}
-  -- TODO: Same for this.
+    -- Some juggling required to assemble the chains from the list of blocks.
 
   modelParams : PerasParams
   modelParams = record
@@ -51,7 +44,7 @@ module _ ⦃ _ : Hashable Block ⦄
     ; perasL = L
     ; perasτ = τ
     ; perasB = B
-    ; perasT = 1      -- TODO: Missing from Params
+    ; perasT = 0      -- TODO: Missing from Params
     ; perasΔ = Δ
     }
     where
@@ -64,7 +57,7 @@ module _ ⦃ _ : Hashable Block ⦄
     ; protocol     = modelParams
     ; allChains    = maybe′ (buildChains ∘ allBlocks) [] (State.blockTrees s ⁉ sutId)
     ; allVotes     = maybe′ votes                     [] (State.blockTrees s ⁉ sutId)
-    ; allSeenCerts = maybe′ (seenCerts ∘ certs)       [] (State.blockTrees s ⁉ sutId)
+    ; allSeenCerts = maybe′ certs                     [] (State.blockTrees s ⁉ sutId)
     }
 
   sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)

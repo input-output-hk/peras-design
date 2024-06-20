@@ -5,7 +5,7 @@
 module Peras.Abstract.Protocol.Conformance.Model where
 
 import Control.Monad (guard)
-import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasΔ, perasτ), defaultPerasParams)
+import Peras.Abstract.Protocol.Params (PerasParams(MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Block (Block(MkBlock), Certificate(MkCertificate, round), PartyId)
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash(MkHash), replicateBS)
@@ -26,8 +26,8 @@ import Peras.Abstract.Protocol.Voting (extends)
 import Peras.Abstract.Protocol.Fetching (findNewQuora)
 
 data NodeModel = NodeModel{clock :: SlotNumber,
-                           protocol :: PerasParams, allChains :: [(RoundNumber, Chain)],
-                           allVotes :: [Vote], allSeenCerts :: [(Certificate, SlotNumber)]}
+                           protocol :: PerasParams, allChains :: [Chain], allVotes :: [Vote],
+                           allSeenCerts :: [Certificate]}
                    deriving (Eq, Show)
 
 data EnvAction = Tick
@@ -49,11 +49,11 @@ initialModelState
   = NodeModel 1
       (MkPerasParams 5 (perasA defaultPerasParams) 1 1 1 1
          (perasB defaultPerasParams)
-         1
-         1)
-      [(0, genesisChain)]
+         0
+         0)
+      [genesisChain]
       []
-      [(genesisCert, 0)]
+      [genesisCert]
 
 sutId :: PartyId
 sutId = 1
@@ -72,14 +72,11 @@ nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
 nextRound :: RoundNumber -> RoundNumber
 nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
 
-insertCert ::
-           SlotNumber ->
-             Certificate ->
-               [(Certificate, SlotNumber)] -> [(Certificate, SlotNumber)]
-insertCert slot cert [] = [(cert, slot)]
-insertCert slot cert ((cert', slot') : certs)
-  = if cert == cert' then (cert', slot') : certs else
-      (cert', slot') : insertCert slot cert certs
+insertCert :: Certificate -> [Certificate] -> [Certificate]
+insertCert cert [] = [cert]
+insertCert cert (cert' : certs)
+  = if cert == cert' then cert' : certs else
+      cert' : insertCert cert certs
 
 seenBeforeStartOfRound ::
                        PerasParams -> RoundNumber -> (Certificate, SlotNumber) -> Bool
@@ -118,14 +115,11 @@ blockOldEnough params clock (MkBlock slot _ _ _ _ _ _)
 votesInState :: NodeModel -> [Vote]
 votesInState s
   = maybeToList
-      (do guard (slotInRound params slot == MkSlotNumber (perasT params))
+      (do guard (slotInRound params slot == 0)
           block <- listToMaybe
                      (dropWhile (not . blockOldEnough params slot) pref)
           guard
-            ((nextRound (round cert') == r &&
-                getSlotNumber cert'Slot + perasΔ params + 1 <=
-                  getRoundNumber r * perasU params)
-               && extends block cert' allChains'
+            (nextRound (round cert') == r && extends block cert' (allChains s)
                ||
                getRoundNumber r >= getRoundNumber (round cert') + perasR params &&
                  r > round certS &&
@@ -139,22 +133,10 @@ votesInState s
     slot = clock s
     r :: RoundNumber
     r = slotToRound params slot
-    allChains' :: [Chain]
-    allChains'
-      = map (\ r -> snd r) $ filter ((< r) . \ r -> fst r) (allChains s)
-    allSeenCerts' :: [(Certificate, SlotNumber)]
-    allSeenCerts'
-      = filter (seenBeforeStartOfRound params r) (allSeenCerts s)
     pref :: Chain
-    pref
-      = preferredChain params (map (\ r -> fst r) allSeenCerts')
-          allChains'
-    certAndSlot' :: (Certificate, SlotNumber)
-    certAndSlot' = maximumBy (comparing (\ r -> snd r)) allSeenCerts'
+    pref = preferredChain params (allSeenCerts s) (allChains s)
     cert' :: Certificate
-    cert' = fst certAndSlot'
-    cert'Slot :: SlotNumber
-    cert'Slot = snd certAndSlot'
+    cert' = maximumBy (comparing (\ r -> round r)) (allSeenCerts s)
     certS :: Certificate
     certS
       = maximumBy (comparing (\ r -> round r))
@@ -173,7 +155,7 @@ transition s Tick
       (sutVotes,
        NodeModel (clock s') (protocol s') (allChains s')
          (sutVotes ++ allVotes s')
-         (foldr (insertCert (clock s')) (allSeenCerts s') certsFromQuorum))
+         (foldr insertCert (allSeenCerts s') certsFromQuorum))
   where
     s' :: NodeModel
     s'
@@ -184,16 +166,12 @@ transition s Tick
     sutVotes = votesInState s'
     certsFromQuorum :: [Certificate]
     certsFromQuorum
-      = newQuora (perasτ (protocol s))
-          (map (\ r -> fst r) (allSeenCerts s))
-          (allVotes s)
+      = newQuora (perasτ (protocol s)) (allSeenCerts s) (allVotes s)
 transition s (NewChain chain)
   = Just
       ([],
-       NodeModel (clock s) (protocol s)
-         ((slotToRound (protocol s) (clock s), chain) : allChains s)
-         (allVotes s)
-         (foldr (insertCert (nextSlot (clock s))) (allSeenCerts s)
+       NodeModel (clock s) (protocol s) (chain : allChains s) (allVotes s)
+         (foldr insertCert (allSeenCerts s)
             (catMaybes $ map certificate chain)))
 transition s (NewVote v)
   = Just
