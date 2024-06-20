@@ -319,80 +319,93 @@ Updating the block-tree upon receiving a message for vote and block messages.
 When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
+
+#### Voting rule
+
+VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
-    IsVR-1A : RoundNumber → T → Set
-    IsVR-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
+    VotingRule-1A : RoundNumber → T → Set
+    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
 
-    IsVR-1A? : (r : RoundNumber) → (t : T) → Dec (IsVR-1A r t)
-    IsVR-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
+    VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
+    VotingRule-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
+```
+VR-1B: The  extends the block certified by cert-r−1,
+```agda
+    VotingRule-1B : T → Set
+    VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
 
-    IsVR-1B : T → Set
-    IsVR-1B t = (latestCertSeen t) PointsInto (preferredChain t)
+    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
+    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+```
+VR-2A: The last certificate a party has seen is from a round at least R rounds back
+```agda
+    VotingRule-2A : RoundNumber → T → Set
+    VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
 
-    IsVR-1B? : (t : T) → Dec (IsVR-1B t)
-    IsVR-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
-
-    IsVR-2A : RoundNumber → T → Set
-    IsVR-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
-
-    IsVR-2A? : (r : RoundNumber) → (t : T) → Dec (IsVR-2A r t)
-    IsVR-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
-
-    IsVR-2B : RoundNumber → T → Set
-    IsVR-2B (MkRoundNumber r) t =
+    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
+    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
+```
+VR-2B: The last certificate included in a party's current chain is from a round exactly
+c⋆K rounds ago for some integer c ≥ 0
+```agda
+    VotingRule-2B : RoundNumber → T → Set
+    VotingRule-2B (MkRoundNumber r) t =
       (r > roundNumber (latestCertOnChain t))
       × ((_%_ r K ⦃ K-nonZero ⦄ ) ≡ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
 
-    IsVR-2B? : (r : RoundNumber) → (t : T) → Dec (IsVR-2B r t)
-    IsVR-2B? (MkRoundNumber r) t =
+    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
+    VotingRule-2B? (MkRoundNumber r) t =
       (r >? roundNumber (latestCertOnChain t))
       ×-dec ((_%_ r K ⦃ K-nonZero ⦄) ≟ (_%_ (roundNumber (latestCertOnChain t)) K ⦃ K-nonZero ⦄ ))
 ```
+If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is exprected
 ```agda
     data VoteInRound : RoundNumber → T → Type where
 
       Regular : ∀ {r t} →
-        ∙ IsVR-1A r t
-        ∙ IsVR-1B t
-          ───────────────
+        ∙ VotingRule-1A r t
+        ∙ VotingRule-1B t
+          ─────────────────
           VoteInRound r t
 
       AfterCooldown : ∀ {r t} →
-        ∙ IsVR-2A r t
-        ∙ IsVR-2B r t
-          ───────────────
+        ∙ VotingRule-2A r t
+        ∙ VotingRule-2B r t
+          ─────────────────
           VoteInRound r t
 ```
+Decidablity for the `VotingInRond` relation
 ```agda
-    vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1A r t) × (¬ IsVR-2A r t)  → ¬ VoteInRound r t
-    vr-1a-2a (x , _) (Regular x₁ x₂) = contradiction x₁ x
-    vr-1a-2a (_ , y) (AfterCooldown x₁ x₂) = contradiction x₁ y
+    vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
+    vr-1a-2a (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
+    vr-1a-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
 
-    vr-1a-2b : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1A r t) × (¬ IsVR-2B r t)  → ¬ VoteInRound r t
-    vr-1a-2b (x , _) (Regular x₁ x₂) = contradiction x₁ x
-    vr-1a-2b (_ , y) (AfterCooldown x₁ x₂) = contradiction x₂ y
+    vr-1a-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
+    vr-1a-2b (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
+    vr-1a-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
 
-    vr-1b-2a : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1B t) × (¬ IsVR-2A r t)  → ¬ VoteInRound r t
-    vr-1b-2a (x , _) (Regular x₁ x₂) = contradiction x₂ x
-    vr-1b-2a (_ , y) (AfterCooldown x₁ x₂) = contradiction x₁ y
+    vr-1b-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
+    vr-1b-2a (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
+    vr-1b-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
 
-    vr-1b-2b : ∀ {r : RoundNumber} → {t : T} → (¬ IsVR-1B t) × (¬ IsVR-2B r t)  → ¬ VoteInRound r t
-    vr-1b-2b (x , _) (Regular x₁ x₂) = contradiction x₂ x
-    vr-1b-2b (_ , y) (AfterCooldown x₁ x₂) = contradiction x₂ y
+    vr-1b-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
+    vr-1b-2b (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
+    vr-1b-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
 ```
 ```agda
     VoteInRound? : (r : RoundNumber) → (t : T) → Dec (VoteInRound r t)
     VoteInRound? r t
-      with IsVR-1A? r t
-      with IsVR-1B? t
-      with IsVR-2A? r t
-      with IsVR-2B? r t
-    ... | yes p | yes q | _     | _     = yes (Regular p q)
-    ... | _     | _     | yes p | yes q = yes (AfterCooldown p q)
-    ... | no p  | _     | no q  | _     = no (vr-1a-2a (p , q))
-    ... | no p  | _     | _     | no q  = no (vr-1a-2b (p , q))
-    ... | _     | no p  | no q  | _     = no (vr-1b-2a (p , q))
-    ... | _     | no p  | _     | no q  = no (vr-1b-2b (p , q))
+      with VotingRule-1A? r t
+         | VotingRule-1B? t
+         | VotingRule-2A? r t
+         | VotingRule-2B? r t
+    ... | yes p | yes q | _     | _     = yes $ Regular p q
+    ... | _     | _     | yes p | yes q = yes $ AfterCooldown p q
+    ... | no p  | _     | no q  | _     = no  $ vr-1a-2a (p , q)
+    ... | no p  | _     | _     | no q  = no  $ vr-1a-2b (p , q)
+    ... | _     | no p  | no q  | _     = no  $ vr-1b-2a (p , q)
+    ... | _     | no p  | _     | no q  = no  $ vr-1b-2b (p , q)
 ```
 ### State
 
