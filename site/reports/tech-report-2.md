@@ -432,3 +432,37 @@ function(s, B, p, q)
 > List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
 
 ## Conclusion
+
+# Formal specification in Agda
+
+In the following subsections we explain how the formal specification of Ouroboros Peras relates the research paper with the reference implementation of the protocol.
+
+## Formal specification
+
+The formal specification is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time.
+Computational aspects in general are not considered, but are only defined by types, which might be refined by properties. The block-tree is an example of such a type that is not implemented in the formal specification, but on the other hand defined by properties specifying the behavior of an implementation of this data structure.
+
+This is different approach to for example the formal ledger specification, where the formal specification is also directly executable.
+
+We considered and investigated the following approaches to link the formal specification with an executable specification in Haskell
+
+* Relational specification, make it decidable and use that executable version as reference implementation
+    Pro: yields an executable specification in Haskell.
+    Con: requires decidable versions of each small step.
+
+* Relational specification, formulate test properties and prove that test properties conform
+    Pro: yields properties in Haskell
+    Con: no executable specification in Haskell
+
+* Relational specification together with an executable specification and prove their equivalence
+    Pro: yields an executable specification in Haskell
+    Con: consistency and completeness proofs may be difficult
+
+Restrictions:
+
+* fixed set of participants
+
+## Formally verified properties from the research paper
+
+## Formally verified test executions
+
