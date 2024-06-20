@@ -365,7 +365,7 @@ c⋆K rounds ago for some integer c ≥ 0
             r >? roundNumber (latestCertOnChain t)
       ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
 ```
-If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is exprected
+If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
     data VoteInRound : RoundNumber → T → Type where
 
