@@ -161,10 +161,9 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 # Analyses of adversarial scenarios
 
 > [!CAUTION]
-> Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
-
-> [!CAUTION]
-> Check all of the mathematical derivations in this section.
+> 1. Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
+> 2. Check all of the mathematical derivations in this section.
+> 3. Explain the scenarios more clearly.
 
 In this section we use the following notation:
 
@@ -400,17 +399,30 @@ function(s, B, p, q)
 
 ## No common prefix
 
-***Question:***
+***Question:*** How long can an adversary maintain a common prefix?
 
-***Relevance:***
+***Relevance:*** "Finally, in the third phase, parties wait until the blocks from the second phase have stabilized." This common-prefix time helps determine the value of the cooldown period $K$.
 
-***Risk:***
+***Risk:*** A strong adversary can keep their fork viable for many slots.
 
-***Scenario:***
+***Scenario:*** The honest chain must grow longer than the adversarial chain.
 
-***Analysis:***
+***Analysis:*** During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \le n$ at slot $s$ is
 
-***Example:***
+$$
+P = \sum_{0 \le m \le n \le s} \mathbf{p}_\text{binom}(m, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q) = \sum_{n=0}^s \mathbf{P}_\text{binom}(n, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q)
+$$
+
+and can be computed by the following R function:
+
+```R
+function(s, B, p, q)
+  sum(pbinom(0:s, s, p) * dbinom(0:s, s, q))
+```
+
+***Example:*** Plot the probability of the adversarial chain being at least as long as the honest chain, as a function of the common-prefix time $s$, under the assumption that the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ a.
+
+![Probability of not achieving the common-prefix time, given 5% active slots.](../diagrams/no-common-prefix.plot.png)
 
 ## Block rolled back
 
