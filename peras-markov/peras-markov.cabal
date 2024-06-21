@@ -20,12 +20,17 @@ library
                       Peras.Markov.Class
                       Peras.Markov.Orphans
                       Peras.Markov.Polynomial
+                      Peras.MarkovSim.Decoupled
+                      Peras.MarkovSim.Types
     build-depends:    QuickCheck,
                       base ^>=4.18.1.0,
                       containers,
                       data-default,
+                      hashable,
                       numeric-prelude,
                       prettyprinter,
+                      statistics,
+                      unordered-containers,
     default-language: Haskell2010
 
 executable  peras-markov
