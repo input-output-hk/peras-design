@@ -5,10 +5,10 @@ import Criterion (Benchmark, env, perRunEnv)
 import Criterion.Main (bench, bgroup, defaultMain, nf, whnf)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Maybe (isJust, mapMaybe)
+import Data.Maybe (fromJust, isJust, mapMaybe)
 import Data.Word (Word8)
 import Peras.Voting.Arbitraries (gen32Bytes, genVoters)
-import Peras.Voting.Vote (Voter (voterStake), castVote, fromBytes)
+import Peras.Voting.Vote (Voter (voterStake), castVote, checkVote, fromBytes, mkStakeDistribution)
 import Test.QuickCheck (Gen, arbitrary, elements, generate, vectorOf)
 
 main :: IO ()
@@ -19,7 +19,27 @@ main = do
         "Committee Selection"
         [benchCommitteeSelection n voters | n <- [100, 500, 1000, 5000, 10000]]
     , benchVote voters
+    , benchVerification voters
     ]
+
+benchVerification :: [Voter] -> Benchmark
+benchVerification voters =
+  bench "Single Verification" $
+    perRunEnv setup $ \ ~(blockHash, totalStake, input, committeeSize, spos, vote) ->
+      evaluate $
+        rnf $
+          checkVote committeeSize totalStake spos input vote
+ where
+  setup = generate $ do
+    blockHash <- gen32Bytes
+    input <- fromBytes <$> gen32Bytes
+    let totalStake = sum $ voterStake <$> voters
+        committeeSize = fromInteger $ totalStake * 75 `div` 100
+        roundNumber = 42
+        spos = mkStakeDistribution voters
+    voter <- elements voters
+    let vote = fromJust $ castVote blockHash totalStake input committeeSize roundNumber voter
+    pure (blockHash, totalStake, input, committeeSize, spos, vote)
 
 benchVote :: [Voter] -> Benchmark
 benchVote voters =

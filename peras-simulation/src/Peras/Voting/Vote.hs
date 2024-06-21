@@ -181,6 +181,13 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
 
 type StakeDistribution = Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256), Integer)
 
+mkStakeDistribution :: [Voter] -> StakeDistribution
+mkStakeDistribution voters =
+  Map.fromList $
+    [ (voterId, (vrfVerKey, kesVerKey, voterStake))
+    | MkVoter{voterId, vrfVerKey, kesVerKey, voterStake} <- voters
+    ]
+
 checkVote :: SignableRepresentation a => CommitteeSize -> Integer -> StakeDistribution -> MembershipInput -> Vote a -> Bool
 checkVote committeeSize totalStake stakePools (MkMembershipInput h) vote =
   case Map.lookup creatorId stakePools of

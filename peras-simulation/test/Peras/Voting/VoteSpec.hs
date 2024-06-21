@@ -12,20 +12,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Ratio ((%))
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genVoters, mutationName)
-import Peras.Voting.Vote (
-  CommitteeSize,
-  MembershipInput,
-  RoundNumber (..),
-  StakeDistribution,
-  Vote (..),
-  Voter (..),
-  binomialVoteWeighing,
-  castVote,
-  checkVote,
-  fromBytes,
-  voterStake,
-  votingWeight,
- )
+import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), binomialVoteWeighing, castVote, checkVote, fromBytes, mkStakeDistribution, voterStake, votingWeight)
 import Test.Hspec (Spec, runIO)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
@@ -81,11 +68,7 @@ forAllVotes p =
   forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
     forAllBlind (genVoters 10) $ \voters ->
       let totalStake = sum $ voterStake <$> voters
-          spos =
-            Map.fromList $
-              [ (voterId, (vrfVerKey, kesVerKey, voterStake))
-              | MkVoter{voterId, vrfVerKey, kesVerKey, voterStake} <- voters
-              ]
+          spos = mkStakeDistribution voters
        in p input voters spos (fromIntegral totalStake `div` 2)
 
 prop_sortitionSelectsVoterAccordingToWeight :: Property
