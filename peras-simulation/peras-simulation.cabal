@@ -37,6 +37,7 @@ library
                      Peras.Abstract.Protocol.Voting
                      -- details of voting
                      Peras.Voting.Vote
+                     Peras.Voting.Arbitraries
     other-modules:   Peras.Abstract.Protocol.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
@@ -48,6 +49,7 @@ library
                       containers,
                       contra-tracer,
                       data-default,
+                      deepseq,
                       hashable,
                       io-classes,
                       io-sim,
@@ -113,3 +115,18 @@ test-suite peras-simulation-test
     build-tool-depends:
        hspec-discover:hspec-discover
     ghc-options: -rtsopts -threaded
+
+benchmark bench
+  hs-source-dirs: bench/
+  main-is:        Bench.hs
+  type:           exitcode-stdio-1.0
+  build-depends:
+                  QuickCheck
+                , aeson
+                , base
+                , bytestring
+                , criterion
+                , deepseq
+                , peras-simulation
+
+  ghc-options:    -threaded -rtsopts

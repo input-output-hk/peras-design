@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -5,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,6 +22,7 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF.Class as VRF
 import qualified Cardano.Crypto.VRF.Praos as VRF
+import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -26,6 +30,7 @@ import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Data.Serialize (getWord64le, runGet)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import Statistics.Distribution (cumulative)
 import Statistics.Distribution.Binomial (binomial)
 
@@ -37,29 +42,36 @@ data Vote block = MkVote
   , votingWeight :: VotingWeight
   , signature :: Signature
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (NFData)
 
 newtype VotingWeight = VotingWeight {unVotingWeight :: Word64}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (Num, Integral, Real, Enum)
+  deriving newtype (Num, Integral, Real, Enum, NFData)
 
 -- | A party (SPO) is identified by its pool ID which is the hash of its VRF verification key.
 newtype PartyId = MkPartyId {unPartyId :: Hash Blake2b_256 (VRF.VerKeyVRF VRF.PraosVRF)}
   deriving stock (Eq, Ord, Show)
+  deriving newtype (NFData)
 
 mkPartyId :: BS.ByteString -> PartyId
 mkPartyId = MkPartyId . fromJust . Hash.hashFromBytes
 
 -- | A round number is just a natural number.
 newtype RoundNumber = RoundNumber {unRoundNumber :: Word64}
-  deriving stock (Eq, Ord, Show)
+  deriving newtype (Eq, Ord, Show, Num, Integral, Real, Enum, NFData)
 
 type MembershipProof = VRF.CertifiedVRF VRF.PraosVRF MembershipInput
 
+deriving anyclass instance NFData (VRF.CertifiedVRF VRF.PraosVRF MembershipInput)
+
 type Signature = KES.SignedKES (KES.Sum6KES Ed25519DSIGN Blake2b_256) MembershipProof
 
+deriving newtype instance NFData (KES.SignedKES (KES.Sum6KES Ed25519DSIGN Blake2b_256) MembershipProof)
+
 -- | The input to the `evalVRF` is a hash value.
-data MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 MembershipInput}
-  deriving (Eq, Ord, Show)
+newtype MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 MembershipInput}
+  deriving newtype (Eq, Ord, Show, NFData)
 
 fromBytes :: BS.ByteString -> MembershipInput
 fromBytes = MkMembershipInput . fromJust . Hash.hashFromBytes
@@ -71,7 +83,8 @@ data Voter = MkVoter
   , kesPeriod :: KES.Period
   , kesSignKey :: KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
   }
-  deriving (Show)
+  deriving stock (Show, Generic)
+  deriving anyclass (NFData)
 
 newVRFSigningKey :: BS.ByteString -> VRF.SignKeyVRF VRF.PraosVRF
 newVRFSigningKey = fst . VRF.genKeyPairVRF . mkSeedFromBytes
@@ -80,7 +93,7 @@ newKESSigningKey :: BS.ByteString -> KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Bl
 newKESSigningKey = genKeyKES . mkSeedFromBytes
 
 newtype CommitteeSize = CommitteeSize Integer
-  deriving newtype (Eq, Show, Num, Integral, Real, Ord, Enum)
+  deriving newtype (Eq, Show, Num, Integral, Real, Ord, Enum, NFData)
 
 instance SignableRepresentation MembershipInput where
   getSignableRepresentation (MkMembershipInput x) = Hash.hashToBytes x

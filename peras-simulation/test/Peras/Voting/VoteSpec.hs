@@ -11,6 +11,7 @@ import qualified Data.ByteString as BS
 import Data.Function ((&))
 import Data.Maybe (mapMaybe)
 import Data.Ratio ((%))
+import Peras.Voting.Arbitraries (gen32Bytes, genVoters)
 import Peras.Voting.Vote (RoundNumber (..), Voter (..), binomialVoteWeighing, castVote, fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake, votingWeight)
 import Test.Hspec (Spec, runIO)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
@@ -33,18 +34,6 @@ prop_sortitionSelectsVoterAccordingToWeight =
             & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10000 * actual) / 100)]
             & counterexample ("actual = " <> show actual <> ", weight = " <> show weight <> ", diff = " <> show diff)
 
-genVoters :: Int -> Gen [Voter]
-genVoters n = vectorOf n genVoter
-
-genVoter :: Gen Voter
-genVoter = do
-  voterId <- mkPartyId <$> gen32Bytes
-  voterStake <- choose (1_000_000, 1_000_000_000) -- in ADA
-  vrfSignKey <- newVRFSigningKey <$> gen32Bytes
-  let kesPeriod = 0
-  kesSignKey <- newKESSigningKey <$> gen32Bytes
-  pure $ MkVoter{voterId, voterStake, vrfSignKey, kesPeriod, kesSignKey}
-
 instance Arbitrary RoundNumber where
   arbitrary = RoundNumber <$> choose (1, 1000000)
 
@@ -63,6 +52,3 @@ prop_selectCommitteeSizeVotersEveryRound voters =
                 & counterexample ("totalVotes = " <> show totalVotes)
                 & counterexample ("committeeSize = " <> show committeeSize)
                 & counterexample ("difference = " <> show (abs (totalVotes - fromIntegral committeeSize)))
-
-gen32Bytes :: Gen ByteString
-gen32Bytes = BS.pack <$> vectorOf 32 arbitrary
