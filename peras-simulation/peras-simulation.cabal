@@ -41,7 +41,7 @@ library
     other-modules:   Peras.Abstract.Protocol.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
-                      base,
+                      base ^>=4.18.1.0,
                       bytestring,
                       cardano-binary,
                       cardano-crypto-class ^>= 2.1,
@@ -86,7 +86,7 @@ executable  peras-visualize
     main-is:          Visualize.hs
     other-modules:    Paths_peras_simulation
     build-depends:    aeson
-                    , base
+                    , base ^>=4.18.1.0
                     , bytestring
                     , optparse-applicative
                     , peras-simulation
@@ -104,7 +104,7 @@ test-suite peras-simulation-test
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:  QuickCheck
-                  , base
+                  , base ^>=4.18.1.0
                   , bytestring
                   , cardano-binary
                   , containers
