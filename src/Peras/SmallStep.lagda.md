@@ -328,7 +328,8 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
     VotingRule-1A : RoundNumber → T → Set
     VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
-
+```
+```agda
     VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
     VotingRule-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
 ```
@@ -336,20 +337,35 @@ VR-1B: The  extends the block certified by cert-r−1,
 ```agda
     VotingRule-1B : T → Set
     VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
-
+```
+```agda
     VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
     VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+```
+VR-1: Both VR-1A and VR-1B hold
+```agda
+    VotingRule-1 : RoundNumber → T → Set
+    VotingRule-1 r t =
+        VotingRule-1A r t
+      × VotingRule-1B t
+```
+```agda
+    VotingRule-1? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
+    VotingRule-1? r t =
+            VotingRule-1A? r t
+      ×-dec VotingRule-1B? t
 ```
 VR-2A: The last certificate a party has seen is from a round at least R rounds back
 ```agda
     VotingRule-2A : RoundNumber → T → Set
     VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
-
+```
+```agda
     VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
     VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
 ```
 VR-2B: The last certificate included in a party's current chain is from a round exactly
-c⋆K rounds ago for some integer c ≥ 0
+c⋆K rounds ago for some c : ℕ, c ≥ 0
 <!--
 ```agda
     _mod_ : ℕ → (n : ℕ) → ⦃ NonZero n ⦄ → ℕ
@@ -361,59 +377,38 @@ c⋆K rounds ago for some integer c ≥ 0
     VotingRule-2B (MkRoundNumber r) t =
         r > roundNumber (latestCertOnChain t)
       × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
-
+```
+```agda
     VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
     VotingRule-2B? (MkRoundNumber r) t =
             r >? roundNumber (latestCertOnChain t)
       ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
 ```
+VR-2: Both VR-2A and VR-2B hold
+```agda
+    VotingRule-2 : RoundNumber → T → Set
+    VotingRule-2 r t =
+        VotingRule-2A r t
+      × VotingRule-2B r t
+```
+```agda
+    VotingRule-2? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
+    VotingRule-2? r t =
+            VotingRule-2A? r t
+      ×-dec VotingRule-2B? r t
+```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
-    data VoteInRound : RoundNumber → T → Type where
-
-      Regular : ∀ {r t} →
-        ∙ VotingRule-1A r t
-        ∙ VotingRule-1B t
-          ─────────────────
-          VoteInRound r t
-
-      AfterCooldown : ∀ {r t} →
-        ∙ VotingRule-2A r t
-        ∙ VotingRule-2B r t
-          ─────────────────
-          VoteInRound r t
-```
-Decidablity for the `VotingInRound` relation
-```agda
-    vr-1a-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
-    vr-1a-2a (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
-    vr-1a-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
-
-    vr-1a-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1A r t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
-    vr-1a-2b (x₁ , _) (Regular y₁ _) = contradiction y₁ x₁
-    vr-1a-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
-
-    vr-1b-2a : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2A r t)  → ¬ VoteInRound r t
-    vr-1b-2a (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
-    vr-1b-2a (_ , x₂) (AfterCooldown y₁ _) = contradiction y₁ x₂
-
-    vr-1b-2b : ∀ {r : RoundNumber} → {t : T} → (¬ VotingRule-1B t) × (¬ VotingRule-2B r t)  → ¬ VoteInRound r t
-    vr-1b-2b (x₁ , _) (Regular _ y₂) = contradiction y₂ x₁
-    vr-1b-2b (_ , x₂) (AfterCooldown _ y₂) = contradiction y₂ x₂
+    VotingRule : RoundNumber → T → Set
+    VotingRule r t =
+        VotingRule-1 r t
+      ⊎ VotingRule-2 r t
 ```
 ```agda
-    VoteInRound? : (r : RoundNumber) → (t : T) → Dec (VoteInRound r t)
-    VoteInRound? r t
-      with VotingRule-1A? r t
-         | VotingRule-1B? t
-         | VotingRule-2A? r t
-         | VotingRule-2B? r t
-    ... | yes p | yes q | _     | _     = yes $ Regular p q
-    ... | _     | _     | yes p | yes q = yes $ AfterCooldown p q
-    ... | no p  | _     | no q  | _     = no  $ vr-1a-2a (p , q)
-    ... | no p  | _     | _     | no q  = no  $ vr-1a-2b (p , q)
-    ... | _     | no p  | no q  | _     = no  $ vr-1b-2a (p , q)
-    ... | _     | no p  | _     | no q  = no  $ vr-1b-2b (p , q)
+    VotingRule? : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
+    VotingRule? r t =
+            VotingRule-1? r t
+      ⊎-dec VotingRule-2? r t
 ```
 ### State
 
@@ -479,7 +474,7 @@ transitioning from one voting round to another.
     RequiredVotes : State → Type
     RequiredVotes M =
       let r = v-round clock
-       in Any (VoteInRound r ∘ proj₂) blockTrees
+       in Any (VotingRule r ∘ proj₂) blockTrees
         → Any (hasVote r ∘ proj₂) blockTrees
       where open State M
 ```
@@ -599,7 +594,7 @@ is added to be consumed immediately.
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
         ∙ IsCommitteeMember p r π
-        ∙ VoteInRound r t
+        ∙ VotingRule r t
           ───────────────────────────────────
           Honest {p} ⊢
             M ⇉ add (VoteMsg v , 𝟘 , p) to t
