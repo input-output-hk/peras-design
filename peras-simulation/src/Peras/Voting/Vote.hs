@@ -88,13 +88,29 @@ instance SignableRepresentation MembershipInput where
 instance SignableRepresentation (VRF.CertifiedVRF VRF.PraosVRF v) where
   getSignableRepresentation = VRF.getOutputVRFBytes . VRF.certifiedOutput
 
-castVote :: a -> Integer -> MembershipInput -> CommitteeSize -> RoundNumber -> Voter -> Maybe (Vote a)
+castVote ::
+  -- | The thing we are voting on
+  a ->
+  -- | Total stake of all voters
+  Integer ->
+  -- | The previous input to the VRF
+  --  This is a basis for the VRF nonce, concatenated with the round number and the string @peras@
+  --  to give the actual VRF input.
+  MembershipInput ->
+  -- | The target committee size, in the range [0, totalStake]
+  CommitteeSize ->
+  -- | The round number
+  RoundNumber ->
+  -- | The voter
+  Voter ->
+  -- | The vote, if the voter is selected
+  Maybe (Vote a)
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let nonce = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
       certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signedKES () kesPeriod certVRF kesSignKey
       ratio = asInteger nonce % toInteger (maxBound @Word64)
-   in case selectVote committeeSize ratio voterStake totalStake of
+   in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
         n ->
           Just
@@ -113,7 +129,7 @@ asInteger (MkMembershipInput h) = fromIntegral $ fromBytesLE $ Hash.hashToBytes 
   fromBytesLE = either error id . runGet getWord64le . BS.take 8
 
 -- stolen from https://github.com/algorand/sortition/blob/main/sortition.cpp
-selectVote ::
+binomialVoteWeighing ::
   -- | Expected committee size
   Integer ->
   -- | Outcome of "random" function, used to find voter's resulting weight
@@ -124,16 +140,19 @@ selectVote ::
   -- | Total stake
   Integer ->
   VotingWeight
-selectVote expectedSize ratio voterStake totalStake =
-  go 0
+binomialVoteWeighing expectedSize ratio voterStake totalStake =
+  go 0 coin
  where
   n = voterStake
   p = expectedSize % totalStake
   ρ = fromRational ratio
   coin = fromIntegral voterStake
   cdf = binomial (fromIntegral n) (fromRational p)
-  go k =
-    if
-      | cumulative cdf k >= ρ -> VotingWeight (floor k)
-      | k >= coin -> VotingWeight (fromInteger voterStake)
-      | otherwise -> go (k + 1)
+  go a b =
+    let c = (a + b) `div` 2
+     in if abs (b - a) <= 1
+          then VotingWeight b
+          else case compare (cumulative cdf (fromIntegral c)) ρ of
+            GT -> go a c
+            LT -> go c b
+            EQ -> VotingWeight c
