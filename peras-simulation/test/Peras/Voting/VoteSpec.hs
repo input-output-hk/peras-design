@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,11 +7,24 @@
 module Peras.Voting.VoteSpec where
 
 import Data.Function ((&))
-import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Ratio ((%))
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genVoters, mutationName)
-import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), binomialVoteWeighing, castVote, checkVote, fromBytes, mkStakeDistribution, voterStake, votingWeight)
+import Peras.Voting.Vote (
+  CommitteeSize,
+  MembershipInput,
+  RoundNumber (..),
+  StakeDistribution,
+  Vote (..),
+  Voter (..),
+  binomialVoteWeighing,
+  castVote,
+  checkVote,
+  fromBytes,
+  mkStakeDistribution,
+  voterStake,
+  votingWeight,
+ )
 import Test.Hspec (Spec, runIO)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
@@ -33,7 +45,7 @@ import Test.QuickCheck (
 
 spec :: Spec
 spec = do
-  voters <- runIO $ generate $ genVoters 30
+  voters <- runIO $ generate $ genVoters 300
   prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
   prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
   prop "verifies valid votes" prop_verifiesValidVotes
@@ -41,11 +53,11 @@ spec = do
 
 prop_rejectsInvalidVotes :: Property
 prop_rejectsInvalidVotes =
-  forAllBlind gen32Bytes $ \blockHash ->
+  forAllBlind gen32Bytes $ \block ->
     forAllVotes $ \input voters spos committeeSize ->
       forAllBlind (elements voters) $ \voter ->
         let totalStake = sum $ voterStake <$> voters
-            vote = fromJust $ castVote blockHash totalStake input committeeSize 42 voter
+            vote = fromJust $ castVote block totalStake input committeeSize 42 voter
          in forAll (genMutation voter vote) $ \mutation ->
               (checkVote committeeSize totalStake spos input . applyMutation mutation $ vote) === False
                 & counterexample ("vote = " <> show vote)
@@ -55,11 +67,11 @@ prop_rejectsInvalidVotes =
 
 prop_verifiesValidVotes :: Property
 prop_verifiesValidVotes =
-  forAllBlind gen32Bytes $ \blockHash ->
+  forAllBlind gen32Bytes $ \block ->
     forAllVotes $ \input voters spos committeeSize ->
       forAllBlind (elements voters) $ \voter ->
         let totalStake = sum $ voterStake <$> voters
-            vote = castVote blockHash totalStake input committeeSize 42 voter
+            vote = castVote block totalStake input committeeSize 42 voter
          in (checkVote committeeSize totalStake spos input <$> vote) === Just True
               & counterexample ("vote = " <> show vote)
 
@@ -86,7 +98,7 @@ prop_sortitionSelectsVoterAccordingToWeight =
           actual = fromIntegral weight % committeeSize
           diff = abs (actual - expectedShare)
        in diff <= tolerance
-            & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10_000 * actual) / 100)]
+            & tabulate "committee share" [show @Double ((fromIntegral @Integer $ floor $ 10_000 * actual) / 100)]
             & counterexample ("actual = " <> show actual <> ", weight = " <> show weight <> ", diff = " <> show diff)
 
 instance Arbitrary RoundNumber where
@@ -96,13 +108,14 @@ prop_selectCommitteeSizeVotersEveryRound :: [Voter] -> Property
 prop_selectCommitteeSizeVotersEveryRound voters =
   forAll arbitrary $ \roundNumber ->
     forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
-      forAllBlind gen32Bytes $ \blockHash ->
+      forAllBlind gen32Bytes $ \block ->
         forAllBlind (choose (60, 80)) $ \committeeRatio ->
           let totalStake = sum $ voterStake <$> voters
               committeeSize = fromInteger $ totalStake * committeeRatio `div` 100
-              votes = mapMaybe (castVote blockHash totalStake input committeeSize roundNumber) voters
+              votes = mapMaybe (castVote block totalStake input committeeSize roundNumber) voters
               totalVotes :: Integer = fromIntegral $ sum (votingWeight <$> votes)
-           in abs (totalVotes - fromIntegral committeeSize) < 2_000_000
+              committeeSizeTolerance = floor @Rational ((5 % 10_000) * fromIntegral committeeSize)
+           in abs (totalVotes - fromIntegral committeeSize) < committeeSizeTolerance
                 & tabulate "committee ratio" [show committeeRatio]
                 & counterexample ("totalVotes = " <> show totalVotes)
                 & counterexample ("committeeSize = " <> show committeeSize)
