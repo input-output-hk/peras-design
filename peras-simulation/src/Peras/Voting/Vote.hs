@@ -198,5 +198,3 @@ checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = Round
           )
  where
   nonce = mkNonce h unRoundNumber
-
--- && KES.verifyKES () votingRound signature (KES.getSigCert signature) (KES.getSig signature)

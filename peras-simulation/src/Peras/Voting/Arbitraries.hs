@@ -10,7 +10,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.List as List
-import Peras.Voting.Vote (MembershipInput (..), Signature, Vote (..), Voter (..), fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake)
+import Peras.Voting.Vote (MembershipInput (..), Signature, Vote (..), Voter (..), VotingWeight (..), fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake)
 import Test.QuickCheck (Gen, arbitrary, choose, oneof, vectorOf)
 
 genVoters :: Int -> Gen [Voter]
@@ -42,6 +42,8 @@ applyMutation (MutateSignature signature) vote =
   vote{signature}
 applyMutation (MutateBlockHash blockHash) vote =
   vote{blockHash}
+applyMutation (MutateWeight votingWeight) vote =
+  vote{votingWeight}
 
 mutationName :: Mutation -> String
 mutationName = head . List.words . show
@@ -49,12 +51,17 @@ mutationName = head . List.words . show
 data Mutation
   = MutateSignature Signature
   | MutateBlockHash ByteString
+  | MutateWeight VotingWeight
   deriving (Show)
 
 genMutation :: Voter -> Vote ByteString -> Gen Mutation
 genMutation MkVoter{kesSignKey, kesPeriod, vrfSignKey} _vote =
-  oneof [mutateSig, mutateHash]
+  oneof [mutateSig, mutateHash, mutateWeight]
  where
+  mutateWeight = do
+    weight <- VotingWeight <$> choose (1_000_000_000, 100_000_000_000)
+    pure $ MutateWeight weight
+
   mutateSig = do
     input <- fromBytes <$> gen32Bytes
     let vrf = VRF.evalCertified @_ @MembershipInput () input vrfSignKey

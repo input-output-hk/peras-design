@@ -38,7 +38,9 @@ prop_rejectsInvalidVotes =
          in forAll (genMutation voter vote) $ \mutation ->
               (checkVote spos input . applyMutation mutation $ vote) === False
                 & counterexample ("vote = " <> show vote)
-                & tabulate "mutation" [mutationName mutation]
+                & tabulate "mutations" [mutationName mutation]
+                & coverTable "mutations" [("MutateSignature", 33), ("MutateBlockHash", 33), ("MutateWeight", 33)]
+                & checkCoverage
 
 prop_verifiesValidVotes :: Property
 prop_verifiesValidVotes =
