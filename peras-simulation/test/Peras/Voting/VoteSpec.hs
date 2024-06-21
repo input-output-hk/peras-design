@@ -7,6 +7,7 @@
 
 module Peras.Voting.VoteSpec where
 
+import Control.Concurrent.Class.MonadSTM (MonadSTM (check))
 import Data.ByteString (ByteString)
 import Data.Function ((&))
 import qualified Data.List as List
@@ -17,7 +18,7 @@ import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genVote
 import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), Signature, StakeDistribution, Vote (..), Voter (..), binomialVoteWeighing, castVote, checkVote, fromBytes, voterStake, votingWeight)
 import Test.Hspec (Spec, runIO)
 import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Arbitrary, Gen, Property, arbitrary, choose, counterexample, elements, forAll, forAllBlind, generate, tabulate, (===))
+import Test.QuickCheck (Arbitrary, Confidence (..), Gen, Property, arbitrary, checkCoverage, checkCoverageWith, choose, counterexample, coverTable, elements, forAll, forAllBlind, generate, stdConfidence, tabulate, (===))
 
 spec :: Spec
 spec = do

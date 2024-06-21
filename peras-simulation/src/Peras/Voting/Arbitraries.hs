@@ -11,7 +11,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.List as List
 import Peras.Voting.Vote (MembershipInput (..), Signature, Vote (..), Voter (..), fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake)
-import Test.QuickCheck (Gen, arbitrary, choose, vectorOf)
+import Test.QuickCheck (Gen, arbitrary, choose, oneof, vectorOf)
 
 genVoters :: Int -> Gen [Voter]
 genVoters n = vectorOf n genVoter
@@ -40,16 +40,27 @@ gen32Bytes = BS.pack <$> vectorOf 32 arbitrary
 applyMutation :: Mutation -> Vote ByteString -> Vote ByteString
 applyMutation (MutateSignature signature) vote =
   vote{signature}
+applyMutation (MutateBlockHash blockHash) vote =
+  vote{blockHash}
 
 mutationName :: Mutation -> String
 mutationName = head . List.words . show
 
-data Mutation = MutateSignature Signature
+data Mutation
+  = MutateSignature Signature
+  | MutateBlockHash ByteString
   deriving (Show)
 
 genMutation :: Voter -> Vote ByteString -> Gen Mutation
-genMutation MkVoter{kesSignKey, kesPeriod, vrfSignKey} _vote = do
-  input <- fromBytes <$> gen32Bytes
-  let vrf = VRF.evalCertified @_ @MembershipInput () input vrfSignKey
-      sig = KES.signKES () kesPeriod vrf kesSignKey
-  pure $ MutateSignature sig
+genMutation MkVoter{kesSignKey, kesPeriod, vrfSignKey} _vote =
+  oneof [mutateSig, mutateHash]
+ where
+  mutateSig = do
+    input <- fromBytes <$> gen32Bytes
+    let vrf = VRF.evalCertified @_ @MembershipInput () input vrfSignKey
+        sig = KES.signKES () kesPeriod vrf kesSignKey
+    pure $ MutateSignature sig
+
+  mutateHash = do
+    blockHash <- gen32Bytes
+    pure $ MutateBlockHash blockHash

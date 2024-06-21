@@ -110,7 +110,8 @@ instance SignableRepresentation (VRF.CertifiedVRF VRF.PraosVRF v) where
   getSignableRepresentation = VRF.getOutputVRFBytes . VRF.certifiedOutput
 
 castVote ::
-  -- | The thing we are voting on
+  -- \| The thing we are voting on
+  SignableRepresentation a =>
   a ->
   -- | Total stake of all voters
   Integer ->
@@ -129,7 +130,7 @@ castVote ::
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let nonce = mkNonce h unRoundNumber
       certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
-      certKES = KES.signKES () kesPeriod certVRF kesSignKey
+      certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
       ratio = asInteger nonce % toInteger (maxBound @Word64)
    in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
@@ -181,13 +182,20 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
 
 type StakeDistribution = Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256), Integer)
 
-checkVote :: StakeDistribution -> MembershipInput -> Vote a -> Bool
+checkVote :: SignableRepresentation a => StakeDistribution -> MembershipInput -> Vote a -> Bool
 checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} =
   case Map.lookup creatorId stakePools of
     Nothing -> False
     Just (vrfKey, kesKey, _) ->
       VRF.verifyCertified () vrfKey nonce membershipProof
-        && isRight (KES.verifyKES () kesKey sigKesPeriod membershipProof signature)
+        && isRight
+          ( KES.verifyKES
+              ()
+              kesKey
+              sigKesPeriod
+              (getSignableRepresentation membershipProof <> getSignableRepresentation blockHash)
+              signature
+          )
  where
   nonce = mkNonce h unRoundNumber
 
