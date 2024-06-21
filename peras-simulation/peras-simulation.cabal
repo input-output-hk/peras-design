@@ -55,7 +55,7 @@ library
                       io-sim,
                       language-dot,
                       mtl,
-                      non-integral,
+--                      non-integral,
                       peras-hs,
                       quickcheck-dynamic,
                       statistics,
@@ -97,12 +97,13 @@ test-suite peras-simulation-test
                    Peras.Abstract.Protocol.Node.ModelSpec
                    Peras.Abstract.Protocol.NodeSpec
                    Peras.Abstract.Protocol.VotingSpec
+                   -- voting
+                   Peras.Voting.VoteSpec
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:  QuickCheck
                   , base ^>=4.18.1.0
-                  , bytestring
                   , containers
                   , contra-tracer
                   , data-default

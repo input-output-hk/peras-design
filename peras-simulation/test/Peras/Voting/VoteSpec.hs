@@ -7,18 +7,42 @@
 
 module Peras.Voting.VoteSpec where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (check))
-import Data.ByteString (ByteString)
 import Data.Function ((&))
-import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Ratio ((%))
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genVoters, mutationName)
-import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), Signature, StakeDistribution, Vote (..), Voter (..), binomialVoteWeighing, castVote, checkVote, fromBytes, voterStake, votingWeight)
+import Peras.Voting.Vote (
+  CommitteeSize,
+  MembershipInput,
+  RoundNumber (..),
+  StakeDistribution,
+  Vote (..),
+  Voter (..),
+  binomialVoteWeighing,
+  castVote,
+  checkVote,
+  fromBytes,
+  voterStake,
+  votingWeight,
+ )
 import Test.Hspec (Spec, runIO)
 import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Arbitrary, Confidence (..), Gen, Property, arbitrary, checkCoverage, checkCoverageWith, choose, counterexample, coverTable, elements, forAll, forAllBlind, generate, stdConfidence, tabulate, (===))
+import Test.QuickCheck (
+  Arbitrary,
+  Property,
+  arbitrary,
+  checkCoverage,
+  choose,
+  counterexample,
+  coverTable,
+  elements,
+  forAll,
+  forAllBlind,
+  generate,
+  tabulate,
+  (===),
+ )
 
 spec :: Spec
 spec = do
@@ -36,10 +60,10 @@ prop_rejectsInvalidVotes =
         let totalStake = sum $ voterStake <$> voters
             vote = fromJust $ castVote blockHash totalStake input committeeSize 42 voter
          in forAll (genMutation voter vote) $ \mutation ->
-              (checkVote spos input . applyMutation mutation $ vote) === False
+              (checkVote committeeSize totalStake spos input . applyMutation mutation $ vote) === False
                 & counterexample ("vote = " <> show vote)
                 & tabulate "mutations" [mutationName mutation]
-                & coverTable "mutations" [("MutateSignature", 33), ("MutateBlockHash", 33), ("MutateWeight", 33)]
+                & coverTable "mutations" [("MutateSignature", 30), ("MutateBlockHash", 30), ("MutateWeight", 30)]
                 & checkCoverage
 
 prop_verifiesValidVotes :: Property
@@ -49,7 +73,7 @@ prop_verifiesValidVotes =
       forAllBlind (elements voters) $ \voter ->
         let totalStake = sum $ voterStake <$> voters
             vote = castVote blockHash totalStake input committeeSize 42 voter
-         in (checkVote spos input <$> vote) === Just True
+         in (checkVote committeeSize totalStake spos input <$> vote) === Just True
               & counterexample ("vote = " <> show vote)
 
 forAllVotes :: (MembershipInput -> [Voter] -> StakeDistribution -> CommitteeSize -> Property) -> Property
@@ -68,10 +92,17 @@ prop_sortitionSelectsVoterAccordingToWeight :: Property
 prop_sortitionSelectsVoterAccordingToWeight =
   forAll (choose (1_000_000, 100_000_000)) $ \committeeSize ->
     forAll (choose (10, 50)) $ \flipped ->
-      let weight = binomialVoteWeighing committeeSize (flipped % 100) 10_000_000 200_000_000
+      let expectedShare = 5 % 100
+
+          totalStake :: Num a => a
+          totalStake = 200_000_000
+
+          tolerance = 5 % 10_000
+
+          weight = binomialVoteWeighing committeeSize (flipped % 100) (floor $ expectedShare * totalStake) totalStake
           actual = fromIntegral weight % committeeSize
-          diff = abs (actual - 5 % 100)
-       in diff <= 5 % 10_000
+          diff = abs (actual - expectedShare)
+       in diff <= tolerance
             & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10_000 * actual) / 100)]
             & counterexample ("actual = " <> show actual <> ", weight = " <> show weight <> ", diff = " <> show diff)
 

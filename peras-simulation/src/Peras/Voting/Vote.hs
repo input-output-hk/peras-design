@@ -4,7 +4,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -128,9 +127,9 @@ castVote ::
   -- | The vote, if the voter is selected
   Maybe (Vote a)
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
-  let nonce = mkNonce h unRoundNumber
-      certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
+  let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
+      nonce = mkNonce h unRoundNumber
       ratio = asInteger nonce % toInteger (maxBound @Word64)
    in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
@@ -182,19 +181,31 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
 
 type StakeDistribution = Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256), Integer)
 
-checkVote :: SignableRepresentation a => StakeDistribution -> MembershipInput -> Vote a -> Bool
-checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} =
+checkVote :: SignableRepresentation a => CommitteeSize -> Integer -> StakeDistribution -> MembershipInput -> Vote a -> Bool
+checkVote committeeSize totalStake stakePools (MkMembershipInput h) vote =
   case Map.lookup creatorId stakePools of
     Nothing -> False
-    Just (vrfKey, kesKey, _) ->
-      VRF.verifyCertified () vrfKey nonce membershipProof
-        && isRight
-          ( KES.verifyKES
-              ()
-              kesKey
-              sigKesPeriod
-              (getSignableRepresentation membershipProof <> getSignableRepresentation blockHash)
-              signature
-          )
+    Just (vrfKey, kesKey, voterStake) ->
+      checkVRF vrfKey
+        && checkSignature kesKey
+        && checkWeight voterStake
  where
+  checkWeight voterStake =
+    case binomialVoteWeighing (fromIntegral committeeSize) ratio voterStake totalStake of
+      0 -> False
+      n -> n == votingWeight
+
+  checkVRF vrfKey = VRF.verifyCertified () vrfKey nonce membershipProof
+
+  checkSignature kesKey =
+    isRight
+      ( KES.verifyKES
+          ()
+          kesKey
+          sigKesPeriod
+          (getSignableRepresentation membershipProof <> getSignableRepresentation blockHash)
+          signature
+      )
+  MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} = vote
   nonce = mkNonce h unRoundNumber
+  ratio = asInteger nonce % toInteger (maxBound @Word64)
