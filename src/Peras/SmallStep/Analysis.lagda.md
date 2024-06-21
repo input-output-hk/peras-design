@@ -19,7 +19,7 @@ open import Data.List as L using (List; any; map; length; foldr)
 
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
--- open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Unary.All using (All)
 
 open import Function using (_$_; case_of_; _∘_)
 
@@ -73,6 +73,10 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 
   module _ {T : Set} (blockTree : TreeType T)
+           {S : Set} (adversarialState₀ : S)
+           (txSelection : SlotNumber → PartyId → List Tx)
+           (parties : Parties)
+
            where
 
     open TreeType blockTree
@@ -124,7 +128,7 @@ Building up the voting string from all the party's block-trees
         → 1 ≤ L
         → L ≤ K
         → (replicate L 🄀 ++ (？ ∷ ⒈ ∷ σ)) ⟶ 🄀
-
+{-
       HS-V-?₁ : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
         → (replicate L 🄀 ++ (？ ∷ ⒈ ∷ σ)) ⟶ ？
@@ -153,12 +157,19 @@ Building up the voting string from all the party's block-trees
       HS-VII-1 : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
         → (replicate L 🄀 ++ (？ ∷ 🄀 ∷ σ)) ⟶ ⒈
+-}
 ```
 ```agda
     postulate
       lastIsHead : ∀ {ts : List T} {m} {x}
         → build-σ′ (MkRoundNumber m) ts ⟶ x
         → V.head (build-σ′ (MkRoundNumber (suc m)) ts) ≡ x
+
+    ？→¬VotingRule-1 : ∀ {ts : List T} {r}
+      → build-σ′ (MkRoundNumber r) ts ⟶ ？
+      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t}) ts
+    ？→¬VotingRule-1 {ts} {zero} ()
+    ？→¬VotingRule-1 {ts} {suc r} x = {!!}
 ```
 <!--
 ```agda
