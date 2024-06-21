@@ -3,25 +3,40 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Peras.Voting.VoteSpec where
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import Data.Function ((&))
+import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import Data.Ratio ((%))
 import Peras.Voting.Arbitraries (gen32Bytes, genVoters)
-import Peras.Voting.Vote (RoundNumber (..), Voter (..), binomialVoteWeighing, castVote, fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake, votingWeight)
+import Peras.Voting.Vote (RoundNumber (..), Voter (..), binomialVoteWeighing, castVote, checkVote, fromBytes, voterStake, votingWeight)
 import Test.Hspec (Spec, runIO)
-import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
-import Test.QuickCheck (Arbitrary, Gen, Property, arbitrary, choose, counterexample, forAll, forAllBlind, generate, tabulate, vectorOf)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (Arbitrary, Property, arbitrary, choose, counterexample, forAll, forAllBlind, generate, tabulate, (===))
 
 spec :: Spec
 spec = do
   voters <- runIO $ generate $ genVoters 30
   prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
   prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
+  prop "verifies valid votes" prop_verifiesValidVotes
+
+prop_verifiesValidVotes :: Property
+prop_verifiesValidVotes =
+  forAllBlind gen32Bytes $ \blockHash ->
+    forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
+      forAllBlind (genVoters 1) $ \[voter] ->
+        let totalStake = 2 * stake
+            stake = voterStake voter
+            spos = Map.singleton (voterId voter) (vrfVerKey voter, voterStake voter)
+            roundNumber = 42
+            vote = castVote blockHash totalStake input (fromIntegral stake `div` 2) roundNumber voter
+         in (checkVote spos input <$> vote) === Just True
+              & counterexample ("vote = " <> show vote)
 
 prop_sortitionSelectsVoterAccordingToWeight :: Property
 prop_sortitionSelectsVoterAccordingToWeight =

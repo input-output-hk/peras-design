@@ -26,6 +26,8 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Data.Serialize (getWord64le, runGet)
@@ -76,18 +78,22 @@ newtype MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 Members
 fromBytes :: BS.ByteString -> MembershipInput
 fromBytes = MkMembershipInput . fromJust . Hash.hashFromBytes
 
+mkNonce :: Hash h a -> Word64 -> MembershipInput
+mkNonce h unRoundNumber = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
+
 data Voter = MkVoter
   { voterId :: PartyId
   , voterStake :: Integer
   , vrfSignKey :: VRF.SignKeyVRF VRF.PraosVRF
+  , vrfVerKey :: VRF.VerKeyVRF VRF.PraosVRF
   , kesPeriod :: KES.Period
   , kesSignKey :: KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
   }
   deriving stock (Show, Generic)
   deriving anyclass (NFData)
 
-newVRFSigningKey :: BS.ByteString -> VRF.SignKeyVRF VRF.PraosVRF
-newVRFSigningKey = fst . VRF.genKeyPairVRF . mkSeedFromBytes
+newVRFSigningKey :: BS.ByteString -> (VRF.SignKeyVRF VRF.PraosVRF, VRF.VerKeyVRF VRF.PraosVRF)
+newVRFSigningKey = VRF.genKeyPairVRF . mkSeedFromBytes
 
 newKESSigningKey :: BS.ByteString -> KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
 newKESSigningKey = genKeyKES . mkSeedFromBytes
@@ -119,7 +125,7 @@ castVote ::
   -- | The vote, if the voter is selected
   Maybe (Vote a)
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
-  let nonce = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
+  let nonce = mkNonce h unRoundNumber
       certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signedKES () kesPeriod certVRF kesSignKey
       ratio = asInteger nonce % toInteger (maxBound @Word64)
@@ -169,3 +175,14 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
             GT -> go a c
             LT -> go c b
             EQ -> VotingWeight c
+
+checkVote :: Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, Integer) -> MembershipInput -> Vote a -> Bool
+checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, signature} =
+  case Map.lookup creatorId stakePools of
+    Nothing -> False
+    Just (vrfKey, _) ->
+      VRF.verifyCertified () vrfKey nonce membershipProof
+ where
+  nonce = mkNonce h unRoundNumber
+
+-- && KES.verifyKES () votingRound signature (KES.getSigCert signature) (KES.getSig signature)
