@@ -10,7 +10,20 @@ import qualified Cardano.Crypto.VRF as VRF
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.List as List
-import Peras.Voting.Vote (MembershipInput (..), Signature, Vote (..), Voter (..), VotingWeight (..), fromBytes, mkPartyId, newKESSigningKey, newVRFSigningKey, voterStake)
+import Data.Maybe (fromJust)
+import Peras.Voting.Vote (
+  MembershipInput (..),
+  Signature,
+  Vote (..),
+  Voter (..),
+  VotingWeight (..),
+  castVote,
+  fromBytes,
+  mkPartyId,
+  newKESSigningKey,
+  newVRFSigningKey,
+  voterStake,
+ )
 import Test.QuickCheck (Gen, arbitrary, choose, oneof, vectorOf)
 
 genVoters :: Int -> Gen [Voter]
@@ -33,6 +46,15 @@ genVoter = do
       , kesSignKey
       , kesVerKey = KES.deriveVerKeyKES kesSignKey
       }
+
+genOneVote :: Gen (Vote ByteString)
+genOneVote = do
+  block <- gen32Bytes
+  input <- fromBytes <$> gen32Bytes
+  voter <- head <$> genVoters 1
+  let totalStake = 2 * voterStake voter
+  let committeeSize = fromIntegral totalStake `div` 2
+  pure $ fromJust $ castVote block totalStake input committeeSize 42 voter
 
 gen32Bytes :: Gen ByteString
 gen32Bytes = BS.pack <$> vectorOf 32 arbitrary

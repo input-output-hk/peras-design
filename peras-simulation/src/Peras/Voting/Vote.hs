@@ -13,6 +13,7 @@
 
 module Peras.Voting.Vote where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN (Ed25519DSIGN)
 import Cardano.Crypto.Hash (Blake2b_256, Hash)
 import qualified Cardano.Crypto.Hash as Hash
@@ -46,24 +47,45 @@ data Vote block = MkVote
   , sigKesPeriod :: KES.Period
   , signature :: Signature
   }
-  deriving stock (Show, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData)
+
+instance ToCBOR block => ToCBOR (Vote block) where
+  toCBOR MkVote{creatorId, votingRound, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} =
+    toCBOR creatorId
+      <> toCBOR votingRound
+      <> toCBOR blockHash
+      <> toCBOR membershipProof
+      <> toCBOR votingWeight
+      <> toCBOR sigKesPeriod
+      <> toCBOR signature
+
+instance FromCBOR block => FromCBOR (Vote block) where
+  fromCBOR =
+    MkVote
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 newtype VotingWeight = VotingWeight {unVotingWeight :: Word64}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (Num, Integral, Real, Enum, NFData)
+  deriving newtype (Num, Integral, Real, Enum, NFData, ToCBOR, FromCBOR)
 
 -- | A party (SPO) is identified by its pool ID which is the hash of its VRF verification key.
 newtype PartyId = MkPartyId {unPartyId :: Hash Blake2b_256 (VRF.VerKeyVRF VRF.PraosVRF)}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData)
+  deriving newtype (NFData, ToCBOR, FromCBOR)
 
 mkPartyId :: BS.ByteString -> PartyId
 mkPartyId = MkPartyId . fromJust . Hash.hashFromBytes
 
 -- | A round number is just a natural number.
 newtype RoundNumber = RoundNumber {unRoundNumber :: Word64}
-  deriving newtype (Eq, Ord, Show, Num, Integral, Real, Enum, NFData)
+  deriving newtype (Eq, Ord, Show, Num, Integral, Real, Enum, NFData, ToCBOR, FromCBOR)
 
 type MembershipProof = VRF.CertifiedVRF VRF.PraosVRF MembershipInput
 

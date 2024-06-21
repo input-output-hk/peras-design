@@ -6,10 +6,12 @@
 
 module Peras.Voting.VoteSpec where
 
+import Cardano.Binary (serialize', unsafeDeserialize')
+import qualified Data.ByteString as BS
 import Data.Function ((&))
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Ratio ((%))
-import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genVoters, mutationName)
+import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genOneVote, genVoters, mutationName)
 import Peras.Voting.Vote (
   CommitteeSize,
   MembershipInput,
@@ -25,7 +27,7 @@ import Peras.Voting.Vote (
   voterStake,
   votingWeight,
  )
-import Test.Hspec (Spec, runIO)
+import Test.Hspec (Spec, it, runIO, shouldBe)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
   Arbitrary,
@@ -50,6 +52,21 @@ spec = do
   prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
   prop "verifies valid votes" prop_verifiesValidVotes
   prop "rejects invalid votes" prop_rejectsInvalidVotes
+  prop "can serialise and deserialise vote" prop_serialiseDeserialiseVote
+  it "size of serialized vote for block hash is 676 bytes" $ do
+    vote <- generate genOneVote
+    let serialized = serialize' vote
+    BS.length serialized `shouldBe` 676
+
+prop_serialiseDeserialiseVote :: Property
+prop_serialiseDeserialiseVote =
+  forAllBlind gen32Bytes $ \block ->
+    forAllVotes $ \input voters spos committeeSize ->
+      forAllBlind (elements voters) $ \voter ->
+        let totalStake = sum $ voterStake <$> voters
+            vote = fromJust $ castVote block totalStake input committeeSize 42 voter
+         in (unsafeDeserialize' . serialize' $ vote) === vote
+              & counterexample ("vote = " <> show vote)
 
 prop_rejectsInvalidVotes :: Property
 prop_rejectsInvalidVotes =
