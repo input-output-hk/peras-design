@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiWayIf #-}
@@ -26,6 +27,7 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.Either (isRight)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -42,6 +44,7 @@ data Vote block = MkVote
   , blockHash :: block
   , membershipProof :: MembershipProof
   , votingWeight :: VotingWeight
+  , sigKesPeriod :: KES.Period
   , signature :: Signature
   }
   deriving stock (Show, Generic)
@@ -67,9 +70,7 @@ type MembershipProof = VRF.CertifiedVRF VRF.PraosVRF MembershipInput
 
 deriving anyclass instance NFData (VRF.CertifiedVRF VRF.PraosVRF MembershipInput)
 
-type Signature = KES.SignedKES (KES.Sum6KES Ed25519DSIGN Blake2b_256) MembershipProof
-
-deriving newtype instance NFData (KES.SignedKES (KES.Sum6KES Ed25519DSIGN Blake2b_256) MembershipProof)
+type Signature = KES.SigKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
 
 -- | The input to the `evalVRF` is a hash value.
 newtype MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 MembershipInput}
@@ -88,6 +89,7 @@ data Voter = MkVoter
   , vrfVerKey :: VRF.VerKeyVRF VRF.PraosVRF
   , kesPeriod :: KES.Period
   , kesSignKey :: KES.SignKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
+  , kesVerKey :: KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
   }
   deriving stock (Show, Generic)
   deriving anyclass (NFData)
@@ -127,7 +129,7 @@ castVote ::
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let nonce = mkNonce h unRoundNumber
       certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
-      certKES = KES.signedKES () kesPeriod certVRF kesSignKey
+      certKES = KES.signKES () kesPeriod certVRF kesSignKey
       ratio = asInteger nonce % toInteger (maxBound @Word64)
    in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
@@ -139,6 +141,7 @@ castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize
               , blockHash
               , membershipProof = certVRF
               , votingWeight = n
+              , sigKesPeriod = kesPeriod
               , signature = certKES
               }
 
@@ -176,12 +179,15 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
             LT -> go c b
             EQ -> VotingWeight c
 
-checkVote :: Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, Integer) -> MembershipInput -> Vote a -> Bool
-checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, signature} =
+type StakeDistribution = Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256), Integer)
+
+checkVote :: StakeDistribution -> MembershipInput -> Vote a -> Bool
+checkVote stakePools (MkMembershipInput h) MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} =
   case Map.lookup creatorId stakePools of
     Nothing -> False
-    Just (vrfKey, _) ->
+    Just (vrfKey, kesKey, _) ->
       VRF.verifyCertified () vrfKey nonce membershipProof
+        && isRight (KES.verifyKES () kesKey sigKesPeriod membershipProof signature)
  where
   nonce = mkNonce h unRoundNumber
 
