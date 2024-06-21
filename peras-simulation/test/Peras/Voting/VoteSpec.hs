@@ -1,6 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
@@ -45,8 +43,8 @@ prop_sortitionSelectsVoterAccordingToWeight =
       let weight = binomialVoteWeighing committeeSize (flipped % 100) 10_000_000 200_000_000
           actual = fromIntegral weight % committeeSize
           diff = abs (actual - 5 % 100)
-       in diff <= 5 % 10000
-            & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10000 * actual) / 100)]
+       in diff <= 5 % 10_000
+            & tabulate "committee share" [show @Double ((fromIntegral $ floor $ 10_000 * actual) / 100)]
             & counterexample ("actual = " <> show actual <> ", weight = " <> show weight <> ", diff = " <> show diff)
 
 instance Arbitrary RoundNumber where
