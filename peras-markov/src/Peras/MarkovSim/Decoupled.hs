@@ -3,68 +3,152 @@
 
 module Peras.MarkovSim.Decoupled where
 
-import Peras.MarkovSim.Types
+import Control.Parallel.Strategies
+import Data.Maybe (fromMaybe)
 import Prelude hiding (round)
+import Data.Bifunctor (second)
+import Data.Map.Strict (Map)
+import Peras.MarkovSim.Types
 
-import qualified Data.HashMap.Strict as Map
+import qualified Data.Map.Strict as Map
 
-step :: Peras -> Probabilities -> Evolution -> Evolution
-step peras probabilities =
-  let
-    transition = Map.filter (/= 0) . blockCreation peras probabilities . tick peras
-   in
-    MkEvolution
-      . Map.foldlWithKey'
-        (\acc chains probability -> Map.unionWith (+) (Map.map (* probability) $ transition chains) acc)
+steps :: Double -> Peras -> Probabilities -> Int -> Evolution -> Evolution
+steps ε peras probabilities n initial = foldr id initial . replicate n $ step ε peras probabilities
+
+step :: Double -> Peras -> Probabilities -> Evolution -> Evolution
+step ε peras probabilities =
+  MkEvolution
+    . Map.filter (> ε)
+    . evolve (voting peras probabilities)
+    . evolve (blockCreation peras probabilities . fetching peras . tick)
+    . getEvolution
+
+evolve :: (Chains -> [(Chains, Probability)]) -> Map Chains Probability -> Map Chains Probability
+evolve transition =
+      Map.foldlWithKey'
+        (\acc chains probability -> Map.unionWith (+) (Map.map (* probability) . Map.fromListWith (+) $ transition chains) acc)
         Map.empty
-      . getEvolution
 
-tick :: Peras -> Chains -> Chains
-tick peras chains@MkChains{slot, honest, adversary} =
-  -- Increment the slot number
-  let chains' = chains{slot = slot + 1}
-   in if newRound peras slot
-        then -- Age the recent certificates.
-          chains'{honest = tickCerts honest, adversary = tickCerts adversary}
-        else chains'
+psteps :: Double -> Peras -> Probabilities -> Int -> Evolution -> Evolution
+psteps ε peras probabilities n initial = foldr id initial . replicate n $ pstep ε peras probabilities
 
-tickCerts :: Chain -> Chain
-tickCerts chain@MkChain{certUltimate, certPenultimate} =
-  chain
-    { -- No round-0 cert yet.
-      certUltimate = False
-    , -- The old round-0 cert becomes the round-1 cert.
-      certPenultimate = certUltimate
-    , -- The old round-1 cert becomes the round-2 cert.
-      certAntepenultimate = certPenultimate
-    }
+pstep :: Double -> Peras -> Probabilities -> Evolution -> Evolution
+pstep ε peras probabilities =
+  MkEvolution
+    . Map.filter (> ε)
+    . Map.unionsWith (+)
+    . parMap rpar process
+    . Map.toList
+    . getEvolution
+  where
+    blockCreation' = blockCreation peras probabilities . fetching peras . tick
+    voting' = voting peras probabilities
+    process (chains, probability) =
+      Map.fromListWith (+)
+        . concatMap (\(chains', probability') -> second (* (probability * probability')) <$> voting' chains')
+        $ blockCreation' chains
 
-blockCreation :: Peras -> Probabilities -> Chains -> Map.HashMap Chains Probability
-blockCreation peras MkProbabilities{noBlock, honestBlock, adversaryBlock, mixedBlocks} chains@MkChains{slot, honest, adversary} =
+tick :: Chains -> Chains
+tick chains@MkChains{..} =
+  chains
+  {
+    -- Increment the slot number
+    slot = slot + 1
+  }
+
+fetching :: Peras -> Chains -> Chains
+fetching peras chains@MkChains{..} =
+  let receive chain@MkChain{..} =
+        chain
+        {
+          -- Update cert*.
+          certStar = fromMaybe certStar certStarNext
+        , certStarNext = Nothing
+        , -- Update cert'.
+          certPrime = fromMaybe certPrime certPrimeNext
+        , certPrimeNext = Nothing
+        }
+      update chain@MkChain{..} =
+         chain
+         {
+           -- No round-0 cert yet.
+           certUltimate = False
+         , -- The old round-0 cert becomes the round-1 cert.
+           certPenultimate = certUltimate
+         , -- The old round-1 cert becomes the round-2 cert.
+           certAntepenultimate = certPenultimate
+         }
+      chains' =
+        chains
+        {
+          -- Update cert* for the honest chain.
+          honest = receive honest
+        , -- Update cert* for the adversary chain.
+          adversary = receive adversary
+        }
+  in if newRound peras slot
+    then -- Age the recent certificates.
+         chains'
+         {
+           honest = update honest
+         , adversary = update adversary
+         }
+    else chains'
+
+blockCreation :: Peras -> Probabilities -> Chains -> [(Chains, Probability)]
+blockCreation peras@MkPeras{a} MkProbabilities{noBlock, honestBlock,adversaryBlock,mixedBlocks} chains@MkChains{..} =
   let
     round = inRound peras slot
-    honest' = forgeBlock peras round honest
-    adversary' = forgeBlock peras round adversary
-   in
-    -- FIXME: Handle common prefix.
-    Map.fromList
-      [ (chains, noBlock)
-      , (chains{honest = honest'}, honestBlock)
-      , (chains{adversary = adversary'}, adversaryBlock)
-      , (chains{honest = honest', adversary = adversary'}, mixedBlocks)
+    forge chain@MkChain{..} =
+      let bc1a = not certAntepenultimate
+          bc1c = certPrime > certStar
+          bc1b = round - certPrime <= a
+      in if bc1a && bc1b && bc1c
+           then chain
+                {
+                  -- Add a block.
+                  weight = weight + 1
+                , -- Include cert'.
+                  certStarNext = Just certPrime
+                }
+           else chain
+                {
+                  -- Add a block.
+                  weight = weight + 1
+                }
+    honest' = forge honest
+    adversary' = forge adversary
+  in
+      [
+        (chains, noBlock)
+      , (chains {honest = honest'}, honestBlock)
+      , (chains {adversary = adversary'}, adversaryBlock)
+      , (chains {honest = honest', adversary = adversary'}, mixedBlocks)
       ]
 
-forgeBlock :: Peras -> Round -> Chain -> Chain
-forgeBlock MkPeras{a} round chain@MkChain{..} =
-  let
-    bc1a = not certAntepenultimate
-    bc1b = round - certPrime <= a
-    bc1c = certPrime > certStar
+voting :: Peras -> Probabilities -> Chains -> [(Chains, Probability)]
+voting peras@MkPeras{r,k,b} MkProbabilities{noQuorum, honestQuorum, adversaryQuorum,mixedQuorum} chains@MkChains{..} =
+   let
+       round = inRound peras slot
+       vote chain@MkChain{..} =
+         let vr1a = certPrime == round - 1
+             vr1b = True -- FIXME
+             vr2a = round > certPrime + r
+             vr2b = (round - certStar) `mod` k == 0
+         in if vr1a && vr1b || vr2a && vr2b
+            then chain
+                 {
+                   -- Boost the chain.
+                   weight = weight + b
+                 , -- Record the certificate.
+                   certStarNext = Just round
+                 }
+            else chain
    in
-    if bc1a && bc1b && bc1c
-      then chain{weight = weight + 1, certStar = certPrime}
-      else chain{weight = weight + 1}
-
-voting :: Peras -> Probabilities -> Chains -> Map.HashMap Chains Probability
--- voting peras MkProbabilities{noQuorum, honestQuorum, adversaryQuorum,mixedQuorum} chains@MkChains{..} =
-voting _ _ chains = Map.singleton chains 1
+     if newRound peras slot
+           then [
+                  (chains, noQuorum + mixedQuorum)
+                , (chains {honest = vote honest}, honestQuorum)
+                , (chains {adversary = vote adversary}, adversaryQuorum)
+                ]     
+           else [(chains, 1)]

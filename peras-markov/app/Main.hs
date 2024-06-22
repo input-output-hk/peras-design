@@ -1,4 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Main (
   main,
@@ -12,16 +14,55 @@ import NumericPrelude.Numeric hiding (sum)
 import Data.Default (def)
 import Data.Foldable (sum)
 import Peras.Markov.Adversary (transitions)
+import Data.Functor ((<$>), (<&>))
+import Data.Monoid ((<>))
 import Peras.Markov.Orphans ()
 import Peras.Markov.Polynomial (evaluate)
 import Prettyprinter (Pretty (pretty), fill, (<+>))
+import Data.Time (getCurrentTime)
+import Data.Time.Clock (diffUTCTime)
+import System.Environment (getArgs)
 
 import qualified Peras.Markov.Adversary.CommonCandidate as CommonCandidate
 import qualified Peras.Markov.Adversary.TwoChain as TwoChain (lookupDelta, separatedChains, splitChains)
+import qualified Data.Map.Strict as Map
 import qualified Peras.Markov.Polynomial as Var (p, q)
+import qualified Peras.MarkovSim.Decoupled as MarkovSim
+import qualified Peras.MarkovSim.Types as MarkovSim
 
 main :: IO ()
-main = main2
+main = main3
+
+main3 :: IO ()
+main3 =
+ do
+  (ε, slots) <- getArgs <&> \case
+    [] -> (1e-30, 200)
+    [slots'] -> (1e-30, read slots')
+    [slots', ε'] -> (read ε', read slots')
+    _ -> error "USAGE: [slots [[epsilon]]]"
+  let peras = def
+      probabilities = MarkovSim.mkProbabilities def 750 250
+      initial = def
+      metrics f =
+        do
+          t0 <- getCurrentTime
+          let MarkovSim.MkEvolution{MarkovSim.getEvolution} = f ε peras probabilities slots initial
+          putStrLn $ "Size: " <> show (Map.size getEvolution)
+          putStrLn $ "Total probability: " <> show (sum getEvolution)
+          putStrLn $ "Honest length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.honest chains)) <$> Map.toList getEvolution)
+          putStrLn $ "Adversary length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.adversary chains)) <$> Map.toList getEvolution)
+          t1 <- getCurrentTime
+          putStrLn $ "Elapsed time: " <> show (t1 `diffUTCTime` t0)
+  putStrLn ""
+{-
+  putStrLn "Serial"
+  metrics MarkovSim.steps
+  putStrLn ""
+  putStrLn "Parallel"
+-}
+  metrics MarkovSim.psteps
+  putStrLn ""
 
 main2 :: IO ()
 main2 =

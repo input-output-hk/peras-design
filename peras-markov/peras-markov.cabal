@@ -26,11 +26,10 @@ library
                       base ^>=4.18.1.0,
                       containers,
                       data-default,
-                      hashable,
                       numeric-prelude,
+                      parallel,
                       prettyprinter,
                       statistics,
-                      unordered-containers,
     default-language: Haskell2010
 
 executable  peras-markov
@@ -39,11 +38,14 @@ executable  peras-markov
     main-is:          Main.hs
     other-modules:    Paths_peras_markov
     build-depends:    base ^>=4.18.1.0,
+                      containers,
                       data-default,
                       numeric-prelude,
                       peras-markov,
                       prettyprinter,
+                      time,
     default-language: Haskell2010
+    ghc-options: -threaded -rtsopts
 
 test-suite peras-markov-test
     type:             exitcode-stdio-1.0
