@@ -212,7 +212,7 @@ jobs:
         with:
           token_format: access_token
           credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
-          access_token_lifetime: 1200s # need to be long enough for docker build to finish
+          access_token_lifetime: 3600s # need to be long enough for docker build to finish
 
       - name: 👮 Log in to the Container registry
         uses: docker/login-action@v3
