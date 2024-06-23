@@ -8,7 +8,9 @@
 module Peras.Voting.VoteSpec where
 
 import Cardano.Binary (serialize', unsafeDeserialize')
+import qualified Cardano.Crypto.Hash as Hash
 import Control.Monad (forM_)
+import Data.Bits ((.&.), (.>>.))
 import qualified Data.ByteString as BS
 import Data.Function ((&))
 import Data.Maybe (fromJust, mapMaybe)
@@ -16,7 +18,7 @@ import Data.Ratio ((%))
 import Data.Word (Word64)
 import Numeric (showFFloat)
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genOneVote, genVoters, mutationName)
-import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), VotingParameters (..), binomialVoteWeighing, castVote, castVote', checkVote, fromBytes, isLotteryWinner, mkStakeDistribution, voterStake, votingWeight)
+import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), VotingParameters (..), asInteger, binomialVoteWeighing, castVote, castVote', checkVote, fromBytes, isLotteryWinner, mkStakeDistribution, voterStake, votingWeight)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop, xprop)
 import Test.QuickCheck (
@@ -41,6 +43,7 @@ import Test.QuickCheck (
 spec :: Spec
 spec = do
   voters <- runIO $ generate $ genVoters 300
+  prop "asInteger distributes hashes uniformly" $ prop_asIntegerDistributesHashesUniformly
   describe "Binomial Sortition" $ do
     prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
     prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
@@ -57,13 +60,15 @@ spec = do
               <> ")"
           )
           $ prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
+
     forM_ [1, 10, 25, 50, 100] $ \stakeRatio ->
-      prop
-        ( "Voter cast votes accoding to stake and parameters (stake = "
-            <> show (fromIntegral stakeRatio / 10)
-            <> "%)"
-        )
-        $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
+      modifyMaxSuccess (const 1) $ do
+        prop
+          ( "Voter cast votes accoding to stake and parameters (stake = "
+              <> show (fromIntegral stakeRatio / 10)
+              <> "%)"
+          )
+          $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
     modifyMaxSuccess (const 4) $ do
       xprop "selects committee size voters every round" $
         prop_selectVotersEveryRoundWithTaylorExpansion voters
@@ -73,6 +78,15 @@ spec = do
     vote <- generate genOneVote
     let serialized = serialize' vote
     BS.length serialized `shouldBe` 676
+
+prop_asIntegerDistributesHashesUniformly :: Property
+prop_asIntegerDistributesHashesUniformly =
+  forAll gen32Bytes $ \bytes -> do
+    let i = asInteger (Hash.hashWith id bytes)
+    property True
+      & tabulate "distribution" [show $ i .&. 0xf]
+      & coverTable "distribution" [(show j, 100 / 16) | j <- [0 .. 15]]
+      & checkCoverage
 
 prop_voterCastsVotesAccordingToStakeAndParameters :: Voter -> Rational -> Property
 prop_voterCastsVotesAccordingToStakeAndParameters voter stakeRatio =

@@ -271,8 +271,8 @@ isLotteryWinner ::
 isLotteryWinner certNat certNatMax σ c =
   trace ("random = " <> show certNat) $
     case taylorExpCmp 3 recip_q x of
-      ABOVE -> False
       BELOW -> True
+      ABOVE -> False
       MaxReached -> False
  where
   recip_q = fromRational $ certNatMax % (certNatMax - certNat)
