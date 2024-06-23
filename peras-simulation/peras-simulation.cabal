@@ -56,7 +56,6 @@ library
                       io-sim,
                       language-dot,
                       mtl,
---                      non-integral,
                       peras-hs,
                       quickcheck-dynamic,
                       statistics,

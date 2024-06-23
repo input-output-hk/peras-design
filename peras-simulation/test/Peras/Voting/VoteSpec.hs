@@ -7,28 +7,17 @@
 module Peras.Voting.VoteSpec where
 
 import Cardano.Binary (serialize', unsafeDeserialize')
+import Control.Monad (forM_)
 import qualified Data.ByteString as BS
 import Data.Function ((&))
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Ratio ((%))
+import Data.Word (Word64)
+import Numeric (showFFloat)
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genOneVote, genVoters, mutationName)
-import Peras.Voting.Vote (
-  CommitteeSize,
-  MembershipInput,
-  RoundNumber (..),
-  StakeDistribution,
-  Vote (..),
-  Voter (..),
-  binomialVoteWeighing,
-  castVote,
-  checkVote,
-  fromBytes,
-  mkStakeDistribution,
-  voterStake,
-  votingWeight,
- )
-import Test.Hspec (Spec, it, runIO, shouldBe)
-import Test.Hspec.QuickCheck (prop)
+import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), VotingParameters (..), binomialVoteWeighing, castVote, castVote', checkVote, fromBytes, isLotteryWinner, mkStakeDistribution, voterStake, votingWeight)
+import Test.Hspec (Spec, describe, it, runIO, shouldBe)
+import Test.Hspec.QuickCheck (modifyMaxSuccess, prop, xprop)
 import Test.QuickCheck (
   Arbitrary,
   Property,
@@ -36,11 +25,14 @@ import Test.QuickCheck (
   checkCoverage,
   choose,
   counterexample,
+  cover,
   coverTable,
   elements,
   forAll,
   forAllBlind,
   generate,
+  label,
+  property,
   tabulate,
   (===),
  )
@@ -48,15 +40,35 @@ import Test.QuickCheck (
 spec :: Spec
 spec = do
   voters <- runIO $ generate $ genVoters 300
-  prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
-  prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
-  prop "verifies valid votes" prop_verifiesValidVotes
-  prop "rejects invalid votes" prop_rejectsInvalidVotes
+  describe "Binomial Sortition" $ do
+    prop "select committee size voters every round" $ prop_selectCommitteeSizeVotersEveryRound voters
+    prop "sortition selects committee shares according to relative weight" prop_sortitionSelectsVoterAccordingToWeight
+    prop "verifies valid votes" prop_verifiesValidVotes
+    prop "rejects invalid votes" prop_rejectsInvalidVotes
+  describe "Taylor-based Sortition" $ do
+    forM_ [0.1, 0.2, 0.3, 0.5] $ \f ->
+      forM_ [5, 10, 25, 50] $ \stakeRatio ->
+        prop ("lottery respects expected probabilities (stake = " <> show stakeRatio <> "%, f = " <> show f <> ")") $
+          prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
+    modifyMaxSuccess (const 4) $ do
+      xprop "selects committee size voters every round" $
+        prop_selectVotersEveryRoundWithTaylorExpansion voters
+
   prop "can serialise and deserialise vote" prop_serialiseDeserialiseVote
   it "size of serialized vote for block hash is 676 bytes" $ do
     vote <- generate genOneVote
     let serialized = serialize' vote
     BS.length serialized `shouldBe` 676
+
+prop_lotteryRespectsExpectedProbabilities :: Double -> Rational -> Property
+prop_lotteryRespectsExpectedProbabilities f stakeRatio =
+  forAll (choose (0, maxBound @Word64 - 1)) $ \draw ->
+    let c = log (1 - f)
+        expected = 1 - (1 - f) ** fromRational stakeRatio
+        win = isLotteryWinner (fromIntegral draw) (fromIntegral (maxBound :: Word64)) stakeRatio c
+     in property True
+          & cover (expected * 100) win ("expected win = " <> showFFloat (Just 2) (expected * 100) "%")
+          & checkCoverage
 
 prop_serialiseDeserialiseVote :: Property
 prop_serialiseDeserialiseVote =
@@ -137,3 +149,21 @@ prop_selectCommitteeSizeVotersEveryRound voters =
                 & counterexample ("totalVotes = " <> show totalVotes)
                 & counterexample ("committeeSize = " <> show committeeSize)
                 & counterexample ("difference = " <> show (abs (totalVotes - fromIntegral committeeSize)))
+
+prop_selectVotersEveryRoundWithTaylorExpansion :: [Voter] -> Property
+prop_selectVotersEveryRoundWithTaylorExpansion voters =
+  forAll arbitrary $ \roundNumber ->
+    forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
+      forAllBlind gen32Bytes $ \block ->
+        let totalStake = sum $ voterStake <$> voters
+            params =
+              VotingParameters
+                { k = 2422
+                , m = 20973
+                , f = 1 % 5
+                }
+            votes = mapMaybe (castVote' block totalStake input params roundNumber) voters
+            totalVotes :: Integer = fromIntegral $ sum (votingWeight <$> votes)
+            committeeSizeTolerance = floor @Rational ((5 % 10_000) * 2422)
+         in property True
+              & label ("votes = " <> show totalVotes)

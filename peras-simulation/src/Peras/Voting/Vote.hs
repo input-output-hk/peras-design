@@ -6,7 +6,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -34,6 +36,7 @@ import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Data.Serialize (getWord64le, runGet)
 import Data.Word (Word64)
+import Debug.Trace (trace)
 import GHC.Generics (Generic)
 import Statistics.Distribution (cumulative)
 import Statistics.Distribution.Binomial (binomial)
@@ -100,7 +103,7 @@ newtype MembershipInput = MkMembershipInput {unNonce :: Hash Blake2b_256 Members
 fromBytes :: BS.ByteString -> MembershipInput
 fromBytes = MkMembershipInput . fromJust . Hash.hashFromBytes
 
-mkNonce :: Hash h a -> Word64 -> MembershipInput
+mkNonce :: Hash Blake2b_256 a -> Word64 -> MembershipInput
 mkNonce h unRoundNumber = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
 
 data Voter = MkVoter
@@ -151,8 +154,8 @@ castVote ::
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
-      nonce = mkNonce h unRoundNumber
-      ratio = asInteger nonce % toInteger (maxBound @Word64)
+      nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
+      ratio = asInteger h' % toInteger (maxBound @Word64)
    in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
         n ->
@@ -167,8 +170,8 @@ castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize
               , signature = certKES
               }
 
-asInteger :: MembershipInput -> Integer
-asInteger (MkMembershipInput h) = fromIntegral $ fromBytesLE $ Hash.hashToBytes h
+asInteger :: Hash Blake2b_256 a -> Integer
+asInteger h = fromIntegral $ fromBytesLE $ Hash.hashToBytes h
  where
   fromBytesLE = either error id . runGet getWord64le . BS.take 8
 
@@ -200,6 +203,103 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
             GT -> go a c
             LT -> go c b
             EQ -> VotingWeight c
+
+data VotingParameters = VotingParameters
+  { k :: Integer
+  -- ^ The number of voters in the committee
+  , m :: Integer
+  , f :: Rational
+  }
+
+castVote' ::
+  -- \| The thing we are voting on
+  SignableRepresentation a =>
+  -- | The thing to vote on
+  a ->
+  -- | Total stake of all voters
+  Integer ->
+  -- | The previous input to the VRF
+  --  This is a basis for the VRF nonce, concatenated with the round number and the string @peras@
+  --  to give the actual VRF input.
+  MembershipInput ->
+  -- | The voting parameters
+  VotingParameters ->
+  -- | The round number
+  RoundNumber ->
+  -- | The voter
+  Voter ->
+  -- | The vote, if the voter is selected
+  Maybe (Vote a)
+castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
+  let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
+      certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
+      nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
+      c = log $ fromRational (1 - f)
+      certNatMax = toInteger $ maxBound @Word64
+      checkVoteAtIndex i =
+        let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes h' <> BS.singleton (fromIntegral i)
+         in isLotteryWinner (asInteger h'') certNatMax (voterStake % totalStake) c
+      votingWeight = length $ filter checkVoteAtIndex [0 .. m - 1]
+   in trace ("num votes=" <> show votingWeight <> ", stake = " <> show (voterStake % totalStake)) $
+        case votingWeight of
+          0 -> Nothing
+          n ->
+            Just
+              MkVote
+                { creatorId = voterId
+                , votingRound = roundNumber
+                , blockHash
+                , membershipProof = certVRF
+                , votingWeight = fromIntegral n
+                , sigKesPeriod = kesPeriod
+                , signature = certKES
+                }
+
+-- | Taylor expansion-based single voting
+-- stolen from https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L434
+isLotteryWinner ::
+  -- | Value to check probability against
+  Integer ->
+  -- | Upper bound of the value
+  Integer ->
+  -- | The stake of the voter
+  Rational ->
+  -- | The `ln (1 - f)`  coefficient
+  Double ->
+  Bool
+isLotteryWinner certNat certNatMax σ c =
+  case taylorExpCmp 3 recip_q x of
+    ABOVE -> False
+    BELOW -> True
+    MaxReached -> False
+ where
+  recip_q = fromRational $ certNatMax % (certNatMax - certNat)
+  x = -fromRational σ * c
+
+data CompareResult
+  = BELOW
+  | ABOVE
+  | MaxReached
+  deriving (Show, Eq)
+
+-- | Efficient way to compare the result of the Taylor expansion of the
+-- exponential function to a threshold value.
+-- Stolen from https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/libs/non-integral/src/Cardano/Ledger/NonIntegral.hs#L197
+taylorExpCmp :: forall a. RealFrac a => a -> a -> a -> CompareResult
+taylorExpCmp boundX cmp x = go 1000 0 x 1 1
+ where
+  go :: Int -> Int -> a -> a -> a -> CompareResult
+  go maxN n err acc divisor
+    | maxN == n = MaxReached
+    | cmp >= acc' + errorTerm = ABOVE
+    | cmp < acc' - errorTerm = BELOW
+    | otherwise = go maxN (n + 1) err' acc' divisor'
+   where
+    errorTerm = abs (err' * boundX)
+    divisor' = divisor + 1
+    nextX = err
+    err' = (err * x) / divisor'
+    acc' = acc + nextX
 
 type StakeDistribution = Map PartyId (VRF.VerKeyVRF VRF.PraosVRF, KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256), Integer)
 
@@ -236,5 +336,5 @@ checkVote committeeSize totalStake stakePools (MkMembershipInput h) vote =
           signature
       )
   MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} = vote
-  nonce = mkNonce h unRoundNumber
-  ratio = asInteger nonce % toInteger (maxBound @Word64)
+  nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
+  ratio = asInteger h' % toInteger (maxBound @Word64)
