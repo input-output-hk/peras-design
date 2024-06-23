@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -48,8 +49,21 @@ spec = do
   describe "Taylor-based Sortition" $ do
     forM_ [0.1, 0.2, 0.3, 0.5] $ \f ->
       forM_ [5, 10, 25, 50] $ \stakeRatio ->
-        prop ("lottery respects expected probabilities (stake = " <> show stakeRatio <> "%, f = " <> show f <> ")") $
-          prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
+        prop
+          ( "lottery respects expected probabilities (stake = "
+              <> show stakeRatio
+              <> "%, f = "
+              <> show f
+              <> ")"
+          )
+          $ prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
+    forM_ [1, 10, 25, 50, 100] $ \stakeRatio ->
+      prop
+        ( "Voter cast votes accoding to stake and parameters (stake = "
+            <> show (fromIntegral stakeRatio / 10)
+            <> "%)"
+        )
+        $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
     modifyMaxSuccess (const 4) $ do
       xprop "selects committee size voters every round" $
         prop_selectVotersEveryRoundWithTaylorExpansion voters
@@ -59,6 +73,27 @@ spec = do
     vote <- generate genOneVote
     let serialized = serialize' vote
     BS.length serialized `shouldBe` 676
+
+prop_voterCastsVotesAccordingToStakeAndParameters :: Voter -> Rational -> Property
+prop_voterCastsVotesAccordingToStakeAndParameters voter stakeRatio =
+  forAllBlind (RoundNumber <$> choose (1, 100)) $ \roundNumber ->
+    forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
+      forAllBlind gen32Bytes $ \block ->
+        let totalStake = floor $ fromIntegral (voterStake voter) * recip stakeRatio
+            params =
+              VotingParameters
+                { k = 2422
+                , m = 20_973
+                , f = 1 % 5
+                }
+            expected = 1 - (fromRational $ 4 % 5) ** fromRational stakeRatio
+            vote = castVote' block totalStake input params roundNumber voter
+         in case vote of
+              Just MkVote{votingWeight} ->
+                votingWeight === floor (expected * 20_973)
+                  & cover (expected * 100 / 20_973) True ("expected wins = " <> show (floor $ expected * 20_973))
+                  & checkCoverage
+              Nothing -> property True
 
 prop_lotteryRespectsExpectedProbabilities :: Double -> Rational -> Property
 prop_lotteryRespectsExpectedProbabilities f stakeRatio =
@@ -164,6 +199,5 @@ prop_selectVotersEveryRoundWithTaylorExpansion voters =
                 }
             votes = mapMaybe (castVote' block totalStake input params roundNumber) voters
             totalVotes :: Integer = fromIntegral $ sum (votingWeight <$> votes)
-            committeeSizeTolerance = floor @Rational ((5 % 10_000) * 2422)
          in property True
               & label ("votes = " <> show totalVotes)

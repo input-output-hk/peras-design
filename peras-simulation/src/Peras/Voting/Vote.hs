@@ -34,10 +34,11 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Ratio ((%))
-import Data.Serialize (getWord64le, runGet)
+import Data.Serialize (getWord64be, getWord64le, runGet)
 import Data.Word (Word64)
 import Debug.Trace (trace)
 import GHC.Generics (Generic)
+import Numeric (showFFloat)
 import Statistics.Distribution (cumulative)
 import Statistics.Distribution.Binomial (binomial)
 
@@ -170,10 +171,11 @@ castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize
               , signature = certKES
               }
 
+-- | Convert a hash to a 64-bit unsigned integer
 asInteger :: Hash Blake2b_256 a -> Integer
 asInteger h = fromIntegral $ fromBytesLE $ Hash.hashToBytes h
  where
-  fromBytesLE = either error id . runGet getWord64le . BS.take 8
+  fromBytesLE = either error id . runGet getWord64be . BS.take 8 . BS.drop 24
 
 -- stolen from https://github.com/algorand/sortition/blob/main/sortition.cpp
 binomialVoteWeighing ::
@@ -240,20 +242,19 @@ castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} r
         let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes h' <> BS.singleton (fromIntegral i)
          in isLotteryWinner (asInteger h'') certNatMax (voterStake % totalStake) c
       votingWeight = length $ filter checkVoteAtIndex [0 .. m - 1]
-   in trace ("num votes=" <> show votingWeight <> ", stake = " <> show (voterStake % totalStake)) $
-        case votingWeight of
-          0 -> Nothing
-          n ->
-            Just
-              MkVote
-                { creatorId = voterId
-                , votingRound = roundNumber
-                , blockHash
-                , membershipProof = certVRF
-                , votingWeight = fromIntegral n
-                , sigKesPeriod = kesPeriod
-                , signature = certKES
-                }
+   in case votingWeight of
+        0 -> Nothing
+        n ->
+          Just
+            MkVote
+              { creatorId = voterId
+              , votingRound = roundNumber
+              , blockHash
+              , membershipProof = certVRF
+              , votingWeight = fromIntegral n
+              , sigKesPeriod = kesPeriod
+              , signature = certKES
+              }
 
 -- | Taylor expansion-based single voting
 -- stolen from https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L434
@@ -268,10 +269,11 @@ isLotteryWinner ::
   Double ->
   Bool
 isLotteryWinner certNat certNatMax σ c =
-  case taylorExpCmp 3 recip_q x of
-    ABOVE -> False
-    BELOW -> True
-    MaxReached -> False
+  trace ("random = " <> show certNat) $
+    case taylorExpCmp 3 recip_q x of
+      ABOVE -> False
+      BELOW -> True
+      MaxReached -> False
  where
   recip_q = fromRational $ certNatMax % (certNatMax - certNat)
   x = -fromRational σ * c
