@@ -62,15 +62,14 @@ spec = do
           $ prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
 
     forM_ [1, 10, 25, 50, 100] $ \stakeRatio ->
-      modifyMaxSuccess (const 1) $ do
-        prop
-          ( "Voter cast votes accoding to stake and parameters (stake = "
-              <> show (fromIntegral stakeRatio / 10)
-              <> "%)"
-          )
-          $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
+      prop
+        ( "Voter cast votes accoding to stake and parameters (stake = "
+            <> show (fromIntegral stakeRatio / 10)
+            <> "%)"
+        )
+        $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
     modifyMaxSuccess (const 4) $ do
-      xprop "selects committee size voters every round" $
+      prop "selects committee size voters every round" $
         prop_selectVotersEveryRoundWithTaylorExpansion voters
 
   prop "can serialise and deserialise vote" prop_serialiseDeserialiseVote
@@ -84,8 +83,10 @@ prop_asIntegerDistributesHashesUniformly =
   forAll gen32Bytes $ \bytes -> do
     let i = asInteger (Hash.hashWith id bytes)
     property True
-      & tabulate "distribution" [show $ i .&. 0xf]
-      & coverTable "distribution" [(show j, 100 / 16) | j <- [0 .. 15]]
+      & tabulate "distribution le" [show $ i .>>. 60]
+      & coverTable "distribution le" [(show j, 100 / 16) | j <- [0 .. 15]]
+      & tabulate "distribution be" [show $ i .&. 0xf]
+      & coverTable "distribution be" [(show j, 100 / 16) | j <- [0 .. 15]]
       & checkCoverage
 
 prop_voterCastsVotesAccordingToStakeAndParameters :: Voter -> Rational -> Property
@@ -100,13 +101,23 @@ prop_voterCastsVotesAccordingToStakeAndParameters voter stakeRatio =
                 , m = 20_973
                 , f = 1 % 5
                 }
-            expected = 1 - (fromRational $ 4 % 5) ** fromRational stakeRatio
-            vote = castVote' block totalStake input params roundNumber voter
-         in case vote of
+            expected :: Double = (1 - (fromRational $ 4 % 5) ** fromRational stakeRatio) * fromIntegral 20_973
+            expectedCeil = ceiling expected
+            tolerance :: Integer = ceiling $ expected / 4
+         in case castVote' block totalStake input params roundNumber voter of
               Just MkVote{votingWeight} ->
-                votingWeight === floor (expected * 20_973)
-                  & cover (expected * 100 / 20_973) True ("expected wins = " <> show (floor $ expected * 20_973))
-                  & checkCoverage
+                let difference = abs (fromIntegral votingWeight - fromIntegral expectedCeil)
+                 in difference <= tolerance
+                      & counterexample
+                        ( "diff = "
+                            <> show difference
+                            <> ", expected = "
+                            <> show expectedCeil
+                            <> ", actual = "
+                            <> show votingWeight
+                            <> ", tolerance = "
+                            <> show tolerance
+                        )
               Nothing -> property True
 
 prop_lotteryRespectsExpectedProbabilities :: Double -> Rational -> Property

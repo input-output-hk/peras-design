@@ -34,7 +34,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Ratio ((%))
-import Data.Serialize (getWord64be, getWord64le, runGet)
+import Data.Serialize (getWord64be, getWord64le, putWord64le, runGet, runPut)
 import Data.Word (Word64)
 import Debug.Trace (trace)
 import GHC.Generics (Generic)
@@ -239,7 +239,7 @@ castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} r
       c = log $ fromRational (1 - f)
       certNatMax = toInteger $ maxBound @Word64
       checkVoteAtIndex i =
-        let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes h' <> BS.singleton (fromIntegral i)
+        let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes h' <> runPut (putWord64le $ fromIntegral i)
          in isLotteryWinner (asInteger h'') certNatMax (voterStake % totalStake) c
       votingWeight = length $ filter checkVoteAtIndex [0 .. m - 1]
    in case votingWeight of
@@ -269,11 +269,10 @@ isLotteryWinner ::
   Double ->
   Bool
 isLotteryWinner certNat certNatMax σ c =
-  trace ("random = " <> show certNat) $
-    case taylorExpCmp 3 recip_q x of
-      BELOW -> True
-      ABOVE -> False
-      MaxReached -> False
+  case taylorExpCmp 3 recip_q x of
+    BELOW -> True
+    ABOVE -> False
+    MaxReached -> False
  where
   recip_q = fromRational $ certNatMax % (certNatMax - certNat)
   x = -fromRational σ * c
