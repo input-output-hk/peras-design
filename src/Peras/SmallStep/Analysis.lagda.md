@@ -81,6 +81,7 @@ module _ ⦃ _ : Hashable Block ⦄
            where
 
     open TreeType blockTree
+    open IsTreeType
 ```
 Assign a letter for a voting round for a list of block-trees:
 
@@ -193,18 +194,18 @@ Building up the voting string from all the party's block-trees
       → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
     build？→¬Any-cert = ？→¬Any-cert ∘ lastIsHead
 
-    -- TODO:
-    postulate
-      xxxx : ∀ {t} {r}
-        → VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} r t
-        → hasCert r t
+    -- TODO: contraposition of quorum-cert from blocktree
 
     x→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → ¬ Any (VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r))) (map proj₂ ts)
     x→¬AnyVotingRule-1 {ts} {r} x =
       let s = build？→¬Any-cert {ts} {r} x
-      in All¬⇒¬Any (All.map (contraposition xxxx) (¬Any⇒All¬ (map proj₂ ts) s))
+          xx = ¬Any⇒All¬ (map proj₂ ts) s
+          -- yy = All.map (λ {t → contraposition (is-TreeType .quorum-cert r t)}) (map proj₂ ts)
+          -- yy = All¬⇒¬Any (All.map (contraposition ) )
+       --   xx = is-TreeType .quorum-cert t r
+      in {!!}
 
     ？→All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
@@ -261,7 +262,6 @@ Reflexive, transitive closure
              where
 
       open State
-      open IsTreeType
 
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 

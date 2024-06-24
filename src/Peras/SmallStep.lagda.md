@@ -216,7 +216,7 @@ as proposed in the paper.
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
 
-      quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
+      quorum-cert : ∀ (r : ℕ) (t : T) {b : Block}
         → length (filter (λ {v →
                     (getRoundNumber (votingRound v) ≟ r)
               ×-dec (blockHash v ≟-BlockHash hash b)}
