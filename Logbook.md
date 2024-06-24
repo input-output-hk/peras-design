@@ -49,6 +49,27 @@ $$
 
 The $q$ can be efficiently computed as the fraction $vmax / (vmax -v )$ and the exponentiation approximated through a Taylor series.
 
+### Better vote diffusion ΔQ model
+
+* Building on previous work, we want to model the expected delay to reach a quorum. We know the newest version of the ΔQ library based on polynomials is computationally intensive and cannot handle this kind of modelling
+* Using the old version of ΔQ based on numerical sampling, we introduce a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
+* The model works as follows:
+  * We start from a base uniform distribution of single MTU latency between 2 nodes, assuming a vote fits in a single TCP frame
+  * We then use the expected distribution of paths length for a random graph with 15 average connections, to model the latency distribution across the network
+  * We then apply the `NToFinish 75` combinator to this distribution to compute the expected distribution to reach 75% of the votes (quorum)
+  * An important assumption is that each vote diffusion across the network is expected to be independent from all other votes
+* We also want to take into account the verification time of a single vote, which we do in 2 different ways:
+  * One distribution assumes a node does all verifications sequentially, one vote at a time
+  * Another assumes all verifications can be done in parallel
+  * Of course, the actual verification time should be expected to be in between those 2 extremes
+* Verification time assumption is based on some experiments documented in [Vote benchmarks](https://github.com/input-output-hk/peras-design/blob/249d40ebb5400f9edf2ec3c9ffbf014e2ff7b91f/peras-simulation/bench-vote.html) where a single vote's verification time is expected to be about 160μs.
+
+This yields the following graph:
+
+![Vote diffusion](peras-delta-q/vote-diffusion.svg)
+
+This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1s most of the time.
+
 ## 2024-06-19
 
 ### New adversarial scenarios
@@ -57,36 +78,6 @@ The $q$ can be efficiently computed as the fraction $vmax / (vmax -v )$ and the 
 - No honest block (i.e. "chain-quality time")
 
 ## 2024-06-18
-
-### New adversarial scenarios
-
-- No honest quorum in round
-- Adversarial quorum
-- No certificate in honest block
-- Adversarial chain receives boost
-    - Variant 2
-
-### Votes details
-
-* Started working on detailing the voting algorithm, data structures, and certificates process.
-* Interestingly, things are more complicated when one looks at them closely enough.
-* I want to provide some detailed code and benchmarks, so I had to look at how VRF voting is done within the node, and import actual VRF and KES functions from `cardano-base`
-* Currently a bit confused by the committee election (sortition) algorithm, but I found a good and simple explanation in the [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) paper so will just use that for the time being
-* Also need to detail the stake-based certificate construction algorithm in ALBA
-
-### Modeling vote diffusion
-
-* Worked w/ Brian on modeling vote diffusion with old version of ΔQ library.
-* We reused the data from previous model about the 1-hop delay and distance distribution in small graph assuming degree distribution of 15
-* Assume a vote fits in a single MTU so there's a single transmission for each vote
-* Also assumes that verifying a single vote (VRF + KES) takes 1.3ms (from [cardano-base](https://github.com/input-output-hk/cardano-base/blob/a9bfdf50b7794c962f73f06763546dc65257720e/cardano-crypto-tests/README.md#L1) benchmarks), so verifying 1000 votes takes 1.3s and on average a vote is verified after 0.65s
-* We consider the delay probability distribution function to represent the fraction of votes that are available after some delay, taking into account the topology of the network and validation time.
-* We assume that network contention does not impact votes diffusion
-* This model (see picture) below seems to demonstrate vote diffusion and validation can happen quite quickly. The 75% line represents the expected time to reach a quorum which is around 1.5s.
-* We note that given round length will be in the order of 120-150 seconds, which provides ample time for voting to happend and quorum to be reached
-  * Note that it could quite interesting to validate this empirically using _netsim_ or _PeerNet_
-
-![Vote diffusion & validation](peras-delta-q/path.svg)
 
 ### New adversarial scenarios
 
