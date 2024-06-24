@@ -1,8 +1,53 @@
+## 2024-06-21
+
+### Fixing docker build
+
+* The docker build stopped working after adding dependencies to `cardano-crypto-class` because it has native dependencies to `libsodium`, `libblst` and `libsecp256k1`.
+* Added the dependencies to the build image following instructions from [cardano-node](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/getting-started/install.md) wiki documentation
+
 ## 2024-06-20
 
 ### New adversarial scenarios
 
 - Attack on common-prefix
+
+### Voting process as defined in Leios (and Mithril)
+
+In the Leios paper, stake-based voting is defined similarly to how it's done in Mithril:
+
+```
+VoteCount(𝑥, 𝑠):
+  (1) 𝑦 := 𝐻 (𝑥)
+  (2) 𝑐𝑛𝑡 := Sum 𝑖 ∈ [𝑚](𝐻 (𝑦, 𝑖) > 𝑇 (𝑠))
+  (3) return 𝑐𝑛𝑡;
+```
+
+where $T$ maps a probability function $1 - (1 - f)^{s}$ for some stake ratio $\sigma$ to an integer.
+
+In other words, just like we do [in
+Mithril](https://github.com/input-output-hk/mithril/blob/f390dfb28122baa6ba1356a452718946089fb8f6/mithril-stm/src/eligibility_check.rs#L34),
+a voter runs a lottery by hashing some base value (VRF output) with an
+index $m$ times and counting the number of "winning" indices. The
+underlying check is exactly the same as the [leader
+election](https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L427),
+comparing a _ratio_ (the random value derived from the hash) to the
+function $1 - (1 - f)^{\sigma}$.
+
+I had a hard time understanding the comment in the previous functions (note the comment from the ledger code has been copied verbatim to the Mithril STM library1) as it details how the above function is transformed to provide a more efficient computation.
+
+Given $q = 1 / (1 - p)$ and $c = ln(1 - f)$, then
+
+$$
+\begin{array}[rl]
+& p < 1 - (1 - f)^{\sigma} \\
+\Leftrightarrow & 1 - p >= (1 - f)^{\sigma} \\
+\Leftrightarrow & \frac{1}{1-p} < (1 - f)^{-\sigma} \\
+\Leftrightarrow & q < e^{ln(1 - f)\times (-\sigma)} \\
+\Leftrightarrow & q < e^{-\sigma \times c} \\
+\end{array}
+$$
+
+The $q$ can be efficiently computed as the fraction $vmax / (vmax -v )$ and the exponentiation approximated through a Taylor series.
 
 ## 2024-06-19
 
