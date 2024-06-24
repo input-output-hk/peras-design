@@ -171,8 +171,8 @@ castVote ::
 castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize) roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
-      nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
-      ratio = asInteger h' % toInteger (maxBound @Word64)
+      nonce = mkNonce h unRoundNumber
+      ratio = asInteger (Hash.hashWith id $ getSignableRepresentation certVRF) % toInteger (maxBound @Word64)
    in case binomialVoteWeighing committeeSize ratio voterStake totalStake of
         0 -> Nothing
         n ->
@@ -307,11 +307,12 @@ castVote' ::
 castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
-      nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
+      nonce = mkNonce h unRoundNumber
       c = log $ fromRational (1 - f)
       certNatMax = toInteger $ maxBound @Word64
+      baseHash = Hash.hashWith @Blake2b_256 id $ getSignableRepresentation certVRF
       checkVoteAtIndex i =
-        let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes h' <> runPut (putWord64le $ fromIntegral i)
+        let h'' = Hash.hashWith @Blake2b_256 id $ Hash.hashToBytes baseHash <> runPut (putWord64le $ fromIntegral i)
          in isLotteryWinner (asInteger h'') certNatMax (voterStake % totalStake) c
       votingWeight = length $ filter checkVoteAtIndex [0 .. m - 1]
    in case votingWeight of
@@ -409,5 +410,5 @@ checkVote committeeSize totalStake stakePools (MkMembershipInput h) vote =
           signature
       )
   MkVote{creatorId, votingRound = RoundNumber{unRoundNumber}, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} = vote
-  nonce@(MkMembershipInput h') = mkNonce h unRoundNumber
-  ratio = asInteger h' % toInteger (maxBound @Word64)
+  nonce = mkNonce h unRoundNumber
+  ratio = asInteger (Hash.hashWith id $ getSignableRepresentation membershipProof) % toInteger (maxBound @Word64)
