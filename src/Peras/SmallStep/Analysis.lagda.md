@@ -19,14 +19,15 @@ open import Data.List as L using (List; any; map; length; foldr)
 
 open import Data.List.Membership.Propositional as P using (_∈_; _∉_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there)
-open import Data.List.Relation.Unary.All using (All)
+open import Data.List.Relation.Unary.All as All using (All)
+open import Data.List.Relation.Unary.All.Properties using (¬Any⇒All¬; All¬⇒¬Any)
 
 open import Function using (_$_; case_of_; _∘_)
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; _≢_; refl; cong; sym; trans)
+open Eq using (_≡_; _≢_; refl; cong; sym; trans; subst)
 
-open import Relation.Nullary using (yes; no; ¬_; Dec; contradiction)
+open import Relation.Nullary using (yes; no; ¬_; Dec; contradiction; contraposition)
 open import Relation.Nullary.Decidable using (⌊_⌋; _⊎-dec_; toWitness)
 
 open import Peras.Block
@@ -164,12 +165,51 @@ Building up the voting string from all the party's block-trees
       lastIsHead : ∀ {ts : List T} {m} {x}
         → build-σ′ (MkRoundNumber m) ts ⟶ x
         → V.head (build-σ′ (MkRoundNumber (suc m)) ts) ≡ x
+```
+```agda
+    Any-cert→⒈ : ∀ {ts : List T} {r}
+      → Any (hasCert r) ts
+      → σᵢ r ts ≡ ⒈
+    Any-cert→⒈ {ts} {r} x with any? (hasCert? r) ts
+    ... | yes p = refl
+    ... | no q = ⊥-elim (q x)
 
-    ？→¬VotingRule-1 : ∀ {ts : List T} {r}
-      → build-σ′ (MkRoundNumber r) ts ⟶ ？
-      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t}) ts
-    ？→¬VotingRule-1 {ts} {zero} ()
-    ？→¬VotingRule-1 {ts} {suc r} x = {!!}
+    ¬⒈→¬Any-cert : ∀ {ts : List T} {r}
+      → σᵢ r ts ≢ ⒈
+      → ¬ Any (hasCert r) ts
+    ¬⒈→¬Any-cert = contraposition Any-cert→⒈
+
+    ⒈≢？ : ⒈ ≢ ？
+    ⒈≢？ ()
+
+    ？→¬Any-cert : ∀ {ts : List T} {r}
+      → σᵢ r ts ≡ ？
+      → ¬ Any (hasCert r) ts
+    ？→¬Any-cert {ts} {r} x = ¬⒈→¬Any-cert λ x₁ →
+      contradiction (trans (sym x₁) x) ⒈≢？
+
+    build？→¬Any-cert : ∀ {ts : AssocList PartyId T} {r}
+      → build-σ (MkRoundNumber r) ts ⟶ ？
+      → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
+    build？→¬Any-cert = ？→¬Any-cert ∘ lastIsHead
+
+    -- TODO:
+    postulate
+      xxxx : ∀ {t} {r}
+        → VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} r t
+        → hasCert r t
+
+    x→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
+      → build-σ (MkRoundNumber r) ts ⟶ ？
+      → ¬ Any (VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r))) (map proj₂ ts)
+    x→¬AnyVotingRule-1 {ts} {r} x =
+      let s = build？→¬Any-cert {ts} {r} x
+      in All¬⇒¬Any (All.map (contraposition xxxx) (¬Any⇒All¬ (map proj₂ ts) s))
+
+    ？→All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
+      → build-σ (MkRoundNumber r) ts ⟶ ？
+      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t}) (map proj₂ ts)
+    ？→All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (x→¬AnyVotingRule-1 x)
 ```
 <!--
 ```agda
