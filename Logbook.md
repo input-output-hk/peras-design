@@ -35,14 +35,14 @@ function $1 - (1 - f)^{\sigma}$.
 
 I had a hard time understanding the comment in the previous functions (note the comment from the ledger code has been copied verbatim to the Mithril STM library1) as it details how the above function is transformed to provide a more efficient computation.
 
-Given $q = 1 / (1 - p)$ and $c = ln(1 - f)$, then
+Given $q = 1 / (1 - p)$ and $c = \log(1 - f)$, then
 
 $$
 \begin{array}[rl]
 & p < 1 - (1 - f)^{\sigma} \\
-\Leftrightarrow & 1 - p >= (1 - f)^{\sigma} \\
+\Leftrightarrow & 1 - p \geq (1 - f)^{\sigma} \\
 \Leftrightarrow & \frac{1}{1-p} < (1 - f)^{-\sigma} \\
-\Leftrightarrow & q < e^{ln(1 - f)\times (-\sigma)} \\
+\Leftrightarrow & q < e^{\log(1 - f)\times (-\sigma)} \\
 \Leftrightarrow & q < e^{-\sigma \times c} \\
 \end{array}
 $$
