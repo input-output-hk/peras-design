@@ -33,6 +33,7 @@ COPY ./peras-server/peras-server.cabal /app/peras-server/peras-server.cabal
 COPY ./peras-delta-q/deltaq.cabal /app/peras-delta-q/deltaq.cabal
 COPY ./test-demo/test-demo.cabal /app/test-demo/test-demo.cabal
 COPY ./peras-markov/peras-markov.cabal /app/peras-markov/peras-markov.cabal
+COPY ./peras-vote/peras-vote.cabal /app/peras-vote/peras-vote.cabal
 
 WORKDIR /app
 
