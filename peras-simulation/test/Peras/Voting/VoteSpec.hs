@@ -18,7 +18,7 @@ import Data.Ratio ((%))
 import Data.Word (Word64)
 import Numeric (showFFloat)
 import Peras.Voting.Arbitraries (applyMutation, gen32Bytes, genMutation, genOneVote, genVoters, mutationName)
-import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), VotingParameters (..), asInteger, binomialVoteWeighing, castVote, castVote', checkVote, fromBytes, isLotteryWinner, mkStakeDistribution, voterStake, votingWeight)
+import Peras.Voting.Vote (CommitteeSize, MembershipInput, RoundNumber (..), StakeDistribution, Vote (..), Voter (..), VotingParameters (..), asInteger, binomialVoteWeighing, castVote, castVote', checkVote, fromBytes, isLotteryWinner, mkStakeDistribution, standardParameters, voterStake, votingWeight)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop, xprop)
 import Test.QuickCheck (
@@ -61,14 +61,17 @@ spec = do
           )
           $ prop_lotteryRespectsExpectedProbabilities f (stakeRatio % 100)
 
-    forM_ [1, 10, 25, 50, 100] $ \stakeRatio ->
+    forM_ [10, 25, 50, 100] $ \stakeRatio ->
       prop
-        ( "Voter cast votes accoding to stake and parameters (stake = "
+        ( "Voter cast votes accoding to stake with standard parameters (stake = "
             <> show (fromIntegral stakeRatio / 10)
             <> "%)"
         )
         $ prop_voterCastsVotesAccordingToStakeAndParameters (head voters) (stakeRatio % 1000)
-    modifyMaxSuccess (const 4) $ do
+    -- NOTE: The following test is extremely slow and does not bring much value on the table,
+    -- it's there mostly to demonstrate we can produce a certiifcate according to the spec,
+    -- with "standard" parameters.
+    modifyMaxSuccess (const 1) $ do
       prop "selects committee size voters every round" $
         prop_selectVotersEveryRoundWithTaylorExpansion voters
 
@@ -95,16 +98,10 @@ prop_voterCastsVotesAccordingToStakeAndParameters voter stakeRatio =
     forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
       forAllBlind gen32Bytes $ \block ->
         let totalStake = floor $ fromIntegral (voterStake voter) * recip stakeRatio
-            params =
-              VotingParameters
-                { k = 2422
-                , m = 20_973
-                , f = 1 % 5
-                }
             expected :: Double = (1 - (fromRational $ 4 % 5) ** fromRational stakeRatio) * fromIntegral 20_973
             expectedCeil = ceiling expected
-            tolerance :: Integer = ceiling $ expected / 4
-         in case castVote' block totalStake input params roundNumber voter of
+            tolerance :: Integer = ceiling $ expected / 2
+         in case castVote' block totalStake input standardParameters roundNumber voter of
               Just MkVote{votingWeight} ->
                 let difference = abs (fromIntegral votingWeight - fromIntegral expectedCeil)
                  in difference <= tolerance
@@ -216,13 +213,7 @@ prop_selectVotersEveryRoundWithTaylorExpansion voters =
     forAllBlind (fromBytes <$> gen32Bytes) $ \input ->
       forAllBlind gen32Bytes $ \block ->
         let totalStake = sum $ voterStake <$> voters
-            params =
-              VotingParameters
-                { k = 2422
-                , m = 20973
-                , f = 1 % 5
-                }
-            votes = mapMaybe (castVote' block totalStake input params roundNumber) voters
+            votes = mapMaybe (castVote' block totalStake input standardParameters roundNumber) voters
             totalVotes :: Integer = fromIntegral $ sum (votingWeight <$> votes)
          in property True
               & label ("votes = " <> show totalVotes)

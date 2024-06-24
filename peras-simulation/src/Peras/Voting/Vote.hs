@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -34,13 +35,10 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Ratio ((%))
-import Data.Serialize (getWord64be, getWord64le, putWord64le, runGet, runPut)
+import Data.Serialize (getWord64be, putWord64le, runGet, runPut)
 import Data.Word (Word64)
-import Debug.Trace (trace)
 import GHC.Generics (Generic)
-import Numeric (showFFloat)
-import Statistics.Distribution (cumulative)
-import Statistics.Distribution.Binomial (binomial)
+import Numeric.SpecFunctions (incompleteBeta)
 
 data Vote block = MkVote
   { creatorId :: PartyId
@@ -105,8 +103,18 @@ fromBytes :: BS.ByteString -> MembershipInput
 fromBytes = MkMembershipInput . fromJust . Hash.hashFromBytes
 
 mkNonce :: Hash Blake2b_256 a -> Word64 -> MembershipInput
-mkNonce h unRoundNumber = MkMembershipInput . Hash.castHash . Hash.hashWith id $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
+mkNonce h unRoundNumber =
+  MkMembershipInput
+    . Hash.castHash
+    . Hash.hashWith id
+    $ Hash.hashToBytes h <> "peras" <> LBS.toStrict (BS.toLazyByteString (BS.word64BE unRoundNumber))
 
+-- | A voter (eg. stake pool operator) and its associated keys.
+--
+-- Of course, in practice the signing keys would only be knonw to the
+-- actual party and the verifiers only have access to verification
+-- keys from the stake pool registration certificate and stake
+-- distribution.
 data Voter = MkVoter
   { voterId :: PartyId
   , voterStake :: Integer
@@ -134,8 +142,16 @@ instance SignableRepresentation MembershipInput where
 instance SignableRepresentation (VRF.CertifiedVRF VRF.PraosVRF v) where
   getSignableRepresentation = VRF.getOutputVRFBytes . VRF.certifiedOutput
 
+-- | Cast a vote for a given block and nonce.
+--
+-- This function uses the VRF to determine if the voter is selected to
+-- vote, based on a target `committeeSize`, `voterStake`and
+-- `totalStake` of all voters. It returns either `Nothing` if the
+-- voter has not enough weight, or a `Vote` with a `VotingWeight`
+-- corresponding to the voter's relative share. The `VotingWeight` is
+-- computed using `binomialVoteWeighing` function with the output of
+-- the VRF function as the random value.
 castVote ::
-  -- \| The thing we are voting on
   SignableRepresentation a =>
   a ->
   -- | Total stake of all voters
@@ -171,18 +187,45 @@ castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize
               , signature = certKES
               }
 
--- | Convert a hash to a 64-bit unsigned integer
+-- | Convert a hash to a 64-bit unsigned integer.
+--
+-- This function assumes the given hash represents a big-endian natural value and
+-- truncates it to 64 bits, converting it to an unsigned integer assuming big endian
+-- ordering.
+--
+-- NOTE: This function is faster and much simpler than the
+-- [one](https://github.com/input-output-hk/cardano-base/blob/a9bfdf50b7794c962f73f06763546dc65257720e/cardano-crypto-class/src/Cardano/Crypto/Util.hs#L139)
+-- used in the actual ledger code base, which should be
+-- preferred. While the distribution it produces is good enough for
+-- our purposes, it is much easier to attack as an adversary only has
+-- to try to tweak 64 bits of the hash instead of 256.  We assume the
+-- performance profile of this simple, naive function is similar to
+-- the highly optimised production one.
 asInteger :: Hash Blake2b_256 a -> Integer
 asInteger h = fromIntegral $ fromBytesLE $ Hash.hashToBytes h
  where
   fromBytesLE = either error id . runGet getWord64be . BS.take 8 . BS.drop 24
 
--- stolen from https://github.com/algorand/sortition/blob/main/sortition.cpp
+-- | Compute a vote's weight based on binomial distribution of the
+-- possible weights.
+--
+-- This function is directly stolen from
+-- [Algorand's](https://github.com/algorand/sortition/blob/main/sortition.cpp)
+-- sortition codebase. It computes the actual voting weight through a
+-- dichotomial search in the binomial distribution $B(n,p)$ where $n$
+-- is the voter's stake (in ADA) and $p$ is the ratio of target
+-- committee size over the total stake.  The value searched for is the
+-- given `ratio` which is compared to quantiles of the distribution.
+--
+-- NOTE: While this is significantly faster, by several orders of
+-- magnitude, to the lottery drawing (see `isLotteryWinner`) process,
+-- the soundness of this process has not been researched so it should
+-- be considered with some caution.
 binomialVoteWeighing ::
   -- | Expected committee size
   Integer ->
   -- | Outcome of "random" function, used to find voter's resulting weight
-  -- Should be < 1
+  -- must be < 1
   Rational ->
   -- | Voter's stake
   Integer ->
@@ -196,15 +239,33 @@ binomialVoteWeighing expectedSize ratio voterStake totalStake =
   p = expectedSize % totalStake
   ρ = fromRational ratio
   coin = fromIntegral voterStake
-  cdf = binomial (fromIntegral n) (fromRational p)
+  distribution = Binomial n (fromRational p)
   go a b =
     let c = (a + b) `div` 2
      in if abs (b - a) <= 1
           then VotingWeight b
-          else case compare (cumulative cdf (fromIntegral c)) ρ of
+          else case compare (cumulative distribution (fromIntegral c)) ρ of
             GT -> go a c
             LT -> go c b
             EQ -> VotingWeight c
+
+-- | Binomial distribution
+data Binomial = Binomial {n :: Integer, p :: Double}
+
+-- | CDF of the binomial distribution using the incomplete beta
+-- function.  This code is directly stolen from the
+-- [statistics](https://hackage.haskell.org/package/statistics-0.16.2.1/docs/src/Statistics.Distribution.Binomial.html#cumulative)
+-- package but uses an `Integer` instead of an `Int` for the binomial
+-- distribution's number of trials.
+cumulative :: Binomial -> Double -> Double
+cumulative (Binomial n p) x
+  | isNaN x = error "Statistics.Distribution.Binomial.cumulative: NaN input"
+  | isInfinite x = if x > 0 then 1 else 0
+  | k < 0 = 0
+  | k >= n = 1
+  | otherwise = incompleteBeta (fromIntegral (n - k)) (fromIntegral (k + 1)) (1 - p)
+ where
+  k = floor x
 
 data VotingParameters = VotingParameters
   { k :: Integer
@@ -213,8 +274,19 @@ data VotingParameters = VotingParameters
   , f :: Rational
   }
 
+-- | Standard parameters for mainnet committee selection.
+--
+-- These parameters are the ones used for Mithril mainnet certificate production,
+-- see https://mithril.network for more details.
+standardParameters :: VotingParameters
+standardParameters =
+  VotingParameters
+    { k = 2422
+    , m = 20_973
+    , f = 0.2
+    }
+
 castVote' ::
-  -- \| The thing we are voting on
   SignableRepresentation a =>
   -- | The thing to vote on
   a ->
