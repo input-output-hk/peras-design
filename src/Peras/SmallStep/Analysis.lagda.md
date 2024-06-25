@@ -171,24 +171,21 @@ Building up the voting string from all the party's block-trees
     ... | yes p = refl
     ... | no q = ⊥-elim (q x)
 
+    Any-vote→？ : ∀ {ts : List T} {r}
+      → ¬ Any (hasCert r) ts
+      → Any (hasVote r) ts
+      → σᵢ r ts ≡ ？
+    Any-vote→？ {ts} {r} x y
+      with any? (hasCert? r) ts
+      with any? (hasVote? r) ts
+    ... | yes p | _     = contradiction p x
+    ... | no p  | yes q = refl
+    ... | no p  | no q  = ⊥-elim (q y)
+
     ¬⒈→¬Any-cert : ∀ {ts : List T} {r}
       → σᵢ r ts ≢ ⒈
       → ¬ Any (hasCert r) ts
     ¬⒈→¬Any-cert = contraposition Any-cert→⒈
-
-{-
-    Any-vote→¬🄀 : ∀ {ts : List T} {r}
-      → Any (hasVote r) ts
-      → σᵢ r ts ≢ 🄀
-    Any-vote→¬🄀 {ts} {r} x with any? (hasVote? r) ts
-    ... | yes p = {!!}
-    ... | no q = {!!}
-
-    🄀→¬Any-vote : ∀ {ts : List T} {r}
-      → ¬ (σᵢ r ts ≢ 🄀)
-      → ¬ Any (hasVote r) ts
-    🄀→¬Any-vote = contraposition Any-vote→¬🄀
--}
 
     ⒈≢？ : ⒈ ≢ ？
     ⒈≢？ ()
@@ -202,40 +199,10 @@ Building up the voting string from all the party's block-trees
     ？⇒¬Any-cert {ts} {r} x = ¬⒈→¬Any-cert λ x₁ →
       contradiction (trans (sym x₁) x) ⒈≢？
 ```
-```agda
-    postulate
-      build-valid : ∀ {ts : List T} {m} {x} {σ : Vec Σ m}
-        → σ ⟶ x
-        → σᵢ (MkRoundNumber (suc m)) ts ≡ x
-```
-<!--
-```agda
-{-
-    build-valid {ts} {.zero} {⒈} HS-I = {!!}
-    build-valid {ts} {.(suc _)} {⒈} HS-II-1 = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {⒈} (HS-V-1₁ x) = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {⒈} (HS-V-1₂ x) = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {⒈} (HS-VII-1 x) = {!!}
-    build-valid {ts} {.(suc _)} {？} HS-II-? = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {？} (HS-V-?₁ x) = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {？} (HS-V-?₂ x) = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {？} (HS-VII-? x) = {!!}
-    build-valid {ts} {.(suc _)} {🄀} HS-III = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {🄀} (HS-IV x x₁) = {!!}
-    build-valid {ts} {.(L + suc (suc _))} {🄀} (HS-VI x x₁) = {!!}
--}
-```
--->
-```agda
-    build？⇒¬Any-cert : ∀ {ts : AssocList PartyId T} {r}
-      → build-σ (MkRoundNumber r) ts ⟶ ？
-      → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
-    build？⇒¬Any-cert = ？⇒¬Any-cert ∘ build-valid
-```
 <!--
 ```agda
     -- contraposition of quorum-cert from blocktree
-    {-
+{-
     cp : ∀ {r} {t}
          → ¬ hasCert (MkRoundNumber r) t
          → ¬ (length (L.filter (λ {v →
@@ -243,7 +210,7 @@ Building up the voting string from all the party's block-trees
          --     ×-dec (blockHash v ≟-BlockHash hash b)
             }) (votes t)) Data.Nat.≥ τ)
     cp {r} {t} = contraposition (is-TreeType .quorum-cert r t)
-    -}
+-}
 ```
 -->
 <!--
@@ -276,8 +243,8 @@ Building up the voting string from all the party's block-trees
 ```
 ```agda
     vr-1a⇒hasCert : ∀ {r} {t}
-        → VotingRule-1A (MkRoundNumber (suc r)) t
-        → hasCert (MkRoundNumber r) t
+      → VotingRule-1A (MkRoundNumber (suc r)) t
+      → hasCert (MkRoundNumber r) t
     vr-1a⇒hasCert {r} {t} refl =
       Any-resp-⊆ latestCertSeen∈certs
         (here {x = latestCertSeen t} {xs = L.[]} refl)
@@ -285,21 +252,21 @@ Building up the voting string from all the party's block-trees
     vr-1⇒hasCert : ∀ {r} {t}
       → VotingRule-1 (MkRoundNumber (suc r)) t
       → hasCert (MkRoundNumber r) t
-    vr-1⇒hasCert (vr-1a , _) = vr-1a⇒hasCert vr-1a
+    vr-1⇒hasCert = vr-1a⇒hasCert ∘ proj₁
 
-    ？⇒¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
-      → build-σ (MkRoundNumber r) ts ⟶ ？
-      → ¬ Any (VotingRule-1 (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
+    ？⇒¬AnyVotingRule-1 : ∀ {ts : List T} {r}
+      → σᵢ (MkRoundNumber r) ts ≡ ？
+      → ¬ Any (VotingRule-1 (MkRoundNumber (suc r))) ts
     ？⇒¬AnyVotingRule-1 {ts} {r} x =
-      let s₀ = build？⇒¬Any-cert {ts} {r} x
-          s₁ = ¬Any⇒All¬ (map proj₂ ts) s₀
+      let s₀ = ？⇒¬Any-cert {ts} {MkRoundNumber r} x
+          s₁ = ¬Any⇒All¬ ts s₀
           s₂ = All.map (contraposition vr-1⇒hasCert) s₁
       in All¬⇒¬Any s₂
 
-    ？⇒All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
-      → build-σ (MkRoundNumber r) ts ⟶ ？
-      → All (¬_ ∘ VotingRule-1 (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
-    ？⇒All¬VotingRule-1 {ts} = ¬Any⇒All¬ (map proj₂ ts) ∘ ？⇒¬AnyVotingRule-1
+    ？⇒All¬VotingRule-1 : ∀ {ts : List T} {r}
+      → σᵢ (MkRoundNumber r) ts ≡ ？
+      → All (¬_ ∘ VotingRule-1 (MkRoundNumber (suc r))) ts
+    ？⇒All¬VotingRule-1 {ts} = ¬Any⇒All¬ ts ∘ ？⇒¬AnyVotingRule-1
 ```
 <!--
 Reflexive, transitive closure
@@ -343,19 +310,6 @@ Reflexive, transitive closure
          ⟧
 ```
 <!--
-```agda
-{-
-      postulate
-        genesis-cert′ : ∀ t → hasCert (MkRoundNumber 1) t
-        genesis-cert : ∀ ts → All (hasCert (MkRoundNumber 0)) ts
-
-      HS-I-rule : ∀ {ts} → σᵢ (MkRoundNumber 0) ts ≡ ⒈
-      HS-I-rule {ts}
-        with any? (hasCert? (MkRoundNumber 0)) ts
-      ... | yes _ = refl
-      ... | no p  = ⊥-elim (p genesis-cert)
--}
-```
 ```agda
 {-
       postulate
@@ -416,14 +370,13 @@ The voting string of every execution of the protocol is built according to the H
     theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
       rewrite σ′
       rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
-      rewrite build-valid {blockTrees' N} st″
       with c
 
     theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
       with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-    ... | yes _ | _     = ⒈ , (HS-II-1 , refl)
-    ... | no _  | yes _ = ？ , (HS-II-? , refl)
+    ... | yes p | _     = ⒈ , (HS-II-1 , …… )
+    ... | no p  | yes q = ？ , (HS-II-? , …… )
     ... | no _  | no _  = …… -- TODO: contradiction
 
     theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
