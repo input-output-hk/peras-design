@@ -37,6 +37,8 @@ open import Peras.Params
 open import Peras.SmallStep
 open import Peras.Numbering
 
+-- open import Data.List.Membership.DecPropositional _≟-Certificate_ using (_∈?_)
+
 open import Prelude.AssocList
 open import Prelude.DecEq using (DecEq)
 open import Prelude.Default using (Default)
@@ -180,8 +182,25 @@ Building up the voting string from all the party's block-trees
       → ¬ Any (hasCert r) ts
     ¬⒈→¬Any-cert = contraposition Any-cert→⒈
 
+{-
+    Any-vote→¬🄀 : ∀ {ts : List T} {r}
+      → Any (hasVote r) ts
+      → σᵢ r ts ≢ 🄀
+    Any-vote→¬🄀 {ts} {r} x with any? (hasVote? r) ts
+    ... | yes p = {!!}
+    ... | no q = {!!}
+
+    🄀→¬Any-vote : ∀ {ts : List T} {r}
+      → ¬ (σᵢ r ts ≢ 🄀)
+      → ¬ Any (hasVote r) ts
+    🄀→¬Any-vote = contraposition Any-vote→¬🄀
+-}
+
     ⒈≢？ : ⒈ ≢ ？
     ⒈≢？ ()
+
+    ⒈≢🄀 : ⒈ ≢ 🄀
+    ⒈≢🄀 ()
 
     ？→¬Any-cert : ∀ {ts : List T} {r}
       → σᵢ r ts ≡ ？
@@ -194,23 +213,49 @@ Building up the voting string from all the party's block-trees
       → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
     build？→¬Any-cert = ？→¬Any-cert ∘ lastIsHead
 
-    -- TODO: contraposition of quorum-cert from blocktree
+    -- contraposition of quorum-cert from blocktree
+    cp : ∀ {r} {t}
+         → ¬ hasCert (MkRoundNumber r) t
+         → ¬ (length (L.filter (λ {v →
+                    (getRoundNumber (votingRound v) Data.Nat.≟ r)
+         --     ×-dec (blockHash v ≟-BlockHash hash b)
+            }) (votes t)) Data.Nat.≥ τ)
+    cp {r} {t} = contraposition (is-TreeType .quorum-cert r t)
 
-    x→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
+    open import Data.List.Extrema.Core
+    open import Data.Nat.Properties using (≤-totalOrder)
+    open import Data.List.Extrema (≤-totalOrder) using (argmax)
+
+    postulate
+      vr-1a⇒hasCert : ∀ {r} {t}
+        → VotingRule-1A {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t
+        → hasCert (MkRoundNumber r) t
+{-
+    vr-1a⇒hasCert {r} {t} refl
+      with (foldr (⊔ᴸ ≤-totalOrder roundNumber) cert₀ (certs t)) ∈? certs t
+    ... | yes p = {!!}
+    ... | no q = {!!}
+-}
+
+    vr-1⇒hasCert : ∀ {r} {t}
+      → VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t
+      → hasCert (MkRoundNumber r) t
+    vr-1⇒hasCert (vr-1a , _) = vr-1a⇒hasCert vr-1a
+
+    -- TODO:
+    ？→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
-      → ¬ Any (VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r))) (map proj₂ ts)
-    x→¬AnyVotingRule-1 {ts} {r} x =
-      let s = build？→¬Any-cert {ts} {r} x
-          xx = ¬Any⇒All¬ (map proj₂ ts) s
-          -- yy = All.map (λ {t → contraposition (is-TreeType .quorum-cert r t)}) (map proj₂ ts)
-          -- yy = All¬⇒¬Any (All.map (contraposition ) )
-       --   xx = is-TreeType .quorum-cert t r
-      in {!!}
+      → ¬ Any (VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
+    ？→¬AnyVotingRule-1 {ts} {r} x =
+      let s₀ = build？→¬Any-cert {ts} {r} x
+          s₁ = ¬Any⇒All¬ (map proj₂ ts) s₀
+          s₂ = All.map (contraposition vr-1⇒hasCert) s₁
+      in All¬⇒¬Any s₂
 
     ？→All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
-      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t}) (map proj₂ ts)
-    ？→All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (x→¬AnyVotingRule-1 x)
+      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc (suc r))) t}) (map proj₂ ts)
+    ？→All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (？→¬AnyVotingRule-1 x)
 ```
 <!--
 ```agda
