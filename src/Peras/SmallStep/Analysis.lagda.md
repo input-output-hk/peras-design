@@ -214,6 +214,7 @@ Building up the voting string from all the party's block-trees
     build？→¬Any-cert = ？→¬Any-cert ∘ lastIsHead
 
     -- contraposition of quorum-cert from blocktree
+    {-
     cp : ∀ {r} {t}
          → ¬ hasCert (MkRoundNumber r) t
          → ¬ (length (L.filter (λ {v →
@@ -221,6 +222,7 @@ Building up the voting string from all the party's block-trees
          --     ×-dec (blockHash v ≟-BlockHash hash b)
             }) (votes t)) Data.Nat.≥ τ)
     cp {r} {t} = contraposition (is-TreeType .quorum-cert r t)
+    -}
 
     open import Data.List.Extrema.Core
     open import Data.Nat.Properties using (≤-totalOrder)
