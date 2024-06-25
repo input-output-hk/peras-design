@@ -213,7 +213,9 @@ Building up the voting string from all the party's block-trees
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
     build？⇒¬Any-cert = ？⇒¬Any-cert ∘ lastIsHead
-
+```
+<!--
+```agda
     -- contraposition of quorum-cert from blocktree
     {-
     cp : ∀ {r} {t}
@@ -224,28 +226,48 @@ Building up the voting string from all the party's block-trees
             }) (votes t)) Data.Nat.≥ τ)
     cp {r} {t} = contraposition (is-TreeType .quorum-cert r t)
     -}
-
+```
+-->
+<!--
+```agda
+{-
     open import Data.List.Extrema.Core
     open import Data.Nat.Properties using (≤-totalOrder)
     open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
+    xxx : ∀ {f} {xs : List Certificate} {x : Certificate}
+      → argmax f x xs ∈ xs ⊎ argmax f x xs ≡ x
+    xxx = {!!}
+
+    latestCertSeen∈certs' : ∀ {t} → latestCertSeen t ∈ certs t
+    latestCertSeen∈certs' {t} with xxx {roundNumber} {certs t} {cert₀}
+    ... | inj₁ x = x
+    ... | inj₂ y = {!!}
+-}
+```
+-->
+```agda
+    open import Data.List.Relation.Binary.Subset.Propositional.Properties
+    open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} using (_⊆_)
+
     postulate
-      vr-1a⇒hasCert : ∀ {r} {t}
+      latestCertSeen∈certs' : ∀ {t} → latestCertSeen t ∈ certs t
+
+    latestCertSeen∈certs : ∀ {t} → latestCertSeen t L.∷ L.[] ⊆ certs t
+    latestCertSeen∈certs (here refl) = latestCertSeen∈certs'
+```
+```agda
+    vr-1a⇒hasCert : ∀ {r} {t}
         → VotingRule-1A (MkRoundNumber (suc r)) t
         → hasCert (MkRoundNumber r) t
-{-
-    vr-1a⇒hasCert {r} {t} refl
-      with (foldr (⊔ᴸ ≤-totalOrder roundNumber) cert₀ (certs t)) ∈? certs t
-    ... | yes p = {!!}
-    ... | no q = {!!}
--}
+    vr-1a⇒hasCert {r} {t} refl =
+      Any-resp-⊆ latestCertSeen∈certs (here {x = latestCertSeen t} {xs = L.[]} refl)
 
     vr-1⇒hasCert : ∀ {r} {t}
       → VotingRule-1 (MkRoundNumber (suc r)) t
       → hasCert (MkRoundNumber r) t
     vr-1⇒hasCert (vr-1a , _) = vr-1a⇒hasCert vr-1a
 
-    -- TODO:
     ？⇒¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → ¬ Any (VotingRule-1 (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
