@@ -77,7 +77,7 @@ This is a very simple example of the execution of the protocol in the small-step
       parties : Parties
       parties = (party₁ , Honest) ∷ (party₂ , Honest) ∷ []
 
-      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+      open Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 ```
 ```agda
       createBlock' : SlotNumber → PartyId → T → Block
@@ -85,7 +85,7 @@ This is a very simple example of the execution of the protocol in the small-step
         let
           π = createLeadershipProof s p
           σ = createBlockSignature p
-        in createBlock {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
+        in createBlock s p π σ t
 ```
 ```agda
       createVote' : SlotNumber → PartyId → T → Vote
@@ -94,7 +94,7 @@ This is a very simple example of the execution of the protocol in the small-step
           r = v-round s
           π = createMembershipProof r p
           σ = createVoteSignature p
-        in createVote {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} s p π σ t
+        in createVote s p π σ t
 ```
 Blocks and Votes
 ```agda
@@ -112,14 +112,14 @@ Blocks and Votes
 ```
 Initial state
 ```agda
-      initialState : GlobalState
+      initialState : State
       initialState = ⟦ MkSlotNumber 0 , initialMap , [] , [] , adversarialState₀ ⟧
         where
           initialMap = (party₁ , tree₀) ∷ (party₂ , tree₀) ∷ []
 ```
 Final state after the execution of all the steps
 ```agda
-      finalState : GlobalState
+      finalState : State
       finalState = ⟦ MkSlotNumber 3 , finalMap , [] , finalMsg , adversarialState₀ ⟧
         where
           -- finalMsg = BlockMsg block₃ ∷ VoteMsg vote₁ ∷ BlockMsg block₁ ∷ []
@@ -158,8 +158,7 @@ Based on properties of the blocktree we can show the following
       x∧false≡false {false} = refl
       x∧false≡false {true} = refl
 
-      needCert-tree₀≡nothing : needCert {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-                (MkRoundNumber 0) tree₀ ≡ nothing
+      needCert-tree₀≡nothing : needCert (MkRoundNumber 0) tree₀ ≡ nothing
       needCert-tree₀≡nothing
         rewrite roundNumber-latestCertSeen-tree₀≡0
         rewrite x∧false≡false {not (any (λ {c → ⌊ roundNumber c + 2 ≟ 0 ⌋}) (certs tree₀))}

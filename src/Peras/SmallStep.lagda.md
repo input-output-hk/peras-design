@@ -287,7 +287,8 @@ additionally:
   * The list of parties
 
 ```agda
-  module _ {T : Type} {blockTree : TreeType T}
+  module Semantics
+           {T : Type} {blockTree : TreeType T}
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees

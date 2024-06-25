@@ -92,14 +92,13 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ### Initial state
 ```agda
+    open Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
     open TreeType blockTree
-
-    GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
 
     states₀ : AssocList PartyId T
     states₀ = map (λ where (p , _) → (p , tree₀)) parties
 
-    N₀ : GlobalState
+    N₀ : State
     N₀ = ⟦ MkSlotNumber 0
          , states₀
          , []
@@ -118,9 +117,9 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 -->
 <!--
 ```agda
-    clock' : GlobalState → ℕ
+    clock' : State → ℕ
     clock' = getSlotNumber ∘ clock
-    clock-incr : ∀ {M N : GlobalState}
+    clock-incr : ∀ {M N : State}
       → M ↝ N
       → clock' M ≤ clock' N
     clock-incr {⟦ c , _ , _ , _ , _ ⟧} {⟦ c , _ , _ , _ , _ ⟧} (Fetch (honest _ _ _)) = ≤-refl
@@ -130,7 +129,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     clock-incr {M} (NextSlot _ _) = n≤1+n (clock' M)
     clock-incr {M} (NextSlotNewRound _ _ _) = n≤1+n (clock' M)
 
-    clock-incr⋆ : ∀ {M N : GlobalState}
+    clock-incr⋆ : ∀ {M N : State}
       → M ↝⋆ N
       → clock' M ≤ clock' N
     clock-incr⋆ ∎ = ≤-refl
@@ -152,19 +151,19 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 <!--
 ```agda
 {-
-    data Any↝ (P : ∀ {A B : GlobalState} → (A ↝ B) → Set) : ∀ {M N : GlobalState} → (M ↝⋆ N) → Set where
-      here  : ∀ {A B N : GlobalState} {x xs} (px : P {A} {B} x) → Any↝ P {A} {N} (_ ↝⟨ x ⟩ xs)
-      there : ∀ {M N : GlobalState} {x xs} (pxs : Any↝ P {M} {N} xs) → Any↝ P {M} {N} (_ ↝⟨ x ⟩ xs)
+    data Any↝ (P : ∀ {A B : State} → (A ↝ B) → Set) : ∀ {M N : State} → (M ↝⋆ N) → Set where
+      here  : ∀ {A B N : State} {x xs} (px : P {A} {B} x) → Any↝ P {A} {N} (_ ↝⟨ x ⟩ xs)
+      there : ∀ {M N : State} {x xs} (pxs : Any↝ P {M} {N} xs) → Any↝ P {M} {N} (_ ↝⟨ x ⟩ xs)
 
-    HasStep : ∀ {A B M N : GlobalState} → (A ↝ B) → (M ↝⋆ N) → Set
+    HasStep : ∀ {A B M N : State} → (A ↝ B) → (M ↝⋆ N) → Set
     HasStep {A} {B} {M} {N} x xs = Any↝ (λ { y → y ≡ x }) xs
 
-    HasCreateStep : ∀ {M N : GlobalState} → Block → (M ↝⋆ N) → Set
+    HasCreateStep : ∀ {M N : State} → Block → (M ↝⋆ N) → Set
     HasCreateStep b xs =
       let h = honest {block = b} refl {!!} {!!} {!!} {!!}
       in HasStep (CreateBlock {!h!}) xs
 
-    knowledge-propagation1 : ∀ {N : GlobalState}
+    knowledge-propagation1 : ∀ {N : State}
         → {p₁ p : PartyId}
         → {t₁ t : T}
         → {h₁ : Honesty p₁}
@@ -181,7 +180,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```agda
 {-
     postulate
-      knowledge-propagation₁ : ∀ {N : GlobalState}
+      knowledge-propagation₁ : ∀ {N : State}
         → {p₁ p : PartyId}
         → {t₁ t : T}
         → {h₁ : Honesty p₁}
@@ -191,7 +190,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
         → Fetched N
         → lookup (blockTrees N) p₁ ≡ just t₁
         → b ∈ allBlocks t₁
-        → Σ[ (M , M′) ∈ GlobalState × GlobalState ] (
+        → Σ[ (M , M′) ∈ State × State ] (
              Σ[ (s₀ , s₁ , s₂) ∈ (N₀ ↝⋆ M) × (M ↝ M′) × (M′ ↝⋆ N) ] (
                s ≡ ↝⋆∘↝⋆ s₀ (s₁ ↣ s₂) × ⦅ p , Honest , BlockMsg b , zero ⦆ ∈ messages M′))
 -}
@@ -203,7 +202,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 
 {-
     postulate
-      blocksNotLost : ∀ {M N : GlobalState} {p} {tₘ tₙ} {b}
+      blocksNotLost : ∀ {M N : State} {p} {tₘ tₙ} {b}
         → M ↝⋆ N
         → lookup (State.blockTrees M) p ≡ just tₘ
         → lookup (State.blockTrees N) p ≡ just tₙ
@@ -244,12 +243,12 @@ module _ {block₀ : Block} {cert₀ : Certificate}
     VoteMsg≢BlockMsg x with cong message x
     ... | ()
 
-    ⊆-vote : ∀ {M N : GlobalState} {p} {h : Honesty p}
+    ⊆-vote : ∀ {M N : State} {p} {h : Honesty p}
       → h ⊢ M ⇉ N
       → messages M ⊆ᵐ messages N
     ⊆-vote {p = p} (honest {vote = v} refl _ _ _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, VoteMsg v , zero ⦆) (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
 
-    ⊆-block : ∀ {M N : GlobalState} {p} {h : Honesty p}
+    ⊆-block : ∀ {M N : State} {p} {h : Honesty p}
       → h ⊢ M ↷ N
       → messages M ⊆ᵐ messages N
     ⊆-block {p = p} (honest {block = b} refl _ _ _) = ∈-++⁺ʳ $ map (uncurry ⦅_,_, BlockMsg b , zero ⦆)  (filter (¬? ∘ (p ℕ.≟_) ∘ proj₁) parties)
@@ -260,7 +259,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 <!--
 ```agda
 {-
-    knowledge-propagation₂ : ∀ {M N : GlobalState}
+    knowledge-propagation₂ : ∀ {M N : State}
         → {p : PartyId}
         → {t : T}
         → {h : Honesty p}
@@ -340,7 +339,7 @@ module _ {block₀ : Block} {cert₀ : Certificate}
 ```
 ```agda
 {-
-    knowledge-propagation₀ : ∀ {N : GlobalState}
+    knowledge-propagation₀ : ∀ {N : State}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : T}
         → {honest₁ : Honesty p₁}
@@ -364,7 +363,7 @@ The lemma describes how knowledge is propagated between honest parties in the sy
 
 ```agda
     postulate
-      knowledge-propagation : ∀ {N₁ N₂ : GlobalState}
+      knowledge-propagation : ∀ {N₁ N₂ : State}
         → {p₁ p₂ : PartyId}
         → {t₁ t₂ : T}
         → {honesty₁ : Honesty p₁}
@@ -554,7 +553,7 @@ that period.
 
 ```agda
     postulate
-      chain-growth : ∀ {N₁ N₂ : GlobalState}
+      chain-growth : ∀ {N₁ N₂ : State}
         → {p₁ p₂ : PartyId}
         → {h₁ : Honesty p₁} {h₂ : Honesty p₂}
         → {t₁ t₂ : T}
@@ -591,7 +590,7 @@ chains of honest parties will always be a common prefix of each other.
 ```agda
 {-
     postulate
-      common-prefix : ∀ {N : GlobalState}
+      common-prefix : ∀ {N : State}
         → {p : PartyId} {h : Honesty p} {c : Chain} {k : SlotNumber} {bh : List Block} {t : T}
         → p ‼ blockTrees N ≡ just t
         → N₀ ↝⋆ N

@@ -82,6 +82,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
            where
 
+    open Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
     open TreeType blockTree
     open IsTreeType
 ```
@@ -230,7 +231,7 @@ Building up the voting string from all the party's block-trees
 
     postulate
       vr-1a⇒hasCert : ∀ {r} {t}
-        → VotingRule-1A {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t
+        → VotingRule-1A (MkRoundNumber (suc r)) t
         → hasCert (MkRoundNumber r) t
 {-
     vr-1a⇒hasCert {r} {t} refl
@@ -240,14 +241,14 @@ Building up the voting string from all the party's block-trees
 -}
 
     vr-1⇒hasCert : ∀ {r} {t}
-      → VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc r)) t
+      → VotingRule-1 (MkRoundNumber (suc r)) t
       → hasCert (MkRoundNumber r) t
     vr-1⇒hasCert (vr-1a , _) = vr-1a⇒hasCert vr-1a
 
     -- TODO:
     ？→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
-      → ¬ Any (VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
+      → ¬ Any (VotingRule-1 (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
     ？→¬AnyVotingRule-1 {ts} {r} x =
       let s₀ = build？→¬Any-cert {ts} {r} x
           s₁ = ¬Any⇒All¬ (map proj₂ ts) s₀
@@ -256,7 +257,7 @@ Building up the voting string from all the party's block-trees
 
     ？→All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
-      → All (λ {t → ¬ VotingRule-1 {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} (MkRoundNumber (suc (suc r))) t}) (map proj₂ ts)
+      → All (λ {t → ¬ VotingRule-1 (MkRoundNumber (suc (suc r))) t}) (map proj₂ ts)
     ？→All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (？→¬AnyVotingRule-1 x)
 ```
 <!--
@@ -303,25 +304,18 @@ Reflexive, transitive closure
 -->
 ### Theorem: The voting string in any execution is valid
 ```agda
-    module _ {parties : Parties}
-             {S : Set} (adversarialState₀ : S)
-             (txSelection : SlotNumber → PartyId → List Tx)
-             where
+    open State
 
-      open State
+    states₀ : AssocList PartyId T
+    states₀ = map (λ where (p , _) → (p , tree₀)) parties
 
-      GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-
-      states₀ : AssocList PartyId T
-      states₀ = map (λ where (p , _) → (p , tree₀)) parties
-
-      N₀ : GlobalState
-      N₀ = ⟦ MkSlotNumber 0
-           , states₀
-           , L.[]
-           , L.[]
-           , adversarialState₀
-           ⟧
+    N₀ : State
+    N₀ = ⟦ MkSlotNumber 0
+         , states₀
+         , L.[]
+         , L.[]
+         , adversarialState₀
+         ⟧
 ```
 <!--
 ```agda
@@ -362,62 +356,62 @@ Reflexive, transitive closure
 ```
 -->
 ```agda
-      postulate
-        prevRound : ∀ (N : GlobalState)
-          → ∃[ M ] (M ↦ N)
+    postulate
+      prevRound : ∀ (N : State)
+        → ∃[ M ] (M ↦ N)
 
-        knowledge-prop : ∀ {m} {M N : GlobalState}
-          → M ↦⋆ N
-          → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
+      knowledge-prop : ∀ {m} {M N : State}
+        → M ↦⋆ N
+        → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
 
-        prev-rnd : ∀ {M N : GlobalState} {m}
-          → M ↦ N
-          → suc m ≡ v-rnd' N
-          → m ≡ v-rnd' M
+      prev-rnd : ∀ {M N : State} {m}
+        → M ↦ N
+        → suc m ≡ v-rnd' N
+        → m ≡ v-rnd' M
 
-        …… : {A : Set} → A
+      …… : {A : Set} → A
 ```
 #### Theorem 2:
 The voting string of every execution of the protocol is built according to the HS-rules
 ```agda
-      -- preconditions
-      -- * transition to new voting round
-      -- * required votes from the previous round
-      theorem-2 : ∀ {M N : GlobalState} {m}
-        → M ↦ N
-        → m ≡ v-rnd' M
-        → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
-              σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
-          in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
-      theorem-2 {M} {N} {zero} _ _ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
-      theorem-2 {M} {N} {suc m} M↦N m≡rndM
-        with
-          (let (M' , M'↦M) = prevRound M
-           in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
-      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
-        rewrite σ′
-        rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
-        rewrite lastIsHead {blockTrees' N} st″
-        with c
+    -- preconditions
+    -- * transition to new voting round
+    -- * required votes from the previous round
+    theorem-2 : ∀ {M N : State} {m}
+      → M ↦ N
+      → m ≡ v-rnd' M
+      → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
+            σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
+        in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
+    theorem-2 {M} {N} {zero} _ _ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM
+      with
+        (let (M' , M'↦M) = prevRound M
+         in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
+      rewrite σ′
+      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
+      rewrite lastIsHead {blockTrees' N} st″
+      with c
 
-      theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
-        with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-        with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-      ... | yes _ | _     = ⒈ , (HS-II-1 , refl)
-      ... | no _  | yes _ = ？ , (HS-II-? , refl)
-      ... | no _  | no _  = …… -- TODO: contradiction
+    theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
+      with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
+      with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
+    ... | yes _ | _     = ⒈ , (HS-II-1 , refl)
+    ... | no _  | yes _ = ？ , (HS-II-? , refl)
+    ... | no _  | no _  = …… -- TODO: contradiction
 
-      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
-      theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
 ```
 <!--
 ```agda
 {-
       postulate
-        P : ∀ {M N : GlobalState} → (M ↝ N) → Set
-        Q : ∀ {M N : GlobalState} → (M ↝ N) → Set
+        P : ∀ {M N : State} → (M ↝ N) → Set
+        Q : ∀ {M N : State} → (M ↝ N) → Set
 
-        theorem-4 : ∀ {M N : GlobalState} {m : ℕ}
+        theorem-4 : ∀ {M N : State} {m : ℕ}
           → (st : M ↝ N)
           → (let σₘ = build-σ m (blockTrees M)
                  σₙ = build-σ m (blockTrees N)
