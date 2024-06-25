@@ -203,16 +203,16 @@ Building up the voting string from all the party's block-trees
     ⒈≢🄀 : ⒈ ≢ 🄀
     ⒈≢🄀 ()
 
-    ？→¬Any-cert : ∀ {ts : List T} {r}
+    ？⇒¬Any-cert : ∀ {ts : List T} {r}
       → σᵢ r ts ≡ ？
       → ¬ Any (hasCert r) ts
-    ？→¬Any-cert {ts} {r} x = ¬⒈→¬Any-cert λ x₁ →
+    ？⇒¬Any-cert {ts} {r} x = ¬⒈→¬Any-cert λ x₁ →
       contradiction (trans (sym x₁) x) ⒈≢？
 
-    build？→¬Any-cert : ∀ {ts : AssocList PartyId T} {r}
+    build？⇒¬Any-cert : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → ¬ Any (hasCert (MkRoundNumber (suc r))) (map proj₂ ts)
-    build？→¬Any-cert = ？→¬Any-cert ∘ lastIsHead
+    build？⇒¬Any-cert = ？⇒¬Any-cert ∘ lastIsHead
 
     -- contraposition of quorum-cert from blocktree
     {-
@@ -246,19 +246,19 @@ Building up the voting string from all the party's block-trees
     vr-1⇒hasCert (vr-1a , _) = vr-1a⇒hasCert vr-1a
 
     -- TODO:
-    ？→¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
+    ？⇒¬AnyVotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → ¬ Any (VotingRule-1 (MkRoundNumber (suc (suc r)))) (map proj₂ ts)
-    ？→¬AnyVotingRule-1 {ts} {r} x =
-      let s₀ = build？→¬Any-cert {ts} {r} x
+    ？⇒¬AnyVotingRule-1 {ts} {r} x =
+      let s₀ = build？⇒¬Any-cert {ts} {r} x
           s₁ = ¬Any⇒All¬ (map proj₂ ts) s₀
           s₂ = All.map (contraposition vr-1⇒hasCert) s₁
       in All¬⇒¬Any s₂
 
-    ？→All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
+    ？⇒All¬VotingRule-1 : ∀ {ts : AssocList PartyId T} {r}
       → build-σ (MkRoundNumber r) ts ⟶ ？
       → All (λ {t → ¬ VotingRule-1 (MkRoundNumber (suc (suc r))) t}) (map proj₂ ts)
-    ？→All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (？→¬AnyVotingRule-1 x)
+    ？⇒All¬VotingRule-1 {ts} {r} x = ¬Any⇒All¬ (map proj₂ ts) (？⇒¬AnyVotingRule-1 x)
 ```
 <!--
 ```agda
