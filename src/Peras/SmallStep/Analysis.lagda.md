@@ -133,7 +133,7 @@ Building up the voting string from all the party's block-trees
         → 1 ≤ L
         → L ≤ K
         → (replicate L 🄀 ++ (？ ∷ ⒈ ∷ σ)) ⟶ 🄀
-{-
+
       HS-V-?₁ : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
         → (replicate L 🄀 ++ (？ ∷ ⒈ ∷ σ)) ⟶ ？
@@ -162,7 +162,6 @@ Building up the voting string from all the party's block-trees
       HS-VII-1 : ∀ {n} {σ : VotingString n}
         → L + 1 ≡ K
         → (replicate L 🄀 ++ (？ ∷ 🄀 ∷ σ)) ⟶ ⒈
--}
 ```
 ```agda
     postulate
