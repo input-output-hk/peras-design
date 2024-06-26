@@ -182,6 +182,17 @@ Building up the voting string from all the party's block-trees
     ... | no p  | yes q = refl
     ... | no p  | no q  = ⊥-elim (q y)
 
+    No-vote→🄀 : ∀ {ts : List T} {r}
+      → ¬ Any (hasCert r) ts
+      → ¬ Any (hasVote r) ts
+      → σᵢ r ts ≡ 🄀
+    No-vote→🄀 {ts} {r} x y
+      with any? (hasCert? r) ts
+      with any? (hasVote? r) ts
+    ... | yes p | _     = contradiction p x
+    ... | no p  | yes q = contradiction q y
+    ... | no p  | no q  = refl
+
     ¬⒈→¬Any-cert : ∀ {ts : List T} {r}
       → σᵢ r ts ≢ ⒈
       → ¬ Any (hasCert r) ts
@@ -192,6 +203,12 @@ Building up the voting string from all the party's block-trees
 
     ⒈≢🄀 : ⒈ ≢ 🄀
     ⒈≢🄀 ()
+{-
+    ⒈→Any-vote : ∀ {ts : List T} {r}
+      → σᵢ (MkRoundNumber r) ts ≡ ⒈
+      → Any (hasVote (MkRoundNumber (suc r))) ts
+    ⒈→Any-vote = {!!}
+-}
 
     ？⇒¬Any-cert : ∀ {ts : List T} {r}
       → σᵢ r ts ≡ ？
@@ -339,11 +356,13 @@ Reflexive, transitive closure
       prevRound : ∀ (N : State)
         → ∃[ M ] (M ↦ N)
 
+{-
       knowledge-prop : ∀ {m} {M N : State}
         → M ↦⋆ N
         → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
+-}
 
-      knowledge-prop' : ∀ {m} {M N : State}
+      knowledge-prop : ∀ {m} {M N : State}
         → M ↦ N
         → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
 
@@ -357,33 +376,38 @@ Reflexive, transitive closure
 #### Theorem 2:
 The voting string of every execution of the protocol is built according to the HS-rules
 ```agda
-    -- preconditions
-    -- * transition to new voting round
-    -- * required votes from the previous round
     theorem-2 : ∀ {M N : State} {m}
       → M ↦ N
       → m ≡ v-rnd' M
       → let σₘ = build-σ (MkRoundNumber m) (blockTrees M)
             σₙ = build-σ (MkRoundNumber (suc m)) (blockTrees N)
         in ∃[ c ] (σₘ ⟶ c × σₙ ≡ c ∷ σₘ)
+```
+Proof by induction over the voting round.
+Base case
+```agda
     theorem-2 {M} {N} {zero} _ _ = ⒈ , (HS-I , ……) -- TODO: rewrite with genesis cert
+```
+Induction step
+```agda
     theorem-2 {M} {N} {suc m} M↦N m≡rndM
-      with
-        (let (M' , M'↦M) = prevRound M
-         in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
+      with (
+        let (M' , M'↦M) = prevRound M
+        in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM)
+        )
 
     theorem-2 {M} {N} {suc m} M↦N m≡rndM | (⒈ , σₘ⟶1 , σₙ≡1∷σₘ)
       rewrite σₙ≡1∷σₘ
-      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
+      rewrite knowledge-prop {suc m} M↦N
       with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-    ... | yes p | _     rewrite Any-cert→⒈ p   = ⒈ , (HS-II-1 ,  ……)
-    ... | no p  | yes q rewrite Any-vote→？ p q = ？ , (HS-II-? ,  ……)
-    ... | no _  | no _  = …… -- TODO: contradiction
+    ... | yes p | _     rewrite Any-cert→⒈ p    = ⒈ , (HS-II-1 , cong (⒈ ∷_) σₙ≡1∷σₘ)
+    ... | no ¬p | yes q rewrite Any-vote→？ ¬p q = ？ , (HS-II-? , cong (？ ∷_) σₙ≡1∷σₘ)
+    ... | no ¬p | no ¬q rewrite No-vote→🄀 ¬p ¬q = …… -- TODO: contradiction
 
     theorem-2 {M} {N} {suc m} M↦N m≡rndM | (？ , σₘ⟶? , σₙ≡?∷σₘ)
       rewrite σₙ≡?∷σₘ
-      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
+      rewrite knowledge-prop {suc m} M↦N
       = 🄀 , HS-III , …… -- TODO
 
     theorem-2 {M} {N} {suc m} M↦N m≡rndM | (🄀 , σₘ⟶0 , σₙ≡0∷σₘ) = …… -- TODO
