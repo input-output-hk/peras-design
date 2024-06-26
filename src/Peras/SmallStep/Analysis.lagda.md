@@ -343,6 +343,10 @@ Reflexive, transitive closure
         → M ↦⋆ N
         → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
 
+      knowledge-prop' : ∀ {m} {M N : State}
+        → M ↦ N
+        → build-σ′ (MkRoundNumber m) (blockTrees' M) ≡ build-σ′ (MkRoundNumber m) (blockTrees' N)
+
       prev-rnd : ∀ {M N : State} {m}
         → M ↦ N
         → suc m ≡ v-rnd' N
@@ -367,20 +371,22 @@ The voting string of every execution of the protocol is built according to the H
       with
         (let (M' , M'↦M) = prevRound M
          in theorem-2 {M'} {M} {m} M'↦M (prev-rnd M'↦M m≡rndM))
-    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′)
-      rewrite σ′
-      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
-      with c
 
-    theorem-2 {M} {N} {suc m} M↦N _ | (c , st″ , σ′) | ⒈
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (⒈ , σₘ⟶1 , σₙ≡1∷σₘ)
+      rewrite σₙ≡1∷σₘ
+      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
       with any? (hasCert? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
       with any? (hasVote? (MkRoundNumber (suc (suc m)))) (blockTrees' N)
-    ... | yes p | _     = ⒈ , (HS-II-1 , …… )
-    ... | no p  | yes q = ？ , (HS-II-? , …… )
+    ... | yes p | _     rewrite Any-cert→⒈ p   = ⒈ , (HS-II-1 ,  ……)
+    ... | no p  | yes q rewrite Any-vote→？ p q = ？ , (HS-II-? ,  ……)
     ... | no _  | no _  = …… -- TODO: contradiction
 
-    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | ？ = 🄀 , HS-III , …… -- TODO
-    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (c , st″ , σ′) | 🄀 = …… -- TODO
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (？ , σₘ⟶? , σₙ≡?∷σₘ)
+      rewrite σₙ≡?∷σₘ
+      rewrite knowledge-prop {m} (proj₂ (prevRound M) ⨾ M↦N ⨾ ρ)
+      = 🄀 , HS-III , …… -- TODO
+
+    theorem-2 {M} {N} {suc m} M↦N m≡rndM | (🄀 , σₘ⟶0 , σₙ≡0∷σₘ) = …… -- TODO
 ```
 <!--
 ```agda
