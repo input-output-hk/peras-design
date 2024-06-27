@@ -229,8 +229,7 @@ module _ ⦃ _ : Hashable Block ⦄
   votesInState : NodeModel → List Vote
   votesInState s = maybeToList do
     guard (slotInRound params slot == 0)
-    let canVote = isYes (VotingRule? r bt)
-     in guard canVote
+    guard (isYes (VotingRule? r bt))
     makeVote params slot block -- TODO: use createVote
     where
       bt = toTree s
