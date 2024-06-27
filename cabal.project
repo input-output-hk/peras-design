@@ -36,7 +36,6 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
-benchmarks: False
 optimization: False
 
 flags: +defer-plugin-errors

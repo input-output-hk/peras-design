@@ -38,25 +38,34 @@ library
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Visualizer
                      Peras.Abstract.Protocol.Voting
+                     -- details of voting
+                     Peras.Voting.Vote
+                     Peras.Voting.Arbitraries
     other-modules:   Peras.Abstract.Protocol.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
                       base ^>=4.18.1.0,
                       bytestring,
+                      cardano-binary,
+                      cardano-crypto-class ^>= 2.1,
+                      cardano-crypto-praos,
                       cereal,
                       containers,
                       contra-tracer,
                       data-default,
+                      deepseq,
                       hashable,
                       io-classes,
                       io-sim,
                       language-dot,
                       mtl,
+--                      non-integral,
                       peras-hs,
                       quickcheck-dynamic,
                       text,
                       stm,
-                      pretty
+                      pretty,
+                      statistics
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -94,11 +103,15 @@ test-suite peras-simulation-test
                    Peras.Abstract.Protocol.Node.ModelSpec
                    Peras.Abstract.Protocol.NodeSpec
                    Peras.Abstract.Protocol.VotingSpec
+                   -- voting
+                   Peras.Voting.VoteSpec
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:  QuickCheck
                   , base ^>=4.18.1.0
+                  , bytestring
+                  , cardano-binary
                   , containers
                   , contra-tracer
                   , data-default
@@ -111,3 +124,18 @@ test-suite peras-simulation-test
     build-tool-depends:
        hspec-discover:hspec-discover
     ghc-options: -rtsopts -threaded
+
+benchmark bench
+  hs-source-dirs: bench/
+  main-is:        Bench.hs
+  type:           exitcode-stdio-1.0
+  build-depends:
+                  QuickCheck
+                , aeson
+                , base
+                , bytestring
+                , criterion
+                , deepseq
+                , peras-simulation
+
+  ghc-options:    -threaded -rtsopts

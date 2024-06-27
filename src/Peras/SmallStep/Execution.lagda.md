@@ -15,7 +15,7 @@ open import Data.Nat.Properties using (+-identityˡ; +-identityʳ)
 open import Function using (_∘_; id; _$_; flip)
 
 open import Peras.Chain
-open import Peras.Crypto hiding (isCommitteeMember)
+open import Peras.Crypto hiding (_≟_; isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
@@ -143,17 +143,13 @@ Based on properties of the blocktree we can show the following
       open import Haskell.Prim.List using (map)
       open import Relation.Nullary.Decidable hiding (map)
 
-      -- TODO: Do we need to adjust the block-tree for proving those properties?
-      postulate
-        pref-tree₀≡block₀∷[] : preferredChain tree₀ ≡ block₀ ∷ [] -- or: preferredChain tree₀ ≐ block₀ ∷ []
-
       latestCertSeen-tree₀≡cert₀ : latestCertSeen tree₀ ≡ cert₀
-      latestCertSeen-tree₀≡cert₀ rewrite instantiated-certs is-TreeType = refl
+      latestCertSeen-tree₀≡cert₀ rewrite is-TreeType .instantiated-certs = refl
 
       latestCertOnChain-tree₀≡cert₀ : latestCertOnChain tree₀ ≡ cert₀
       latestCertOnChain-tree₀≡cert₀
-        rewrite pref-tree₀≡block₀∷[]
-        rewrite genesis-block-no-certificate is-TreeType = refl
+        rewrite is-TreeType .instantiated
+        rewrite is-TreeType .genesis-block-no-certificate = refl
 
       roundNumber-latestCertSeen-tree₀≡0 : roundNumber (latestCertSeen tree₀) ≡ 0
       roundNumber-latestCertSeen-tree₀≡0 rewrite latestCertSeen-tree₀≡cert₀ = refl
@@ -171,14 +167,14 @@ Based on properties of the blocktree we can show the following
 
       catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
       catMaybes≡[]
-        rewrite pref-tree₀≡block₀∷[]
-        rewrite genesis-block-no-certificate is-TreeType = refl
+        rewrite is-TreeType .instantiated
+        rewrite is-TreeType .genesis-block-no-certificate = refl
 
-      noNewCert : certs (newChain tree₀ chain₁) ≡ []
+      noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
       noNewCert =
         let
-          s₁ = extendable-chain' is-TreeType tree₀ chain₁
-          s₂ = instantiated-certs is-TreeType
+          s₁ = is-TreeType .extendable-chain tree₀ chain₁
+          s₂ = is-TreeType .instantiated-certs
           s₃ = trans s₁ (cong (_++ certs tree₀) r₂)
         in trans s₃ s₂
         where
@@ -208,7 +204,7 @@ Execution trace of the protocol
         where
         validChain₁ : ValidChain chain₁
         validChain₁ =
-          let v = valid is-TreeType tree₀
+          let v = is-TreeType .valid tree₀
               ((_ , d), pr) = uncons v
           in Cons {c₁ = d} isBlockSignature isSlotLeader refl pr v
 

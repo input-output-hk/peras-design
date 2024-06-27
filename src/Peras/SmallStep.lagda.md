@@ -11,13 +11,14 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 open import Prelude.Init hiding (_⊆_)
 
-open Nat using (_≟_; _≤?_; _≤ᵇ_)
+open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _%_; _>?_; NonZero)
+open L using (concat)
 open L.All using (All)
 open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto
+open import Peras.Crypto hiding (_≟_)
 open import Peras.Numbering
 open import Peras.Params
 
@@ -34,44 +35,23 @@ open Party
 
 # Small-step semantics
 
-The small-step semantics of the **Peras** protocol define the evolution of the
-global state of the system modelling *honest* and *adversarial* parties. The
-number of parties is fixed during the execution of the protocol. In addition the
+The small-step semantics of the **Ouroboros Peras** protocol define the
+evolution of the global state of the system modelling *honest* and *adversarial*
+parties. The number of parties is fixed during the execution of the protocol and
+the list of parties has to be provided as a module parameter. In addition the
 model is parameterized by the lotteries (for slot leadership and voting
 committee membership) as well as the type of the block tree. Furthermore
-adversarial parties share adversarial state, which is generic state.
-
-The following sub-sections cover the Peras protocol (see Figure 2: The Peras
-protocol)
-
-  * [Fetching](SmallStep.lagda.md#fetching)
-  * [Block creation](SmallStep.lagda.md#block-creation)
-  * [Voting](SmallStep.lagda.md#voting)
+adversarial parties share generic, adversarial state.
 
 References:
 
 * Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
-<!--
-```agda
--- We introduce the relation ≐ to denote that two lists have the same elements
-open import Relation.Binary.Core using (Rel)
-
-infix 2 _≐_
-
-_≐_ : Rel (List Block) _
-P ≐ Q = (P ⊆ Q) × (Q ⊆ P)
-```
--->
 
 ### Parameters
 
-The model takes a couple of parameters: `block₀` denotes the genesis block,
-`cert₀` is certificate for the first voting round referencing the genesis block.
-In addition there are the following relations abstracting the lotteries (slot
-leadership and voting committee membership) and the cryptographic signatures.
-The parameters for the Peras protocol and hash functions are defined as instance
-arguments of the module.
+The parameters for the *Peras* protocol and hash functions are defined as
+instance arguments of the module.
 
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
@@ -92,9 +72,8 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 #### Messages
 
-Messages for sending and receiving blocks and votes. In the `Peras` protocol
-certificates are not diffused explicitly with the exception of bootstraping the
-system.
+Messages for sending and receiving chains and votes. Note, in the *Peras* protocol
+certificates are not diffused explicitly.
 ```agda
   data Message : Type where
     ChainMsg : Chain → Message
@@ -173,7 +152,7 @@ has to fulfil all the properties mentioned below:
   record IsTreeType {T : Type}
                     (tree₀ : T)
                     (newChain : T → Chain → T)
-                    (allBlocks : T → List Block)
+                    (allChains : T → List Chain)
                     (preferredChain : T → Chain)
                     (addVote : T → Vote → T)
                     (votes : T → List Vote)
@@ -183,17 +162,20 @@ has to fulfil all the properties mentioned below:
 
     field
 ```
-Properties that must hold with respect to blocks and votes.
+Properties that must hold with respect to chains, certificates and votes.
 
 **TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
 as proposed in the paper.
 
 ```agda
       instantiated :
-        allBlocks tree₀ ≡ block₀ ∷ []
+        preferredChain tree₀ ≡ block₀ ∷ []
 
       instantiated-certs :
-        certs tree₀ ≡ []
+        certs tree₀ ≡ cert₀ ∷ []
+
+      instantiated-votes :
+        votes tree₀ ≡ []
 
       genesis-block-slotnumber :
         getSlotNumber (slotNumber block₀) ≡ 0
@@ -201,16 +183,7 @@ as proposed in the paper.
       genesis-block-no-certificate :
         certificate block₀ ≡ nothing
 
-      genesis-cert-roundnumber :
-        getRoundNumber (round cert₀) ≡ 0
-
-      extendable-votes : ∀ (t : T) (v : Vote)
-        → allBlocks (addVote t v) ≐ allBlocks t
-
       extendable-chain : ∀ (t : T) (c : Chain)
-        → certsFromChain c ⊆ᶜ certs (newChain t c)
-
-      extendable-chain' : ∀ (t : T) (c : Chain)
         → certs (newChain t c) ≡ certsFromChain c ++ certs t
 
       valid : ∀ (t : T)
@@ -222,11 +195,11 @@ as proposed in the paper.
             cts = certs t
           in
           ValidChain c
-        → c ⊆ allBlocks t
+        → c ∈ allChains t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
       self-contained : ∀ (t : T)
-        → preferredChain t ⊆ allBlocks t
+        → preferredChain t ∈ allChains t
 
       valid-votes : ∀ (t : T)
         → All ValidVote (votes t)
@@ -252,15 +225,15 @@ as proposed in the paper.
             (getRoundNumber (round c) ≡ r)
           × (blockRef c ≡ hash b) }) (certs t)
 ```
-In addition to blocks the block-tree manages votes and certificates as well.
-The block tree type is defined as follows:
+In addition to chains the block-tree manages votes and certificates as well.
+The block-tree type is defined as follows:
 ```agda
   record TreeType (T : Type) : Type₁ where
 
     field
       tree₀ : T
       newChain : T → Chain → T
-      allBlocks : T → List Block
+      allChains : T → List Chain
       preferredChain : T → Chain
 
       addVote : T → Vote → T
@@ -273,7 +246,7 @@ The block tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ newChain allBlocks preferredChain
+                      tree₀ newChain allChains preferredChain
                       addVote votes certs cert₀
 
     latestCertOnChain : T → Certificate
@@ -299,11 +272,14 @@ The block tree type is defined as follows:
     preferredChain′ (MkSlotNumber sl) =
       let cond = (_≤? sl) ∘ slotNumber'
       in filter cond ∘ preferredChain
+
+    allBlocks : T → List Block
+    allBlocks = concat ∘ allChains
 ```
 ### Additional parameters
 
-In addition to the parameters already introduced above we introduce the
-following parameters
+In order to define the semantics the following parameters are required
+additionally:
 
   * The type of the block-tree
   * adversarialState₀ is the initial adversarial state
@@ -316,6 +292,7 @@ following parameters
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
+                               -- i.e. allow dynamic participation
 
            where
 
@@ -345,29 +322,94 @@ Updating the block-tree upon receiving a message for vote and block messages.
 When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
+
+#### Voting rules
+
+VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
-    data VoteInRound : RoundNumber → T → Type where
-
-      Regular : ∀ {r t} →
-        let
-          pref  = preferredChain t
-          cert′ = latestCertSeen t
-        in
-        ∙ r ≡ roundNumber cert′ + 1       -- VR-1A
-        ∙ cert′ PointsInto pref           -- VR-1B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
-
-      AfterCooldown : ∀ {r c t} →
-        let
-          cert⋆ = latestCertOnChain t
-          cert′ = latestCertSeen t
-        in
-        ∙ c > 0
-        ∙ r ≥ roundNumber cert′ + R       -- VR-2A
-        ∙ r ≡ roundNumber cert⋆ + c * K   -- VR-2B
-          ───────────────────────────────
-          VoteInRound (MkRoundNumber r) t
+    VotingRule-1A : RoundNumber → T → Set
+    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
+```
+```agda
+    VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
+    VotingRule-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
+```
+VR-1B: The  extends the block certified by cert-r−1,
+```agda
+    VotingRule-1B : T → Set
+    VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
+```
+```agda
+    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
+    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+```
+VR-1: Both VR-1A and VR-1B hold
+```agda
+    VotingRule-1 : RoundNumber → T → Set
+    VotingRule-1 r t =
+        VotingRule-1A r t
+      × VotingRule-1B t
+```
+```agda
+    VotingRule-1? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
+    VotingRule-1? r t =
+            VotingRule-1A? r t
+      ×-dec VotingRule-1B? t
+```
+VR-2A: The last certificate a party has seen is from a round at least R rounds back
+```agda
+    VotingRule-2A : RoundNumber → T → Set
+    VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
+```
+```agda
+    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
+    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
+```
+VR-2B: The last certificate included in a party's current chain is from a round exactly
+c⋆K rounds ago for some c : ℕ, c ≥ 0
+<!--
+```agda
+    _mod_ : ℕ → (n : ℕ) → ⦃ NonZero n ⦄ → ℕ
+    _mod_ a b ⦃ prf ⦄ = _%_ a b ⦃ prf ⦄
+```
+-->
+```agda
+    VotingRule-2B : RoundNumber → T → Set
+    VotingRule-2B (MkRoundNumber r) t =
+        r > roundNumber (latestCertOnChain t)
+      × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
+```
+```agda
+    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
+    VotingRule-2B? (MkRoundNumber r) t =
+            r >? roundNumber (latestCertOnChain t)
+      ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
+```
+VR-2: Both VR-2A and VR-2B hold
+```agda
+    VotingRule-2 : RoundNumber → T → Set
+    VotingRule-2 r t =
+        VotingRule-2A r t
+      × VotingRule-2B r t
+```
+```agda
+    VotingRule-2? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
+    VotingRule-2? r t =
+            VotingRule-2A? r t
+      ×-dec VotingRule-2B? r t
+```
+If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
+```agda
+    VotingRule : RoundNumber → T → Set
+    VotingRule r t =
+        VotingRule-1 r t
+      ⊎ VotingRule-2 r t
+```
+```agda
+    VotingRule? : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
+    VotingRule? r t =
+            VotingRule-1? r t
+      ⊎-dec VotingRule-2? r t
 ```
 ### State
 
@@ -400,7 +442,7 @@ The small-step semantics rely on a global state, which consists of the following
 ```
 #### Progress
 
-Rather that keeping track of progress, we introduce a predicate stating that all
+Rather than keeping track of progress, we introduce a predicate stating that all
 messages that are not delayed have been delivered. This is a precondition that
 must hold before transitioning to the next slot.
 ```agda
@@ -433,7 +475,7 @@ transitioning from one voting round to another.
     RequiredVotes : State → Type
     RequiredVotes M =
       let r = v-round clock
-       in Any (VoteInRound r ∘ proj₂) blockTrees
+       in Any (VotingRule r ∘ proj₂) blockTrees
         → Any (hasVote r ∘ proj₂) blockTrees
       where open State M
 ```
@@ -553,7 +595,7 @@ is added to be consumed immediately.
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
         ∙ IsCommitteeMember p r π
-        ∙ VoteInRound r t
+        ∙ VotingRule r t
           ───────────────────────────────────
           Honest {p} ⊢
             M ⇉ add (VoteMsg v , 𝟘 , p) to t
@@ -566,7 +608,16 @@ delay the message.
 
 Certificates are conditionally added to a block. The following function deterimes
 if there needs to be a certificate provided for a given voting round and a local
-block-tree. The conditions (a) - (c) are reflected in the Peras paper.
+block-tree.
+
+The conditions (a) - (c) are reflected in Figure 2 in the *Peras*
+paper
+
+a) There is no certificate from 2 rounds ago in certs
+b) The last seen certificate is not expired
+c) The last seen certificate is from a later round than
+   the last certificate on chain
+
 ```agda
     needCert : RoundNumber → T → Maybe Certificate
     needCert (MkRoundNumber r) t =
@@ -584,15 +635,13 @@ Helper function for creating a block
 ```agda
     createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
     createBlock s p π σ t =
-      let
-        open IsTreeType
-        Cpref = valid is-TreeType t
-        h = proj₁ (proj₁ (uncons Cpref))
-      in
       record
         { slotNumber = s
         ; creatorId = p
-        ; parentBlock = hash h
+        ; parentBlock =
+            let open IsTreeType
+                (h , _) , _ = uncons (is-TreeType .valid t)
+            in hash h
         ; certificate =
             let r = v-round s
             in needCert r t
@@ -608,21 +657,17 @@ Helper function for creating a block
         }
 ```
 A party can create a new block by adding it to the local block tree and
-gossiping the block creation messages to the other parties. Block creation is
-possible, if
+diffuse the block creation messages to the other parties. Block creation is
+possible, if as in *Praos*
+
   * the block signature is correct
   * the party is the slot leader
 
 Block creation updates the party's local state and for all other parties a
-message is added to be consumed immediately.
+message is added to the message buffer
 ```agda
     infix 2 _⊢_↷_
-```
-During regular execution of the protocol, i.e. not in cool-down phase, no
-certificate reference is included in the block. The exact conditions to
-decide wheter a certificate has to be included are (see: Block creation in
-Figure 2)
-```agda
+
     data _⊢_↷_ : {p : PartyId} → Honesty p → State → State → Type where
 
       honest : ∀ {p} {t} {M} {π} {σ}
@@ -642,9 +687,6 @@ Figure 2)
                 , p) to t
                 diffuse M
 ```
-Rather than creating a delayed block, an adversary can honestly create it and
-delay the message.
-
 ## Small-step semantics
 
 The small-step semantics describe the evolution of the global state.
