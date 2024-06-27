@@ -5,7 +5,7 @@ open import Haskell.Prelude
 open import Haskell.Control.Monad
 open import Agda.Builtin.Maybe hiding (Maybe)
 open import Data.Nat using (ℕ; _/_; _%_; NonZero)
-open import Peras.SmallStep
+open import Peras.SmallStep using (TreeType)
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Crypto
@@ -155,8 +155,9 @@ seenBeforeStartOfRound params r (c , s) =
   getSlotNumber s <= getRoundNumber r * perasU params
 {-# COMPILE AGDA2HS seenBeforeStartOfRound #-}
 
-postulate
-  preferredChain : PerasParams → List Certificate → List Chain → Chain
+
+-- postulate
+--  preferredChain : PerasParams → List Certificate → List Chain → Chain
 
 {-# FOREIGN AGDA2HS
 preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
@@ -217,29 +218,32 @@ module _ ⦃ _ : Hashable Block ⦄
   open Postulates ⦃...⦄
   open Hashable ⦃...⦄
 
+  open Peras.SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+  open TreeType blockTree
+
   open import Relation.Nullary.Decidable.Core
 
   postulate
-    tree : TreeType T
-
     toTree : NodeModel → T
 
   votesInState : NodeModel → List Vote
   votesInState s = maybeToList do
     guard (slotInRound params slot == 0)
-    block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
-    let canVote = isYes (VotingRule? {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} r (toTree s))
+    let canVote = isYes (VotingRule? r bt)
      in guard canVote
-    makeVote params slot block
+    makeVote params slot block -- TODO: use createVote
     where
+      bt = toTree s
+
       params = protocol s
       slot   = clock s
       r      = slotToRound params slot
 
-      pref = preferredChain params (allSeenCerts s) (allChains s)
-  
-      cert' = maximumBy (comparing round) (allSeenCerts s)
-      certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+      pref = preferredChain bt
+      cert' = latestCertSeen bt
+      certS = certs bt
+
+      block = Preagreement slot bt
 
   {-# COMPILE AGDA2HS votesInState #-}
 
