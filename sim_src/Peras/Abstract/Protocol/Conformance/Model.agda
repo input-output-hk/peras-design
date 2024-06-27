@@ -13,6 +13,7 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.Abstract.Protocol.Params
 open import Protocol.Peras using ()
+open import Relation.Nullary.Decidable using (isYes)
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE RecordWildCards #-}
@@ -194,13 +195,6 @@ blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
-postulate
-  -- TODO: we need to implement this on the Agda side for the proofs
-  extends : Block → Certificate → List Chain → Bool
-
-variable
-  T : Set
-
 module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
@@ -220,8 +214,6 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Peras.SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
   open TreeType blockTree
-
-  open import Relation.Nullary.Decidable.Core
 
   postulate
     toTree : NodeModel → T
