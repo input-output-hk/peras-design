@@ -10,6 +10,7 @@ open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
+open import Peras.Params
 open import Peras.Abstract.Protocol.Params
 open import Protocol.Peras using ()
 
@@ -196,62 +197,86 @@ postulate
   -- TODO: we need to implement this on the Agda side for the proofs
   extends : Block → Certificate → List Chain → Bool
 
-votesInState : NodeModel → List Vote
-votesInState s = maybeToList do
-  guard (slotInRound params slot == 0)
-  block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
-  let vr1A = nextRound (round cert') == r
-      vr1B = extends block cert' (allChains s)
-      vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
-      vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-  guard (vr1A && vr1B || vr2A && vr2B)
-  makeVote params slot block
-  where
-    params = protocol s
-    slot   = clock s
-    r      = slotToRound params slot
+variable
+  T : Set
 
-    pref = preferredChain params (allSeenCerts s) (allChains s)
+module _ ⦃ _ : Hashable Block ⦄
+         ⦃ _ : Hashable (List Tx) ⦄
+         ⦃ _ : Params ⦄
+         ⦃ _ : Network ⦄
+         ⦃ _ : Postulates ⦄
+         {T : Set} (blockTree : TreeType T)
+         {S : Set} (adversarialState₀ : S)
+         (txSelection : SlotNumber → PartyId → List Tx)
+         (parties : Parties)
 
-    cert' = maximumBy (comparing round) (allSeenCerts s)
-    certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+         where
 
-{-# COMPILE AGDA2HS votesInState #-}
+  open Params ⦃...⦄
+  open Network ⦃...⦄
+  open Postulates ⦃...⦄
+  open Hashable ⦃...⦄
 
-postulate
-  -- TODO: this need to be in Agda for the proofs
-  newQuora : ℕ → List Certificate → List Vote → List Certificate
-{-# FOREIGN AGDA2HS
-newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
-newQuora quorum priorCerts votes = newCerts
-  where
-    quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
-    Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
-    newCerts = [ c | Right c <- newCertsResults ]
-#-}
+  open import Relation.Nullary.Decidable.Core
 
-postulate
-  checkVoteSignature : Vote → Bool
-{-# FOREIGN AGDA2HS
-checkVoteSignature :: Vote -> Bool
-checkVoteSignature _ = True -- TODO: could do actual crypto here
-#-}
+  postulate
+    tree : TreeType T
 
-transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
-transition s Tick =
-  Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
-                             ; allSeenCerts = foldr insertCert (allSeenCerts s') certsFromQuorum
-                             })
-  where s' = record s { clock = nextSlot (clock s) }
-        sutVotes = votesInState s'
-        certsFromQuorum = newQuora (perasτ (protocol s)) (allSeenCerts s) (allVotes s)
-transition s (NewChain chain) =
-  Just ([] , record s
-             { allChains = chain ∷ allChains s
-             ; allSeenCerts = foldr insertCert (allSeenCerts s) (catMaybes $ map certificate chain)
-             })
-transition s (NewVote v) = do
-  guard (slotInRound (protocol s) (clock s) == 0)
-  guard (checkVoteSignature v)
-  Just ([] , record s { allVotes = v ∷ allVotes s })
-{-# COMPILE AGDA2HS transition #-}
+    toTree : NodeModel → T
+
+  votesInState : NodeModel → List Vote
+  votesInState s = maybeToList do
+    guard (slotInRound params slot == 0)
+    block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
+    let canVote = isYes (VotingRule? {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties} r (toTree s))
+     in guard canVote
+    makeVote params slot block
+    where
+      params = protocol s
+      slot   = clock s
+      r      = slotToRound params slot
+
+      pref = preferredChain params (allSeenCerts s) (allChains s)
+  
+      cert' = maximumBy (comparing round) (allSeenCerts s)
+      certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+
+  {-# COMPILE AGDA2HS votesInState #-}
+
+  postulate
+    -- TODO: this need to be in Agda for the proofs
+    newQuora : ℕ → List Certificate → List Vote → List Certificate
+  {-# FOREIGN AGDA2HS
+  newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
+  newQuora quorum priorCerts votes = newCerts
+    where
+      quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
+      Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
+      newCerts = [ c | Right c <- newCertsResults ]
+  #-}
+
+  postulate
+    checkVoteSignature : Vote → Bool
+  {-# FOREIGN AGDA2HS
+  checkVoteSignature :: Vote -> Bool
+  checkVoteSignature _ = True -- TODO: could do actual crypto here
+  #-}
+
+  transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
+  transition s Tick =
+    Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
+                               ; allSeenCerts = foldr insertCert (allSeenCerts s') certsFromQuorum
+                               })
+    where s' = record s { clock = nextSlot (clock s) }
+          sutVotes = votesInState s'
+          certsFromQuorum = newQuora (perasτ (protocol s)) (allSeenCerts s) (allVotes s)
+  transition s (NewChain chain) =
+    Just ([] , record s
+               { allChains = chain ∷ allChains s
+               ; allSeenCerts = foldr insertCert (allSeenCerts s) (catMaybes $ map certificate chain)
+               })
+  transition s (NewVote v) = do
+    guard (slotInRound (protocol s) (clock s) == 0)
+    guard (checkVoteSignature v)
+    Just ([] , record s { allVotes = v ∷ allVotes s })
+  {-# COMPILE AGDA2HS transition #-}
