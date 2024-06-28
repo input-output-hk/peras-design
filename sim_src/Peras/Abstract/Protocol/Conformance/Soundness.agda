@@ -39,7 +39,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
   open Export blockTree adversarialState₀ txSelection parties
-  open SmallStep.TreeType blockTree
+  open SmallStep.TreeType blockTree renaming (allChains to chains)
 
   module Assumptions
            (let open Postulates postulates)
@@ -51,10 +51,6 @@ module _ ⦃ _ : Hashable Block ⦄
              → checkVoteSignature vote ≡ True
              → IsVoteSignature vote (signature vote))
          where
-
-    buildChains : List Block → List Chain
-    buildChains bs = {!!}
-      -- Some juggling required to assemble the chains from the list of blocks.
 
     modelParams : PerasParams
     modelParams = record
@@ -72,13 +68,15 @@ module _ ⦃ _ : Hashable Block ⦄
         open Params params
         open Network network
 
+    open State
+
     modelState : State → NodeModel
     modelState s = record
       { clock        = State.clock s
       ; protocol     = modelParams
-      ; allChains    = maybe′ (buildChains ∘ allBlocks) [] (State.blockTrees s ⁉ sutId)
-      ; allVotes     = maybe′ votes                     [] (State.blockTrees s ⁉ sutId)
-      ; allSeenCerts = maybe′ certs                     [] (State.blockTrees s ⁉ sutId)
+      ; allChains    = maybe′ chains [] (blockTrees s ⁉ sutId)
+      ; allVotes     = maybe′ votes  [] (blockTrees s ⁉ sutId)
+      ; allSeenCerts = maybe′ certs  [] (blockTrees s ⁉ sutId)
       }
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
