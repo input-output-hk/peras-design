@@ -5,7 +5,7 @@ open import Haskell.Prelude
 open import Haskell.Control.Monad
 open import Agda.Builtin.Maybe hiding (Maybe)
 open import Data.Nat using (ℕ; _/_; _%_; NonZero)
-open import Peras.SmallStep using (TreeType ; IsTreeType ; cert₀)
+open import Peras.SmallStep using (TreeType; IsTreeType)
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Crypto
@@ -342,5 +342,6 @@ module Export
   transition s (NewVote v) = do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkVoteSignature v)
+--    guard (isYes (VotingRule'' (v-round (clock s)) s))
     Just ([] , record s { allVotes = v ∷ allVotes s })
   {-# COMPILE AGDA2HS transition #-}

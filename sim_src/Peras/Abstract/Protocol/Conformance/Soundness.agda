@@ -20,26 +20,23 @@ import Peras.SmallStep as SmallStep
 open import Peras.Abstract.Protocol.Params
 open import Peras.Abstract.Protocol.Conformance.Model
 
+open import Relation.Nullary.Decidable using (isYes)
+
 -- TODO: ProofPrelude
 eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _   = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
-module _ ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ params     : Params ⦄
-         ⦃ network    : Network ⦄
-         ⦃ postulates : Postulates ⦄
-
-         {T : Set} {blockTree : SmallStep.TreeType T}
+module _ ⦃ params : Params ⦄
+         ⦃ network : Network ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
-         {parties : Parties} -- TODO: use parties from blockTrees
+         {parties : Parties}
     where
 
-  open SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-  open Export blockTree adversarialState₀ txSelection parties
-  open SmallStep.TreeType blockTree renaming (allChains to chains)
+  open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
+  open SmallStep.TreeType NodeModelTree renaming (allChains to chains)
+  open Export adversarialState₀ txSelection parties
 
   module Assumptions
            (let open Postulates postulates)
@@ -100,7 +97,7 @@ module _ ⦃ _ : Hashable Block ⦄
       r    = v-round slot
       σ    = signature vote
       field
-        {tree}         : T
+        {tree}         : NodeModel
         creatorExists  : blockTrees s ⁉ (creatorId vote) ≡ just tree
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
