@@ -104,7 +104,7 @@ module _ ⦃ _ : Hashable Block ⦄
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
-        validVote      : VoteInRound r tree
+        validVote      : VotingRule r tree
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ tree) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid

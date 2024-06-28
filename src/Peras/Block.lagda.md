@@ -167,7 +167,7 @@ record Block where
 open Block public
 
 _≟-BlockHash_ : DecidableEquality (Hash Block)
-(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟ b₂
+(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟-BS b₂
 ... | yes p = yes (cong MkHash p)
 ... | no ¬p =  no (¬p ∘ cong hashBytes)
 
