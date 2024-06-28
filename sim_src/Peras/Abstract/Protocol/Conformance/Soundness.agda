@@ -72,7 +72,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
     modelState : State → NodeModel
     modelState s = record
-      { clock        = State.clock s
+      { clock        = clock s
       ; protocol     = modelParams
       ; allChains    = maybe′ chains [] (blockTrees s ⁉ sutId)
       ; allVotes     = maybe′ votes  [] (blockTrees s ⁉ sutId)
@@ -83,7 +83,7 @@ module _ ⦃ _ : Hashable Block ⦄
     sutVotesInStep (Fetch _) = []
     sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} _ _ _ _ _)) =
       case p ≟ sutId of λ where
-        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ t) ∷ []
+        (yes _) → (clock s₀ , createVote (clock M) p π σ t) ∷ []
         (no _)  → []
     sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _ _) = []
@@ -96,12 +96,12 @@ module _ ⦃ _ : Hashable Block ⦄
     -- Preconditions ---
 
     record NewVotePreconditions (s : State) (vote : Vote) : Set where
-      slot = State.clock s
+      slot = clock s
       r    = v-round slot
       σ    = signature vote
       field
         {tree}         : T
-        creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
+        creatorExists  : blockTrees s ⁉ (creatorId vote) ≡ just tree
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
@@ -117,7 +117,7 @@ module _ ⦃ _ : Hashable Block ⦄
                           → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote prf
-      with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
+      with mod (getSlotNumber (clock s)) (Params.U params) == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
     newVote-preconditions s vote refl | True | True =
       record
@@ -149,7 +149,7 @@ module _ ⦃ _ : Hashable Block ⦄
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
               → transition (modelState s₀) a ≡ Just (vs , ms₁)
-              → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+              → Soundness s₀ ms₁ (map (clock s₀ ,_) vs)
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
     soundness s₀ (NewVote vote) inv prf = record
