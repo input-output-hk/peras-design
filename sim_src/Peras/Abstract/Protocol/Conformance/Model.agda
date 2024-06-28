@@ -5,7 +5,7 @@ open import Haskell.Prelude
 open import Haskell.Control.Monad
 open import Agda.Builtin.Maybe hiding (Maybe)
 open import Data.Nat using (ℕ; _/_; _%_; NonZero)
-open import Peras.SmallStep using (TreeType)
+open import Peras.SmallStep using (TreeType ; IsTreeType ; cert₀)
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Crypto
@@ -84,6 +84,7 @@ record NodeModel : Set where
     allVotes         : List Vote
     allSeenCerts     : List Certificate
 
+
 open NodeModel public
 {-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
 
@@ -122,6 +123,83 @@ initialModelState = record
   ; allSeenCerts     = genesisCert ∷ []
   }
 {-# COMPILE AGDA2HS initialModelState #-}
+
+
+instance
+  iBlockHashable : Hashable Block
+  iBlockHashable = record { hash = MkHash ∘ bytesS ∘ signature }
+
+instance
+  iTxHashable : Hashable (List Tx)
+  iTxHashable = record { hash = const $ MkHash emptyBS}  -- FIXME
+
+instance
+ initialParams : Params
+ initialParams = record {
+   U = 5 ;
+   K = 1;
+   R = 1 ;
+   L = 1;
+   A = 0 ;
+   τ = 1;
+   B = 0 ;
+   W = 0
+  }
+
+
+genesisBlock : Block
+genesisBlock = record {
+  slotNumber = 0 ;
+  creatorId = 0 ;
+  parentBlock =  MkHash emptyBS ;
+  certificate = nothing ;
+  leadershipProof = MkLeadershipProof emptyBS ;
+  signature  = MkSignature emptyBS ;
+  bodyHash = MkHash emptyBS
+ }
+
+instance
+
+   initialNetwork : Network
+   initialNetwork = record {
+       block₀ = genesisBlock ;
+       Δ  = 5
+    }
+
+postulate
+  instance
+    postulates : Postulates
+
+
+bestChain : NodeModel → Chain
+bestChain model =
+   case allChains model of λ where
+     [] → []
+     (c ∷ _) → c
+
+newChain' : NodeModel → Chain → NodeModel
+newChain' = λ model chain → record model { allChains = chain ∷ allChains model }
+
+addVote' : NodeModel → Vote → NodeModel
+addVote' =  λ model vote → record model { allVotes = vote ∷ allVotes model }
+
+cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
+
+postulate
+  instance
+    isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts cert₀
+
+NodeModelTree : TreeType NodeModel
+NodeModelTree = record {
+    tree₀ = initialModelState ;
+    allChains = allChains ;
+    votes = allVotes ;
+    certs = allSeenCerts ;
+    newChain = newChain' ;
+    preferredChain = bestChain;
+    addVote = addVote' ;
+    is-TreeType = isTreeType
+ }
 
 sutId : PartyId
 sutId = 1
@@ -196,13 +274,8 @@ blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + per
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
 module Export
-         ⦃ _ : Hashable Block ⦄
-         ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ _ : Params ⦄
-         ⦃ _ : Network ⦄
-         ⦃ _ : Postulates ⦄
-         {T : Set} (blockTree : TreeType T)
-         {S : Set} (adversarialState₀ : S)
+         {S : Set}
+         (adversarialState₀ : S)
          (txSelection : SlotNumber → PartyId → List Tx)
          (parties : Parties)
 
@@ -213,29 +286,24 @@ module Export
   open Postulates ⦃...⦄
   open Hashable ⦃...⦄
 
-  open Peras.SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-  open TreeType blockTree
-
-  postulate
-    toTree : NodeModel → T
+  open Peras.SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
+  open TreeType NodeModelTree
 
   votesInState : NodeModel → List Vote
   votesInState s = maybeToList do
     guard (slotInRound params slot == 0)
-    guard (isYes (VotingRule? r bt))
+    guard (isYes (VotingRule'' r s))
     makeVote params slot block -- TODO: use createVote
     where
-      bt = toTree s
-
       params = protocol s
       slot   = clock s
       r      = slotToRound params slot
 
-      pref = preferredChain bt
-      cert' = latestCertSeen bt
-      certS = certs bt
+      cert' = latestCertSeen s
+      certS = certs s
 
-      block = Preagreement slot bt
+      block = preagreement slot s
+      pref = preferredChain s
 
   {-# COMPILE AGDA2HS votesInState #-}
 

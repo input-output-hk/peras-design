@@ -198,8 +198,8 @@ module _ ⦃ _ : Hashable Block ⦄
   _PointsInto_ c = Any ((blockRef c ≡_) ∘ hash)
 ```
 ```agda
-  _PointsInto?_ : ∀ (c : Certificate) → (ch : Chain) → Dec (c PointsInto ch)
-  _PointsInto?_ c = any? ((blockRef c ≟-BlockHash_) ∘ hash)
+  _PointsInto''_ : ∀ (c : Certificate) → (ch : Chain) → Dec (c PointsInto ch)
+  _PointsInto''_ c = any? ((blockRef c ≟-BlockHash_) ∘ hash)
 ```
 ```agda
   StartOfRound : SlotNumber → RoundNumber → Set
@@ -217,7 +217,7 @@ module _ ⦃ _ : Hashable Block ⦄
 
 ```agda
   ∥_∥_ : Chain → List Certificate → ℕ
-  ∥ ch ∥ cts = ∣ ch ∣ + ∣ filter (_PointsInto? ch) cts ∣ * B
+  ∥ ch ∥ cts = ∣ ch ∣ + ∣ filter (_PointsInto'' ch) cts ∣ * B
 ```
 
 ### Chain validity

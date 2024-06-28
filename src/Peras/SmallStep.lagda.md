@@ -331,8 +331,8 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
     VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
 ```
 ```agda
-    VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
-    VotingRule-1A? (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
+    VotingRule-1A'' : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
+    VotingRule-1A'' (MkRoundNumber r) t = r ≟ roundNumber (latestCertSeen t) + 1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
@@ -340,8 +340,8 @@ VR-1B: The  extends the block certified by cert-r−1,
     VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
 ```
 ```agda
-    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
-    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+    VotingRule-1B'' : (t : T) → Dec (VotingRule-1B t)
+    VotingRule-1B'' t = (latestCertSeen t) PointsInto'' (preferredChain t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
@@ -351,10 +351,10 @@ VR-1: Both VR-1A and VR-1B hold
       × VotingRule-1B t
 ```
 ```agda
-    VotingRule-1? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
-    VotingRule-1? r t =
-            VotingRule-1A? r t
-      ×-dec VotingRule-1B? t
+    VotingRule-1'' : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
+    VotingRule-1'' r t =
+            VotingRule-1A'' r t
+      ×-dec VotingRule-1B'' t
 ```
 VR-2A: The last certificate a party has seen is from a round at least R rounds back
 ```agda
@@ -362,8 +362,8 @@ VR-2A: The last certificate a party has seen is from a round at least R rounds b
     VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
 ```
 ```agda
-    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
-    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
+    VotingRule-2A'' : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
+    VotingRule-2A'' (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
 ```
 VR-2B: The last certificate included in a party's current chain is from a round exactly
 c⋆K rounds ago for some c : ℕ, c ≥ 0
@@ -380,8 +380,8 @@ c⋆K rounds ago for some c : ℕ, c ≥ 0
       × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
 ```
 ```agda
-    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
-    VotingRule-2B? (MkRoundNumber r) t =
+    VotingRule-2B'' : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
+    VotingRule-2B'' (MkRoundNumber r) t =
             r >? roundNumber (latestCertOnChain t)
       ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
 ```
@@ -393,10 +393,10 @@ VR-2: Both VR-2A and VR-2B hold
       × VotingRule-2B r t
 ```
 ```agda
-    VotingRule-2? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
-    VotingRule-2? r t =
-            VotingRule-2A? r t
-      ×-dec VotingRule-2B? r t
+    VotingRule-2'' : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
+    VotingRule-2'' r t =
+            VotingRule-2A'' r t
+      ×-dec VotingRule-2B'' r t
 ```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
@@ -406,10 +406,10 @@ If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
       ⊎ VotingRule-2 r t
 ```
 ```agda
-    VotingRule? : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
-    VotingRule? r t =
-            VotingRule-1? r t
-      ⊎-dec VotingRule-2? r t
+    VotingRule'' : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
+    VotingRule'' r t =
+            VotingRule-1'' r t
+      ⊎-dec VotingRule-2'' r t
 ```
 ### State
 
@@ -551,8 +551,8 @@ An adversarial party might delay a message
 #### Preagreement
 **TODO**: Needs to be finalized in the Peras paper
 ```agda
-    Preagreement : SlotNumber → T → Block
-    Preagreement (MkSlotNumber s) t =
+    preagreement : SlotNumber → T → Block
+    preagreement (MkSlotNumber s) t =
       let
         Cpref = preferredChain t
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
@@ -567,7 +567,7 @@ Helper function for creating a vote
         ; creatorId = p
         ; proofM = prf
         ; blockHash =
-            let b = Preagreement s t
+            let b = preagreement s t
             in hash b
         ; signature = sig
         }
