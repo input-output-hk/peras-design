@@ -38,6 +38,7 @@ module _ ⦃ _ : Hashable Block ⦄
     where
 
   open SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+  open Export blockTree adversarialState₀ txSelection parties
   open SmallStep.TreeType blockTree
 
   module Assumptions
@@ -46,7 +47,9 @@ module _ ⦃ _ : Hashable Block ⦄
            -- Currently we allow anyone to vote
            (axiom-everyoneIsOnTheCommittee : ∀ {p slot prf} → IsCommitteeMember p slot prf)
 
-           (axiom-checkVoteSignature : ∀ {vote} → checkVoteSignature vote ≡ True → IsVoteSignature vote (signature vote))
+           (axiom-checkVoteSignature : ∀ {vote : Vote}
+             → checkVoteSignature vote ≡ True
+             → IsVoteSignature vote (signature vote))
          where
 
     buildChains : List Block → List Chain

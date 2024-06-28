@@ -195,7 +195,8 @@ blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
-module _ ⦃ _ : Hashable Block ⦄
+module Export
+         ⦃ _ : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ _ : Params ⦄
          ⦃ _ : Network ⦄
