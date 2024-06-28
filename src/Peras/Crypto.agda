@@ -17,7 +17,7 @@ postulate
   eqBS : ByteString → ByteString → Bool
   _isInfixOf_ : ByteString → ByteString → Bool
   replicateBS : Int → Int → ByteString
-  _≟_ : DecidableEquality ByteString
+  _≟-BS_ : DecidableEquality ByteString
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
