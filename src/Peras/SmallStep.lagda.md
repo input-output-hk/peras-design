@@ -18,7 +18,7 @@ open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto hiding (_≟_)
+open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
 
