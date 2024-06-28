@@ -6,7 +6,7 @@ open import Data.Nat using (NonZero)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
-open import Relation.Nullary.Decidable using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (Dec; yes; no; toWitness)
 
 open import Peras.Block
 open import Peras.Chain
@@ -108,20 +108,26 @@ module _ {S : Set} {adversarialState₀ : S}
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
+    open import Data.Bool using (T)
+
+    ≡→T : ∀ {b : Bool} → b ≡ True → T b
+    ≡→T refl = tt
+
     newVote-preconditions : ∀ {vs ms₁} s vote
                           → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote prf
       with mod (getSlotNumber (clock s)) U == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
-    newVote-preconditions s vote refl | True | True =
+         | isYes (VotingRule'' (v-round (clock s)) (modelState s)) in checkedVRs
+    newVote-preconditions s vote refl | True | True | True =
       record
-      { tree            = {!!}    -- we don't track the block trees for the environment nodes in the test model!
+      { tree            = modelState s -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = {!!}    -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = {!!}    -- need to check the VR logic also for environment votes
+      ; validVote       = toWitness (≡→T checkedVRs)
       }
 
     -- Soundness --

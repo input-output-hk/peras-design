@@ -342,6 +342,6 @@ module Export
   transition s (NewVote v) = do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkVoteSignature v)
---    guard (isYes (VotingRule'' (v-round (clock s)) s))
+    guard (isYes (VotingRule'' (v-round (clock s)) s))
     Just ([] , record s { allVotes = v ∷ allVotes s })
   {-# COMPILE AGDA2HS transition #-}
