@@ -27,12 +27,13 @@ eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _   = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
-module _ ⦃ params : Params ⦄
-         ⦃ network : Network ⦄
-         {S : Set} {adversarialState₀ : S}
+module _ {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
          {parties : Parties}
     where
+
+  open Params ⦃...⦄
+  open Network ⦃...⦄
 
   open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
   open SmallStep.TreeType NodeModelTree renaming (allChains to chains)
@@ -58,12 +59,9 @@ module _ ⦃ params : Params ⦄
       ; perasτ = τ
       ; perasB = B
       ; perasK = K
-      ; perasT = 0      -- TODO: Missing from Params
+      ; perasT = 0 -- TODO: Missing from Params
       ; perasΔ = Δ
       }
-      where
-        open Params params
-        open Network network
 
     open State
 
@@ -114,7 +112,7 @@ module _ ⦃ params : Params ⦄
                           → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote prf
-      with mod (getSlotNumber (clock s)) (Params.U params) == 0 in isSlotZero
+      with mod (getSlotNumber (clock s)) U == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
     newVote-preconditions s vote refl | True | True =
       record
