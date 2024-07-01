@@ -2,46 +2,41 @@
 
 ## Agenda
 
-| Goal/Topic                                             | Items                                                                                    | Actions                                            |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| Define/improve available public stuff on Peras         | currently, https://peras.cardano-scaling.org contains minimal content,                   | Fleshout website                                   |
-|                                                        | how much of https://github.com/input-output-hk/peras-design can we add there?            | Polish code repo                                   |
-|                                                        |                                                                                          | Review material                                    |
-|                                                        |                                                                                          | Go public                                          |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| Action items and next steps                            | high-priority items for this PI                                                          | Finalise technical report #2                       |
-|                                                        | At least make sure we have a ToC covering all we wanted to cover                         |                                                    |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| Reflect & plan on improving Research/Eng collaboration | proof techniques                                                                         | focus on network simulation work for Leios         |
-|                                                        | Custom DSL                                                                               |                                                    |
-|                                                        | https://github.com/EasyCrypt/easycrypt                                                   |                                                    |
-|                                                        | research focused development environment and tools                                       |                                                    |
-|                                                        | what kind of specs do we want?                                                           |                                                    |
-| Internship contribution to Innovation Streams?         |                                                                                          | Anatolyi to talk to Arnaud                         |
-|                                                        |                                                                                          | Work on ALBA at start then SNARKs                  |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| protocol                                               | what to do about preagreement?                                                           |                                                    |
-|                                                        | do we need certificate time < Delta check?                                               |                                                    |
-|                                                        | committee size and other parameters range/constraints ?                                  | Clean-up parameters table in tech report           |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| votes and certificates                                 | review proposed Vote structure & process                                                 | Detail comparison of approaches in the tech report |
-|                                                        | review ALBA construction                                                                 | Work with crypto engineers to validate approach    |
-|                                                        | benchmarks & caveats                                                                     |                                                    |
-|                                                        | diffusion delta-Q model                                                                  |                                                    |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| implementation concerns                                | do we need to store votes & certs forever?                                               |                                                    |
-|                                                        | can we put certificates on-chain?                                                        |                                                    |
-|                                                        | deferring certificate/vote check to avoid having certificates download on critical path? |                                                    |
-|                                                        | we still have the problem that we need certs/votes to choose select best chain           |                                                    |
-| adversarial scenarios and analyses                     | is current list of adversarial scenarios complete?                                       | Review analyses from research side                 |
-|                                                        | review process for analyses?                                                             |                                                    |
-| conformance tests                                      | review Quviq's model and link to Agda specification                                      |                                                    |
-|                                                        | align research/spec/test/reference implementation                                        |                                                    |
-|                                                        | remaining work on conformance model                                                      |                                                    |
-|                                                        | work on adversarial model-based testing                                                  |                                                    |
-|                                                        | list properties of interest                                                              |                                                    |
-| Markov chain simulation for adversarial                | what kind of behaviour can we simulate?                                                  |                                                    |
-|                                                        | how can we extend the framework?                                                         |                                                    |
+| Goal/Topic                                                 | Items                                                                                    | Actions                                            |
+|------------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
+| **Define/improve available public stuff on Peras**         | currently, https://peras.cardano-scaling.org contains minimal content,                   | Fleshout website                                   |
+|                                                            | how much of https://github.com/input-output-hk/peras-design can we add there?            | Polish code repo                                   |
+|                                                            |                                                                                          | Review material                                    |
+|                                                            |                                                                                          | Go public                                          |
+| **Action items and next steps**                            | high-priority items for this PI                                                          | Finalise technical report #2                       |
+|                                                            | At least make sure we have a ToC covering all we wanted to cover                         |                                                    |
+| **Reflect & plan on improving Research/Eng collaboration** | proof techniques                                                                         | focus on network simulation work for Leios         |
+|                                                            | Custom DSL                                                                               |                                                    |
+|                                                            | https://github.com/EasyCrypt/easycrypt                                                   |                                                    |
+|                                                            | research focused development environment and tools                                       |                                                    |
+|                                                            | what kind of specs do we want?                                                           |                                                    |
+| **Internship contribution to Innovation Streams?**         |                                                                                          | Anatolyi to talk to Arnaud                         |
+|                                                            |                                                                                          | Work on ALBA at start then SNARKs                  |
+| **protocol**                                               | what to do about preagreement?                                                           |                                                    |
+|                                                            | do we need certificate time < Delta check?                                               |                                                    |
+|                                                            | committee size and other parameters range/constraints ?                                  | Clean-up parameters table in tech report           |
+| **votes and certificates**                                 | review proposed Vote structure & process                                                 | Detail comparison of approaches in the tech report |
+|                                                            | review ALBA construction                                                                 | Work with crypto engineers to validate approach    |
+|                                                            | benchmarks & caveats                                                                     |                                                    |
+|                                                            | diffusion delta-Q model                                                                  |                                                    |
+| **implementation concerns**                                | do we need to store votes & certs forever?                                               |                                                    |
+|                                                            | can we put certificates on-chain?                                                        |                                                    |
+|                                                            | deferring certificate/vote check to avoid having certificates download on critical path? |                                                    |
+|                                                            | we still have the problem that we need certs/votes to choose select best chain           |                                                    |
+| **adversarial scenarios and analyses**                     | is current list of adversarial scenarios complete?                                       | Review analyses from research side                 |
+|                                                            | review process for analyses?                                                             |                                                    |
+| **conformance tests**                                      | review Quviq's model and link to Agda specification                                      |                                                    |
+|                                                            | align research/spec/test/reference implementation                                        |                                                    |
+|                                                            | remaining work on conformance model                                                      |                                                    |
+|                                                            | work on adversarial model-based testing                                                  |                                                    |
+|                                                            | list properties of interest                                                              |                                                    |
+| **Markov chain simulation for adversarial**                | what kind of behaviour can we simulate?                                                  |                                                    |
+|                                                            | how can we extend the framework?                                                         |                                                    |
 
 # Day 1
 
