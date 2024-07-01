@@ -42,48 +42,58 @@
 
 ## Agenda/Planning
 
-* What things can be  handed-over?
+We spend the first half of the morning discussing the agenda for the workshop and the goals of the Peras innovation stream:
+* What things can be handed-over?
 * What things need to be polished, worked on more, before we can publish or hand them over?
-* We need to define some kind of roadmap for next steps (CIP? RFP?)
-* Discussion about the state of ΔQ:
-  * current state of libraries
-  * options/ideas
-  * PNSoL plans? collaboration?
+* What's our roadmap for the second half of the year?
+
+We also discuss the state of ΔQ framework and possible improvements:
+* what's the current state of libraries?
+* what are options/ideas for improving those libraries and make this methodology more widely accessible and useful?
+* what are PNSoL plans? what are opportunities collaboration?
 
 ## State of the Protocol
 
-* Q: when is publication planned? what's the state of research?
-  * we know how to do it :tada:
-  * how to prove expected settlement?
-  * more details for the rest of the thing
-  * -> 09/2024 ?
-* main issue preventing publication is people scooping the protocol but given the intricacy of the proofs, that's quite unlikely at this stage
+We then spent time delving into the details of the current state of the protocol, ensuring alignment between innovation and research.
 
-* [x] What to do about pre-agreement?
-  * v1 w/o pre-agreement is just fine
-  * pre-agreement is orthogonal, can be implemented later
-  * v1 does not _guarantee_ fast-settlement in theory, but should work in practice
-  * pre-agreement protects against cooldown with < 25% adversarial stake
-* [x] do we need certificate time < Delta check?
-  * needed for the (paper) proof
-  * 2 strings = 1 slot leadership string, 1 voting string
-  * this defines a compatible graph (=> axioms)
-  * easier to have the certainty about delivery of the certificates?
-  * adds more code to the implementation (need to keep track of votes/certificates delivery time)
-  * problematic for Agda spec & Conformance test (could still inject votes/certs at different point in time?)
-  * let's keep it for now!
+A first question was: when is publication planned? what's the state of research?
+  * we know how to do it :tada:, where `it` means proving the main properties of the protocol, eg. the expected settlement time
+  * there's a need for more details for the rest of the "thing", so it's more about doing the required "leg work" than deep thinking at this stage
+  * a rough target would be to be ready for submission around 09/2024
+
+The main issue preventing opening the protocol publicly was that
+people would be "scooping" the protocol but given the intricacy of the
+proofs, that's quite unlikely at this stage.
+
+Some more detailed questions ensue:
+
+* [x] What to do about _pre-agreement_?
+  * Having a v1 w/o pre-agreement is just fine
+  * pre-agreement is orthogonal to the main protocol, it can be implemented later
+  * v1 will not _guarantee_ fast-settlement, but should work in practice given what we know of the behaviour of the network
+  * importantly, pre-agreement protects against cooldown within the 25% adversarial stake margin
+* [x] do we need to check certificate time is lower than Delta?
+  * it's definitely needed for the (paper) proof
+  * the key insight is that it manipulates 2 strings, 1 slot leadership string, 1 voting string, and this defines a graph compatible with the axioms of the protocol (eg. Δ delivery bound, adversarial stake...)
+  * it's easier to have  certainty about delivery of the certificates?
+  * _but_ it adds more code to the implementation as it needs to keep track of votes/certificates delivery time
+  * this is mostly problematic for Agda spec & Conformance test, but we could still inject votes/certs at different point in time?
+  * _conclusion_: let's keep it for now!
 * [x] committee size and other parameters range/constraints (see [tech-report #2](https://github.com/input-output-hk/peras-design/blob/main/site/reports/tech-report-2.md#constraints-on-peras-parameters))
-  * remove L <= U constraint
-  * Check simulation?
-* [x] τ is a function of _mean_ committee size
-  * fluctuation in actual committee size are smaller when size grows
-* [x] adversarial analytics
-  * how to provide a framework for estimating the parameters?
-  * simulating/visualising the private chain attack? how much would it cost?
-  * briefly mention https://nodemesh.cc/ which provide a service for faster inclusion of tx on-chain by ensuring tx are submitted "close" to SPOs' block producers
-* [ ] Votes & certificates
+  * we go through all parameters and their mentioned constraints
+  * need to remove L <= U constraint and some other adjustments
+* [x] is τ is a function of _mean_ committee size?
+  * yes, fluctuation in actual committee size are smaller when size grows but they are expected
+* [x] we review adversarial analytics
+  * underlying question is: how to provide a framework for estimating the parameters?
+  * this raises the interesting question of simulating and/or visualising the private chain attack? how much would it cost?
+  * as we discuss _how_ a private chain attack could be carried over,
+    someone mentions https://nodemesh.cc/ which provide a service for
+    faster inclusion of tx on-chain by ensuring tx are submitted
+    "close" to SPOs' block producers
+* [x] We discuss the current state of [votes & certificates analysis]()
   * Makes sense overall
-  * Anatolyi Zinovyev will start an internship, can work on definitive voting scheme for Peras and Leios
+  * Anatolyi Zinovyev will start an internship, can work on definitive voting scheme for Peras and Leios?
 * ambiguities of the protocol?
 
 ## Research/Engineering Collaboration
