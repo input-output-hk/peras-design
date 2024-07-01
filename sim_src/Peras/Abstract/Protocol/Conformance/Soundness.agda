@@ -109,20 +109,26 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
+    postulate
+      makeVote≡True⇒VotingRule : ∀ (s : State) → (t : T)
+        → makeVote'' (modelState s) ≡ Just True
+        → VotingRule (v-round (clock (modelState s))) t
+
     newVote-preconditions : ∀ {vs ms₁} s vote
                           → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
-    newVote-preconditions s vote refl | True | True =
+         | makeVote'' (modelState s) in checkVotingRules
+    newVote-preconditions s vote refl | True | True | Just True =
       record
       { tree            = {!!}    -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = {!!}    -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = {!!}    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule s {!!} checkVotingRules    -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --

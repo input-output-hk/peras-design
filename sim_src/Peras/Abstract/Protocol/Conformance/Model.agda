@@ -196,16 +196,16 @@ postulate
   -- TODO: we need to implement this on the Agda side for the proofs
   extends : Block → Certificate → List Chain → Bool
 
-votesInState : NodeModel → List Vote
-votesInState s = maybeToList do
-  guard (slotInRound params slot == 0)
+makeVote'' : NodeModel → Maybe Bool
+makeVote'' s = do
   block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
   let vr1A = nextRound (round cert') == r
       vr1B = extends block cert' (allChains s)
       vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
       vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-  guard (vr1A && vr1B || vr2A && vr2B)
-  makeVote params slot block
+
+  pure (vr1A && vr1B || vr2A && vr2B)
+
   where
     params = protocol s
     slot   = clock s
@@ -215,6 +215,36 @@ votesInState s = maybeToList do
 
     cert' = maximumBy (comparing round) (allSeenCerts s)
     certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+
+makeVote' : NodeModel → Maybe Vote
+makeVote' s = do
+  block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
+  let vr1A = nextRound (round cert') == r
+      vr1B = extends block cert' (allChains s)
+      vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
+      vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
+
+  guard (vr1A && vr1B || vr2A && vr2B)
+  makeVote params slot block
+
+  where
+    params = protocol s
+    slot   = clock s
+    r      = slotToRound params slot
+
+    pref = preferredChain params (allSeenCerts s) (allChains s)
+
+    cert' = maximumBy (comparing round) (allSeenCerts s)
+    certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+
+
+votesInState : NodeModel → List Vote
+votesInState s = maybeToList do
+  guard (slotInRound params slot == 0)
+  makeVote' s
+  where
+    params = protocol s
+    slot   = clock s
 
 {-# COMPILE AGDA2HS votesInState #-}
 
@@ -253,5 +283,8 @@ transition s (NewChain chain) =
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkVoteSignature v)
+  checkVotingRules <- makeVote'' s
+  guard (checkVotingRules)
+
   Just ([] , record s { allVotes = v ∷ allVotes s })
 {-# COMPILE AGDA2HS transition #-}
