@@ -2,6 +2,7 @@
 module Peras.Abstract.Protocol.Conformance.Soundness where
 
 open import Haskell.Prelude
+open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (NonZero)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
@@ -147,23 +148,26 @@ module _ ⦃ _ : Hashable Block ⦄
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
-    soundness s₀ (NewVote vote) inv prf = record
-      { s₁          = {!!}
-      ; invariant₀  = inv
-      ; invariant₁  = {!!}
-      ; trace       =
-        let pre = newVote-preconditions s₀ vote prf
-            open NewVotePreconditions pre
-        in  CreateVote (invFetched inv)
-                      (honest {σ = Vote.signature vote}
+    soundness s₀ (NewVote vote) inv prf =
+      let pre = newVote-preconditions s₀ vote prf
+          open NewVotePreconditions pre
+          open SmallStep.Message
+      in
+        record
+          { s₁          = let v = createVote slot (creatorId vote) (proofM vote) σ tree
+                          in VoteMsg v , fzero , creatorId v , addVote tree v ⇑ s₀
+          ; invariant₀  = inv
+          ; invariant₁  = {!!}
+          ; trace       = CreateVote (invFetched inv)
+                            (honest {σ = Vote.signature vote}
                               creatorExists
                               validSignature'
                               startOfRound
                               axiom-everyoneIsOnTheCommittee
                               validVote
-                      )
-            -- TODO: also deliver the vote message to establish Fetched s₁
-            ↣ ∎
-      ; s₁-agrees   = {!!}
-      ; votes-agree = {!!}
-      }
+                            )
+                          -- TODO: also deliver the vote message to establish Fetched s₁
+                          ↣ ∎
+          ; s₁-agrees   = {!!}
+          ; votes-agree = {!!}
+          }
