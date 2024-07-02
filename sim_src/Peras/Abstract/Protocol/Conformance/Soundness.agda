@@ -7,6 +7,7 @@ open import Data.Nat using (NonZero)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
+open import Data.Product using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
 open import Relation.Nullary.Decidable using (Dec; yes; no)
 
 open import Peras.Block
@@ -20,6 +21,13 @@ import Peras.SmallStep as SmallStep
 
 open import Peras.Abstract.Protocol.Params
 open import Peras.Abstract.Protocol.Conformance.Model
+
+open import Data.Bool using (T)
+open import Data.Nat using (_≡ᵇ_)
+open import Data.Nat.Properties using (≡ᵇ⇒≡)
+
+≡→T : ∀ {b : Bool} → b ≡ True → Data.Bool.T b
+≡→T refl = tt
 
 -- TODO: ProofPrelude
 eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
@@ -114,31 +122,34 @@ module _ ⦃ _ : Hashable Block ⦄
         → makeVote'' (modelState s) ≡ Just True
         → VotingRule (v-round (clock (modelState s))) t
 
-    newVote-preconditions : ∀ {vs ms₁} s vote
-                          → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
-                          → NewVotePreconditions s vote
-    newVote-preconditions s vote prf
-      with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
-         | checkVoteSignature vote in checkedSig
-         | makeVote'' (modelState s) in checkVotingRules
-    newVote-preconditions s vote refl | True | True | Just True =
-      record
-      { tree            = {!!}    -- we don't track the block trees for the environment nodes in the test model!
-      ; creatorExists   = {!!}    -- maybe invariant that everyone has the same blockTree?
-      ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
-      ; validSignature  = axiom-checkVoteSignature checkedSig
-      ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s {!!} checkVotingRules    -- need to check the VR logic also for environment votes
-      }
-
-    -- Soundness --
-
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
+        hasTree : ∃[ t ] (State.blockTrees s ⁉ sutId ≡ just t)
 
     open Invariant
 
+    newVote-preconditions : ∀ {vs ms₁} s vote
+                          → Invariant s
+                          → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
+                          → NewVotePreconditions s vote
+    newVote-preconditions s vote inv prf
+      with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
+         | checkVoteSignature vote in checkedSig
+         | makeVote'' (modelState s) in checkVotingRules
+         | creatorId vote == sutId in checkedCreatorId
+    newVote-preconditions s vote inv refl | True | True | Just True | True =
+      record
+      { tree            = proj₁ (hasTree inv) -- we don't track the block trees for the environment nodes in the test model!
+      ; creatorExists   = let creatorId≡sutId = ≡ᵇ⇒≡ (creatorId vote) sutId (≡→T checkedCreatorId)
+                          in trans (cong (State.blockTrees s ⁉_) creatorId≡sutId) (proj₂ (hasTree inv)) -- maybe invariant that everyone has the same blockTree?
+      ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
+      ; validSignature  = axiom-checkVoteSignature checkedSig
+      ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
+      ; validVote       = makeVote≡True⇒VotingRule s (proj₁ (hasTree inv)) checkVotingRules    -- need to check the VR logic also for environment votes
+      }
+
+    -- Soundness --
     record Soundness (s₀ : State) (ms₁ : NodeModel) (vs : List (SlotNumber × Vote)) : Set where
       field
         s₁          : State
@@ -146,7 +157,7 @@ module _ ⦃ _ : Hashable Block ⦄
         invariant₁  : Invariant s₁
         trace       : s₀ ↝⋆ s₁
         s₁-agrees   : modelState s₁ ≡ ms₁
-        votes-agree : sutVotesInTrace trace ≡ vs
+        votes-agree : sutVotesInTrace trace ≡ vs -- prefix
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
@@ -155,7 +166,7 @@ module _ ⦃ _ : Hashable Block ⦄
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
     soundness s₀ (NewVote vote) inv prf =
-      let pre = newVote-preconditions s₀ vote prf
+      let pre = newVote-preconditions s₀ vote inv prf
           open NewVotePreconditions pre
           open SmallStep.Message
       in

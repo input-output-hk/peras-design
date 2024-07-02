@@ -285,6 +285,7 @@ transition s (NewVote v) = do
   guard (checkVoteSignature v)
   checkVotingRules <- makeVote'' s
   guard (checkVotingRules)
+  guard (creatorId v == sutId)
 
   Just ([] , record s { allVotes = v ∷ allVotes s })
 {-# COMPILE AGDA2HS transition #-}
