@@ -215,6 +215,7 @@ makeVote'' s = do
 
     cert' = maximumBy (comparing round) (allSeenCerts s)
     certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+{-# COMPILE AGDA2HS makeVote'' #-}
 
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
@@ -236,7 +237,7 @@ makeVote' s = do
 
     cert' = maximumBy (comparing round) (allSeenCerts s)
     certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
-
+{-# COMPILE AGDA2HS makeVote' #-}
 
 votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
@@ -285,7 +286,6 @@ transition s (NewVote v) = do
   guard (checkVoteSignature v)
   checkVotingRules <- makeVote'' s
   guard (checkVotingRules)
-  guard (creatorId v == sutId)
 
   Just ([] , record s { allVotes = v ∷ allVotes s })
 {-# COMPILE AGDA2HS transition #-}

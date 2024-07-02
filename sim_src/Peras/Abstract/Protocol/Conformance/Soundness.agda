@@ -3,7 +3,7 @@ module Peras.Abstract.Protocol.Conformance.Soundness where
 
 open import Haskell.Prelude
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
-open import Data.Nat using (NonZero)
+open import Data.Nat using (NonZero; ℕ; _≡ᵇ_)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
@@ -21,13 +21,6 @@ import Peras.SmallStep as SmallStep
 
 open import Peras.Abstract.Protocol.Params
 open import Peras.Abstract.Protocol.Conformance.Model
-
-open import Data.Bool using (T)
-open import Data.Nat using (_≡ᵇ_)
-open import Data.Nat.Properties using (≡ᵇ⇒≡)
-
-≡→T : ∀ {b : Bool} → b ≡ True → Data.Bool.T b
-≡→T refl = tt
 
 -- TODO: ProofPrelude
 eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
@@ -117,15 +110,25 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-    postulate
-      makeVote≡True⇒VotingRule : ∀ (s : State) → (t : T)
-        → makeVote'' (modelState s) ≡ Just True
-        → VotingRule (v-round (clock (modelState s))) t
+    vr-1a⇒VotingRule-1A : ∀ (s : State) → (t : T)
+      → let
+          m = modelState s
+          r = slotToRound (protocol m) (clock m)
+          cert' = maximumBy (comparing round) (allSeenCerts m)
+        in
+          nextRound (round cert') ≡ r
+      → VotingRule-1A (v-round (clock (modelState s))) t
+    vr-1a⇒VotingRule-1A s t x = {!!}
+
+    makeVote≡True⇒VotingRule : ∀ (s : State) → (t : T)
+      → makeVote'' (modelState s) ≡ Just True
+      → VotingRule (v-round (clock (modelState s))) t
+    makeVote≡True⇒VotingRule s t x = {!!}
 
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
-        hasTree : ∃[ t ] (State.blockTrees s ⁉ sutId ≡ just t)
+        hasTree : ∀ (p : ℕ) → ∃[ t ] (State.blockTrees s ⁉ p ≡ just t)
 
     open Invariant
 
@@ -137,16 +140,14 @@ module _ ⦃ _ : Hashable Block ⦄
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
          | makeVote'' (modelState s) in checkVotingRules
-         | creatorId vote == sutId in checkedCreatorId
-    newVote-preconditions s vote inv refl | True | True | Just True | True =
+    newVote-preconditions s vote inv refl | True | True | Just True =
       record
-      { tree            = proj₁ (hasTree inv) -- we don't track the block trees for the environment nodes in the test model!
-      ; creatorExists   = let creatorId≡sutId = ≡ᵇ⇒≡ (creatorId vote) sutId (≡→T checkedCreatorId)
-                          in trans (cong (State.blockTrees s ⁉_) creatorId≡sutId) (proj₂ (hasTree inv)) -- maybe invariant that everyone has the same blockTree?
+      { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
+      ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s (proj₁ (hasTree inv)) checkVotingRules    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule s (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
