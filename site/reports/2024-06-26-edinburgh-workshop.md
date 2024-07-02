@@ -233,17 +233,15 @@ We review current code from [Quviq](https://github.com/input-output-hk/peras-des
 
 We would like to have just a `record` on the Agda side describing the state machine, and call the right functions from the Haskell side
 
-::: note
-
-This attempt sort of contradicts the approach proposed by Quviq which rests on:
-
-* A test model in Agda that can "easily" be projected to Haskell
-* Soundness proof that relates the test model to the formal model
-
-In this case, we don't need `Dec`idable versions of the functions used
-by the formal spec, or we can make them part of the test model and
-prove they are sound w.r.t. the formal model. This has the benefits of
-simplifying the projection to Haskell and insulate it from Agda's
-`stdlib` percolating.
-
-:::
+> [!NOTE]
+>
+> This attempt sort of contradicts the approach proposed by Quviq which rests on:
+>
+> * A test model in Agda that can "easily" be projected to Haskell
+> * Soundness proof that relates the test model to the formal model
+>
+> In this case, we don't need `Dec`idable versions of the functions used
+> by the formal spec, or we can make them part of the test model and
+> prove they are sound w.r.t. the formal model. This has the benefits of
+> simplifying the projection to Haskell and insulate it from Agda's
+> `stdlib` percolating.
