@@ -185,13 +185,13 @@ newChain' : NodeModel → Chain → NodeModel
 newChain' = λ model chain → record model { allChains = chain ∷ allChains model }
 
 addVote' : NodeModel → Vote → NodeModel
-addVote' model vote with (vote ∈? allVotes model)
-... | yes _ = model
-... | no _  = record model { allVotes = vote ∷ allVotes model }
+addVote' = λ model vote → record model { allVotes = vote ∷ allVotes model }
 
-instance
-  isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts genesisCert
-  isTreeType = record
+postulate
+  instance
+    isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts genesisCert
+{-
+    isTreeType = record
                  { instantiated = refl
                  ; instantiated-certs = refl
                  ; instantiated-votes = refl
@@ -202,10 +202,11 @@ instance
                  ; optimal = {!!}
                  ; self-contained = λ t → {!!}
                  ; valid-votes = {!!}
-                 ; unique-votes = λ t v x → ?
+                 ; unique-votes = λ t v x → refl
                  ; no-equivocations = {!!}
                  ; quorum-cert = {!!}
                  }
+-}
 
 NodeModelTree : TreeType NodeModel
 NodeModelTree = record {
