@@ -91,102 +91,117 @@ Some more detailed questions ensue:
     someone mentions https://nodemesh.cc/ which provide a service for
     faster inclusion of tx on-chain by ensuring tx are submitted
     "close" to SPOs' block producers
-* [x] We discuss the current state of [votes & certificates analysis]()
+* [x] We discuss the current state of [votes & certificates analysis](https://github.com/input-output-hk/peras-design/blob/f4a5646a6c043738d15957eb8096e22e4f959469/peras-vote/src/Peras/Voting/Vote.hs#L17)
   * Makes sense overall
   * Anatolyi Zinovyev will start an internship, can work on definitive voting scheme for Peras and Leios?
-* ambiguities of the protocol?
 
 ## Research/Engineering Collaboration
 
-* Getting the objectives clear but not stating we are solving all the problems
-  * fast-settlement
-  * fluctuating participation
-  * self-healing & recovery from failures
+We covered two main topics here: When/how to publish Peras' R&D stream results (website and github repository), and how to improve collaboration between research and innovation?
 
-* Leios
-  * network simulations => work w/ Spyros
-  * critical for publication of the Leios in top-tier venues
+On the publication of our results: We need to get the objectives clear but of course stating we are not solving all the problems. What's important to highlight for Peras:
+  * it provides fast-settlement
+  * it handles fluctuating participation
+  * it's self-healing & can recover from failures
+
+On the overall collaboration process, major next step is Leios. We need to collaborate with Spyros on the network simulations as they are critical for publication in top-tier venues.
 
 # Day 2
 
 ## Implementation
 
-* Do you need votes if you have certs? => no
+We discussed some questions related to practical implementation of Peras, as we want to ensure we provide sound and useful advices to future implementors of the protocol.
+
+The main discussion revolves around votes and certificates storage which will be the most impactful in terms of implementation:
+* Do you need votes if you have certs?
+  * _no_
 * Which certs do you need?
-  * on-line -> see block creation rules 1.2.a
-* What and where to store things?
-* Can we prove that: if you forget the certificates more than X slots in the past, you are safe?
-* Option 1:
-  * 2 types of certificates stored ?
-* :warning: The chain cannot be the only canonical source of truth anymore
-* specify transport layer for votes
+  * see block creation rules 1.2.a: it requires we are able to check certificates up to 2 rounds in the past, and of course requires inclusion of latest `cert'`
+* What and where to store things (votes and certificates)?
+  * _This should be left implementation dependent_
+* Can we prove that if you forget the certificates more than X slots in the past, you are safe?
+* :warning: The chain cannot be the only canonical source of truth anymore as nodes need to be able to provide certificates to prove their chain is the heaviest
+* We need to _specify_ the transport layer for votes and certificates, in particular the CDDL schemas and protocol details in order to ensure interoperability
   * how to retrieve historical votes
-* specific protocol for vote synchronisation -> pub/sub?
-  * custom mini-protocol being worked on as part of mithril/cardano integration -> https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view#Message-Submission-mini-protocol
-* minimal change to the body -> recording of cert*, various options
-  * store full cert in the block => seems safer? does not need to wait for certificate to accept block, happens rarely anyway
+* What would a specific protocol for vote synchronisation look like?
+  * Could it be something like pub/sub? _this does not seem appropriate_
+  * There's a custom mini-protocol being worked on as part of mithril/cardano integration -> https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view#Message-Submission-mini-protocol
+* change to the block body is minimal: we only need recording of cert*, but there may be various options to do so:
+  * store full cert in the block => seems safer, does not need to wait for certificate to accept block, happens rarely anyway
   * store hash of it -> have the certificate elsewhere
   * not store it
 * do we need to store votes & certs forever?
   * yes for certs, votes can be considered transient and discarded after a while (when?)
 * can we put certificates on-chain?
-  * probably not
+  * _probably not_
 * deferring certificate/vote check to avoid having certificates download on critical path?
   * do we still have the problem that we need certs/votes to choose select best chain?
-  * yes, but that's not a problem because votes and certs are diffused separately
-* certs must be stored independently
+  * that's not a problem because votes and certs are diffused separately
+  * the chain selection rule have to be adapted to handle incoming new
+    certificates, but we don't risk anymore flip-flop problems with an
+    adversary releasing votes strategically to force us to switch
+    chain on every vote
 
-## PI Planning
+## Planning
 
-* PI6 goals:
-  * 1 done
-  * 1 nearly completed (tech report -> CIP draft)
-  * 1 started but not completed (conformance suite)
-* Next steps for PI6
+### Q2 Goals
+
+* Reviewing the Q2 goals:
+  * 1 done  [INN-90](https://input-output.atlassian.net/browse/INN-90)
+  * 1 nearly completed (tech report -> CIP draft) [INN-89](https://input-output.atlassian.net/browse/INN-89)
+  * 1 started but not completed (conformance suite) [INN-91](https://input-output.atlassian.net/browse/INN-91)
+* Short term actions pursuant to completing Q2
   * complete tech report
   * ask RW & MB about proper CIP format/expectations
   * draft a CIP pulling stuff from TR#2
   * make website and repo public
 
-* What do we want to do next?
-  * **note**: AB on "sabbatical" for 2 months starting the week of 22/07
-  * work on conformance suite (Agda <-> Haskell)
-    * organise a workshop with Santiago/Chris/Nick/Damian/Pi on "good conformance suite" and "specification"?
-    * brand it as Intersect Consensus Technical WG
-    * external feedback on conformance test (node/protocol) value -> depends on who you ask?
-  * pre-alpha -> alpha ? requires paper done
-  * parameters value? recommendations?
-    * work with partner chains to get some requirements
-    * we should provide guidelines but need actual calculations
-    * give "users" tool to calculate them?
-    * work with Peter Gazi on tooling/computations
-  * improve simulator -> split brain, larger networks, longer simulations
-    * useful for paper = concrete numbers on private chain attack, how many rounds you have to wait for settlement (negligible probability of fork)?
-  * network simulator (Spyros' stuff but more usable?)
-    * enhance ce-netsim?
-    * useful for Leios too
-    * acceptance of a generic tool might be hard to get (=> shelfware)
-  * make ΔQ more usable
-    * interactive visualisation
-    * fast numeric computations
-  * focus on Leios?
-  * PI7 => options?
-    * polish what we have
-    * no more polish
-  * complete voting string proof (and others?)
-    * for publication, it would be useful to have the "full monty" but would change the shape of the paper, focusing on the form alisation part
-    * more a PoC that we can connect Research <-> FM <-> Test
-    * Work on Praos specification has started, more bottom up approach, could be a good follow-up to reuse the techniques and tools we experimented here
+### What's next?
+
+What do we want to do next?
+
+* **note**: AB on "sabbatical" for 2 months starting the week of 22/07
+* Need more work on conformance suite (Agda <-> Haskell)
+  * organise a workshop with Santiago/Chris/Nick/Damian/Pi on "good conformance suite" and "specification"?
+  * brand it as Intersect Consensus Technical WG
+  * external feedback on conformance test (node/protocol) value -> depends on who you ask?
+* moving from "pre-alpha" to "alpha" version requires paper to be published
+* what about parameters value? recommendations?
+  * work with _partner chains_ to get some requirements
+  * we should provide guidelines but need actual calculations to be done "in the field"
+  * users should have a tool to be able to calculate themselves the needed parameters
+  * work with Peter Gazi on tooling/computations
+* improve existing chain simulator
+  * some scenarios we can work on: split brain, larger networks, longer simulations
+  * what could be useful for paper publication = concrete numbers on private chain attack, how many rounds you have to wait for settlement (negligible probability of fork)?
+* improve network simulator, eg. make [PeerNet](https://github.com/PeerNet/PeerNet) more widely usable
+  * we could work on the basis of [ce-netsim]() and enhance it to match PeerNet's features
+  * it's useful and needed for Leios too
+  * :warning: acceptance of a generic tool might be hard to get and it easily could become shelfware
+* make ΔQ more usable
+  * provide out-of-the-box and possibly interactive visualisation
+  * provide faster numeric computations (eg. using discretised CDFs and fast vector operations, possibly offloaded to GPU)
+* we might shift focus on Leios which is only getting started
+* for Q3 planning, we want to provide _options_ and get decision from stakeholders
+  * polish what we have
+  * no more polish and switch on something else
+  * tools & frameworks
+* complete voting string proof (and others?)
+  * for publication, it would be useful to have the "full monty" but would change the shape of the paper, as it focuses on the formalisation part
+  * a less ambitious but more realistic goal would be to consider the formal spec work for Peras as a _PoC_ that we can connect Research <-> FM <-> Test
+  * Work on Praos specification has started, more bottom up approach, could be a good follow-up to reuse the techniques and tools we experimented here
 
 ## Markov chain simulations
 
-* Adversary coordinating, approximate honest nodes as a single node
-* at each slot, 4 options
+BB walks us through his work on [Markov chain](https://github.com/input-output-hk/peras-design/blob/f4a5646a6c043738d15957eb8096e22e4f959469/peras-markov/ReadMe.md#L1) simulations
+
+* Basic principle: represents the whole network with an Adversary _coordinating_, and approximate all honest nodes as a _single node_
+* at each slot, the network has 4 possible transitions each with an attached probability:
   1. no blocks
   2. honest block
   3. adversary block
   4. both blocks
-* similarly at each round
+* similarly at each round, there are 4 transitions:
   1. no quorum
   2. honest quorum
   3. adversarial quorun
@@ -194,11 +209,10 @@ Some more detailed questions ensue:
 * state is very small, just a few numbers to keep around
 * private chain attack classical paper https://arxiv.org/pdf/1311.0243
 
-
 Benefits:
 * Can take into account small probabilities which detailed simulation are blind to
-* connnect to Agda specification by assigning probabilities to the transition relations
-* QC generators based on those probabilities
+* we can later on connnect to Agda specification by assigning probabilities to the transition relations
+* we can define QC generators based on those probabilities
 
 * looking at Ouroboros paper for application?
   * https://eprint.iacr.org/2016/889.pdf  p.27
@@ -209,7 +223,8 @@ Benefits:
 
 ## Conformance testing
 
-* Looking at current code from [Quviq](https://github.com/input-output-hk/peras-design/pull/144) to replace voting rules with the ones from the specification
+We review current code from [Quviq](https://github.com/input-output-hk/peras-design/pull/144) with an aim to replace voting rules with the ones from the specification
+
 * The `Dec xx` functions need to be Agda2hs compatible => need to rewrite most of them
 * The TC has some troubles inferring types from the decidable functions, possibly because of renamings (?)
 * We need to work on a Haskell-side blocktree implementation, which might be problematic because of the dependencies on stdlib (implement `toTree`)
@@ -217,3 +232,18 @@ Benefits:
 * Remove Haskell code from Agda code -> see if we need it, or can pull it from Agda formal spec, or move it to proper Haskell
 
 We would like to have just a `record` on the Agda side describing the state machine, and call the right functions from the Haskell side
+
+::: note
+
+This attempt sort of contradicts the approach proposed by Quviq which rests on:
+
+* A test model in Agda that can "easily" be projected to Haskell
+* Soundness proof that relates the test model to the formal model
+
+In this case, we don't need `Dec`idable versions of the functions used
+by the formal spec, or we can make them part of the test model and
+prove they are sound w.r.t. the formal model. This has the benefits of
+simplifying the projection to Haskell and insulate it from Agda's
+`stdlib` percolating.
+
+:::
