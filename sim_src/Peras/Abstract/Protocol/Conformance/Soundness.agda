@@ -2,7 +2,7 @@
 module Peras.Abstract.Protocol.Conformance.Soundness where
 
 open import Haskell.Prelude
-open import Data.Nat using (NonZero)
+open import Data.Nat using (ℕ; NonZero)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
@@ -65,13 +65,13 @@ module _ {S : Set} {adversarialState₀ : S}
 
     open State
 
-    modelState : State → NodeModel
-    modelState s = record
+    modelState : State → ℕ → NodeModel
+    modelState s p = record
       { clock        = clock s
       ; protocol     = modelParams
-      ; allChains    = maybe′ chains [] (blockTrees s ⁉ sutId)
-      ; allVotes     = maybe′ votes  [] (blockTrees s ⁉ sutId)
-      ; allSeenCerts = maybe′ certs  [] (blockTrees s ⁉ sutId)
+      ; allChains    = maybe′ chains [] (blockTrees s ⁉ p)
+      ; allVotes     = maybe′ votes  [] (blockTrees s ⁉ p)
+      ; allSeenCerts = maybe′ certs  [] (blockTrees s ⁉ p)
       }
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
@@ -114,15 +114,15 @@ module _ {S : Set} {adversarialState₀ : S}
     ≡→T refl = tt
 
     newVote-preconditions : ∀ {vs ms₁} s vote
-                          → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
+                          → transition (modelState s (creatorId vote)) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote prf
       with mod (getSlotNumber (clock s)) U == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
-         | isYes (VotingRule'' (v-round (clock s)) (modelState s)) in checkedVRs
+         | isYes (VotingRule'' (v-round (clock s)) (modelState s (creatorId vote))) in checkedVRs
     newVote-preconditions s vote refl | True | True | True =
       record
-      { tree            = modelState s -- we don't track the block trees for the environment nodes in the test model!
+      { tree            = modelState s (creatorId vote)    -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = {!!}    -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
@@ -144,16 +144,19 @@ module _ {S : Set} {adversarialState₀ : S}
         invariant₀  : Invariant s₀
         invariant₁  : Invariant s₁
         trace       : s₀ ↝⋆ s₁
-        s₁-agrees   : modelState s₁ ≡ ms₁
+        s₁-agrees   : modelState s₁ sutId ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs
 
-    @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
+    @0 soundness : ∀ {p ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
-              → transition (modelState s₀) a ≡ Just (vs , ms₁)
+              → transition (modelState s₀ p) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (clock s₀ ,_) vs)
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
-    soundness s₀ (NewVote vote) inv prf = record
+    soundness {p} {ms₁} {vs} s₀ (NewVote vote) inv prf
+      with p ≟ creatorId vote
+    ... | yes p≡creatorId rewrite p≡creatorId =
+      record
       { s₁          = {!!}
       ; invariant₀  = inv
       ; invariant₁  = {!!}
@@ -173,3 +176,4 @@ module _ {S : Set} {adversarialState₀ : S}
       ; s₁-agrees   = {!!}
       ; votes-agree = {!!}
       }
+    ... | no p≢creatorId = {!!}
