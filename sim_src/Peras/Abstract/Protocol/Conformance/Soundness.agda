@@ -67,13 +67,13 @@ module _ ⦃ _ : Hashable Block ⦄
         open Params params
         open Network network
 
-    modelState : State → NodeModel
-    modelState s = record
+    modelState : State → ℕ → NodeModel
+    modelState s p = record
       { clock        = State.clock s
       ; protocol     = modelParams
-      ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
-      ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-      ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+      ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ p)
+      ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ p)
+      ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ p)
       }
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
@@ -110,20 +110,19 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-    vr-1a⇒VotingRule-1A : ∀ (s : State) → (t : T)
+    vr-1a⇒VotingRule-1A : ∀ (m : NodeModel) (t : T)
       → let
-          m = modelState s
           r = slotToRound (protocol m) (clock m)
           cert' = maximumBy (comparing round) (allSeenCerts m)
         in
           nextRound (round cert') ≡ r
-      → VotingRule-1A (v-round (clock (modelState s))) t
-    vr-1a⇒VotingRule-1A s t x = {!!}
+      → VotingRule-1A (v-round (clock m)) t
+    vr-1a⇒VotingRule-1A m t x = {!!}
 
-    makeVote≡True⇒VotingRule : ∀ (s : State) → (t : T)
-      → makeVote'' (modelState s) ≡ Just True
-      → VotingRule (v-round (clock (modelState s))) t
-    makeVote≡True⇒VotingRule s t x = {!!}
+    makeVote≡True⇒VotingRule : ∀ (m : NodeModel) (t : T)
+      → makeVote'' m ≡ Just True
+      → VotingRule (v-round (clock m)) t
+    makeVote≡True⇒VotingRule m t x = {!!}
 
     record Invariant (s : State) : Set where
       field
@@ -134,12 +133,12 @@ module _ ⦃ _ : Hashable Block ⦄
 
     newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
-                          → transition (modelState s) (NewVote vote) ≡ Just (vs , ms₁)
+                          → transition (modelState s (creatorId vote)) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkVoteSignature vote in checkedSig
-         | makeVote'' (modelState s) in checkVotingRules
+         | makeVote'' (modelState s (creatorId vote)) in checkVotingRules
     newVote-preconditions s vote inv refl | True | True | Just True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
@@ -147,7 +146,7 @@ module _ ⦃ _ : Hashable Block ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule (modelState s (creatorId vote)) (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
@@ -157,16 +156,18 @@ module _ ⦃ _ : Hashable Block ⦄
         invariant₀  : Invariant s₀
         invariant₁  : Invariant s₁
         trace       : s₀ ↝⋆ s₁
-        s₁-agrees   : modelState s₁ ≡ ms₁
+        s₁-agrees   : modelState s₁ sutId ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs -- prefix
 
-    @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
+    @0 soundness : ∀ {p ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
-              → transition (modelState s₀) a ≡ Just (vs , ms₁)
+              → transition (modelState s₀ p) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
-    soundness s₀ (NewVote vote) inv prf =
+    soundness {p} s₀ (NewVote vote) inv prf
+      with p ≟ creatorId vote
+    ... | yes x rewrite x =
       let pre = newVote-preconditions s₀ vote inv prf
           open NewVotePreconditions pre
           open SmallStep.Message
@@ -189,3 +190,4 @@ module _ ⦃ _ : Hashable Block ⦄
           ; s₁-agrees   = {!!}
           ; votes-agree = {!!}
           }
+    ... | no x = {!!}
