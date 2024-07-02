@@ -58,6 +58,9 @@ record Vote : Set where
 
 open Vote public
 
+postulate
+  _≟-Vote_ : DecidableEquality Vote
+
 instance
   iVoteEq : Eq Vote
   iVoteEq ._==_ x y = votingRound x == votingRound y
