@@ -2,7 +2,7 @@ module Convolution where
 
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
-import FFT (irdft, rdft)
+import FFT (irfft, rfft)
 
 -- | Computes the convolution of two lists.
 -- The convolution of two lists is defined as:
@@ -36,7 +36,7 @@ convolution a b =
   b_padded = b <> Vector.replicate (m - length b) 0
 
 fftConvolution :: Vector Double -> Vector Double -> Vector Double
-fftConvolution a b = irdft $ Vector.zipWith (*) (rdft a_padded) (rdft b_padded)
+fftConvolution a b = irfft $ Vector.zipWith (*) (rfft a_padded) (rfft b_padded)
  where
   -- the length of the convolution
   m = length a + length b - 1

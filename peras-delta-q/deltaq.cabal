@@ -64,6 +64,22 @@ executable dqsd-vote
   default-extensions: UnicodeSyntax
                       TypeApplications
 
+benchmark bench
+  hs-source-dirs: bench/
+  main-is:        Bench.hs
+  type:           exitcode-stdio-1.0
+  build-depends:
+                  QuickCheck
+                , aeson
+                , base
+                , bytestring
+                , criterion
+                , deepseq
+                , delta-q
+                , vector
+
+  ghc-options:    -threaded -rtsopts
+
 test-suite tests
   type:             exitcode-stdio-1.0
   hs-source-dirs:     tests
