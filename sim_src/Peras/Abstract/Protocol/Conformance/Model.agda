@@ -15,6 +15,11 @@ open import Peras.Abstract.Protocol.Params
 open import Protocol.Peras using ()
 open import Relation.Nullary.Decidable using (isYes)
 
+open import Data.List.Membership.DecPropositional _≟-Vote_ using (_∈?_)
+open import Data.List.Membership.Propositional using (_∈_)
+open import Relation.Nullary using (yes; no; ¬_; Dec; contradiction)
+
+
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -98,8 +103,19 @@ genesisHash : Hash Block
 genesisHash = MkHash emptyBS
 {-# COMPILE AGDA2HS genesisHash #-}
 
+genesisBlock : Block
+genesisBlock = record {
+  slotNumber = 0 ;
+  creatorId = 0 ;
+  parentBlock =  MkHash emptyBS ;
+  certificate = nothing ;
+  leadershipProof = MkLeadershipProof emptyBS ;
+  signature  = MkSignature emptyBS ;
+  bodyHash = MkHash emptyBS
+ }
+
 genesisChain : Chain
-genesisChain = []
+genesisChain = genesisBlock ∷ []
 {-# COMPILE AGDA2HS genesisChain #-}
 
 genesisCert : Certificate
@@ -146,18 +162,6 @@ instance
    W = 0
   }
 
-
-genesisBlock : Block
-genesisBlock = record {
-  slotNumber = 0 ;
-  creatorId = 0 ;
-  parentBlock =  MkHash emptyBS ;
-  certificate = nothing ;
-  leadershipProof = MkLeadershipProof emptyBS ;
-  signature  = MkSignature emptyBS ;
-  bodyHash = MkHash emptyBS
- }
-
 instance
 
    initialNetwork : Network
@@ -181,22 +185,24 @@ newChain' : NodeModel → Chain → NodeModel
 newChain' = λ model chain → record model { allChains = chain ∷ allChains model }
 
 addVote' : NodeModel → Vote → NodeModel
-addVote' =  λ model vote → record model { allVotes = vote ∷ allVotes model }
+addVote' model vote with (vote ∈? allVotes model)
+... | yes _ = model
+... | no _  = record model { allVotes = vote ∷ allVotes model }
 
 instance
   isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts genesisCert
   isTreeType = record
-                 { instantiated = {!!}
+                 { instantiated = refl
                  ; instantiated-certs = refl
                  ; instantiated-votes = refl
                  ; genesis-block-slotnumber = refl
                  ; genesis-block-no-certificate = refl
-                 ; extendable-chain = {!!}
+                 ; extendable-chain = λ t c → {!!}
                  ; valid = {!!}
                  ; optimal = {!!}
-                 ; self-contained = {!!}
+                 ; self-contained = λ t → {!!}
                  ; valid-votes = {!!}
-                 ; unique-votes = {!!}
+                 ; unique-votes = λ t v x → ?
                  ; no-equivocations = {!!}
                  ; quorum-cert = {!!}
                  }
