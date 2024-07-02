@@ -4,11 +4,11 @@
 
 | Goal/Topic                                                 | Items                                                                                    | Actions                                            |
 |------------------------------------------------------------|------------------------------------------------------------------------------------------|----------------------------------------------------|
-| **Define/improve available public stuff on Peras**         | currently, https://peras.cardano-scaling.org contains minimal content,                   | Fleshout website                                   |
-|                                                            | how much of https://github.com/input-output-hk/peras-design can we add there?            | Polish code repo                                   |
+| **Define/improve available public stuff on Peras**         | currently, https://peras.cardano-scaling.org contains minimal content,                   | [Fleshout website](https://github.com/input-output-hk/peras-design/issues/159)                                   |
+|                                                            | how much of https://github.com/input-output-hk/peras-design can we add there?            | [Polish code repo](https://github.com/input-output-hk/peras-design/issues/160)                                   |
 |                                                            |                                                                                          | Review material                                    |
 |                                                            |                                                                                          | Go public                                          |
-| **Action items and next steps**                            | high-priority items for this PI                                                          | Finalise technical report #2                       |
+| **Action items and next steps**                            | high-priority items for this PI                                                          | [Finalise technical report #2](https://github.com/input-output-hk/peras-design/issues/161)                       |
 |                                                            | At least make sure we have a ToC covering all we wanted to cover                         |                                                    |
 | **Reflect & plan on improving Research/Eng collaboration** | proof techniques                                                                         | focus on network simulation work for Leios         |
 |                                                            | Custom DSL                                                                               |                                                    |
@@ -28,7 +28,7 @@
 |                                                            | can we put certificates on-chain?                                                        |                                                    |
 |                                                            | deferring certificate/vote check to avoid having certificates download on critical path? |                                                    |
 |                                                            | we still have the problem that we need certs/votes to choose select best chain           |                                                    |
-| **adversarial scenarios and analyses**                     | is current list of adversarial scenarios complete?                                       | Review analyses from research side                 |
+| **adversarial scenarios and analyses**                     | is current list of adversarial scenarios complete?                                       | [Review analyses from research side](https://github.com/input-output-hk/peras-design/issues/162)                 |
 |                                                            | review process for analyses?                                                             |                                                    |
 | **conformance tests**                                      | review Quviq's model and link to Agda specification                                      |                                                    |
 |                                                            | align research/spec/test/reference implementation                                        |                                                    |
