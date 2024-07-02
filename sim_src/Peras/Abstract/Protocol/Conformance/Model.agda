@@ -95,7 +95,7 @@ data EnvAction : Set where
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
 genesisHash : Hash Block
-genesisHash = MkHash (replicateBS 8 0)
+genesisHash = MkHash emptyBS
 {-# COMPILE AGDA2HS genesisHash #-}
 
 genesisChain : Chain
@@ -183,11 +183,23 @@ newChain' = λ model chain → record model { allChains = chain ∷ allChains mo
 addVote' : NodeModel → Vote → NodeModel
 addVote' =  λ model vote → record model { allVotes = vote ∷ allVotes model }
 
-cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
-
-postulate
-  instance
-    isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts cert₀
+instance
+  isTreeType : IsTreeType {T = NodeModel} initialModelState newChain' allChains bestChain addVote' allVotes allSeenCerts genesisCert
+  isTreeType = record
+                 { instantiated = {!!}
+                 ; instantiated-certs = refl
+                 ; instantiated-votes = refl
+                 ; genesis-block-slotnumber = refl
+                 ; genesis-block-no-certificate = refl
+                 ; extendable-chain = {!!}
+                 ; valid = {!!}
+                 ; optimal = {!!}
+                 ; self-contained = {!!}
+                 ; valid-votes = {!!}
+                 ; unique-votes = {!!}
+                 ; no-equivocations = {!!}
+                 ; quorum-cert = {!!}
+                 }
 
 NodeModelTree : TreeType NodeModel
 NodeModelTree = record {
