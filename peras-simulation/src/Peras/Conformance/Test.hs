@@ -43,6 +43,7 @@ import Peras.Prototype.Trace qualified as Trace
 import Peras.Prototype.Types
 import Peras.Prototype.Voting
 import Test.QuickCheck
+import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras
 import Test.QuickCheck.Monadic
 import Test.QuickCheck.StateModel
@@ -52,6 +53,8 @@ import Prelude hiding (round)
 
 instance HasVariables NodeModel where
   getAllVariables _ = mempty
+
+instance DynLogicModel NodeModel
 
 instance Show (Action NodeModel a) where
   show (Step a) = show a

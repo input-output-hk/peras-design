@@ -121,7 +121,8 @@ executable  peras-visualize
 test-suite peras-simulation-test
     import:           warnings
     default-language: Haskell2010
-    other-modules: Peras.Prototype.BlockCreationSpec
+    other-modules: Peras.Conformance.TestSpec
+                   Peras.Prototype.BlockCreationSpec
                    Peras.Prototype.Node.ModelSpec
                    Peras.Prototype.NodeSpec
                    Peras.Prototype.VotingSpec
