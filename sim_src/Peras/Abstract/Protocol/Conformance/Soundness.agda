@@ -159,14 +159,14 @@ module _ ⦃ _ : Hashable Block ⦄
         s₁-agrees   : modelState s₁ sutId ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs -- prefix
 
-    @0 soundness : ∀ {p ms₁ vs} (s₀ : State) (a : EnvAction)
+    @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
-              → transition (modelState s₀ p) a ≡ Just (vs , ms₁)
+              → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     soundness s₀ Tick inv prf = {!!}
     soundness s₀ (NewChain x) inv prf = {!!}
-    soundness {p} s₀ (NewVote vote) inv prf
-      with p ≟ creatorId vote
+    soundness s₀ (NewVote vote) inv prf
+      with sutId ≟ creatorId vote
     ... | yes x rewrite x =
       let pre = newVote-preconditions s₀ vote inv prf
           open NewVotePreconditions pre
