@@ -15,6 +15,7 @@ open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
+open import Peras.Util
 open import Prelude.AssocList
 open import Prelude.DecEq using (DecEq)
 import Peras.SmallStep as SmallStep
@@ -110,10 +111,6 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-    postulate
-      maxby≡argmax : ∀ (x : Certificate) (xs : List Certificate)
-        → maximumBy (comparing round) xs ≡ latestCert x xs
-
     suc-definition : ∀ {n} → suc n ≡ n + 1
     suc-definition {zero} = refl
     suc-definition {suc n} = cong suc (suc-definition {n})
@@ -122,12 +119,11 @@ module _ ⦃ _ : Hashable Block ⦄
       → let
           m = modelState s p
           r = slotToRound (protocol m) (clock m)
-          cert' = maximumBy (comparing round) (allSeenCerts m)
+          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
           nextRound (round cert') ≡ r
       → VotingRule-1A (v-round (clock m)) (proj₁ ∃tree)
     vr-1a⇒VotingRule-1A s p ∃tree x
-        rewrite maxby≡argmax cert₀ (allSeenCerts (modelState s p))
         rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
         rewrite (proj₂ ∃tree)
       = cong getRoundNumber (sym x)

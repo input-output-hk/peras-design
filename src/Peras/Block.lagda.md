@@ -26,6 +26,7 @@ open Equ using (_≡_; _≢_; cong)
 
 open import Peras.Crypto
 open import Peras.Numbering
+open import Peras.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -149,7 +150,7 @@ record Certificate where
 open Certificate public
 
 latestCert : Certificate → List Certificate → Certificate
-latestCert = argmax roundNumber
+latestCert c = maximumBy c (comparing round)
 
 record Block where
   constructor MkBlock

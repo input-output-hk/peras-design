@@ -10,6 +10,7 @@ open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
+open import Peras.Util
 open import Peras.Abstract.Protocol.Params
 open import Protocol.Peras using ()
 
@@ -63,14 +64,6 @@ maybeToList (Just x) = x ∷ []
 listToMaybe : List a → Maybe a
 listToMaybe [] = Nothing
 listToMaybe (x ∷ _) = Just x
-
-postulate
-  -- FIXME (change model so we don't need it?)
-  maximumBy : (a → a → Ordering) → List a → a
-
-comparing : ⦃ Ord b ⦄ → (a → b) → a → a → Ordering
-comparing f x y = compare (f x) (f y)
-
 
 -- The actual model ---
 
@@ -213,8 +206,8 @@ makeVote'' s = do
 
     pref = preferredChain params (allSeenCerts s) (allChains s)
 
-    cert' = maximumBy (comparing round) (allSeenCerts s)
-    certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+    cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
+    certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
 {-# COMPILE AGDA2HS makeVote'' #-}
 
 makeVote' : NodeModel → Maybe Vote
@@ -235,8 +228,8 @@ makeVote' s = do
 
     pref = preferredChain params (allSeenCerts s) (allChains s)
 
-    cert' = maximumBy (comparing round) (allSeenCerts s)
-    certS = maximumBy (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+    cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
+    certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
 {-# COMPILE AGDA2HS makeVote' #-}
 
 votesInState : NodeModel → List Vote
