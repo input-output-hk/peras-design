@@ -11,12 +11,11 @@ import Peras.Block (Block (MkBlock), Certificate (MkCertificate, blockRef, round
 import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
-import Peras.Util (comparing, maximumBy)
+import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
 import qualified Prelude ((/=))
 
 import Control.Monad.Identity
 import Data.Function (on)
-import Data.Maybe (catMaybes, listToMaybe, maybeToList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedCertificate, createSignedVote, mkCommitteeMember, mkParty)

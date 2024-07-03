@@ -25,7 +25,6 @@ open import Protocol.Peras using ()
   import Control.Monad.Identity
   import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
-  import Data.Maybe (catMaybes, listToMaybe, maybeToList)
   import Data.Function (on)
   import qualified Data.Set as Set
   import Data.Set (Set)
@@ -33,11 +32,7 @@ open import Protocol.Peras using ()
   import Peras.Abstract.Protocol.Fetching (findNewQuora)
 #-}
 
--- Hoop-jumping ---
-
-uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
-uneraseNonZero {zero} ()
-uneraseNonZero {suc n} _ = _
+-- Work around `agda2hs` limitations.
 
 div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
 div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
@@ -48,19 +43,6 @@ mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 certificate : Block → Maybe Certificate
 certificate record{certificate = just c}  = Just c
 certificate record{certificate = nothing} = Nothing
-
-catMaybes : List (Maybe a) → List a
-catMaybes [] = []
-catMaybes (Nothing ∷ xs) = catMaybes xs
-catMaybes (Just x ∷ xs) = x ∷ catMaybes xs
-
-maybeToList : Maybe a → List a
-maybeToList Nothing = []
-maybeToList (Just x) = x ∷ []
-
-listToMaybe : List a → Maybe a
-listToMaybe [] = Nothing
-listToMaybe (x ∷ _) = Just x
 
 -- The actual model ---
 
