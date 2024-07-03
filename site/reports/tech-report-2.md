@@ -167,7 +167,7 @@ A vote is _cast_ by a node using the following process which paraphrases the [ac
 
 #### Verifying vote
 
-Vote verification requires access to the current epoch's _stake distribution_ and _stake pool registration_ information.
+[Vote verification](https://github.com/input-output-hk/peras-design/blob/34196ee6e06ee6060c189116b04a2666450c5b75/peras-vote/src/Peras/Voting/Vote.hs#L392) requires access to the current epoch's _stake distribution_ and _stake pool registration_ information.
 
 1. Lookup the `voter_id` in the stake distribution and registration map to retrieve their current stake and VRF verification key,
 2. Compute the _nonce_ (see above),
@@ -184,7 +184,8 @@ The first algorithm is basically identical to the one used for [Mithril](https:/
 * There are various parameters to the algorithm:
   * $f$ is the fraction of slots that are "active" for voting
   * $m$ is the number of _lottery_ each voter should try to get a vote for,
-  * $k$ is the target total number of votes for each round (eg. quorum). $k$ is usually  chosen such that $k = m \dot \phi(0.5)$,
+  * $k$ is the target total number of votes for each round (eg. quorum). $k$ should be chosen such that $k = m \dot \phi(0.5)$ to reach a majority quorum,
+* When its turn to vote comes, a node
 
 ### Sortition-like voting
 
