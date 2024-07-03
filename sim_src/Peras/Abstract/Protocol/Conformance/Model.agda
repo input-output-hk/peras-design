@@ -147,26 +147,33 @@ seenBeforeStartOfRound params r (c , s) =
   getSlotNumber s <= getRoundNumber r * perasU params
 {-# COMPILE AGDA2HS seenBeforeStartOfRound #-}
 
-postulate
-  preferredChain : PerasParams → List Certificate → List Chain → Chain
+instance
+    hashBlock : Hashable Block
+    hashBlock = record
+      { hash = λ b →
+               (let record { bytesS = s } = signature b
+                  in record { hashBytes = s })
+      }
 
-{-# FOREIGN AGDA2HS
-preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
-preferredChain MkPerasParams{..} certs chains =
-  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (Set.fromList $ genesisChain : chains)
+chainWeight : Nat → List Certificate -> Chain → Nat
+chainWeight boost certs = chainWeight' 0
+  where
+    isCertified : Block → Bool
+    isCertified block = filter (λ cert → Hashable.hash hashBlock block == blockRef cert) certs == []
+    chainWeight' : Nat → List Block → Nat
+    chainWeight' accum [] = accum
+    chainWeight' accum (block ∷ blocks) =
+      if isCertified block
+        then chainWeight' (accum + 1 + boost) blocks
+        else chainWeight' (accum + 1) blocks
 
-chainWeight :: Integer -> Set Certificate -> Chain -> Integer
-chainWeight boost certs blocks =
-  let
-    -- Block hashes certified by any certificate.
-    certifiedBlocks = Set.map blockRef certs :: Set (Hash Block)
-    -- Block hashes on the chain.
-    chainBlocks = Set.fromList $ hash <$> blocks :: Set (Hash Block)
-   in
-    -- Length of the chain plus the boost times the count of certified blocks.
-    fromIntegral (length blocks)
-      + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
-#-}
+{-# COMPILE AGDA2HS chainWeight #-}
+
+preferredChain : PerasParams → List Certificate → List Chain → Chain
+preferredChain params certs =
+  maximumBy genesisChain (comparing (chainWeight (perasB params) certs))
+
+{-# COMPILE AGDA2HS preferredChain #-}
 
 postulate
   makeVote : PerasParams → SlotNumber → Block → Maybe Vote
