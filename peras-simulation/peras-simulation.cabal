@@ -32,10 +32,8 @@ common warnings
 library
     import:           warnings
     exposed-modules: Peras.Abstract.Protocol.BlockCreation
+                     -- details of voting
                      Peras.Abstract.Protocol.Crypto
-                     Peras.Abstract.Protocol.Crypto.Foreign
-                     Peras.Abstract.Protocol.Conformance.Model
-                     Peras.Abstract.Protocol.Conformance.Test
                      Peras.Abstract.Protocol.Diffusion
                      Peras.Abstract.Protocol.Environment
                      Peras.Abstract.Protocol.Fetching
@@ -44,7 +42,6 @@ library
                      Peras.Abstract.Protocol.Node
                      Peras.Abstract.Protocol.Node.Model
                      Peras.Abstract.Protocol.Preagreement
-                     Peras.Abstract.Protocol.Params
                      Peras.Abstract.Protocol.Trace
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Visualizer
@@ -52,15 +49,18 @@ library
                      Peras.Arbitraries
                      Peras.Block
                      Peras.Chain
+                     Peras.Conformance.Model
+                     Peras.Conformance.Params
+                     Peras.Conformance.Test
                      Peras.Crypto
                      Peras.Event
+                     Peras.Foreign
                      Peras.Message
                      Peras.Numbering
                      Peras.Orphans
                      Peras.Util
-                     -- details of voting
-                     Peras.Voting.Vote
                      Peras.Voting.Arbitraries
+                     Peras.Voting.Vote
     other-modules:   Peras.Abstract.Protocol.BytesModulo
     build-depends:    QuickCheck,
                       aeson,

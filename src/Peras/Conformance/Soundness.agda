@@ -1,5 +1,5 @@
 
-module Peras.Abstract.Protocol.Conformance.Soundness where
+module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
@@ -20,8 +20,8 @@ open import Prelude.AssocList
 open import Prelude.DecEq using (DecEq)
 import Peras.SmallStep as SmallStep
 
-open import Peras.Abstract.Protocol.Params
-open import Peras.Abstract.Protocol.Conformance.Model
+open import Peras.Conformance.Model
+open import Peras.Conformance.Params
 
 -- TODO: ProofPrelude
 eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m

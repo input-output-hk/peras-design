@@ -12,7 +12,7 @@ open import Function.Base using (_∘_)
 open import Haskell.Prelude using (Eq; Ord; ordFromCompare; compare; _==_;  cong)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Nullary using (¬_; yes; no)
-open import Peras.Abstract.Protocol.Params
+open import Peras.Conformance.Params
 open import Peras.Util
 
 {-# FOREIGN AGDA2HS

@@ -2,17 +2,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.Params where
+module Peras.Conformance.Params where
 
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import Data.Default (Default (..))
 import GHC.Generics (Generic)
 
-data PerasParams = MkPerasParams{perasU :: Integer,
-                                 perasA :: Integer, perasR :: Integer, perasK :: Integer,
-                                 perasL :: Integer, perasτ :: Integer, perasB :: Integer,
-                                 perasT :: Integer, perasΔ :: Integer}
+data PerasParams = MkPerasParams
+  { perasU :: Integer
+  , perasA :: Integer
+  , perasR :: Integer
+  , perasK :: Integer
+  , perasL :: Integer
+  , perasτ :: Integer
+  , perasB :: Integer
+  , perasT :: Integer
+  , perasΔ :: Integer
+  }
   deriving (Eq, Generic, Show)
 
 defaultPerasParams :: PerasParams
@@ -50,4 +57,3 @@ instance ToJSON PerasParams where
 -- For now I am assuming they all are in the order of security parameter, eg. 2160 on mainnet.
 instance Default PerasParams where
   def = defaultPerasParams
-

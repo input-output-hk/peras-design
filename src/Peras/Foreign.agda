@@ -1,17 +1,17 @@
-module Peras.Abstract.Protocol.Crypto.Foreign where
+module Peras.Foreign where
 
 open import Haskell.Prelude
 open import Peras.Block
 open import Peras.Chain
+open import Peras.Conformance.Params
 open import Peras.Crypto
 open import Peras.Numbering
-open import Peras.Abstract.Protocol.Params
 
 
 {-# FOREIGN AGDA2HS
   import Data.Functor.Identity ( Identity(runIdentity) )
   import Peras.Abstract.Protocol.Types (PerasResult)
-  import Peras.Abstract.Protocol.Params ( PerasParams )
+  import Peras.Conformance.Params ( PerasParams )
   import Peras.Block ( Block, Certificate, Party, PartyId, Payload )
   import Peras.Chain ( Vote, VotingWeight )
   import Peras.Crypto ( Hash, LeadershipProof, MembershipProof, Signature )

@@ -1,18 +1,18 @@
 
-module Peras.Abstract.Protocol.Conformance.Model where
+module Peras.Conformance.Model where
 
 open import Haskell.Prelude
 open import Haskell.Control.Monad
 open import Agda.Builtin.Maybe hiding (Maybe)
 open import Data.Nat using (ℕ; _/_; _%_; NonZero)
-open import Peras.SmallStep
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
+open import Peras.Conformance.Params
 open import Peras.Crypto
+open import Peras.Foreign
 open import Peras.Numbering
+open import Peras.SmallStep
 open import Peras.Util
-open import Peras.Abstract.Protocol.Params
-open import Peras.Abstract.Protocol.Crypto.Foreign
 open import Protocol.Peras using ()
 
 {-# FOREIGN AGDA2HS

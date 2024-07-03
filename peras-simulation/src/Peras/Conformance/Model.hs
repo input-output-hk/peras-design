@@ -2,15 +2,15 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 
-module Peras.Abstract.Protocol.Conformance.Model where
+module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
-import Peras.Abstract.Protocol.Crypto.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
-import Peras.Abstract.Protocol.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Block (Block (MkBlock), Certificate (MkCertificate, blockRef, round), PartyId)
 import Peras.Chain (Chain, Vote (blockHash, votingRound))
+import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
+import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
 import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
 import qualified Prelude ((/=))

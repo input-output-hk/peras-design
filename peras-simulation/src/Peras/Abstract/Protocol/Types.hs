@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.Types
-  ( module Peras.Abstract.Protocol.Types
-  , module Peras.Abstract.Protocol.Params
-  ) where
+module Peras.Abstract.Protocol.Types (
+  module Peras.Abstract.Protocol.Types,
+  module Peras.Conformance.Params,
+) where
 
 import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Aeson (FromJSON, ToJSON)
@@ -17,10 +17,10 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
 import Peras.Chain (Chain, Vote)
+import Peras.Conformance.Params
 import Peras.Crypto (Hash (MkHash), LeadershipProof, MembershipProof, hash)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
-import Peras.Abstract.Protocol.Params
 
 -- FIXME: Should this included read-only items such as the `Party` and `PerasParams`?
 data PerasState = MkPerasState

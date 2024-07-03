@@ -1,5 +1,5 @@
 
-module Peras.Abstract.Protocol.Params where
+module Peras.Conformance.Params where
 
 open import Data.Nat
 

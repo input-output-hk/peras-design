@@ -2,7 +2,7 @@
 
 module Peras.Numbering where
 
-import Peras.Abstract.Protocol.Params (PerasParams (perasU))
+import Peras.Conformance.Params (PerasParams (perasU))
 
 import GHC.Generics (Generic)
 
