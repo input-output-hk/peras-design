@@ -5,13 +5,15 @@ module Peras.Numbering where
 <!--
 ```agda
 open import Agda.Builtin.FromNat
-open import Data.Nat using (ℕ; pred; suc; _∸_; _*_)
+open import Data.Nat using (ℕ; pred; suc; _+_; _∸_; _*_; _/_; _%_; NonZero)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Unit using (⊤)
 open import Function.Base using (_∘_)
 open import Haskell.Prelude using (Eq; Ord; ordFromCompare; compare; _==_;  cong)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Nullary using (¬_; yes; no)
+open import Peras.Abstract.Protocol.Params
+open import Peras.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -96,6 +98,14 @@ newtype RoundNumber = MkRoundNumber {getRoundNumber :: Integer}
 #-}
 
 {-# COMPILE GHC RoundNumber = data G.RoundNumber (G.MkRoundNumber) #-}
+
+private
+  div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+  div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
+
+private
+  mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+  mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 ```
 -->
 
@@ -110,4 +120,25 @@ _≟-RoundNumber_ : DecidableEquality RoundNumber
 ```agda
 roundToSlot : ℕ → RoundNumber → SlotNumber
 roundToSlot T (MkRoundNumber r) = MkSlotNumber (r * T)
+
+slotToRound : PerasParams → SlotNumber → RoundNumber
+slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol))
+
+slotInRound : PerasParams → SlotNumber → SlotNumber
+slotInRound protocol slot = MkSlotNumber (mod (getSlotNumber slot) (perasU protocol))
+
+nextSlot : SlotNumber → SlotNumber
+nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
+
+nextRound : RoundNumber → RoundNumber
+nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
 ```
+
+<!--
+```agda
+{-# COMPILE AGDA2HS slotToRound #-}
+{-# COMPILE AGDA2HS slotInRound #-}
+{-# COMPILE AGDA2HS nextSlot #-}
+{-# COMPILE AGDA2HS nextRound #-}
+```
+-->

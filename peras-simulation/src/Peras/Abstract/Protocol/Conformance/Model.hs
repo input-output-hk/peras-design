@@ -10,7 +10,7 @@ import Peras.Abstract.Protocol.Params (PerasParams (MkPerasParams, perasA, peras
 import Peras.Block (Block (MkBlock), Certificate (MkCertificate, blockRef, round), PartyId)
 import Peras.Chain (Chain, Vote (blockHash, votingRound))
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
-import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
+import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
 import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
 import qualified Prelude ((/=))
 
@@ -19,10 +19,12 @@ import Data.Function (on)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedCertificate, createSignedVote, mkCommitteeMember, mkParty)
-import Peras.Abstract.Protocol.Fetching (findNewQuora)
 import Peras.Block (blockRef, certificate)
 import Peras.Crypto (hash)
 import Prelude hiding (round)
+
+intToInteger :: Int -> Integer
+intToInteger = fromIntegral
 
 data NodeModel = NodeModel
   { clock :: SlotNumber
@@ -69,20 +71,6 @@ initialModelState =
 
 sutId :: PartyId
 sutId = 1
-
-slotToRound :: PerasParams -> SlotNumber -> RoundNumber
-slotToRound protocol (MkSlotNumber n) =
-  MkRoundNumber (div n (perasU protocol))
-
-slotInRound :: PerasParams -> SlotNumber -> SlotNumber
-slotInRound protocol slot =
-  MkSlotNumber (mod (getSlotNumber slot) (perasU protocol))
-
-nextSlot :: SlotNumber -> SlotNumber
-nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
-
-nextRound :: RoundNumber -> RoundNumber
-nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
 
 insertCert :: Certificate -> [Certificate] -> [Certificate]
 insertCert cert [] = [cert]
@@ -199,7 +187,7 @@ newQuora quorum priorCerts (vote : votes) =
         )
         priorCerts
     )
-    && fromIntegral
+    && intToInteger
       ( length
           ( filter
               ( \vote' ->

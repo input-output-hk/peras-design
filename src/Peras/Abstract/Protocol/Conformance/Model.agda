@@ -35,12 +35,6 @@ open import Protocol.Peras using ()
 
 -- Work around `agda2hs` limitations.
 
-div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
-div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
-
-mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
-mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
-
 certificate : Block → Maybe Certificate
 certificate record{certificate = just c}  = Just c
 certificate record{certificate = nothing} = Nothing
@@ -104,26 +98,6 @@ sutId : PartyId
 sutId = 1
 
 {-# COMPILE AGDA2HS sutId #-}
-
-slotToRound : PerasParams → SlotNumber → RoundNumber
-slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol))
-
-{-# COMPILE AGDA2HS slotToRound #-}
-
-slotInRound : PerasParams → SlotNumber → SlotNumber
-slotInRound protocol slot = MkSlotNumber (mod (getSlotNumber slot) (perasU protocol))
-
-{-# COMPILE AGDA2HS slotInRound #-}
-
-nextSlot : SlotNumber → SlotNumber
-nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
-
-{-# COMPILE AGDA2HS nextSlot #-}
-
-nextRound : RoundNumber → RoundNumber
-nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
-
-{-# COMPILE AGDA2HS nextRound #-}
 
 insertCert : Certificate → List Certificate → List Certificate
 insertCert cert [] = cert ∷ []
@@ -200,6 +174,10 @@ extends block cert chain =
           ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock block)
 
 {-# COMPILE AGDA2HS extends #-}
+
+private
+  mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+  mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
