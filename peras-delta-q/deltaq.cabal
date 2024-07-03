@@ -25,6 +25,7 @@ library
                     , data-default
                     , ieee754
                     , haskell-fft
+                    , hmatrix
                     , lens
                     , mtl
                     , mwc-random
