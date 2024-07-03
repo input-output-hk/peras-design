@@ -6,7 +6,7 @@ module Peras.ChainSpec where
 import Data.Data (Proxy (..))
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), PartyId, Tx)
-import Peras.Chain (Chain (..), commonPrefix, prefix)
+import Peras.Chain (Chain, commonPrefix, prefix)
 import Peras.Crypto (Hash (..), LeadershipProof, MembershipProof)
 import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()

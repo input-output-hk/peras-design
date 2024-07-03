@@ -21,7 +21,7 @@ custom-setup
 
 
 common warnings
-    ghc-options: -Wall -Wunused-packages
+    ghc-options: -Wall -Wunused-packages -Werror
                  -fno-warn-missing-pattern-synonym-signatures
                  -fno-warn-missing-signatures
                  -fno-warn-name-shadowing
@@ -56,6 +56,7 @@ library
                      Peras.Message
                      Peras.Numbering
                      Peras.Orphans
+                     Peras.Util
                      -- details of voting
                      Peras.Voting.Vote
                      Peras.Voting.Arbitraries
