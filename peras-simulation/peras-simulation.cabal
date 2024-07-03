@@ -33,6 +33,7 @@ library
     import:           warnings
     exposed-modules: Peras.Abstract.Protocol.BlockCreation
                      Peras.Abstract.Protocol.Crypto
+                     Peras.Abstract.Protocol.Crypto.Foreign
                      Peras.Abstract.Protocol.Conformance.Model
                      Peras.Abstract.Protocol.Conformance.Test
                      Peras.Abstract.Protocol.Diffusion

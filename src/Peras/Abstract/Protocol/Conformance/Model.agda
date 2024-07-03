@@ -12,23 +12,23 @@ open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Util
 open import Peras.Abstract.Protocol.Params
+open import Peras.Abstract.Protocol.Crypto.Foreign
 open import Protocol.Peras using ()
 
 {-# FOREIGN AGDA2HS
   {-# LANGUAGE RecordWildCards #-}
   {-# LANGUAGE NamedFieldPuns #-}
   {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
-#-}
 
-{-# FOREIGN AGDA2HS
   import Prelude hiding (round)
   import Control.Monad.Identity
   import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
+  import Peras.Orphans ()
   import Data.Function (on)
   import qualified Data.Set as Set
   import Data.Set (Set)
-  import Peras.Abstract.Protocol.Crypto (mkCommitteeMember, createMembershipProof, createSignedVote, mkParty, createSignedCertificate)
+
   intToInteger :: Int -> Integer
   intToInteger = fromIntegral
 #-}
@@ -143,18 +143,14 @@ preferredChain params certs =
 
 {-# COMPILE AGDA2HS preferredChain #-}
 
-postulate
-  makeVote : PerasParams → SlotNumber → Block → Maybe Vote
+makeVote : PerasParams → SlotNumber → Block → Vote
+makeVote params slot block =
+  let r = slotToRound params slot
+      party = mkParty 1 [] (r ∷ [])
+      proof = createMembershipProof r (party ∷ [])
+  in createSignedVote party r (Hashable.hash hashBlock block) proof 1
 
-{-# FOREIGN AGDA2HS
-makeVote :: PerasParams -> SlotNumber -> Block -> Maybe Vote
-makeVote protocol@MkPerasParams{perasT} slot block = do
-  let r = slotToRound protocol slot
-      party = mkCommitteeMember (mkParty 1 mempty [0..10000]) protocol (slot - fromIntegral perasT) True
-  Right proof <- createMembershipProof r (Set.singleton party)
-  Right vote  <- createSignedVote party r (hash block) proof 1
-  pure vote
-#-}
+{-# COMPILE AGDA2HS makeVote #-}
 
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} =
@@ -187,7 +183,7 @@ makeVote' s = do
       vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
       vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
   guard (vr1A && vr1B || vr2A && vr2B)
-  makeVote params slot block
+  pure $ makeVote params slot block
   where
     params = protocol s
     slot   = clock s
@@ -237,11 +233,6 @@ newQuora quorum priorCerts (vote ∷ votes) =
 postulate
   checkVoteSignature : Vote → Bool
 
-{-# FOREIGN AGDA2HS
-checkVoteSignature :: Vote -> Bool
-checkVoteSignature _ = True -- TODO: could do actual crypto here
-#-}
-
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
@@ -257,7 +248,7 @@ transition s (NewChain chain) =
              })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
-  guard (checkVoteSignature v)
+  guard (checkSignedVote v)
   checkVotingRules <- makeVote'' s
   guard (checkVotingRules)
   Just ([] , record s { allVotes = v ∷ allVotes s })

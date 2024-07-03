@@ -27,13 +27,13 @@ data Block = MkBlock
   , certificate :: Maybe Certificate
   , leadershipProof :: LeadershipProof
   , signature :: Signature
-  , bodyHash :: Hash [Tx]
+  , bodyHash :: Hash Payload
   }
   deriving (Generic)
 
 data BlockBody = MkBlockBody
-  { blockHash :: Hash [Tx]
-  , payload :: [Tx]
+  { blockHash :: Hash Payload
+  , payload :: Payload
   }
   deriving (Generic)
 
@@ -42,6 +42,8 @@ data Certificate = MkCertificate
   , blockRef :: Hash Block
   }
   deriving (Generic)
+
+type Payload = [Tx]
 
 instance Eq Certificate where
   x == y = round x == round y && blockRef x == blockRef y

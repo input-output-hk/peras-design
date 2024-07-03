@@ -139,6 +139,8 @@ record Block : Set
 record BlockBody : Set
 record Certificate : Set
 
+Payload = List Tx
+
 record Certificate where
   constructor MkCertificate
   field round : RoundNumber
@@ -160,7 +162,7 @@ record Block where
         certificate : Maybe Certificate
         leadershipProof : LeadershipProof
         signature : Signature
-        bodyHash : Hash (List Tx)
+        bodyHash : Hash Payload
 
   slotNumber' : ℕ
   slotNumber' = getSlotNumber slotNumber
@@ -174,8 +176,8 @@ _≟-BlockHash_ : DecidableEquality (Hash Block)
 
 record BlockBody where
   constructor MkBlockBody
-  field blockHash : Hash (List Tx)
-        payload : List Tx
+  field blockHash : Hash Payload
+        payload : Payload
 
 open BlockBody public
 ```
@@ -189,6 +191,7 @@ data HonestBlock : Block → Set where
 ```
 <!--
 ```agda
+{-# COMPILE AGDA2HS Payload #-}
 {-# COMPILE AGDA2HS Block deriving (Generic) #-}
 {-# COMPILE GHC Block = data G.Block (G.MkBlock) #-}
 {-# COMPILE AGDA2HS BlockBody deriving (Generic) #-}
