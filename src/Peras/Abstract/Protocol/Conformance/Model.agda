@@ -15,9 +15,9 @@ open import Peras.Abstract.Protocol.Params
 open import Protocol.Peras using ()
 
 {-# FOREIGN AGDA2HS
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
+  {-# LANGUAGE RecordWildCards #-}
+  {-# LANGUAGE NamedFieldPuns #-}
+  {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 #-}
 
 {-# FOREIGN AGDA2HS
@@ -30,7 +30,6 @@ open import Protocol.Peras using ()
   import qualified Data.Set as Set
   import Data.Set (Set)
   import Peras.Abstract.Protocol.Crypto (mkCommitteeMember, createMembershipProof, createSignedVote, mkParty, createSignedCertificate)
-  import Peras.Abstract.Protocol.Voting (extends)
   import Peras.Abstract.Protocol.Fetching (findNewQuora)
 #-}
 
@@ -74,24 +73,29 @@ record NodeModel : Set where
     allSeenCerts     : List Certificate
 
 open NodeModel public
+
 {-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
 
 data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
+
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
 genesisHash : Hash Block
 genesisHash = MkHash emptyBS
+
 {-# COMPILE AGDA2HS genesisHash #-}
 
 genesisChain : Chain
 genesisChain = []
+
 {-# COMPILE AGDA2HS genesisChain #-}
 
 genesisCert : Certificate
 genesisCert = MkCertificate 0 genesisHash
+
 {-# COMPILE AGDA2HS genesisCert #-}
 
 initialModelState : NodeModel
@@ -110,26 +114,32 @@ initialModelState = record
   ; allVotes         = []
   ; allSeenCerts     = genesisCert ∷ []
   }
+
 {-# COMPILE AGDA2HS initialModelState #-}
 
 sutId : PartyId
 sutId = 1
+
 {-# COMPILE AGDA2HS sutId #-}
 
 slotToRound : PerasParams → SlotNumber → RoundNumber
 slotToRound protocol (MkSlotNumber n) = MkRoundNumber (div n (perasU protocol))
+
 {-# COMPILE AGDA2HS slotToRound #-}
 
 slotInRound : PerasParams → SlotNumber → SlotNumber
 slotInRound protocol slot = MkSlotNumber (mod (getSlotNumber slot) (perasU protocol))
+
 {-# COMPILE AGDA2HS slotInRound #-}
 
 nextSlot : SlotNumber → SlotNumber
 nextSlot (MkSlotNumber n) = MkSlotNumber (1 + n)
+
 {-# COMPILE AGDA2HS nextSlot #-}
 
 nextRound : RoundNumber → RoundNumber
 nextRound (MkRoundNumber n) = MkRoundNumber (1 + n)
+
 {-# COMPILE AGDA2HS nextRound #-}
 
 insertCert : Certificate → List Certificate → List Certificate
@@ -138,13 +148,16 @@ insertCert cert (cert' ∷ certs) =
   if cert == cert'
   then cert' ∷ certs
   else cert' ∷ insertCert cert certs
+
 {-# COMPILE AGDA2HS insertCert #-}
 
 seenBeforeStartOfRound : PerasParams → RoundNumber → Certificate × SlotNumber → Bool
 seenBeforeStartOfRound params r (c , s) =
   getSlotNumber s <= getRoundNumber r * perasU params
+
 {-# COMPILE AGDA2HS seenBeforeStartOfRound #-}
 
+-- FIXME: Relocate this.
 instance
     hashBlock : Hashable Block
     hashBlock = record
@@ -188,11 +201,21 @@ makeVote protocol@MkPerasParams{perasT} slot block = do
 
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
+
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
-postulate
-  -- TODO: we need to implement this on the Agda side for the proofs
-  extends : Block → Certificate → List Chain → Bool
+extends : Block → Certificate → List Chain → Bool
+extends block cert chain =
+  if cert == genesisCert
+    then True
+    else any chainExtends chain
+    where
+      chainExtends : Chain → Bool
+      chainExtends =
+        any (λ block → Hashable.hash hashBlock block == blockRef cert)
+          ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock block)
+
+{-# COMPILE AGDA2HS extends #-}
 
 makeVote'' : NodeModel → Maybe Bool
 makeVote'' s = do
@@ -201,9 +224,7 @@ makeVote'' s = do
       vr1B = extends block cert' (allChains s)
       vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
       vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-
   pure (vr1A && vr1B || vr2A && vr2B)
-
   where
     params = protocol s
     slot   = clock s
@@ -213,6 +234,7 @@ makeVote'' s = do
 
     cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
     certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+
 {-# COMPILE AGDA2HS makeVote'' #-}
 
 makeVote' : NodeModel → Maybe Vote
@@ -222,19 +244,16 @@ makeVote' s = do
       vr1B = extends block cert' (allChains s)
       vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
       vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-
   guard (vr1A && vr1B || vr2A && vr2B)
   makeVote params slot block
-
   where
     params = protocol s
     slot   = clock s
     r      = slotToRound params slot
-
     pref = preferredChain params (allSeenCerts s) (allChains s)
-
     cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
     certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+
 {-# COMPILE AGDA2HS makeVote' #-}
 
 votesInState : NodeModel → List Vote
@@ -250,6 +269,7 @@ votesInState s = maybeToList do
 postulate
   -- TODO: this need to be in Agda for the proofs
   newQuora : ℕ → List Certificate → List Vote → List Certificate
+
 {-# FOREIGN AGDA2HS
 newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
 newQuora quorum priorCerts votes = newCerts
@@ -261,6 +281,7 @@ newQuora quorum priorCerts votes = newCerts
 
 postulate
   checkVoteSignature : Vote → Bool
+
 {-# FOREIGN AGDA2HS
 checkVoteSignature :: Vote -> Bool
 checkVoteSignature _ = True -- TODO: could do actual crypto here
@@ -284,6 +305,6 @@ transition s (NewVote v) = do
   guard (checkVoteSignature v)
   checkVotingRules <- makeVote'' s
   guard (checkVotingRules)
-
   Just ([] , record s { allVotes = v ∷ allVotes s })
+
 {-# COMPILE AGDA2HS transition #-}

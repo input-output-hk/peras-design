@@ -12,6 +12,7 @@ import Peras.Chain (Chain, Vote)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
 import Peras.Util (comparing, maximumBy)
+import qualified Prelude ((/=))
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -20,7 +21,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedCertificate, createSignedVote, mkCommitteeMember, mkParty)
 import Peras.Abstract.Protocol.Fetching (findNewQuora)
-import Peras.Abstract.Protocol.Voting (extends)
 import Peras.Block (blockRef, certificate)
 import Peras.Crypto (hash)
 import Prelude hiding (round)
@@ -128,6 +128,15 @@ blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
 blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
   getSlotNumber slot + perasL params + perasT params
     <= getSlotNumber clock
+
+extends :: Block -> Certificate -> [Chain] -> Bool
+extends block cert chain =
+  if cert == genesisCert then True else any chainExtends chain
+ where
+  chainExtends :: Chain -> Bool
+  chainExtends =
+    any (\block -> hash block == blockRef cert)
+      . dropWhile (\block' -> (Prelude./=) (hash block') (hash block))
 
 makeVote'' :: NodeModel -> Maybe Bool
 makeVote'' s =
