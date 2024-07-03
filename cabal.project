@@ -15,7 +15,6 @@ index-state:
   , cardano-haskell-packages 2024-05-29T10:15:00Z
 
 packages:
-  peras-hs
   peras-simulation
   peras-markov
   peras-server
