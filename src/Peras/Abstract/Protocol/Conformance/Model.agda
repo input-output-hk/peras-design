@@ -152,7 +152,7 @@ chainWeight : Nat → List Certificate -> Chain → Nat
 chainWeight boost certs = chainWeight' 0
   where
     isCertified : Block → Bool
-    isCertified block = filter (λ cert → Hashable.hash hashBlock block == blockRef cert) certs == []
+    isCertified block = any (λ cert → Hashable.hash hashBlock block == blockRef cert) certs
     chainWeight' : Nat → List Block → Nat
     chainWeight' accum [] = accum
     chainWeight' accum (block ∷ blocks) =

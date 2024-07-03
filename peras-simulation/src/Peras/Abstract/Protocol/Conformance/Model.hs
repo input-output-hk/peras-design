@@ -101,7 +101,7 @@ chainWeight boost certs = chainWeight' 0
  where
   isCertified :: Block -> Bool
   isCertified block =
-    filter (\cert -> hash block == blockRef cert) certs == []
+    any (\cert -> hash block == blockRef cert) certs
   chainWeight' :: Natural -> [Block] -> Natural
   chainWeight' accum [] = accum
   chainWeight' accum (block : blocks) =
