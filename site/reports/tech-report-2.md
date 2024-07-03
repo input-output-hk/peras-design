@@ -32,6 +32,10 @@ monofont: Monaco
 > - Made chain-preference deterministic.
 > - Sequenced operations.
 
+> [!IMPORTANT]
+> Do we want to provide a detailed description of the protocol here?
+> Seems to me we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
+
 ## Variables
 
 The protocol keeps track of the following variables, initialized to the values below:
@@ -101,19 +105,94 @@ This section details the Peras voting process, from the casting and detailed str
 
 ## Votes
 
-### Algorithms
+### Overview
 
 Voting in Peras is mimicked after the _sortition_ algorithm used in Praos, e.g it is based on the use of a _Verifiable Random Function_ by each stake-pool operator guaranteeing the following properties:
 
 * The probability for each voter to cast their vote in a given round is correlated to their share of total stake,
 * It should be computationally impossible to predict a given SPO's schedule without access to their secret key VRF key,
 * Verification of a voter's right to vote in a round should be efficiently computable,
-* Vote should be unique and non-malleable (this is a requirement for the use of efficient certificates aggregation, see [below](#alba-certificates)),
-* Voting should require minimal additional configuration (ie. key management) for SPOs.
+* Vote should be unique and non-malleable (this is a requirement for the use of efficient certificates aggregation, see [below](#alba-certificates)).
 
-Here is
+Additionally we would like the following property to be provided by our voting scheme:
+
+* Voting should require minimal additional configuration (ie. key management) for SPOs,
+* Voting and certificates construction should be fast in order to ensure we do not interfere with other operations happening in the node.
+
+We have experimented with two different algorithms for voting, which we detail below.
+
+### Structure of votes
+
+We have used an identical structure for single `Vote`s, for both algorithms. We define this structure as a CDDL grammar, inspired by the [block header](https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/eras/conway/impl/cddl-files/conway.cddl#L27) definition from cardano-ledger:
+
+```cddl
+vote =
+  [ voter_id         : hash32
+  , voting_round     : round_no
+  , block_hash       : hash32
+  , voting_proof     : vrf_cert
+  , voting_weight    : voting_weight
+  , kes_period       : kes_period
+  , kes_vkey         : kes_vkey
+  , kes_signature    : kes_signature
+  ]
+```
+
+This definition relies on the following primitive types (drawn from Ledger definitions in [crypto.cddl](https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/eras/conway/impl/cddl-files/crypto.cddl#L1))
+
+```cddl
+round_no = uint .size 8
+voting_weight = uint .size 8
+vrf_cert = [bytes, bytes .size 80]
+hash32 = bytes .size 32
+kes_vkey = bytes .size 32
+kes_signature = bytes .size 448
+kes_period = uint .size 8
+```
+
+As already mentioned, `Vote` mimicks the block header's structure which allows Cardano nodes to reuse their existing VRF and KES keys. Some additional notes:
+
+* Total vote size is **710 bytes** with the above definition,
+* Unless explicitly mentioned, `hash` function exclusively uses 32-bytes Blake2b-256 hashes,
+* The `voter_id` is it's pool identifier, ie. the hash of the node's cold key.
+
+#### Casting vote
+
+A vote is _cast_ by a node using the following process which paraphrases the [actual code](https://github.com/input-output-hk/peras-design/blob/4ab6fad30b1f8c9d83e5dfb2bd6f0fe235e1395c/peras-vote/src/Peras/Voting/Vote.hs#L293)
+
+1. Define _nonce_ as the hash of the _epoch nonce_ concatenated to the `peras` string and the round number voted for encoded as 64-bits big endian value,
+2. Generate a _VRF Certificate_ using the node's VRF key from this `nonce`,
+3. Use the node's KES key with current KES period to sign the VRF certificate concatenated to the _block hash_ the node is voting for,
+4. Compute _voting weight_ from the VRF certificate using _sortition_ algorithm (see details below).
+
+#### Verifying vote
+
+Vote verification requires access to the current epoch's _stake distribution_ and _stake pool registration_ information.
+
+1. Lookup the `voter_id` in the stake distribution and registration map to retrieve their current stake and VRF verification key,
+2. Compute the _nonce_ (see above),
+3. Verify VRF certificate matches nonce and verification key,
+4. Verify KES signature,
+5. Verify provided KES verification key based on stake pool's registered cold verification key and KES period,
+6. Verify provided _voting weight_ according to voting algorithm.
+
+### Leader-election like voting
+
+The first algorithm is basically identical to the one used for [Mithril](https://mithril.network) signatures, and is also the one envisioned for [Leios](https://leios.cardano-scaling.org) (see Appendix D of the paper). It's based on the following principles:
+
+* The goal of the algorithm is to produce a number of votes targeting a certain threshold such that each voter receives a number of vote proportionate to $\sigma$, their fraction of total stake, according to the basic probability function $\phi(\sigma) = 1 - (1 - f)^\sigma$,
+* There are various parameters to the algorithm:
+  * $f$ is the fraction of slots that are "active" for voting
+  * $m$ is the number of _lottery_ each voter should try to get a vote for,
+  * $k$ is the target total number of votes for each round (eg. quorum). $k$ is usually  chosen such that $k = m \dot \phi(0.5)$,
+
+### Sortition-like voting
+
 
 ## ALBA Certificates
+
+> [!WARNING]
+> It's unclear whether or not KES signatures are [non malleable]() which is a requirement
 
 * [ALBAs](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) appears to provide a good basis for Peras certificates
 * The [Prototype implementation in Haskell](https://github.com/cardano-scaling/alba) provides some evidence this construction could be feasible in the context of Peras
