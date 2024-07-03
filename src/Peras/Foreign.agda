@@ -10,15 +10,15 @@ open import Peras.Numbering
 
 {-# FOREIGN AGDA2HS
   import Data.Functor.Identity ( Identity(runIdentity) )
-  import Peras.Abstract.Protocol.Types (PerasResult)
-  import Peras.Conformance.Params ( PerasParams )
   import Peras.Block ( Block, Certificate, Party, PartyId, Payload )
   import Peras.Chain ( Vote, VotingWeight )
+  import Peras.Conformance.Params ( PerasParams )
   import Peras.Crypto ( Hash, LeadershipProof, MembershipProof, Signature )
   import Peras.Numbering ( RoundNumber, SlotNumber )
+  import Peras.Prototype.Types (PerasResult)
   import qualified Data.Set as Set (fromList)
   import qualified Data.Hashable as H (Hashable (..))
-  import qualified Peras.Abstract.Protocol.Crypto as C
+  import qualified Peras.Prototype.Crypto as C
 #-}
 
 IsSlotLeader = Bool
