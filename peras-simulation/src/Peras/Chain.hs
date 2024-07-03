@@ -2,11 +2,14 @@
 
 module Peras.Chain where
 
+import Numeric.Natural (Natural)
 import Peras.Block (Block, PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
 import Peras.Numbering (RoundNumber)
 
 import GHC.Generics (Generic)
+
+type VotingWeight = Natural
 
 data Vote = MkVote
   { votingRound :: RoundNumber

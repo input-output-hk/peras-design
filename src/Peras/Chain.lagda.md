@@ -45,6 +45,9 @@ import qualified Peras.Chain as G
 ### Vote
 
 ```agda
+
+VotingWeight = ℕ
+
 record Vote : Set where
   constructor MkVote
   field votingRound : RoundNumber
@@ -69,6 +72,7 @@ instance
 
 <!--
 ```agda
+{-# COMPILE AGDA2HS VotingWeight #-}
 {-# COMPILE AGDA2HS Vote deriving (Generic) #-}
 {-# COMPILE GHC Vote = data G.Vote (G.MkVote) #-}
 {-# COMPILE AGDA2HS iVoteEq #-}

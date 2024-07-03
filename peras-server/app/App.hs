@@ -14,10 +14,10 @@ import qualified Data.Yaml as Y (decodeFileEither)
 import GHC.Generics (Generic)
 import qualified Options.Applicative as O
 import Paths_peras_server (version)
-import Peras.Abstract.Protocol.Network (SimControl (delay, pause, stop), simulate)
-import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
-import Peras.Abstract.Protocol.Types (PerasParams (..))
-import Peras.Abstract.Protocol.Visualizer (makeVisTracer)
+import Peras.Prototype.Network (SimControl (delay, pause, stop), simulate)
+import Peras.Prototype.Network.Arbitrary (genSimConfigIO)
+import Peras.Prototype.Types (PerasParams (..))
+import Peras.Prototype.Visualizer (makeVisTracer)
 import System.Exit (die)
 
 data AppControl = Simulate

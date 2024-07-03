@@ -16,9 +16,9 @@ import Data.Functor (void)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
-import Peras.Abstract.Protocol.Network (SimControl (delay, pause, stop), simulate)
-import Peras.Abstract.Protocol.Network.Arbitrary (genSimConfigIO)
-import Peras.Abstract.Protocol.Types (PerasParams (..))
+import Peras.Prototype.Network (SimControl (delay, pause, stop), simulate)
+import Peras.Prototype.Network.Arbitrary (genSimConfigIO)
+import Peras.Prototype.Types (PerasParams (..))
 
 data AppControl
   = Simulate

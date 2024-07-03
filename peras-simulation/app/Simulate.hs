@@ -8,10 +8,10 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import Data.Default (def)
 import Data.Version (showVersion)
 import Paths_peras_simulation (version)
-import Peras.Abstract.Protocol.Environment (mkSimpleScenario)
-import Peras.Abstract.Protocol.Network (simulate, simulateNetwork)
-import Peras.Abstract.Protocol.Trace (perasTracer)
-import Peras.Abstract.Protocol.Visualizer (makeVisTracer)
+import Peras.Prototype.Environment (mkSimpleScenario)
+import Peras.Prototype.Network (simulate, simulateNetwork)
+import Peras.Prototype.Trace (perasTracer)
+import Peras.Prototype.Visualizer (makeVisTracer)
 import System.Exit (die)
 
 import qualified Data.Yaml as Y
