@@ -2,7 +2,7 @@
 
 module Peras.OrphansSpec where
 
-import Paths_peras_hs (getDataDir)
+import Paths_peras_simulation (getDataDir)
 import Peras.Arbitraries ()
 import Peras.Block (Block)
 import Peras.Chain (Chain)

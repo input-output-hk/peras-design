@@ -28,6 +28,8 @@ eqBS :: ByteString -> ByteString -> Bool
 eqBS = (==)
 replicateBS :: Int -> Word8 -> ByteString
 replicateBS = BS.replicate
+emptyBS :: ByteString
+emptyBS = mempty
 #-}
 
 {-# FOREIGN GHC

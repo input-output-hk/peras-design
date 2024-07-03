@@ -7,6 +7,11 @@ author:             Arnaud Bailly
 maintainer:         arnaud.bailly@iohk.io
 category:           Testing
 build-type:         Simple
+extra-source-files: ReadMe.md
+extra-doc-files:    CHANGELOG.md
+data-dir:           golden
+data-files:         *.json
+
 custom-setup
   setup-depends: base
                , directory
@@ -14,10 +19,15 @@ custom-setup
                , process
                , Cabal
 
-extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall -Wunused-packages
+    ghc-options: -Wall -Wunused-packages -Werror
+                 -fno-warn-missing-pattern-synonym-signatures
+                 -fno-warn-missing-signatures
+                 -fno-warn-name-shadowing
+                 -fno-warn-type-defaults
+                 -fno-warn-unused-imports
+                 -fno-warn-unused-matches
 
 library
     import:           warnings
@@ -38,6 +48,15 @@ library
                      Peras.Abstract.Protocol.Types
                      Peras.Abstract.Protocol.Visualizer
                      Peras.Abstract.Protocol.Voting
+                     Peras.Arbitraries
+                     Peras.Block
+                     Peras.Chain
+                     Peras.Crypto
+                     Peras.Event
+                     Peras.Message
+                     Peras.Numbering
+                     Peras.Orphans
+                     Peras.Util
                      -- details of voting
                      Peras.Voting.Vote
                      Peras.Voting.Arbitraries
@@ -45,6 +64,7 @@ library
     build-depends:    QuickCheck,
                       aeson,
                       base ^>=4.18.1.0,
+                      base16-bytestring,
                       bytestring,
                       cardano-binary,
                       cardano-crypto-class ^>= 2.1,
@@ -54,18 +74,19 @@ library
                       contra-tracer,
                       data-default,
                       deepseq,
+                      generic-random,
                       hashable,
                       io-classes,
                       io-sim,
                       language-dot,
                       mtl,
---                      non-integral,
-                      peras-hs,
-                      quickcheck-dynamic,
-                      text,
-                      stm,
                       pretty,
-                      statistics
+                      quickcheck-dynamic,
+                      quickcheck-instances,
+                      statistics,
+                      stm,
+                      text,
+                      time,
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -103,6 +124,9 @@ test-suite peras-simulation-test
                    Peras.Abstract.Protocol.Node.ModelSpec
                    Peras.Abstract.Protocol.NodeSpec
                    Peras.Abstract.Protocol.VotingSpec
+                   Peras.ChainSpec
+                   Peras.OrphansSpec
+                   Paths_peras_simulation
                    -- voting
                    Peras.Voting.VoteSpec
     type:             exitcode-stdio-1.0
@@ -116,10 +140,11 @@ test-suite peras-simulation-test
                   , contra-tracer
                   , data-default
                   , hspec
+                  , hspec-golden-aeson
                   , io-classes
                   , mtl
-                  , peras-hs
                   , peras-simulation
+                  , quickcheck-classes
                   , quickcheck-dynamic
     build-tool-depends:
        hspec-discover:hspec-discover
