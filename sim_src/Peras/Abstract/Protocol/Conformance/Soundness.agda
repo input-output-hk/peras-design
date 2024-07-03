@@ -28,7 +28,7 @@ eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _   = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
-module _ ⦃ _ : Hashable Block ⦄
+module _ ⦃ hashBlock : Hashable Block ⦄
          ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
          ⦃ network    : Network ⦄
@@ -115,6 +115,15 @@ module _ ⦃ _ : Hashable Block ⦄
     suc-definition {zero} = refl
     suc-definition {suc n} = cong suc (suc-definition {n})
 
+    open import Data.Bool using ()
+
+    ≡→T : ∀ {b : Bool} → b ≡ True → Data.Bool.T b
+    ≡→T refl = tt
+
+    T→≡ : ∀ (b : Bool) → Data.Bool.T b → b ≡ True
+    T→≡ True tt   =  refl
+    T→≡ False ()
+
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
@@ -128,10 +137,70 @@ module _ ⦃ _ : Hashable Block ⦄
         rewrite (proj₂ ∃tree)
       = cong getRoundNumber (sym x)
 
+    vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → let
+          m = modelState s p
+          r = slotToRound (protocol m) (clock m)
+--          pref = preferredChain (protocol m) (allSeenCerts m) (allChains m)
+--          block = dropWhile (not ∘ blockOldEnough params slot) pref
+          block = {!!}
+          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
+        in
+          extends block cert' (allChains m) ≡ True
+      → VotingRule-1B {- (v-round (clock m)) -} (proj₁ ∃tree)
+    vr-1b⇒VotingRule-1B = {!!}
+
+    vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → let
+          m = modelState s p
+          r = slotToRound (protocol m) (clock m)
+          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
+        in
+          (getRoundNumber r >= getRoundNumber (round cert') + perasR (protocol m)) ≡ True
+      → VotingRule-2A (v-round (clock m)) (proj₁ ∃tree)
+    vr-2a⇒VotingRule-2A = {!!}
+
+    vr-2b⇒VotingRule-2B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → let
+          m = modelState s p
+          r = slotToRound (protocol m) (clock m)
+          certS = maximumBy cert₀ (comparing round) (allSeenCerts m)
+        in
+          (r > round certS && mod (getRoundNumber r) (perasK (protocol m)) == mod (getRoundNumber (round certS)) (perasK (protocol m))) ≡ True
+      → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
+    vr-2b⇒VotingRule-2B = {!!}
+
+    open import Data.Sum using (inj₁; inj₂)
+
+    postulate
+      hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
+
     makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → makeVote'' (modelState s p) ≡ Just True
       → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
-    makeVote≡True⇒VotingRule s p t ∃tree = {!!}
+    makeVote≡True⇒VotingRule s p ∃tree x
+       with ((nextRound (round (maximumBy genesisCert (comparing round) (allSeenCerts (modelState s p))))) ≟-RoundNumber ((slotToRound (protocol (modelState s p)) (clock (modelState s p))))) in xx
+--       with extends block cert' (allChains s)
+--       with getRoundNumber r >= getRoundNumber (round cert') + perasR params
+--       with r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
+    ... | yes vr-1a rewrite hash-genesis =
+      let VR-1A = vr-1a⇒VotingRule-1A s p ∃tree vr-1a
+          VR-1B = vr-1b⇒VotingRule-1B s p ∃tree {!!}
+          VR-1 = (VR-1A Data.Product., VR-1B)
+      in inj₁ VR-1
+
+
+    {-
+      where
+        params = protocol s
+        slot   = clock s
+        r      = slotToRound params slot
+
+        pref = preferredChain params (allSeenCerts s) (allChains s)
+
+        cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
+        certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+    -}
 
     record Invariant (s : State) : Set where
       field

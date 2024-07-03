@@ -85,7 +85,7 @@ data EnvAction : Set where
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
 genesisHash : Hash Block
-genesisHash = MkHash (replicateBS 8 0)
+genesisHash = MkHash emptyBS
 {-# COMPILE AGDA2HS genesisHash #-}
 
 genesisChain : Chain
