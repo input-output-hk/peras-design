@@ -13,3 +13,4 @@ maximumBy {a} candidate f (x ∷ xs) =
 
 comparing : ⦃ Ord b ⦄ → (a → b) → a → a → Ordering
 comparing f x y = compare (f x) (f y)
+{-# COMPILE AGDA2HS comparing #-}

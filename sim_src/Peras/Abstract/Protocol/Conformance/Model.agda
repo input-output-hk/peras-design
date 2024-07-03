@@ -26,8 +26,6 @@ open import Protocol.Peras using ()
   import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
   import Data.Maybe (catMaybes, listToMaybe, maybeToList)
-  import Data.List (maximumBy)
-  import Data.Ord (comparing)
   import Data.Function (on)
   import qualified Data.Set as Set
   import Data.Set (Set)
@@ -171,7 +169,7 @@ chainWeight boost certs = chainWeight' 0
 
 preferredChain : PerasParams → List Certificate → List Chain → Chain
 preferredChain params certs =
-  maximumBy genesisChain (comparing (chainWeight (perasB params) certs))
+  maximumBy genesisChain (comparing (chainWeight (fromNat (perasB params)) certs))
 
 {-# COMPILE AGDA2HS preferredChain #-}
 

@@ -5,17 +5,17 @@
 module Peras.Abstract.Protocol.Conformance.Model where
 
 import Control.Monad (guard)
+import Numeric.Natural (Natural)
 import Peras.Abstract.Protocol.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
-import Peras.Block (Block (MkBlock), Certificate (MkCertificate, round), PartyId)
-import Peras.Chain (Chain, Vote (creatorId))
-import Peras.Crypto (Hash (MkHash), replicateBS)
+import Peras.Block (Block (MkBlock), Certificate (MkCertificate, blockRef, round), PartyId)
+import Peras.Chain (Chain, Vote)
+import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
+import Peras.Util (comparing, maximumBy)
 
 import Control.Monad.Identity
 import Data.Function (on)
-import Data.List (maximumBy)
 import Data.Maybe (catMaybes, listToMaybe, maybeToList)
-import Data.Ord (comparing)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedCertificate, createSignedVote, mkCommitteeMember, mkParty)
@@ -41,7 +41,7 @@ data EnvAction
   deriving (Eq, Show)
 
 genesisHash :: Hash Block
-genesisHash = MkHash (replicateBS 8 0)
+genesisHash = MkHash emptyBS
 
 genesisChain :: Chain
 genesisChain = []
@@ -61,7 +61,7 @@ initialModelState =
         1
         1
         (perasB defaultPerasParams)
-        1
+        0
         0
     )
     [genesisChain]
@@ -97,21 +97,24 @@ seenBeforeStartOfRound ::
 seenBeforeStartOfRound params r (c, s) =
   getSlotNumber s <= getRoundNumber r * perasU params
 
-preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
-preferredChain MkPerasParams{..} certs chains =
-  maximumBy (compare `on` chainWeight perasB (Set.fromList certs)) (Set.fromList $ genesisChain : chains)
+chainWeight :: Natural -> [Certificate] -> Chain -> Natural
+chainWeight boost certs = chainWeight' 0
+ where
+  isCertified :: Block -> Bool
+  isCertified block =
+    filter (\cert -> hash block == blockRef cert) certs == []
+  chainWeight' :: Natural -> [Block] -> Natural
+  chainWeight' accum [] = accum
+  chainWeight' accum (block : blocks) =
+    if isCertified block
+      then chainWeight' (accum + 1 + boost) blocks
+      else chainWeight' (accum + 1) blocks
 
-chainWeight :: Integer -> Set Certificate -> Chain -> Integer
-chainWeight boost certs blocks =
-  let
-    -- Block hashes certified by any certificate.
-    certifiedBlocks = Set.map blockRef certs :: Set (Hash Block)
-    -- Block hashes on the chain.
-    chainBlocks = Set.fromList $ hash <$> blocks :: Set (Hash Block)
-   in
-    -- Length of the chain plus the boost times the count of certified blocks.
-    fromIntegral (length blocks)
-      + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
+preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
+preferredChain params certs =
+  maximumBy
+    genesisChain
+    (comparing (chainWeight (fromIntegral (perasB params)) certs))
 
 makeVote :: PerasParams -> SlotNumber -> Block -> Maybe Vote
 makeVote protocol@MkPerasParams{perasT} slot block = do
@@ -149,10 +152,15 @@ makeVote'' s =
   pref :: Chain
   pref = preferredChain params (allSeenCerts s) (allChains s)
   cert' :: Certificate
-  cert' = maximumBy (comparing (\r -> round r)) (allSeenCerts s)
+  cert' =
+    maximumBy
+      genesisCert
+      (comparing (\r -> round r))
+      (allSeenCerts s)
   certS :: Certificate
   certS =
     maximumBy
+      genesisCert
       (comparing (\r -> round r))
       (genesisCert : catMaybes (map certificate pref))
 
@@ -180,10 +188,15 @@ makeVote' s =
   pref :: Chain
   pref = preferredChain params (allSeenCerts s) (allChains s)
   cert' :: Certificate
-  cert' = maximumBy (comparing (\r -> round r)) (allSeenCerts s)
+  cert' =
+    maximumBy
+      genesisCert
+      (comparing (\r -> round r))
+      (allSeenCerts s)
   certS :: Certificate
   certS =
     maximumBy
+      genesisCert
       (comparing (\r -> round r))
       (genesisCert : catMaybes (map certificate pref))
 
@@ -255,7 +268,6 @@ transition s (NewVote v) =
     guard (checkVoteSignature v)
     checkVotingRules <- makeVote'' s
     guard checkVotingRules
-    guard (creatorId v == sutId)
     Just
       ( []
       , NodeModel
