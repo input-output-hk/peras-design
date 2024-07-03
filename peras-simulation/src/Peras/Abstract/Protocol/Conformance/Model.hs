@@ -8,7 +8,7 @@ import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Abstract.Protocol.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Block (Block (MkBlock), Certificate (MkCertificate, blockRef, round), PartyId)
-import Peras.Chain (Chain, Vote)
+import Peras.Chain (Chain, Vote (blockHash, votingRound))
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
 import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
@@ -137,41 +137,6 @@ extends block cert chain =
     any (\block -> hash block == blockRef cert)
       . dropWhile (\block' -> (Prelude./=) (hash block') (hash block))
 
-makeVote'' :: NodeModel -> Maybe Bool
-makeVote'' s =
-  do
-    block <-
-      listToMaybe
-        (dropWhile (not . blockOldEnough params slot) pref)
-    pure
-      ( nextRound (round cert') == r && extends block cert' (allChains s)
-          || getRoundNumber r >= getRoundNumber (round cert') + perasR params
-            && r > round certS
-            && mod (getRoundNumber r) (perasK params)
-              == mod (getRoundNumber (round certS)) (perasK params)
-      )
- where
-  params :: PerasParams
-  params = protocol s
-  slot :: SlotNumber
-  slot = clock s
-  r :: RoundNumber
-  r = slotToRound params slot
-  pref :: Chain
-  pref = preferredChain params (allSeenCerts s) (allChains s)
-  cert' :: Certificate
-  cert' =
-    maximumBy
-      genesisCert
-      (comparing (\r -> round r))
-      (allSeenCerts s)
-  certS :: Certificate
-  certS =
-    maximumBy
-      genesisCert
-      (comparing (\r -> round r))
-      (genesisCert : catMaybes (map certificate pref))
-
 makeVote' :: NodeModel -> Maybe Vote
 makeVote' s =
   do
@@ -206,7 +171,10 @@ makeVote' s =
     maximumBy
       genesisCert
       (comparing (\r -> round r))
-      (genesisCert : catMaybes (map certificate pref))
+      (catMaybes (map certificate pref))
+
+makeVote'' :: NodeModel -> Maybe Bool
+makeVote'' = pure . maybe False (const True) . makeVote'
 
 votesInState :: NodeModel -> [Vote]
 votesInState s =
@@ -221,12 +189,53 @@ votesInState s =
   slot :: SlotNumber
   slot = clock s
 
-newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
-newQuora quorum priorCerts votes = newCerts
- where
-  quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
-  Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0 .. 10000]) quora
-  newCerts = [c | Right c <- newCertsResults]
+newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
+newQuora _ _ [] = []
+newQuora quorum priorCerts (vote : votes) =
+  if not
+    ( any
+        ( \cert ->
+            votingRound vote == round cert && blockHash vote == blockRef cert
+        )
+        priorCerts
+    )
+    && fromIntegral
+      ( length
+          ( filter
+              ( \vote' ->
+                  votingRound vote == votingRound vote'
+                    && blockHash vote == blockHash vote'
+              )
+              votes
+          )
+          + 1
+      )
+      >= fromIntegral quorum
+    then
+      MkCertificate (votingRound vote) (blockHash vote)
+        : newQuora
+          quorum
+          (MkCertificate (votingRound vote) (blockHash vote) : priorCerts)
+          ( filter
+              ( not
+                  . \vote' ->
+                    votingRound vote == votingRound vote'
+                      && blockHash vote == blockHash vote'
+              )
+              votes
+          )
+    else
+      newQuora
+        quorum
+        priorCerts
+        ( filter
+            ( not
+                . \vote' ->
+                  votingRound vote == votingRound vote'
+                    && blockHash vote == blockHash vote'
+            )
+            votes
+        )
 
 checkVoteSignature :: Vote -> Bool
 checkVoteSignature _ = True -- TODO: could do actual crypto here
@@ -255,7 +264,10 @@ transition s Tick =
   sutVotes = votesInState s'
   certsFromQuorum :: [Certificate]
   certsFromQuorum =
-    newQuora (perasτ (protocol s)) (allSeenCerts s) (allVotes s)
+    newQuora
+      (fromIntegral (perasτ (protocol s)))
+      (allSeenCerts s)
+      (allVotes s)
 transition s (NewChain chain) =
   Just
     ( []

@@ -8,6 +8,11 @@ uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
 uneraseNonZero {zero} ()
 uneraseNonZero {suc n} _ = _
 
+isJust : Maybe a → Maybe Bool
+isJust = pure ∘ maybe False (const True)
+
+{-# COMPILE AGDA2HS isJust #-}
+
 catMaybes : List (Maybe a) → List a
 catMaybes [] = []
 catMaybes (Nothing ∷ xs) = catMaybes xs

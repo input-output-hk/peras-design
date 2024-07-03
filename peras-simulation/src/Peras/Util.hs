@@ -1,5 +1,8 @@
 module Peras.Util where
 
+isJust :: Maybe a -> Maybe Bool
+isJust = pure . maybe False (const True)
+
 catMaybes :: [Maybe a] -> [a]
 catMaybes [] = []
 catMaybes (Nothing : xs) = catMaybes xs

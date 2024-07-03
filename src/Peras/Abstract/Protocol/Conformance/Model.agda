@@ -29,7 +29,8 @@ open import Protocol.Peras using ()
   import qualified Data.Set as Set
   import Data.Set (Set)
   import Peras.Abstract.Protocol.Crypto (mkCommitteeMember, createMembershipProof, createSignedVote, mkParty, createSignedCertificate)
-  import Peras.Abstract.Protocol.Fetching (findNewQuora)
+  intToInteger :: Int -> Integer
+  intToInteger = fromIntegral
 #-}
 
 -- Work around `agda2hs` limitations.
@@ -182,7 +183,8 @@ makeVote protocol@MkPerasParams{perasT} slot block = do
 #-}
 
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
-blockOldEnough params clock record{slotNumber = slot} = getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
+blockOldEnough params clock record{slotNumber = slot} =
+  getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
 
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
@@ -199,26 +201,6 @@ extends block cert chain =
 
 {-# COMPILE AGDA2HS extends #-}
 
-makeVote'' : NodeModel → Maybe Bool
-makeVote'' s = do
-  block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
-  let vr1A = nextRound (round cert') == r
-      vr1B = extends block cert' (allChains s)
-      vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
-      vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-  pure (vr1A && vr1B || vr2A && vr2B)
-  where
-    params = protocol s
-    slot   = clock s
-    r      = slotToRound params slot
-
-    pref = preferredChain params (allSeenCerts s) (allChains s)
-
-    cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
-    certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
-
-{-# COMPILE AGDA2HS makeVote'' #-}
-
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
   block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
@@ -234,9 +216,14 @@ makeVote' s = do
     r      = slotToRound params slot
     pref = preferredChain params (allSeenCerts s) (allChains s)
     cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
-    certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
+    certS = maximumBy genesisCert (comparing round) (catMaybes (map certificate pref))
 
 {-# COMPILE AGDA2HS makeVote' #-}
+
+makeVote'' : NodeModel → Maybe Bool
+makeVote'' = pure ∘ maybe False (const True) ∘ makeVote'
+
+{-# COMPILE AGDA2HS makeVote'' #-}
 
 votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
@@ -248,18 +235,26 @@ votesInState s = maybeToList do
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-postulate
-  -- TODO: this need to be in Agda for the proofs
-  newQuora : ℕ → List Certificate → List Vote → List Certificate
+{-# TERMINATING #-}
+newQuora : ℕ → List Certificate → List Vote → List Certificate
+newQuora _ _ [] = []
+newQuora quorum priorCerts (vote ∷ votes) =
+  let
+    sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
+    sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
+    hasCertificate = any sameCert priorCerts
+    voteCount = length (filter sameVote votes) + 1
+    hasQuorum = intToInteger voteCount >= fromNat quorum
+    remainder = filter (not ∘ sameVote) votes
+  in
+    if not hasCertificate && hasQuorum
+      then (
+        let newCert = MkCertificate (votingRound vote) (blockHash vote)
+        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
+      )
+      else newQuora quorum priorCerts remainder
 
-{-# FOREIGN AGDA2HS
-newQuora :: Integer -> [Certificate] -> [Vote] -> [Certificate]
-newQuora quorum priorCerts votes = newCerts
-  where
-    quora = findNewQuora (fromIntegral quorum) (Set.fromList priorCerts) (Set.fromList votes)
-    Identity newCertsResults = mapM (createSignedCertificate $ mkParty 1 mempty [0..10000]) quora
-    newCerts = [ c | Right c <- newCertsResults ]
-#-}
+{-# COMPILE AGDA2HS newQuora #-}
 
 postulate
   checkVoteSignature : Vote → Bool
@@ -276,7 +271,7 @@ transition s Tick =
                              })
   where s' = record s { clock = nextSlot (clock s) }
         sutVotes = votesInState s'
-        certsFromQuorum = newQuora (perasτ (protocol s)) (allSeenCerts s) (allVotes s)
+        certsFromQuorum = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
 transition s (NewChain chain) =
   Just ([] , record s
              { allChains = chain ∷ allChains s
