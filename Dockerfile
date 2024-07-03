@@ -25,9 +25,8 @@ RUN chmod +x /app/install_libsecp256k1.sh && /app/install_libsecp256k1.sh
 
 COPY ./cabal.project /app/cabal.project
 
-RUN mkdir /app/peras-hs && mkdir /app/peras-simulation && mkdir /app/peras-server
+RUN mkdir /app/peras-simulation && mkdir /app/peras-server
 
-COPY ./peras-hs/peras-hs.cabal /app/peras-hs/peras-hs.cabal
 COPY ./peras-simulation/peras-simulation.cabal /app/peras-simulation/peras-simulation.cabal
 COPY ./peras-server/peras-server.cabal /app/peras-server/peras-server.cabal
 COPY ./peras-delta-q/deltaq.cabal /app/peras-delta-q/deltaq.cabal
