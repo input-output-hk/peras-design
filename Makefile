@@ -20,6 +20,9 @@ $(info $(LHSFILES))
 all: typecheck
 	cabal build all
 
+test:
+	cabal test all
+
 typecheck: $(HSFILES) $(LHSFILES) $(SIMHSFILES)
 
 $(HSDIR)/%.hs: %.agda
