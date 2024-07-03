@@ -1,3 +1,64 @@
+## 2024-07-03
+
+### Playing with faster convolutions
+
+We've been discussing ways to improve both the accuracy and the speed of ΔQ models computation and I have played a bit with the idead of using existign fast linear algebra operations to do so. I did a little spike specifically targeted on computing convolution of 2 Double-valued vectors, comparing 3 different approaches:
+
+1. Direct convolution computation using 0-padded vectors and standard [vector](https://hackage.haskell.org/package/vector-0.13.1.0/docs/Data-Vector.html) operations
+2. FFT-based convolution using a [fork](https://github.com/abailly-iohk/haskell-fft) of a straightforward Haskell implementation of FFT and DFT
+3. [hmatrix](https://hackage.haskell.org/package/hmatrix-0.20.2/docs/Numeric-LinearAlgebra.html#v:conv)-based convolution
+
+Quick benchmarks results are clear: hmatrix is 100x faster than naive convolution and 2000x faster than FFT one.
+
+```
+benchmarking Direct convolution (100 elements)
+time                 2.029 ms   (2.023 ms .. 2.039 ms)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 2.038 ms   (2.032 ms .. 2.052 ms)
+std dev              30.91 μs   (12.10 μs .. 48.87 μs)
+
+benchmarking hmatrix convolution (100 elements)
+time                 19.09 μs   (19.06 μs .. 19.11 μs)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 19.10 μs   (19.07 μs .. 19.11 μs)
+std dev              58.11 ns   (40.92 ns .. 81.04 ns)
+
+benchmarking FFT convolution (100 elements)
+time                 47.46 ms   (47.38 ms .. 47.55 ms)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 47.49 ms   (47.40 ms .. 47.83 ms)
+std dev              314.3 μs   (59.48 μs .. 579.6 μs)
+
+```
+
+Even for relatively large number of points, matrix convolution is fast enough for our purpose:
+
+```
+benchmarking Matrix convolution/hmatrix convolution (100 elements)
+time                 18.00 μs   (17.96 μs .. 18.08 μs)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 18.43 μs   (18.28 μs .. 18.57 μs)
+std dev              522.4 ns   (475.5 ns .. 568.1 ns)
+variance introduced by outliers: 31% (moderately inflated)
+
+benchmarking Matrix convolution/hmatrix convolution (1000 elements)
+time                 897.3 μs   (893.0 μs .. 903.9 μs)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 893.4 μs   (891.2 μs .. 897.1 μs)
+std dev              9.988 μs   (7.214 μs .. 15.93 μs)
+
+benchmarking Matrix convolution/hmatrix convolution (10000 elements)
+time                 93.03 ms   (81.34 ms .. 109.7 ms)
+                     0.959 R²   (0.908 R² .. 0.989 R²)
+mean                 102.4 ms   (93.90 ms .. 112.9 ms)
+std dev              15.28 ms   (11.56 ms .. 20.99 ms)
+variance introduced by outliers: 43% (moderately inflated)
+```
+
+It seems straightforward to implement a hmatrix-based backend for ΔQ that should provide fast modelling capabilities, possibly resorting to even more efficient low-level implementations of convolution if needed to handle very large models. Another interesting option would be to use something like [Futhark](https://futhark-lang.org) which can blend seamlessly with Haskell code and provide GPU-based optimised vector computations.
+
+This experimental code is available in PR [#165](https://github.com/input-output-hk/peras-design/pull/165).
+
 ## 2024-06-21
 
 ### Fixing docker build
