@@ -2,7 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Peras.Abstract.Protocol.Trace where
+module Peras.Prototype.Trace where
 
 import Control.Tracer (Tracer (..), contramap, stdoutTracer)
 import Data.Aeson (FromJSON, ToJSON)
@@ -11,12 +11,12 @@ import Data.Set (Set)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LE
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Types (PerasParams, VotingWeight)
 import Peras.Block (Block, Certificate, PartyId)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Crypto (Hash)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
+import Peras.Prototype.Types (PerasParams, VotingWeight)
 
 data PerasLog
   = Protocol {parameters :: PerasParams}

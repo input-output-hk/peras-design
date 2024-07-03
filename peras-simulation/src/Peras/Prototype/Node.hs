@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Peras.Abstract.Protocol.Node where
+module Peras.Prototype.Node where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad (when)
@@ -11,13 +11,16 @@ import Control.Monad.State (StateT, gets, lift, modify')
 import Control.Tracer (Tracer, nullTracer, traceWith)
 import Data.Default (def)
 import Data.Set (Set)
-import Peras.Abstract.Protocol.BlockCreation (blockCreation)
-import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
-import Peras.Abstract.Protocol.Fetching (fetching)
-import Peras.Abstract.Protocol.Preagreement (preagreement)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (
+import Peras.Block (Party)
+import Peras.Chain (Chain, Vote)
+import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Prototype.BlockCreation (blockCreation)
+import Peras.Prototype.Crypto (mkParty)
+import Peras.Prototype.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
+import Peras.Prototype.Fetching (fetching)
+import Peras.Prototype.Preagreement (preagreement)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (
   Payload,
   PerasParams (perasΔ),
   PerasResult,
@@ -27,10 +30,7 @@ import Peras.Abstract.Protocol.Types (
   newRound,
   systemStart,
  )
-import Peras.Abstract.Protocol.Voting (voting)
-import Peras.Block (Party)
-import Peras.Chain (Chain, Vote)
-import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Prototype.Voting (voting)
 
 data NodeState m = MkNodeState
   { self :: Party

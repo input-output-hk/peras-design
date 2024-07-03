@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Peras.Abstract.Protocol.Diffusion (
+module Peras.Prototype.Diffusion (
   Diffuser,
   allPendingChains,
   allPendingVotes,
@@ -25,10 +25,10 @@ import qualified Data.Map as Map (insertWith, partitionWithKey, unionWith)
 import Data.Set (Set)
 import qualified Data.Set as Set (singleton, union, unions)
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Types (PerasResult)
 import Peras.Chain (Chain, Vote)
 import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()
+import Peras.Prototype.Types (PerasResult)
 
 data Diffuser = MkDiffuser
   { delay :: Integer

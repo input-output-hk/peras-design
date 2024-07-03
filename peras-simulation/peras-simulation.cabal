@@ -31,21 +31,21 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules: Peras.Abstract.Protocol.BlockCreation
+    exposed-modules: Peras.Prototype.BlockCreation
                      -- details of voting
-                     Peras.Abstract.Protocol.Crypto
-                     Peras.Abstract.Protocol.Diffusion
-                     Peras.Abstract.Protocol.Environment
-                     Peras.Abstract.Protocol.Fetching
-                     Peras.Abstract.Protocol.Network
-                     Peras.Abstract.Protocol.Network.Arbitrary
-                     Peras.Abstract.Protocol.Node
-                     Peras.Abstract.Protocol.Node.Model
-                     Peras.Abstract.Protocol.Preagreement
-                     Peras.Abstract.Protocol.Trace
-                     Peras.Abstract.Protocol.Types
-                     Peras.Abstract.Protocol.Visualizer
-                     Peras.Abstract.Protocol.Voting
+                     Peras.Prototype.Crypto
+                     Peras.Prototype.Diffusion
+                     Peras.Prototype.Environment
+                     Peras.Prototype.Fetching
+                     Peras.Prototype.Network
+                     Peras.Prototype.Network.Arbitrary
+                     Peras.Prototype.Node
+                     Peras.Prototype.Node.Model
+                     Peras.Prototype.Preagreement
+                     Peras.Prototype.Trace
+                     Peras.Prototype.Types
+                     Peras.Prototype.Visualizer
+                     Peras.Prototype.Voting
                      Peras.Arbitraries
                      Peras.Block
                      Peras.Chain
@@ -61,7 +61,7 @@ library
                      Peras.Util
                      Peras.Voting.Arbitraries
                      Peras.Voting.Vote
-    other-modules:   Peras.Abstract.Protocol.BytesModulo
+    other-modules:   Peras.Prototype.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
                       base ^>=4.18.1.0,
@@ -121,10 +121,10 @@ executable  peras-visualize
 test-suite peras-simulation-test
     import:           warnings
     default-language: Haskell2010
-    other-modules: Peras.Abstract.Protocol.BlockCreationSpec
-                   Peras.Abstract.Protocol.Node.ModelSpec
-                   Peras.Abstract.Protocol.NodeSpec
-                   Peras.Abstract.Protocol.VotingSpec
+    other-modules: Peras.Prototype.BlockCreationSpec
+                   Peras.Prototype.Node.ModelSpec
+                   Peras.Prototype.NodeSpec
+                   Peras.Prototype.VotingSpec
                    Peras.ChainSpec
                    Peras.OrphansSpec
                    Paths_peras_simulation

@@ -1,4 +1,4 @@
-module Peras.Abstract.Protocol.NodeSpec where
+module Peras.Prototype.NodeSpec where
 
 import Prelude hiding (round)
 
@@ -8,12 +8,12 @@ import Data.Default (def)
 import Data.Function (on)
 import Data.List (isSuffixOf, maximumBy)
 import Data.Maybe (mapMaybe)
-import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Node (NodeState (..), initialNodeState, tick)
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), initialPerasState)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (certificate), Certificate (..))
 import Peras.Crypto (hash)
+import Peras.Prototype.Crypto (mkParty)
+import Peras.Prototype.Node (NodeState (..), initialNodeState, tick)
+import Peras.Prototype.Types (PerasParams (..), PerasState (..), initialPerasState)
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 import Test.QuickCheck (arbitrary)
 

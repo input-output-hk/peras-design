@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.Abstract.Protocol.Crypto where
+module Peras.Prototype.Crypto where
 
 import Prelude hiding (round)
 
@@ -13,11 +13,11 @@ import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Serialize as Serialize (decode, encode)
 import Data.Set (Set)
 import qualified Data.Set as S (map)
-import Peras.Abstract.Protocol.Types (Payload, PerasError (..), PerasParams, PerasResult, VotingWeight, inRound, newRound)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
 import Peras.Numbering
+import Peras.Prototype.Types (Payload, PerasError (..), PerasParams, PerasResult, VotingWeight, inRound, newRound)
 
 createSignedBlock ::
   Applicative m =>

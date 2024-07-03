@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.Abstract.Protocol.Node.Model
+module Peras.Prototype.Node.Model
 where
 
 import Control.Concurrent.Class.MonadSTM (
@@ -38,34 +38,6 @@ import Data.List ((\\))
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Peras.Abstract.Protocol.BlockCreation (blockCreation)
-import Peras.Abstract.Protocol.Crypto (
-  IsCommitteeMember,
-  IsSlotLeader,
-  mkCommitteeMember,
-  mkParty,
-  mkSlotLeader,
- )
-import Peras.Abstract.Protocol.Diffusion (
-  defaultDiffuser,
-  diffuseChain,
-  diffuseVote,
-  popChainsAndVotes,
- )
-import Peras.Abstract.Protocol.Fetching (fetching)
-import Peras.Abstract.Protocol.Preagreement (preagreement)
-import Peras.Abstract.Protocol.Types (
-  Payload,
-  PerasError (MultipleItemsDiffused),
-  PerasParams,
-  PerasState (..),
-  hashTip,
-  inRound,
-  initialPerasState,
-  newRound,
-  systemStart,
- )
-import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries ()
 import Peras.Block (
   Block (MkBlock, creatorId, slotNumber),
@@ -78,6 +50,34 @@ import Peras.Crypto (
   VerificationKey (MkVerificationKey),
  )
 import Peras.Numbering (SlotNumber)
+import Peras.Prototype.BlockCreation (blockCreation)
+import Peras.Prototype.Crypto (
+  IsCommitteeMember,
+  IsSlotLeader,
+  mkCommitteeMember,
+  mkParty,
+  mkSlotLeader,
+ )
+import Peras.Prototype.Diffusion (
+  defaultDiffuser,
+  diffuseChain,
+  diffuseVote,
+  popChainsAndVotes,
+ )
+import Peras.Prototype.Fetching (fetching)
+import Peras.Prototype.Preagreement (preagreement)
+import Peras.Prototype.Types (
+  Payload,
+  PerasError (MultipleItemsDiffused),
+  PerasParams,
+  PerasState (..),
+  hashTip,
+  inRound,
+  initialPerasState,
+  newRound,
+  systemStart,
+ )
+import Peras.Prototype.Voting (voting)
 import Test.QuickCheck (arbitrary, elements, frequency, listOf, suchThat)
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))

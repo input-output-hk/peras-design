@@ -1,16 +1,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.Preagreement (
+module Peras.Prototype.Preagreement (
   preagreement,
 ) where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, readTVarIO)
 import Control.Tracer (Tracer, traceWith)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasResult, PerasState (..), VotingWeight)
 import Peras.Block (Block (MkBlock, slotNumber), Party (pid))
 import Peras.Numbering (RoundNumber)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (PerasParams (..), PerasResult, PerasState (..), VotingWeight)
 import Prelude hiding (round)
 
 -- | FIXME: This is a placeholder for the real preagreement algorithm.

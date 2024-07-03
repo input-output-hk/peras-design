@@ -1,9 +1,9 @@
-module Peras.Abstract.Protocol.Node.ModelSpec where
+module Peras.Prototype.Node.ModelSpec where
 
 import Control.Monad.State (evalStateT)
 import Data.Default (def)
 import Data.Functor (void)
-import Peras.Abstract.Protocol.Node.Model (NodeModel, RunMonad (runMonad))
+import Peras.Prototype.Node.Model (NodeModel, RunMonad (runMonad))
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Gen, Property, Testable, property)

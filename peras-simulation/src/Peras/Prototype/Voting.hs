@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.Voting where
+module Peras.Prototype.Voting where
 
 import Prelude hiding (round)
 
@@ -14,14 +14,14 @@ import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import qualified Data.Map as Map (lookup)
 import qualified Data.Set as Set (insert, singleton)
-import Peras.Abstract.Protocol.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
 import Peras.Numbering (RoundNumber)
 import Peras.Orphans ()
+import Peras.Prototype.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert)
 
 -- Party P does the following at the beginning of each voting round r:
 voting ::

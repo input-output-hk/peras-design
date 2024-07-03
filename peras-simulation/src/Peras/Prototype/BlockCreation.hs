@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.BlockCreation where
+module Peras.Prototype.BlockCreation where
 
 import Prelude hiding (round)
 
@@ -9,13 +9,13 @@ import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (lift)
 import Control.Tracer (Tracer, traceWith)
-import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createSignedBlock, isSlotLeader)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (DiffuseChain, PerasParams (..), PerasResult, PerasState (..), hashTip, inRound)
 import Peras.Block (Certificate (round), Party (pid), Tx)
 import Peras.Crypto (Hashable (hash))
 import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()
+import Peras.Prototype.Crypto (createLeadershipProof, createSignedBlock, isSlotLeader)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (DiffuseChain, PerasParams (..), PerasResult, PerasState (..), hashTip, inRound)
 
 import qualified Data.Map as Map (keys)
 import qualified Data.Set as Set (insert, singleton)

@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Peras.Abstract.Protocol.Visualizer where
+module Peras.Prototype.Visualizer where
 
 import Control.Tracer
 import Data.Foldable (toList)
@@ -8,10 +8,10 @@ import Data.IORef
 import qualified Data.Set as Set
 import qualified Language.Dot.Pretty as G
 import qualified Language.Dot.Syntax as G
-import Peras.Abstract.Protocol.Trace (PerasLog (CastVote, NewChainAndVotes))
 import Peras.Block as Block (Block (..), Certificate (..))
 import Peras.Chain as Vote (Vote (..))
 import Peras.Numbering
+import Peras.Prototype.Trace (PerasLog (CastVote, NewChainAndVotes))
 import Prelude hiding (round)
 
 type VisTracer = Tracer IO PerasLog

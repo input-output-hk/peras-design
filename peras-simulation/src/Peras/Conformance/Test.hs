@@ -29,19 +29,19 @@ import Data.IORef
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Peras.Abstract.Protocol.Crypto
-import Peras.Abstract.Protocol.Diffusion
-import Peras.Abstract.Protocol.Fetching
-import Peras.Abstract.Protocol.Preagreement
-import Peras.Abstract.Protocol.Trace qualified as Trace
-import Peras.Abstract.Protocol.Types
-import Peras.Abstract.Protocol.Voting
 import Peras.Arbitraries ()
 import Peras.Block
 import Peras.Chain
 import Peras.Conformance.Model
 import Peras.Crypto
 import Peras.Numbering
+import Peras.Prototype.Crypto
+import Peras.Prototype.Diffusion
+import Peras.Prototype.Fetching
+import Peras.Prototype.Preagreement
+import Peras.Prototype.Trace qualified as Trace
+import Peras.Prototype.Types
+import Peras.Prototype.Voting
 import Test.QuickCheck
 import Test.QuickCheck.Extras
 import Test.QuickCheck.Monadic

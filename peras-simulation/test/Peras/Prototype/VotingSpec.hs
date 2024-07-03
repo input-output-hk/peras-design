@@ -1,19 +1,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Peras.Abstract.Protocol.VotingSpec where
+module Peras.Prototype.VotingSpec where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
 import qualified Data.Set as Set
-import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Diffusion (allPendingVotes, defaultDiffuser, diffuseVote)
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasState (..), initialPerasState)
-import Peras.Abstract.Protocol.Voting (voting)
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..))
 import Peras.Crypto (hash)
+import Peras.Prototype.Crypto (mkParty)
+import Peras.Prototype.Diffusion (allPendingVotes, defaultDiffuser, diffuseVote)
+import Peras.Prototype.Types (PerasParams (..), PerasState (..), initialPerasState)
+import Peras.Prototype.Voting (voting)
 import Test.Hspec (Spec, describe, it, shouldReturn)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)

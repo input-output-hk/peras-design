@@ -8,7 +8,7 @@
 {-# LANGUAGE TupleSections #-}
 
 -- | Simulate the network environment for a single node.
-module Peras.Abstract.Protocol.Network where
+module Peras.Prototype.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
 import Control.Monad (forM)
@@ -27,13 +27,13 @@ import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Peras.Abstract.Protocol.Crypto (mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, mergeDiffusers, popChainsAndVotes)
-import Peras.Abstract.Protocol.Node (NodeState (MkNodeState, clock, diffuserVar, stateVar), initialNodeState, tick, tickNode)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (Payload, PerasParams (..), PerasResult, PerasState, inRound, initialPerasState, systemStart)
 import Peras.Block (Party (MkParty, pid), PartyId)
 import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Prototype.Crypto (mkParty)
+import Peras.Prototype.Diffusion (Diffuser, defaultDiffuser, mergeDiffusers, popChainsAndVotes)
+import Peras.Prototype.Node (NodeState (MkNodeState, clock, diffuserVar, stateVar), initialNodeState, tick, tickNode)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (Payload, PerasParams (..), PerasResult, PerasState, inRound, initialPerasState, systemStart)
 
 -- | Simulate a `Network` as the interaction of an `Environment` and a single `Node`.
 -- The given @scenario@ function is used to generate the incoming chains and votes for each slot.

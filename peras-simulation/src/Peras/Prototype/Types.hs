@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.Abstract.Protocol.Types (
-  module Peras.Abstract.Protocol.Types,
+module Peras.Prototype.Types (
+  module Peras.Prototype.Types,
   module Peras.Conformance.Params,
 ) where
 

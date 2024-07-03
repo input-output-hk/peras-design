@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Peras.Abstract.Protocol.Fetching (
+module Peras.Prototype.Fetching (
   fetching,
   chainWeight,
   findNewQuora,
@@ -20,13 +20,13 @@ import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set as Set (fromList, intersection, map, notMember, size, union)
-import Peras.Abstract.Protocol.Crypto (createSignedCertificate)
-import Peras.Abstract.Protocol.Trace (PerasLog (..))
-import Peras.Abstract.Protocol.Types (PerasParams (..), PerasResult, PerasState (..), genesisCert)
 import Peras.Block (Block (certificate), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (Hash, hash)
 import Peras.Numbering (SlotNumber)
+import Peras.Prototype.Crypto (createSignedCertificate)
+import Peras.Prototype.Trace (PerasLog (..))
+import Peras.Prototype.Types (PerasParams (..), PerasResult, PerasState (..), genesisCert)
 import Prelude hiding (round)
 
 -- At the beginning of each slot.

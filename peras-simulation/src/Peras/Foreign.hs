@@ -3,13 +3,13 @@ module Peras.Foreign where
 import Data.Functor.Identity (Identity (runIdentity))
 import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Set as Set (fromList)
-import qualified Peras.Abstract.Protocol.Crypto as C
-import Peras.Abstract.Protocol.Types (PerasResult)
 import Peras.Block (Block, Certificate, Party, PartyId, Payload)
 import Peras.Chain (Vote, VotingWeight)
 import Peras.Conformance.Params (PerasParams)
 import Peras.Crypto (Hash, LeadershipProof, MembershipProof, Signature)
 import Peras.Numbering (RoundNumber, SlotNumber)
+import qualified Peras.Prototype.Crypto as C
+import Peras.Prototype.Types (PerasResult)
 
 type IsSlotLeader = Bool
 

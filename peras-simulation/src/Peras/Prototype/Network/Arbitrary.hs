@@ -1,14 +1,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Peras.Abstract.Protocol.Network.Arbitrary where
+module Peras.Prototype.Network.Arbitrary where
 
 import Control.Monad (filterM)
 import Data.Default (def)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Peras.Abstract.Protocol.Network (PartyConfig (..), SimConfig (..))
-import Peras.Abstract.Protocol.Types (PerasParams (..), systemStart)
 import Peras.Numbering (SlotNumber)
+import Peras.Prototype.Network (PartyConfig (..), SimConfig (..))
+import Peras.Prototype.Types (PerasParams (..), systemStart)
 import Test.QuickCheck.Gen (Gen (MkGen), genDouble)
 import Test.QuickCheck.Random (mkQCGen)
 

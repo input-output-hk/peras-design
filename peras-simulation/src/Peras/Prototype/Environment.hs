@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Peras.Abstract.Protocol.Environment where
+module Peras.Prototype.Environment where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, newTVarIO, readTVar, readTVarIO, writeTVar)
 import Control.Monad (forM)
@@ -10,13 +10,13 @@ import Control.Monad.Except (ExceptT (..), runExceptT)
 import Data.Default (def)
 import Data.Either (partitionEithers)
 import qualified Data.Set as Set
-import Peras.Abstract.Protocol.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
-import Peras.Abstract.Protocol.Diffusion (Diffuser, defaultDiffuser, insertChains, insertVotes)
-import Peras.Abstract.Protocol.Types (PerasParams (..), genesisChain, hashTip, inRound, perasL, perasU, systemStart)
 import Peras.Block (Block, Party, slotNumber)
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
 import Peras.Numbering (SlotNumber)
+import Peras.Prototype.Crypto (createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, isSlotLeader, mkParty)
+import Peras.Prototype.Diffusion (Diffuser, defaultDiffuser, insertChains, insertVotes)
+import Peras.Prototype.Types (PerasParams (..), genesisChain, hashTip, inRound, perasL, perasU, systemStart)
 import Prelude hiding (round)
 
 anotherParty :: Party

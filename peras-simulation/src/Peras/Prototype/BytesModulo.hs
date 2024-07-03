@@ -1,6 +1,6 @@
 -- | Computes modulus for `ByteString`s
 -- This module is stolen from https://github.com/cardano-scaling/alba
-module Peras.Abstract.Protocol.BytesModulo where
+module Peras.Prototype.BytesModulo where
 
 import Data.Bits (FiniteBits, countLeadingZeros, countTrailingZeros, finiteBitSize, (.&.), (.<<.))
 import Data.ByteString (ByteString)
