@@ -66,6 +66,22 @@ This experimental code is available in PR [#165](https://github.com/input-output
 * The docker build stopped working after adding dependencies to `cardano-crypto-class` because it has native dependencies to `libsodium`, `libblst` and `libsecp256k1`.
 * Added the dependencies to the build image following instructions from [cardano-node](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/getting-started/install.md) wiki documentation
 
+## 2024-07-02
+
+### Edinburgh Workshop report & short-term planning
+
+* We have completed and published the [workshop report](site/reports/2024-06-26-edinburgh-workshop.md)
+* In the wake of those discussions, we have created a few GitHub issues to short-term actions pursuant to this quarter's goals:
+  * [164](https://github.com/input-output-hk/peras-design/issues/164) Define a communication plan for Peras
+  * [163](https://github.com/input-output-hk/peras-design/issues/163) Conformance model-based tests for voting
+  * [162](https://github.com/input-output-hk/peras-design/issues/162) Review adversarial scenario analysis
+  * [161](https://github.com/input-output-hk/peras-design/issues/161) Complete technical report #2
+  * [160](https://github.com/input-output-hk/peras-design/issues/160) Make code repository public
+  * [159](https://github.com/input-output-hk/peras-design/issues/159) Publish full web site
+  * [128](https://github.com/input-output-hk/peras-design/issues/128) UI improvements for simulator/visualizer
+  * [98](https://github.com/input-output-hk/peras-design/issues/98) Post-retrospective actions
+  * [97](https://github.com/input-output-hk/peras-design/issues/97) Write a draft CIP
+
 ## 2024-06-20
 
 ### New adversarial scenarios
