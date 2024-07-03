@@ -110,26 +110,32 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-    params-rel-U : ∀ {s : State} {p}
-      → perasU (protocol (modelState s p)) ≡ Params.U params
-    params-rel-U = refl
+    postulate
+      maxby≡argmax : ∀ (x : Certificate) (xs : List Certificate)
+        → maximumBy (comparing round) xs ≡ latestCert x xs
 
-    vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (t : T)
+    suc-definition : ∀ {n} → suc n ≡ n + 1
+    suc-definition {zero} = refl
+    suc-definition {suc n} = cong suc (suc-definition {n})
+
+    vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
           r = slotToRound (protocol m) (clock m)
           cert' = maximumBy (comparing round) (allSeenCerts m)
         in
           nextRound (round cert') ≡ r
-      → VotingRule-1A (v-round (clock m)) t
-    vr-1a⇒VotingRule-1A s p t x rewrite params-rel-U {s} {p} =
-      let r = sym x
-      in cong getRoundNumber {!r!}
+      → VotingRule-1A (v-round (clock m)) (proj₁ ∃tree)
+    vr-1a⇒VotingRule-1A s p ∃tree x
+        rewrite maxby≡argmax cert₀ (allSeenCerts (modelState s p))
+        rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
+        rewrite (proj₂ ∃tree)
+      = cong getRoundNumber (sym x)
 
-    makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (t : T)
+    makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → makeVote'' (modelState s p) ≡ Just True
-      → VotingRule (v-round (clock (modelState s p))) t
-    makeVote≡True⇒VotingRule s p t x = {!!}
+      → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
+    makeVote≡True⇒VotingRule s p t ∃tree = {!!}
 
     record Invariant (s : State) : Set where
       field
@@ -153,7 +159,7 @@ module _ ⦃ _ : Hashable Block ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (hasTree inv (creatorId vote)) checkVotingRules    -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
