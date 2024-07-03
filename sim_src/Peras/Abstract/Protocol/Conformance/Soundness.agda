@@ -110,19 +110,26 @@ module _ ⦃ _ : Hashable Block ⦄
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
     lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-    vr-1a⇒VotingRule-1A : ∀ (m : NodeModel) (t : T)
+    params-rel-U : ∀ {s : State} {p}
+      → perasU (protocol (modelState s p)) ≡ Params.U params
+    params-rel-U = refl
+
+    vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (t : T)
       → let
+          m = modelState s p
           r = slotToRound (protocol m) (clock m)
           cert' = maximumBy (comparing round) (allSeenCerts m)
         in
           nextRound (round cert') ≡ r
       → VotingRule-1A (v-round (clock m)) t
-    vr-1a⇒VotingRule-1A m t x = {!!}
+    vr-1a⇒VotingRule-1A s p t x rewrite params-rel-U {s} {p} =
+      let r = sym x
+      in cong getRoundNumber {!r!}
 
-    makeVote≡True⇒VotingRule : ∀ (m : NodeModel) (t : T)
-      → makeVote'' m ≡ Just True
-      → VotingRule (v-round (clock m)) t
-    makeVote≡True⇒VotingRule m t x = {!!}
+    makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (t : T)
+      → makeVote'' (modelState s p) ≡ Just True
+      → VotingRule (v-round (clock (modelState s p))) t
+    makeVote≡True⇒VotingRule s p t x = {!!}
 
     record Invariant (s : State) : Set where
       field
@@ -146,7 +153,7 @@ module _ ⦃ _ : Hashable Block ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule (modelState s (creatorId vote)) (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (proj₁ (hasTree inv (creatorId vote))) checkVotingRules    -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
