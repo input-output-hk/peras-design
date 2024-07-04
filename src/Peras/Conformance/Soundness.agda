@@ -13,6 +13,7 @@ open import Relation.Nullary.Decidable using (Dec; yes; no)
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
+open import Peras.Foreign using (checkSignedVote)
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
@@ -28,8 +29,7 @@ eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _   = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
-module _ ⦃ hashBlock : Hashable Block ⦄
-         ⦃ _ : Hashable (List Tx) ⦄
+module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
          ⦃ network    : Network ⦄
          ⦃ postulates : Postulates ⦄
@@ -49,7 +49,7 @@ module _ ⦃ hashBlock : Hashable Block ⦄
            -- Currently we allow anyone to vote
            (axiom-everyoneIsOnTheCommittee : ∀ {p slot prf} → IsCommitteeMember p slot prf)
 
-           (axiom-checkVoteSignature : ∀ {vote} → checkVoteSignature vote ≡ True → IsVoteSignature vote (signature vote))
+           (axiom-checkVoteSignature : ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
          where
 
     modelParams : PerasParams
@@ -92,6 +92,12 @@ module _ ⦃ hashBlock : Hashable Block ⦄
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
     -- Preconditions ---
+    private
+      mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+      mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
+
+      div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+      div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
 
     record NewVotePreconditions (s : State) (vote : Vote) : Set where
       slot = State.clock s
@@ -215,7 +221,7 @@ module _ ⦃ hashBlock : Hashable Block ⦄
                           → NewVotePreconditions s vote
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
-         | checkVoteSignature vote in checkedSig
+         | checkSignedVote vote in checkedSig
          | makeVote'' (modelState s (creatorId vote)) in checkVotingRules
     newVote-preconditions s vote inv refl | True | True | Just True =
       record
