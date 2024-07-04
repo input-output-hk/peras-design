@@ -236,10 +236,10 @@ makeVote' s = do
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
-makeVote'' : NodeModel → Maybe Bool
-makeVote'' s = do
-  block ← votingBlock s
-  pure (vr1A s && vr1B s block || vr2A s && vr2B s)
+makeVote'' : NodeModel → Bool
+makeVote'' s with votingBlock s
+... | Just block = vr1A s && vr1B s block || vr2A s && vr2B s
+... | Nothing = False
 
 {-# COMPILE AGDA2HS makeVote'' #-}
 
@@ -290,8 +290,7 @@ transition s (NewChain chain) =
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  checkVotingRules <- makeVote'' s
-  guard (checkVotingRules)
+  guard (makeVote'' s)
   Just ([] , record s { allVotes = v ∷ allVotes s })
 
 {-# COMPILE AGDA2HS transition #-}

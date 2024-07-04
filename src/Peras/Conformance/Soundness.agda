@@ -6,7 +6,7 @@ open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
-open import Data.Maybe using (maybe′; nothing; just)
+open import Data.Maybe using (fromMaybe; maybe′; nothing; just)
 open import Data.Product using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
 open import Relation.Nullary.Decidable using (Dec; yes; no)
 
@@ -122,21 +122,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     suc-definition {suc n} = cong suc (suc-definition {n})
 
     open import Data.Bool using ()
+    open import Data.Nat using (_≥_; _≥?_; _>?_)
+    open import Relation.Nullary.Decidable using (_×-dec_; toWitness; isYes)
 
-    ≡→T : ∀ {b : Bool} → b ≡ True → Data.Bool.T b
-    ≡→T refl = tt
-
-    T→≡ : ∀ (b : Bool) → Data.Bool.T b → b ≡ True
-    T→≡ True tt   =  refl
-    T→≡ False ()
+    postulate
+      hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
-          r = slotToRound (protocol m) (clock m)
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
-          nextRound (round cert') ≡ r
+          nextRound (round cert') ≡ rFromSlot m
       → VotingRule-1A (v-round (clock m)) (proj₁ ∃tree)
     vr-1a⇒VotingRule-1A s p ∃tree x
         rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
@@ -146,14 +143,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
-          r = slotToRound (protocol m) (clock m)
---          pref = preferredChain (protocol m) (allSeenCerts m) (allChains m)
---          block = dropWhile (not ∘ blockOldEnough params slot) pref
-          block = {!!}
+          block = case (votingBlock m) of
+                   λ { (Just block) → block
+                     ; Nothing → Network.block₀ network
+                     }
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
           extends block cert' (allChains m) ≡ True
-      → VotingRule-1B {- (v-round (clock m)) -} (proj₁ ∃tree)
+      → VotingRule-1B (proj₁ ∃tree)
     vr-1b⇒VotingRule-1B = {!!}
 
     vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
@@ -162,51 +159,51 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           r = slotToRound (protocol m) (clock m)
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
-          (getRoundNumber r >= getRoundNumber (round cert') + perasR (protocol m)) ≡ True
+          getRoundNumber r ≥ getRoundNumber (round cert') + perasR (protocol m)
       → VotingRule-2A (v-round (clock m)) (proj₁ ∃tree)
-    vr-2a⇒VotingRule-2A = {!!}
+    vr-2a⇒VotingRule-2A _ _ ∃tree x rewrite (proj₂ ∃tree) = x
 
     vr-2b⇒VotingRule-2B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
-          r = slotToRound (protocol m) (clock m)
-          certS = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
-          (r > round certS && mod (getRoundNumber r) (perasK (protocol m)) == mod (getRoundNumber (round certS)) (perasK (protocol m))) ≡ True
+            (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
+          × (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
-    vr-2b⇒VotingRule-2B = {!!}
+    vr-2b⇒VotingRule-2B s p ∃tree x
+      rewrite (proj₂ ∃tree)
+      rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
+      = {!!}
 
     open import Data.Sum using (inj₁; inj₂)
 
-    postulate
-      hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
-
     makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → makeVote'' (modelState s p) ≡ Just True
+      → makeVote'' (modelState s p) ≡ True
       → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
     makeVote≡True⇒VotingRule s p ∃tree x
-       with ((nextRound (round (maximumBy genesisCert (comparing round) (allSeenCerts (modelState s p))))) ≟-RoundNumber ((slotToRound (protocol (modelState s p)) (clock (modelState s p))))) in xx
---       with extends block cert' (allChains s)
---       with getRoundNumber r >= getRoundNumber (round cert') + perasR params
---       with r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-    ... | yes vr-1a rewrite hash-genesis =
+       with (let m = modelState s p
+             in nextRound (round (cert' m)) ≟-RoundNumber (rFromSlot m))
+          | (let m = modelState s p
+             in (maybe False (λ { block → extends block (cert' m) (allChains m)}) (votingBlock m))) Data.Bool.≟ True
+          | (let m = modelState s p
+             in getRoundNumber (rFromSlot m) ≥? getRoundNumber (round (cert' m)) + perasR (protocol m))
+          | (let m = modelState s p
+             in      (getRoundNumber (rFromSlot m) >? getRoundNumber (round (certS m)))
+               ×-dec (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≟ mod (getRoundNumber (round (certS m))) (perasK (protocol m))))
+    ... | yes vr-1a | yes vr-1b | _ | _ rewrite hash-genesis =
       let VR-1A = vr-1a⇒VotingRule-1A s p ∃tree vr-1a
-          VR-1B = vr-1b⇒VotingRule-1B s p ∃tree {!!}
+          VR-1B = vr-1b⇒VotingRule-1B s p ∃tree {!!} --vr-1b
           VR-1 = (VR-1A Data.Product., VR-1B)
       in inj₁ VR-1
-
-
-    {-
-      where
-        params = protocol s
-        slot   = clock s
-        r      = slotToRound params slot
-
-        pref = preferredChain params (allSeenCerts s) (allChains s)
-
-        cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
-        certS = maximumBy genesisCert (comparing round) (genesisCert ∷ catMaybes (map certificate pref))
-    -}
+    ... | _ | _ | yes vr-2a | yes vr-2b rewrite hash-genesis =
+      let VR-2A = vr-2a⇒VotingRule-2A s p ∃tree vr-2a
+          VR-2B = vr-2b⇒VotingRule-2B s p ∃tree {!!} -- vr-2b
+          VR-2 = (VR-2A Data.Product., VR-2B)
+      in inj₂ VR-2
+    ... | no vr-1a | _ | no vr-2a | _ = {!!}
+    ... | no vr-1a | _ | _ | no vr-2b = {!!}
+    ... | _ | no vr-1b | no vr-2a | _ = {!!}
+    ... | _ | no vr-1b | _ | no vr-2b = {!!}
 
     record Invariant (s : State) : Set where
       field
@@ -222,15 +219,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
-         | makeVote'' (modelState s (creatorId vote)) in checkVotingRules
-    newVote-preconditions s vote inv refl | True | True | Just True =
+         | makeVote'' (modelState s (creatorId vote)) in checkedVRs
+    newVote-preconditions s vote inv refl | True | True | True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (hasTree inv (creatorId vote)) checkVotingRules    -- need to check the VR logic also for environment votes
+      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (hasTree inv (creatorId vote)) checkedVRs -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
