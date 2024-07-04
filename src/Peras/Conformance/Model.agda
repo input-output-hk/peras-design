@@ -249,20 +249,20 @@ vr2B s = (rFromSlot s) > round (certS s) && mod (getRoundNumber (rFromSlot s)) (
 
 {-# COMPILE AGDA2HS vr2B #-}
 
-makeVote' : NodeModel → Maybe Vote
-makeVote' s = do
-  block ← votingBlock s
-  guard (vr1A s && vr1B s block || vr2A s && vr2B s)
-  pure $ makeVote (protocol s) (clock s) block
-
-{-# COMPILE AGDA2HS makeVote' #-}
-
-makeVote'' : NodeModel → Bool
-makeVote'' s with votingBlock s
+checkVotingRules : NodeModel → Bool
+checkVotingRules s with votingBlock s
 ... | Just block = vr1A s && vr1B s block || vr2A s && vr2B s
 ... | Nothing = False
 
-{-# COMPILE AGDA2HS makeVote'' #-}
+{-# COMPILE AGDA2HS checkVotingRules #-}
+
+makeVote' : NodeModel → Maybe Vote
+makeVote' s = do
+  block ← votingBlock s
+  guard (checkVotingRules s)
+  pure $ makeVote (protocol s) (clock s) block
+
+{-# COMPILE AGDA2HS makeVote' #-}
 
 votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
@@ -311,7 +311,7 @@ transition s (NewChain chain) =
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  guard (makeVote'' s)
+  guard (checkVotingRules s)
   Just ([] , record s { allVotes = v ∷ allVotes s })
 
 {-# COMPILE AGDA2HS transition #-}

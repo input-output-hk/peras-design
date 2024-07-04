@@ -178,7 +178,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     open import Data.Sum using (inj₁; inj₂)
 
     makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → makeVote'' (modelState s p) ≡ True
+      → checkVotingRules (modelState s p) ≡ True
       → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
     makeVote≡True⇒VotingRule s p ∃tree x
        with (let m = modelState s p
@@ -219,7 +219,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
-         | makeVote'' (modelState s (creatorId vote)) in checkedVRs
+         | checkVotingRules (modelState s (creatorId vote)) in checkedVRs
     newVote-preconditions s vote inv refl | True | True | True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
