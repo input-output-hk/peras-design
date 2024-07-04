@@ -250,9 +250,10 @@ vr2B s = (rFromSlot s) > round (certS s) && mod (getRoundNumber (rFromSlot s)) (
 {-# COMPILE AGDA2HS vr2B #-}
 
 checkVotingRules : NodeModel → Bool
-checkVotingRules s with votingBlock s
-... | Just block = vr1A s && vr1B s block || vr2A s && vr2B s
-... | Nothing = False
+checkVotingRules s =
+  case votingBlock s of
+    λ { (Just block) → vr1A s && vr1B s block || vr2A s && vr2B s
+      ; Nothing → False }
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 

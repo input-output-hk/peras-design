@@ -27,15 +27,6 @@ import Prelude hiding (round)
 intToInteger :: Int -> Integer
 intToInteger = fromIntegral
 
-data NodeModel = NodeModel
-  { clock :: SlotNumber
-  , protocol :: PerasParams
-  , allChains :: [Chain]
-  , allVotes :: [Vote]
-  , allSeenCerts :: [Certificate]
-  }
-  deriving (Eq, Show)
-
 data EnvAction
   = Tick
   | NewChain Chain
@@ -50,25 +41,6 @@ genesisChain = []
 
 genesisCert :: Certificate
 genesisCert = MkCertificate 0 genesisHash
-
-initialModelState :: NodeModel
-initialModelState =
-  NodeModel
-    1
-    ( MkPerasParams
-        5
-        (perasA defaultPerasParams)
-        1
-        1
-        1
-        1
-        (perasB defaultPerasParams)
-        0
-        0
-    )
-    [genesisChain]
-    []
-    [genesisCert]
 
 sutId :: PartyId
 sutId = 1
@@ -136,6 +108,54 @@ makeVote params slot block =
     )
     1
 
+data NodeModel = NodeModel
+  { clock :: SlotNumber
+  , protocol :: PerasParams
+  , allChains :: [Chain]
+  , allVotes :: [Vote]
+  , allSeenCerts :: [Certificate]
+  }
+  deriving (Eq, Show)
+
+rFromSlot :: NodeModel -> RoundNumber
+rFromSlot s = slotToRound (protocol s) (clock s)
+
+cert' :: NodeModel -> Certificate
+cert' s =
+  maximumBy
+    genesisCert
+    (comparing (\r -> round r))
+    (allSeenCerts s)
+
+pref :: NodeModel -> Chain
+pref s = preferredChain (protocol s) (allSeenCerts s) (allChains s)
+
+certS :: NodeModel -> Certificate
+certS s =
+  maximumBy
+    genesisCert
+    (comparing (\r -> round r))
+    (catMaybes (map certificate (pref s)))
+
+initialModelState :: NodeModel
+initialModelState =
+  NodeModel
+    1
+    ( MkPerasParams
+        5
+        (perasA defaultPerasParams)
+        1
+        1
+        1
+        1
+        (perasB defaultPerasParams)
+        0
+        0
+    )
+    [genesisChain]
+    []
+    [genesisCert]
+
 blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
 blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
   getSlotNumber slot + perasL params + perasT params
@@ -150,50 +170,40 @@ extends block cert chain =
     any (\block -> hash block == blockRef cert)
       . dropWhile (\block' -> (Prelude./=) (hash block') (hash block))
 
+votingBlock :: NodeModel -> Maybe Block
+votingBlock s =
+  listToMaybe
+    (dropWhile (not . blockOldEnough (protocol s) (clock s)) (pref s))
+
+vr1A :: NodeModel -> Bool
+vr1A s = nextRound (round (cert' s)) == rFromSlot s
+
+vr1B :: NodeModel -> Block -> Bool
+vr1B s b = extends b (cert' s) (allChains s)
+
+vr2A :: NodeModel -> Bool
+vr2A s =
+  getRoundNumber (rFromSlot s)
+    >= getRoundNumber (round (cert' s)) + perasR (protocol s)
+
+vr2B :: NodeModel -> Bool
+vr2B s =
+  rFromSlot s > round (certS s)
+    && mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))
+      == mod (getRoundNumber (round (certS s))) (perasK (protocol s))
+
+checkVotingRules :: NodeModel -> Bool
+checkVotingRules s =
+  case votingBlock s of
+    Just block -> vr1A s && vr1B s block || vr2A s && vr2B s
+    Nothing -> False
+
 makeVote' :: NodeModel -> Maybe Vote
 makeVote' s =
   do
-    block <-
-      listToMaybe
-        (dropWhile (not . blockOldEnough params slot) pref)
-    guard (vr1A && vr1B block || vr2A && vr2B)
-    pure $ makeVote params slot block
- where
-  params :: PerasParams
-  params = protocol s
-  slot :: SlotNumber
-  slot = clock s
-  r :: RoundNumber
-  r = slotToRound params slot
-  pref :: Chain
-  pref = preferredChain params (allSeenCerts s) (allChains s)
-  cert' :: Certificate
-  cert' =
-    maximumBy
-      genesisCert
-      (comparing (\r -> round r))
-      (allSeenCerts s)
-  certS :: Certificate
-  certS =
-    maximumBy
-      genesisCert
-      (comparing (\r -> round r))
-      (catMaybes (map certificate pref))
-  vr1A :: Bool
-  vr1A = nextRound (round cert') == r
-  vr1B :: Block -> Bool
-  vr1B block = extends block cert' (allChains s)
-  vr2A :: Bool
-  vr2A =
-    getRoundNumber r >= getRoundNumber (round cert') + perasR params
-  vr2B :: Bool
-  vr2B =
-    r > round certS
-      && mod (getRoundNumber r) (perasK params)
-        == mod (getRoundNumber (round certS)) (perasK params)
-
-makeVote'' :: NodeModel -> Maybe Bool
-makeVote'' = pure . maybe False (const True) . makeVote'
+    block <- votingBlock s
+    guard (checkVotingRules s)
+    pure $ makeVote (protocol s) (clock s) block
 
 votesInState :: NodeModel -> [Vote]
 votesInState s =
@@ -302,8 +312,7 @@ transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
-    checkVotingRules <- makeVote'' s
-    guard checkVotingRules
+    guard (checkVotingRules s)
     Just
       ( []
       , NodeModel
