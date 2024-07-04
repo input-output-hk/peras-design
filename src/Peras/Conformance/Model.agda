@@ -39,20 +39,6 @@ certificate : Block → Maybe Certificate
 certificate record{certificate = just c}  = Just c
 certificate record{certificate = nothing} = Nothing
 
--- The actual model ---
-
-record NodeModel : Set where
-  field
-    clock            : SlotNumber
-    protocol         : PerasParams
-    allChains        : List Chain
-    allVotes         : List Vote
-    allSeenCerts     : List Certificate
-
-open NodeModel public
-
-{-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
-
 data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
@@ -74,25 +60,6 @@ genesisCert : Certificate
 genesisCert = MkCertificate 0 genesisHash
 
 {-# COMPILE AGDA2HS genesisCert #-}
-
-initialModelState : NodeModel
-initialModelState = record
-  { clock            = 1
-  ; protocol         = record defaultPerasParams
-                       { perasU = 5
-                       ; perasR = 1
-                       ; perasK = 1
-                       ; perasL = 1
-                       ; perasT = 0
-                       ; perasΔ = 0
-                       ; perasτ = 1
-                       }
-  ; allChains        = genesisChain ∷ []
-  ; allVotes         = []
-  ; allSeenCerts     = genesisCert ∷ []
-  }
-
-{-# COMPILE AGDA2HS initialModelState #-}
 
 sutId : PartyId
 sutId = 1
@@ -152,6 +119,67 @@ makeVote params slot block =
 
 {-# COMPILE AGDA2HS makeVote #-}
 
+-- The actual model ---
+
+record NodeModel : Set where
+  field
+    clock            : SlotNumber
+    protocol         : PerasParams
+    allChains        : List Chain
+    allVotes         : List Vote
+    allSeenCerts     : List Certificate
+
+rFromSlot : NodeModel → RoundNumber
+rFromSlot s =
+  let open NodeModel s
+  in slotToRound protocol clock
+
+{-# COMPILE AGDA2HS rFromSlot #-}
+
+cert' : NodeModel → Certificate
+cert' s =
+  let open NodeModel s
+  in maximumBy genesisCert (comparing round) allSeenCerts
+
+{-# COMPILE AGDA2HS cert' #-}
+
+pref : NodeModel → Chain
+pref s =
+  let open NodeModel s
+  in preferredChain protocol allSeenCerts allChains
+
+{-# COMPILE AGDA2HS pref #-}
+
+certS : NodeModel → Certificate
+certS s =
+  let open NodeModel s
+  in maximumBy genesisCert (comparing round) (catMaybes (map certificate (pref s)))
+
+{-# COMPILE AGDA2HS certS #-}
+
+open NodeModel public
+
+{-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
+
+initialModelState : NodeModel
+initialModelState = record
+  { clock            = 1
+  ; protocol         = record defaultPerasParams
+                       { perasU = 5
+                       ; perasR = 1
+                       ; perasK = 1
+                       ; perasL = 1
+                       ; perasT = 0
+                       ; perasΔ = 0
+                       ; perasτ = 1
+                       }
+  ; allChains        = genesisChain ∷ []
+  ; allVotes         = []
+  ; allSeenCerts     = genesisCert ∷ []
+  }
+
+{-# COMPILE AGDA2HS initialModelState #-}
+
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
 blockOldEnough params clock record{slotNumber = slot} =
   getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
@@ -175,27 +203,43 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
+votingBlock : NodeModel → Maybe Block
+votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
+
+{-# COMPILE AGDA2HS votingBlock #-}
+
+vr1A : NodeModel → Bool
+vr1A s = nextRound (round (cert' s)) == (rFromSlot s)
+
+{-# COMPILE AGDA2HS vr1A #-}
+
+vr1B : NodeModel → Block → Bool
+vr1B s b = extends b (cert' s) (allChains s)
+
+{-# COMPILE AGDA2HS vr1B #-}
+
+vr2A : NodeModel → Bool
+vr2A s = getRoundNumber (rFromSlot s) >= getRoundNumber (round (cert' s)) + perasR (protocol s)
+
+{-# COMPILE AGDA2HS vr2A #-}
+
+vr2B : NodeModel → Bool
+vr2B s = (rFromSlot s) > round (certS s) && mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)) == mod (getRoundNumber (round (certS s))) (perasK (protocol s))
+
+{-# COMPILE AGDA2HS vr2B #-}
+
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
-  block ← listToMaybe (dropWhile (not ∘ blockOldEnough params slot) pref)
-  let vr1A = nextRound (round cert') == r
-      vr1B = extends block cert' (allChains s)
-      vr2A = getRoundNumber r >= getRoundNumber (round cert') + perasR params
-      vr2B = r > round certS && mod (getRoundNumber r) (perasK params) == mod (getRoundNumber (round certS)) (perasK params)
-  guard (vr1A && vr1B || vr2A && vr2B)
-  pure $ makeVote params slot block
-  where
-    params = protocol s
-    slot   = clock s
-    r      = slotToRound params slot
-    pref = preferredChain params (allSeenCerts s) (allChains s)
-    cert' = maximumBy genesisCert (comparing round) (allSeenCerts s)
-    certS = maximumBy genesisCert (comparing round) (catMaybes (map certificate pref))
+  block ← votingBlock s
+  guard (vr1A s && vr1B s block || vr2A s && vr2B s)
+  pure $ makeVote (protocol s) (clock s) block
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
 makeVote'' : NodeModel → Maybe Bool
-makeVote'' = pure ∘ maybe False (const True) ∘ makeVote'
+makeVote'' s = do
+  block ← votingBlock s
+  pure (vr1A s && vr1B s block || vr2A s && vr2B s)
 
 {-# COMPILE AGDA2HS makeVote'' #-}
 
@@ -229,9 +273,6 @@ newQuora quorum priorCerts (vote ∷ votes) =
       else newQuora quorum priorCerts remainder
 
 {-# COMPILE AGDA2HS newQuora #-}
-
-postulate
-  checkVoteSignature : Vote → Bool
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
