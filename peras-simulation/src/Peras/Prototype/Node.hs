@@ -89,6 +89,5 @@ tickNode tracer diffuser params party state s r payload newChains newVotes =
     -- 3. Invoke block creation if leader.
     ExceptT $ blockCreation tracer params party state s payload (diffuseChain diffuser)
     -- 4. Invoke voting if committee member.
-    when (newRound s params) $
-      ExceptT $
-        voting tracer params party state r (preagreement tracer) (diffuseVote diffuser)
+    ExceptT $
+      voting tracer params party state s (preagreement tracer) (diffuseVote diffuser)

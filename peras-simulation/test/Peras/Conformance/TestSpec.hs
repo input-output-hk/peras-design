@@ -17,5 +17,4 @@ spec :: Spec
 spec =
   describe "Prototype node"
     . prop "Simulation respects model"
-    . expectFailure -- FIXME: Actually, we expect success!
     $ forAllDL anyActions_ (prop_node . Blind)

@@ -104,9 +104,30 @@ chainWeight boost certs = chainWeight' 0
 
 {-# COMPILE AGDA2HS chainWeight #-}
 
+compareTip : Chain → Chain → Ordering
+compareTip [] [] = EQ
+compareTip [] _ = LT
+compareTip _ [] = GT
+compareTip (block1 ∷ blocks1) (block2 ∷ blocks2) =
+  case compare (slotNumber block1) (slotNumber block2) of λ where
+    EQ → case compare (creatorId block1) (creatorId block2) of λ where
+      EQ → compare (signature block1) (signature block2)
+      y → y
+    x → x
+
+{-# COMPILE AGDA2HS compareTip #-}
+
+compareChains : Nat → List Certificate → Chain → Chain → Ordering
+compareChains boost certs chain1 chain2 =
+  case compare (chainWeight boost certs chain1) (chainWeight boost certs chain2) of λ where
+    EQ → compareTip chain1 chain2
+    x → x
+
+{-# COMPILE AGDA2HS compareChains #-}
+
 preferredChain : PerasParams → List Certificate → List Chain → Chain
 preferredChain params certs =
-  maximumBy genesisChain (comparing (chainWeight (fromNat (perasB params)) certs))
+  maximumBy genesisChain (compareChains (fromNat (perasB params)) certs)
 
 {-# COMPILE AGDA2HS preferredChain #-}
 

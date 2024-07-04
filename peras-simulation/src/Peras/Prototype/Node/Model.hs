@@ -181,7 +181,7 @@ votingModeled isMember node@MkNodeModel{self, clock, protocol, state} =
           preagreement' = preagreement nullTracer
           diffuser = diffuseVote diffuserVar
       fmap (either (error . show) id) . runExceptT $ do
-        ExceptT $ voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
+        ExceptT $ voting nullTracer protocol party stateVar clock preagreement' diffuser
         s <- lift $ readTVarIO stateVar
         newVote <- assertOneVote =<< lift (popChainsAndVotes diffuserVar clock)
         pure (newVote, node{state = s})
@@ -398,7 +398,7 @@ instance Monad m => RunModel NodeModel (RunMonad m) where
                     preagreement' = preagreement nullTracer
                     diffuser = diffuseVote diffuserVar
                 runExceptT $ do
-                  ExceptT $ voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' diffuser
+                  ExceptT $ voting nullTracer protocol party stateVar clock preagreement' diffuser
                   (,)
                     <$> (assertOneVote =<< lift (popChainsAndVotes diffuserVar clock))
                     <*> lift (readTVarIO stateVar)

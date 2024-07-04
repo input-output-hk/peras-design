@@ -20,7 +20,7 @@ import Prelude hiding (round)
 
 spec :: Spec
 spec = do
-  let params@MkPerasParams{perasR} =
+  let params@MkPerasParams{perasR, perasU} =
         def
           { perasU = 20
           , perasA = 2160
@@ -33,6 +33,7 @@ spec = do
           , perasΔ = 5
           }
       roundNumber = 430
+      slotNumber = fromInteger $ fromIntegral roundNumber * perasU
       someChain = arbitrary `generateWith` 42
       someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}
       someBlock = (arbitrary `generateWith` 12){parentBlock = blockRef someCertificate}
@@ -74,7 +75,7 @@ spec = do
         params
         nonCommitteeMember
         perasState
-        roundNumber
+        slotNumber
         preagreement
         (diffuseVote diffuser)
 
@@ -92,7 +93,7 @@ spec = do
         params
         committeeMember
         perasState
-        roundNumber
+        slotNumber
         preagreement
         (diffuseVote diffuser)
 
@@ -111,7 +112,7 @@ spec = do
           params
           committeeMember
           perasState
-          roundNumber
+          slotNumber
           preagreementSelectsFork
           (diffuseVote diffuser)
 
@@ -129,11 +130,29 @@ spec = do
           params
           committeeMember
           perasState
-          roundNumber
+          slotNumber
           preagreementSelectsCertifiedBlock
           (diffuseVote diffuser)
 
       Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+
+    it "only vote at beginning of round" $ do
+      let certifiedBlock = head someChain
+          preagreementSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
+      perasState <- newTVarIO steadyState
+      diffuser <- newTVarIO $ defaultDiffuser 0
+
+      void $
+        voting
+          nullTracer
+          params
+          committeeMember
+          perasState
+          (slotNumber + 1)
+          preagreementSelectsCertifiedBlock
+          (diffuseVote diffuser)
+
+      allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
   it "VR2-A - votes on preagreement's block given last seen certificate is older than cooldown period" $ do
     let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}, certStar = someCertificate{round = 430 - 2 * 100}}
@@ -146,7 +165,7 @@ spec = do
         params
         committeeMember
         perasState
-        roundNumber
+        slotNumber
         preagreement
         (diffuseVote diffuser)
 
@@ -167,7 +186,7 @@ spec = do
         params
         committeeMember
         perasState
-        roundNumber
+        slotNumber
         preagreement
         (diffuseVote diffuser)
 

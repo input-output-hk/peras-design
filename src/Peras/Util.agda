@@ -36,8 +36,8 @@ maximumBy : {a : Set} → a → (a → a → Ordering) → List a → a
 maximumBy candidate _ [] = candidate
 maximumBy {a} candidate f (x ∷ xs) =
   case f candidate x of λ where
-    GT → maximumBy x f xs
-    _ → maximumBy candidate f xs
+    GT → maximumBy candidate f xs
+    _ → maximumBy x f xs
 {-# COMPILE AGDA2HS maximumBy #-}
 
 comparing : ⦃ Ord b ⦄ → (a → b) → a → a → Ordering

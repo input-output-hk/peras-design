@@ -17,11 +17,11 @@ import qualified Data.Set as Set (insert, singleton)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain)
 import Peras.Crypto (Hashable (..))
-import Peras.Numbering (RoundNumber)
+import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 import Peras.Prototype.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
 import Peras.Prototype.Trace (PerasLog (..))
-import Peras.Prototype.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert)
+import Peras.Prototype.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert, inRound, newRound)
 
 -- Party P does the following at the beginning of each voting round r:
 voting ::
@@ -30,48 +30,52 @@ voting ::
   PerasParams ->
   Party ->
   TVar m PerasState ->
-  RoundNumber ->
+  SlotNumber ->
   Preagreement m ->
   DiffuseVote m ->
   m (PerasResult ())
-voting tracer params@MkPerasParams{perasR, perasK, perasU, perasT, perasΔ} party perasState roundNumber preagreement diffuseVote =
-  runExceptT $ do
-    MkPerasState{..} <- lift $ readTVarIO perasState
-    -- 1. Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot r U + T.
-    ExceptT (preagreement params party perasState roundNumber) >>= \case
-      Nothing -> pure ()
-      Just (block, stake) ->
-        -- 2. If party P is (voting) committee member in a round r,
-        when (isCommitteeMember party roundNumber) $ do
-          let
-            -- (VR-1A) round(cert') = r − 1 and cert' was received at least ∆ before the end of round r − 1, and
-            oldEnough s = fromIntegral s + perasΔ <= fromIntegral (roundNumber - 1) * perasU + perasU - 1
-            vr1a =
-              round certPrime + 1 == roundNumber
-                && maybe True {- Only the genesis certificate is not in the map. -} oldEnough (Map.lookup certPrime certs)
-            -- (VR-1B) B extends the block certified by cert', or
-            vr1b = extends block certPrime $ toList chains
-            -- (VR-2A) r >= round(cert') + R,
-            vr2a = roundNumber >= round certPrime + fromIntegral perasR
-            -- (VR-2B) r = round(cert*) + c K for some c > 0, and
-            vr2b =
-              roundNumber > round certStar -- eliminates c = 0
-                && fromIntegral roundNumber `mod` perasK == fromIntegral (round certStar) `mod` perasK -- some muliple of K
-          lift $ traceWith tracer $ VotingLogic (pid party) vr1a vr1b vr2a vr2b
-          -- then create a vote v = (r, P, h, π, σ)
-          when (vr1a && vr1b || vr2a && vr2b) $
-            do
-              proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
-              -- h is the hash of B,
-              -- π is the committee-membership proof,
-              -- and σ is a signature on the rest of v.
-              vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
-              -- Add v to V and diffuse it.
-              lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
-              -- FIXME: Instead of waiting `T` slots for preagreement, we just queue the message
-              -- `T` slots later. This will have to be fixed when the preagreement algorithm is settled.
-              ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU + perasT) vote
-              lift $ traceWith tracer $ CastVote (pid party) vote
+voting tracer params@MkPerasParams{perasR, perasK, perasU, perasT, perasΔ} party perasState slotNumber preagreement diffuseVote =
+  if newRound slotNumber params
+    then runExceptT $ do
+      MkPerasState{..} <- lift $ readTVarIO perasState
+      -- 1. Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot r U + T.
+      ExceptT (preagreement params party perasState roundNumber) >>= \case
+        Nothing -> pure ()
+        Just (block, stake) ->
+          -- 2. If party P is (voting) committee member in a round r,
+          when (isCommitteeMember party roundNumber) $ do
+            let
+              -- (VR-1A) round(cert') = r − 1 and cert' was received at least ∆ before the end of round r − 1, and
+              oldEnough s = fromIntegral s + perasΔ <= fromIntegral (roundNumber - 1) * perasU + perasU - 1
+              vr1a =
+                round certPrime + 1 == roundNumber
+                  && maybe True {- Only the genesis certificate is not in the map. -} oldEnough (Map.lookup certPrime certs)
+              -- (VR-1B) B extends the block certified by cert', or
+              vr1b = extends block certPrime $ toList chains
+              -- (VR-2A) r >= round(cert') + R,
+              vr2a = roundNumber >= round certPrime + fromIntegral perasR
+              -- (VR-2B) r = round(cert*) + c K for some c > 0, and
+              vr2b =
+                roundNumber > round certStar -- eliminates c = 0
+                  && fromIntegral roundNumber `mod` perasK == fromIntegral (round certStar) `mod` perasK -- some muliple of K
+            lift $ traceWith tracer $ VotingLogic (pid party) vr1a vr1b vr2a vr2b
+            -- then create a vote v = (r, P, h, π, σ)
+            when (vr1a && vr1b || vr2a && vr2b) $
+              do
+                proofM <- ExceptT $ createMembershipProof roundNumber (Set.singleton party)
+                -- h is the hash of B,
+                -- π is the committee-membership proof,
+                -- and σ is a signature on the rest of v.
+                vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
+                -- Add v to V and diffuse it.
+                lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
+                -- FIXME: Instead of waiting `T` slots for preagreement, we just queue the message
+                -- `T` slots later. This will have to be fixed when the preagreement algorithm is settled.
+                ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU + perasT) vote
+                lift $ traceWith tracer $ CastVote (pid party) vote
+    else pure $ pure ()
+ where
+  roundNumber = inRound slotNumber params
 
 -- | Check whether a block extends the block certified in a certificate.
 -- Note that the `extends` relationship is transitive ''and'' reflexive.

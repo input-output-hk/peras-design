@@ -231,11 +231,13 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
         let clock' = clock + 1
         -- TODO: also invoke blockCreation
         _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
-        let party = mkCommitteeMember modelSUT protocol clock' True
+        let roundNumber = inRound clock' protocol
+            party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
             preagreement' = preagreement nullTracer
             diffuser = diffuseVote diffuserVar
-        _ <- voting tracer protocol party stateVar (inRound clock' protocol) preagreement' diffuser
-        Set.toList . snd <$> popChainsAndVotes diffuserVar clock'
+        _ <- voting tracer protocol party stateVar clock' preagreement' diffuser
+        (cs, vs) <- popChainsAndVotes diffuserVar clock'
+        pure $ Set.toList vs
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = Set.insert c (unfetchedChains rs)}
       pure mempty
@@ -244,7 +246,7 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
       pure mempty
 
   postcondition (s, s') (Step a) _ r = do
-    let expected = fromJust $ fmap fst (transition s a)
+    let expected = fst (fromJust (transition s a))
     -- let ok = length r == length expected
     let ok = r == expected
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
@@ -258,21 +260,22 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
     pure ok
 
 prop_node :: Blind (Actions NodeModel) -> Property
-prop_node (Blind as) = ioProperty $ do
-  stateVar <- IO.newTVarIO initialPerasState
-  diffuserVar <- IO.newTVarIO def
-  traceRef <- newIORef []
-  let unfetchedChains = mempty
-      unfetchedVotes = mempty
-      tracer = Tracer $ emit $ \a -> modifyIORef traceRef (a :)
-      printTrace = do
-        putStrLn "-- Trace from node:"
-        trace <- readIORef traceRef
-        print $ vcat . map pPrint $ reverse trace
-  pure $
-    whenFail printTrace $
-      monadicIO $ do
-        monitor $ counterexample "-- Actions:"
-        monitor $ counterexample "do"
-        _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
-        pure True
+prop_node (Blind as) = noShrinking $
+  ioProperty $ do
+    stateVar <- IO.newTVarIO initialPerasState
+    diffuserVar <- IO.newTVarIO def
+    traceRef <- newIORef []
+    let unfetchedChains = mempty
+        unfetchedVotes = mempty
+        tracer = Tracer $ emit $ \a -> modifyIORef traceRef (a :)
+        printTrace = do
+          putStrLn "-- Trace from node:"
+          trace <- readIORef traceRef
+          print $ vcat . map pPrint $ reverse trace
+    pure $
+      whenFail printTrace $
+        monadicIO $ do
+          monitor $ counterexample "-- Actions:"
+          monitor $ counterexample "do"
+          _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
+          pure True

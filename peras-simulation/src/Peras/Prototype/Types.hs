@@ -103,8 +103,10 @@ hashTip (block : _) = hash block
 genesisCert :: Certificate
 genesisCert = MkCertificate 0 genesisHash
 
-newRound :: Integral a => a -> PerasParams -> Bool
-newRound s params = fromIntegral s `mod` perasU params == 0
+newRound :: (Integral a, Show a) => a -> PerasParams -> Bool
+newRound s params = slotInRound == 0
+ where
+  slotInRound = fromIntegral s `mod` perasU params
 
 inRound :: Integral a => a -> PerasParams -> RoundNumber
 inRound s params = fromIntegral $ fromIntegral s `div` perasU params

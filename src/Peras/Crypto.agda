@@ -6,7 +6,7 @@
 module Peras.Crypto where
 
 open import Data.Bool using (Bool)
-open import Haskell.Prelude using (Eq; Int; _==_)
+open import Haskell.Prelude using (Eq; Int; _==_; Ord; compare ; Ordering ; ordFromCompare)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Binary using (StrictTotalOrder)
 
@@ -18,6 +18,8 @@ postulate
   _isInfixOf_ : ByteString → ByteString → Bool
   replicateBS : Int → Int → ByteString
   _≟-BS_ : DecidableEquality ByteString
+  compare-BS : ByteString → ByteString → Ordering
+
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -107,9 +109,15 @@ open Signature public
 {-# COMPILE AGDA2HS Signature newtype deriving (Generic) #-}
 {-# COMPILE GHC Signature = data G.Signature (G.MkSignature) #-}
 
+compareSignature : Signature -> Signature -> Ordering
+compareSignature x y = compare-BS (bytesS x) (bytesS y)
+
 instance
   iSignatureEq : Eq Signature
   iSignatureEq ._==_ x y = eqBS (bytesS x) (bytesS y)
+
+  iSignatureOrd : Ord Signature
+  iSignatureOrd = ordFromCompare compareSignature
 
 {-# COMPILE AGDA2HS iSignatureEq #-}
 
