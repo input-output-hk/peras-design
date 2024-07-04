@@ -18,7 +18,7 @@ open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto hiding (_≟_)
+open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
 
@@ -287,7 +287,8 @@ additionally:
   * The list of parties
 
 ```agda
-  module _ {T : Type} {blockTree : TreeType T}
+  module Semantics
+           {T : Type} {blockTree : TreeType T}
            {S : Type} {adversarialState₀ : S}
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
@@ -949,5 +950,8 @@ already in the block history.
             → m ∈ history M }) (history N)
         → ForgingFree N
 -}
+```
+```agda
+  open Semantics public
 ```
 -->

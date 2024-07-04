@@ -26,6 +26,7 @@ open Equ using (_≡_; _≢_; cong)
 
 open import Peras.Crypto
 open import Peras.Numbering
+open import Peras.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -138,6 +139,8 @@ record Block : Set
 record BlockBody : Set
 record Certificate : Set
 
+Payload = List Tx
+
 record Certificate where
   constructor MkCertificate
   field round : RoundNumber
@@ -149,7 +152,7 @@ record Certificate where
 open Certificate public
 
 latestCert : Certificate → List Certificate → Certificate
-latestCert = argmax roundNumber
+latestCert c = maximumBy c (comparing round)
 
 record Block where
   constructor MkBlock
@@ -159,7 +162,7 @@ record Block where
         certificate : Maybe Certificate
         leadershipProof : LeadershipProof
         signature : Signature
-        bodyHash : Hash (List Tx)
+        bodyHash : Hash Payload
 
   slotNumber' : ℕ
   slotNumber' = getSlotNumber slotNumber
@@ -167,14 +170,14 @@ record Block where
 open Block public
 
 _≟-BlockHash_ : DecidableEquality (Hash Block)
-(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟ b₂
+(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟-BS b₂
 ... | yes p = yes (cong MkHash p)
 ... | no ¬p =  no (¬p ∘ cong hashBytes)
 
 record BlockBody where
   constructor MkBlockBody
-  field blockHash : Hash (List Tx)
-        payload : List Tx
+  field blockHash : Hash Payload
+        payload : Payload
 
 open BlockBody public
 ```
@@ -188,6 +191,7 @@ data HonestBlock : Block → Set where
 ```
 <!--
 ```agda
+{-# COMPILE AGDA2HS Payload #-}
 {-# COMPILE AGDA2HS Block deriving (Generic) #-}
 {-# COMPILE GHC Block = data G.Block (G.MkBlock) #-}
 {-# COMPILE AGDA2HS BlockBody deriving (Generic) #-}

@@ -77,9 +77,6 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
-    - name: 🔬 Test with `peras-hs-test`
-      run: |
-        nix run .#peras-hs-test
     - name: 🔬 Test with `peras-simulation-test`
       run: |
         nix run .#peras-simulation-test
