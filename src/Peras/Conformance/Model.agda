@@ -234,8 +234,11 @@ vr1A s = nextRound (round (cert' s)) == (rFromSlot s)
 
 {-# COMPILE AGDA2HS vr1A #-}
 
-vr1B : NodeModel → Block → Bool
-vr1B s b = extends b (cert' s) (allChains s)
+vr1B : NodeModel → Bool
+vr1B s =
+  case votingBlock s of
+    λ { (Just block) → extends block (cert' s) (allChains s)
+      ; Nothing → False }
 
 {-# COMPILE AGDA2HS vr1B #-}
 
@@ -250,17 +253,14 @@ vr2B s = (rFromSlot s) > round (certS s) && mod (getRoundNumber (rFromSlot s)) (
 {-# COMPILE AGDA2HS vr2B #-}
 
 checkVotingRules : NodeModel → Bool
-checkVotingRules s =
-  case votingBlock s of
-    λ { (Just block) → vr1A s && vr1B s block || vr2A s && vr2B s
-      ; Nothing → False }
+checkVotingRules s = vr1A s && vr1B s || vr2A s && vr2B s
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
-  block ← votingBlock s
   guard (checkVotingRules s)
+  block ← votingBlock s
   pure $ makeVote (protocol s) (clock s) block
 
 {-# COMPILE AGDA2HS makeVote' #-}

@@ -178,8 +178,11 @@ votingBlock s =
 vr1A :: NodeModel -> Bool
 vr1A s = nextRound (round (cert' s)) == rFromSlot s
 
-vr1B :: NodeModel -> Block -> Bool
-vr1B s b = extends b (cert' s) (allChains s)
+vr1B :: NodeModel -> Bool
+vr1B s =
+  case votingBlock s of
+    Just block -> extends block (cert' s) (allChains s)
+    Nothing -> False
 
 vr2A :: NodeModel -> Bool
 vr2A s =
@@ -193,16 +196,13 @@ vr2B s =
       == mod (getRoundNumber (round (certS s))) (perasK (protocol s))
 
 checkVotingRules :: NodeModel -> Bool
-checkVotingRules s =
-  case votingBlock s of
-    Just block -> vr1A s && vr1B s block || vr2A s && vr2B s
-    Nothing -> False
+checkVotingRules s = vr1A s && vr1B s || vr2A s && vr2B s
 
 makeVote' :: NodeModel -> Maybe Vote
 makeVote' s =
   do
-    block <- votingBlock s
     guard (checkVotingRules s)
+    block <- votingBlock s
     pure $ makeVote (protocol s) (clock s) block
 
 votesInState :: NodeModel -> [Vote]
