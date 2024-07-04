@@ -59,24 +59,18 @@ library
                      Peras.Numbering
                      Peras.Orphans
                      Peras.Util
-                     Peras.Voting.Arbitraries
-                     Peras.Voting.Vote
     other-modules:   Peras.Prototype.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
                       base ^>=4.18.1.0,
                       base16-bytestring,
                       bytestring,
-                      cardano-binary,
-                      cardano-crypto-class ^>= 2.1,
-                      cardano-crypto-praos,
                       cereal,
                       containers,
                       contra-tracer,
                       data-default,
-                      deepseq,
-                      generic-random,
                       hashable,
+                      generic-random,
                       io-classes,
                       io-sim,
                       language-dot,
@@ -84,10 +78,9 @@ library
                       pretty,
                       quickcheck-dynamic,
                       quickcheck-instances,
-                      statistics,
                       stm,
                       text,
-                      time,
+                      time
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -129,15 +122,11 @@ test-suite peras-simulation-test
                    Peras.ChainSpec
                    Peras.OrphansSpec
                    Paths_peras_simulation
-                   -- voting
-                   Peras.Voting.VoteSpec
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:  QuickCheck
                   , base ^>=4.18.1.0
-                  , bytestring
-                  , cardano-binary
                   , containers
                   , contra-tracer
                   , data-default
@@ -151,18 +140,3 @@ test-suite peras-simulation-test
     build-tool-depends:
        hspec-discover:hspec-discover
     ghc-options: -rtsopts -threaded
-
-benchmark bench
-  hs-source-dirs: bench/
-  main-is:        Bench.hs
-  type:           exitcode-stdio-1.0
-  build-depends:
-                  QuickCheck
-                , aeson
-                , base
-                , bytestring
-                , criterion
-                , deepseq
-                , peras-simulation
-
-  ghc-options:    -threaded -rtsopts
