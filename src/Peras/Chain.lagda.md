@@ -27,7 +27,8 @@ open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; _,_; _×_)
+open import Haskell.Prelude hiding (length; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; Any; _,_; _×_)
+open import Haskell.Law.Equality using (cong)
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}

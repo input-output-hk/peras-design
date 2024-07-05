@@ -13,7 +13,6 @@ import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
 import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
-import qualified Prelude ((/=))
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -168,7 +167,7 @@ extends block cert chain =
   chainExtends :: Chain -> Bool
   chainExtends =
     any (\block -> hash block == blockRef cert)
-      . dropWhile (\block' -> (Prelude./=) (hash block') (hash block))
+      . dropWhile (\block' -> hash block' /= hash block)
 
 votingBlock :: NodeModel -> Maybe Block
 votingBlock s =
