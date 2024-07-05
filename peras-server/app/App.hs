@@ -14,7 +14,7 @@ import qualified Data.Yaml as Y (decodeFileEither)
 import GHC.Generics (Generic)
 import qualified Options.Applicative as O
 import Paths_peras_server (version)
-import Peras.Prototype.Network (SimControl (delay, pause, stop), simulate)
+import Peras.Prototype.Network (SimControl (delay), simulate)
 import Peras.Prototype.Network.Arbitrary (genSimConfigIO)
 import Peras.Prototype.Types (PerasParams (..))
 import Peras.Prototype.Visualizer (makeVisTracer)
@@ -47,7 +47,7 @@ main =
     Command{..} <- O.execParser commandParser
     Simulate{..} <- either (die . show) pure =<< Y.decodeFileEither inFile
     (tracer, reader) <- makeVisTracer
-    controlVar <- newTVarIO $ def{delay = 0, stop = False, pause = False}
+    controlVar <- newTVarIO $ def{delay = 0}
     simConfig <-
       genSimConfigIO
         def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasT = t, perasΔ = delta}
