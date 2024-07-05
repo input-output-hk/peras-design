@@ -21,7 +21,7 @@ let
   agdaLib = repoRoot.nix.agda-packages.mkDerivation {
     pname = "agda2hs";
     version = "1.2";
-    src = inputs.agda2nix;
+    src = inputs.agda2hs;
     meta = { description = "agda2hs"; };
     everythingFile = "./lib/Everything.agda";
     preBuild = ''
@@ -36,7 +36,17 @@ let
     '';
   };
 
-in {
-  exe = haskellProject.hsPkgs.agda2hs.components.exes.agda2hs;
-  lib = agdaLib;
-}
+in
+if false
+then
+  {
+    # Use these if the `agda2hs` version is available in hackage.
+    exe = haskellProject.hsPkgs.agda2hs.components.exes.agda2hs;
+    lib = agdaLib;
+  }
+else
+  {
+    # Use these for an arbitrary version of `agda2hs` from its github repo.
+    exe = inputs.agda2hsFlake.packages.agda2hs;
+    lib = inputs.agda2hsFlake.packages.agda2hs-lib;
+  }
