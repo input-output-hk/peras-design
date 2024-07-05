@@ -20,7 +20,7 @@ all: typecheck
 test:
 	cabal test all
 
-typecheck: $(HSFILES) $(LHSFILES) $(SIMHSFILES)
+typecheck: $(HSFILES) $(LHSFILES)
 
 $(HSDIR)/%.hs: %.agda
 	@$(AGDA) --local-interfaces --library-file=$(AGDA_LIBS) $^

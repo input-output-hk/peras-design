@@ -229,15 +229,13 @@ instance
 instance
   iBlockBodyEq : Eq BlockBody
   iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
-  
+ 
+open Hashable
+
 private
   instance
     hashBlock : Hashable Block
-    hashBlock = record
-      { hash = λ b →
-                 (let record { bytesS = s } = signature b
-                  in record { hashBytes = s })
-      }
+    hashBlock .hash = MkHash ∘ bytesS ∘ signature
 ```
 
 <!--
