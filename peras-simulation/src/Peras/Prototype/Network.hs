@@ -11,7 +11,7 @@
 module Peras.Prototype.Network where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar, modifyTVar'), atomically, newTVarIO, readTVarIO, writeTVar)
-import Control.Monad (forM)
+import Control.Monad (forM, when)
 import Control.Monad.Class.MonadTimer (MonadDelay, threadDelay)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, execStateT, gets, modify', runStateT)
@@ -127,10 +127,15 @@ instance Default SimConfig where
       , diffuser = def
       }
 
+data SimAction = SimRun | SimStop | SimStep | SimPause
+  deriving (Eq, Generic, Show)
+
+instance A.FromJSON SimAction
+instance A.ToJSON SimAction
+
 data SimControl = MkSimControl
   { delay :: Int
-  , stop :: Bool
-  , pause :: Bool
+  , action :: SimAction
   }
   deriving (Eq, Generic, Show)
 
@@ -138,7 +143,7 @@ instance A.FromJSON SimControl
 instance A.ToJSON SimControl
 
 instance Default SimControl where
-  def = MkSimControl 100_000 False False
+  def = MkSimControl 200_000 SimRun
 
 simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> TVar m SimControl -> SimConfig -> m (PerasResult SimConfig)
 simulate tracer controlVar initial =
@@ -153,14 +158,19 @@ simulate tracer controlVar initial =
     traceWith tracer . Protocol $ params initial
     let go count =
           do
-            MkSimControl{delay, stop, pause} <- lift . lift $ readTVarIO controlVar
+            MkSimControl{delay, action} <- lift . lift $ readTVarIO controlVar
             lift . lift $ threadDelay delay
-            case (stop || count <= 0, pause) of
-              (True, _) -> pure ()
-              (_, True) -> go count
-              (False, False) -> do
+            case if count <= 0 then SimStop else action of
+              SimStop -> pure ()
+              SimPause -> go count
+              _ -> do
                 payload <- gets $ fromMaybe mempty . (`Map.lookup` payloads initial) . netClock
                 ExceptT $ runNetwork tracer payload
+                when (action == SimStep)
+                  . lift
+                  . lift
+                  . atomically
+                  $ modifyTVar' controlVar (\c -> c{action = SimPause})
                 go $ count - 1
     (result, net') <- flip runStateT net . runExceptT . go $ finish initial - start initial
     case result of
