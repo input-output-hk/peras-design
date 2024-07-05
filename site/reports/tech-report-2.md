@@ -162,8 +162,53 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 ## Protocol visualization
 
-> [!IMPORTANT]
-> Write up a description of the Peras visualizer.
+The results of simulations can be viewed graphically in a web application that lets one explore the operation of the Peras protocol and the influence that each of the protocol parameters has upon the evolution of the block tree. This can be used for education, for studying voting behavior, for selecting optimal values of the protocol parameters, or for debugging a simulation.
+
+The screenshot below shows the user interface for the Peras simulation web application.
+
+- Each of the Peras protocol parameters may be set, and tooltips provide explanations of them.
+- Simulation-related parameters such as the duration of the simulation, the number of nodes involved, and the random-number seen may be set.
+- Users can share simulations by copying a URL that embeds sufficient information to fully reproduce the simulation.
+- Buttons allow the user to run, step singly, pause or stop the simulation.
+- A zoomable display visualizes the simulated block tree.
+
+![Screenshot of Peras visualization web application](../diagrams/simvis-parameters.png)
+
+The screenshot below shows the visualization of the Peras block tree:
+
+- Light blue rectangles represent blocks that do not record Peras certificates, whereas dark blue rectangles represent blocks that do record Peras certificates recorded in them.
+	- Block lines point to the parent block.
+	- The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
+- Salmon-colored circles represent votes for blocks, whereas olive-colored circles represent situation were a party was on the voting committee but not allowed to vote.
+	- Salmon-colored dashed lines point to the block being voted for.
+	- The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
+- Certificates are aqua rectangles.
+	- Aqua dashed lines point to the block being certified.
+- Nodes are red circles.
+	- The red dashed lines point to the tip of their preferred blockchain.
+	- The orange dashed lines point to their `cert′` and cert* certificates.
+
+![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
+
+The visualizer can be deployed as a server via Docker. It supports multiple simultaneous web clients running each their own simulations and it supports basic HTTP authentication.
+
+```console
+$ peras-server --help
+
+peras-server: server Peras simulations
+
+Usage: peras-server [--version] [--port PORT] 
+                    [--username STRING --password STRING]
+
+  This server provides Peras simulations.
+
+Available options:
+  -h,--help                Show this help text
+  --version                Show version.
+  --port PORT              Port on which the server listens.
+  --username STRING        Authorized user.
+  --password STRING        Password for authorized user.
+```
 
 ## Markov-chain simulation
 
