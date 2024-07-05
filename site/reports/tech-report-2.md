@@ -157,12 +157,99 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 ## Protocol simulation
 
-> [!IMPORTANT]
-> Discuss the protocol simulation
+The Peras simulator is a prototype/reference implementation of the Peras protocol in Haskell. The implementation aims to encode the pseudo-code for the protocol specification in as literal and transparent a manner as possible, regardless of the performance drawbacks of such literalness. Note that it simulates the Peras protocol in the abstract and does not include a simulation of network diffusion. Its core contains four modules:
 
+- `Peras.Prototype.Fetching` handles the receipt of new chains and new votes. It includes the following logic:
+	- creates new certificates when a new quorum of votes is reached,
+	- selects the preferred chain, and
+	- updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
+- `Peras.Prototype.BlockCreation` forges new blocks and, optionally, includes a certificate in the new block.
+- `Peras.Prototype.Preagreement` selects the block that a party will vote upon.
+- `Peras.Prototype.Voting` casts votes.
+
+Additional, non-core modules handle the diffusion of votes, the interactions between multiple nodes, and visualization of results. The simulator's voting behavior has been tested against the Agda-derived executable specification via the `quickcheck-dynamic` property-based state-machine testing framework: see `Peras.Conformance.Test`.
+
+The simulator can be run from the command line or in a web browser. At the command line, one can specify the input configuration (state) of the simulation, store its output configuration, and record a trace of simulation events. The ending time of the output configuration can be edited to set it to a later time, and then the simulation can be continued by providing that edited output configuration as input to the continued simulation.
+
+```console
+$ peras-simulate --help
+
+peras-simulate: simulate Peras protocol
+
+Usage: peras-simulate [--version] [--in-file FILE] [--out-file FILE] 
+                      [--trace-file FILE]
+
+  This command-line tool simulates the Peras protocol.
+
+Available options:
+  -h,--help                Show this help text
+  --version                Show version.
+  --in-file FILE           Path to input YAML file containing initial simulation
+                           configuration.
+  --out-file FILE          Path to output YAML file containing final simulation
+                           configuration.
+  --trace-file FILE        Path to output JSON-array file containing simulation
+                           trace.
+```
+
+The input configuration file specifies the protocol parameters, the initial state of the simulation, and the slot-leadership and committee-membership schedules for each node/party. This gives the user full control over the simulation and ensures reproducibility of the simulation results.
+
+```json
+{
+  "params":{"U":20,"A":200,"R":10,"K":17,"L":10,"τ":2,"B":10,"T":15,"Δ":5},
+  "start":0,
+  "finish":300,
+  "payloads":{},
+  "parties":{
+    "1":{"leadershipSlots":[2,10,25,33,39,56,71,96,101,108,109,115],"membershipRounds":[1,2,6],"perasState":{"certPrime":{"blockRef":"","round":0},"certStar":{"blockRef":"","round":0},"certs":[],"chainPref":[],"chains":[[]],"votes":[]}},
+    "2":{"leadershipSlots":[12,17,33,44,50,67,75,88,105],"membershipRounds":[2,3,5,6],"perasState":{"certPrime":{"blockRef":"","round":0},"certStar":{"blockRef":"","round":0},"certs":[],"chainPref":[],"chains":[[]],"votes":[]}},
+    "3":{"leadershipSlots":[5,15,42,56,71,82,124],"membershipRounds":[3,4,5,6],"perasState":{"certPrime":{"blockRef":"","round":0},"certStar":{"blockRef":"","round":0},"certs":[],"chainPref":[],"chains":[[]],"votes":[]}},
+    "4":{"leadershipSlots":[8,15,21,38,50,65,127],"membershipRounds":[1,5],"perasState":{"certPrime":{"blockRef":"","round":0},"certStar":{"blockRef":"","round":0},"certs":[],"chainPref":[],"chains":[[]],"votes":[]}}
+  },
+  "diffuser":{"delay":0,"pendingChains":{},"pendingVotes":{}}
+}
+```
+
+The output configuration file reveals all of the chains, votes, etc. tracked by each node/party. The trace file is a JSON array of events occurring in the simulation. The trace file converted to a GraphViz `.dot` file for visualization. Traces can also be piped into tools for real-time analysis.
+
+| Tag                         | Event                                                      |
+| --------------------------- | ---------------------------------------------------------- |
+| `Protocol`                  | new protocol parameters                                    |
+| `Tick`                      | new slot                                                   |
+| `NewChainAndVotes`          | new chains and votes received                              |
+| `NewCertificatesReceived`   | new certificates received (embedded in new chains)         |
+| `NewCertificatesFromQuorum` | new certificates created after new votes have been fetched |
+| `NewChainPref`              | node prefers a new chain                                   |
+| `NewCertPrime`              | node selected a new $\mathsf{cert}^\prime$                 |
+| `NewCertStar`               | node selected a new $\mathsf{cert}^*$                      |
+| `ForgingLogic`              | logic for including a certificate in a new block           |
+| `DiffuseChain`              | chain extended by a new block                              |
+| `PreagreementBlock`         | preagreement on a block to be voted upon                   |
+| `PreagreementNone`          | no preagreement for voting                                 |
+| `VotingLogic`               | logic for casting a vote                                   |
+| `DiffuseVote`               | diffuse a new vote                                         |
+
+```console
+$ peras-visualize --help
+
+peras-visualize: visualize Peras simulation traces
+
+Usage: peras-visualize [--version] --trace-file FILE [--dot-file FILE]
+
+  This command-line tool visualizes Peras simulation traces.
+
+Available options:
+  -h,--help                Show this help text
+  --version                Show version.
+  --trace-file FILE        Path to input JSON-array file containing simulation
+                           trace.
+  --dot-file FILE          Path to output GraphViz DOT file containing
+                           visualization.
+```
+  
 ## Protocol visualization
 
-The results of simulations can be viewed graphically in a web application that lets one explore the operation of the Peras protocol and the influence that each of the protocol parameters has upon the evolution of the block tree. This can be used for education, for studying voting behavior, for selecting optimal values of the protocol parameters, or for debugging a simulation.
+The results of simulations can be viewed graphically in a web application (see https://peras-simulation.cardano-scaling.org/) that lets one explore the operation of the Peras protocol and the influence that each of the protocol parameters has upon the evolution of the block tree. This can be used for education, for studying voting behavior, for selecting optimal values of the protocol parameters, or for debugging a simulation.
 
 The screenshot below shows the user interface for the Peras simulation web application.
 
@@ -186,7 +273,7 @@ The screenshot below shows the visualization of the Peras block tree:
 	- Aqua dashed lines point to the block being certified.
 - Nodes are red circles.
 	- The red dashed lines point to the tip of their preferred blockchain.
-	- The orange dashed lines point to their `cert′` and cert* certificates.
+	- The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
 
 ![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
 
