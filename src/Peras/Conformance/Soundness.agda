@@ -123,7 +123,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open import Data.Bool using ()
     open import Data.Nat using (_≥_; _≥?_; _>?_)
-    open import Relation.Nullary.Decidable using (_×-dec_; toWitness; isYes)
+    open import Relation.Nullary.Decidable using (_×-dec_; isYes; fromWitness)
 
     postulate
       hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
@@ -156,10 +156,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
-          r = slotToRound (protocol m) (clock m)
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
-          getRoundNumber r ≥ getRoundNumber (round cert') + perasR (protocol m)
+          getRoundNumber (rFromSlot m) ≥ getRoundNumber (round cert') + perasR (protocol m)
       → VotingRule-2A (v-round (clock m)) (proj₁ ∃tree)
     vr-2a⇒VotingRule-2A _ _ ∃tree x rewrite (proj₂ ∃tree) = x
 
@@ -175,11 +174,26 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
       = {!!}
 
-    open import Data.Sum using (inj₁; inj₂)
+    open import Data.Sum using (inj₁; inj₂; _⊎_)
+    open import Relation.Nullary.Negation using (contradiction)
+
+    decompose : ∀ {nm : NodeModel}
+      → checkVotingRules nm ≡ True
+      →   (vr1A nm ≡ True × vr1B nm ≡ True)
+        ⊎ (vr2A nm ≡ True × vr2B nm ≡ True)
+    decompose {nm} _
+      with vr1A nm | vr1B nm | vr2A nm | vr2B nm
+    ...   | True   | True    | _       | _        = inj₁ (refl , refl)
+    ...   | _      | _       | True    | True     = inj₂ (refl , refl)
 
     makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → checkVotingRules (modelState s p) ≡ True
       → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
+    makeVote≡True⇒VotingRule s p ∃tree x with decompose {nm = modelState s p} x
+    ... | inj₁ (a , b) rewrite hash-genesis = inj₁ (vr-1a⇒VotingRule-1A s p ∃tree {!!} Data.Product., vr-1b⇒VotingRule-1B s p ∃tree {!!})
+    ... | inj₂ (a , b) rewrite hash-genesis = inj₂ (vr-2a⇒VotingRule-2A s p ∃tree {!!} Data.Product., vr-2b⇒VotingRule-2B s p ∃tree {!!})
+
+{-
     makeVote≡True⇒VotingRule s p ∃tree x
        with (let m = modelState s p
              in nextRound (round (cert' m)) ≟-RoundNumber (rFromSlot m))
@@ -204,6 +218,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ... | no vr-1a | _ | _ | no vr-2b = {!!}
     ... | _ | no vr-1b | no vr-2a | _ = {!!}
     ... | _ | no vr-1b | _ | no vr-2b = {!!}
+-}
+    {-
+      with decompose {modelState s p} x
+    ... | inj₁ (a , b) = {!!}
+    ... | inj₂ (a , b) = contradiction b vr-2b -- {!!}
+    -}
 
     record Invariant (s : State) : Set where
       field
