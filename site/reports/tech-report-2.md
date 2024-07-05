@@ -103,6 +103,8 @@ Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
 This section details the Peras voting process, from the casting and detailed structure of votes, to the creation, diffusion, and storage of certificates.
 
+# Votes & Certificates
+
 ## Votes
 
 ### Overview
@@ -215,7 +217,11 @@ The [peras-vote](../../peras-vote/) package provides some benchmarks comparing t
 
 **Note**: The implementation takes some liberty with the necessary rigor suitable for cryptographic code, but the timings provided should be consistent with real-world production grade code. In particular, when using _nonce_ as a random value, we only use the low order 64 bits of the nonce, not the full 256 bits.
 
-## ALBA Certificates
+## Certificates
+
+### Mithril certificates
+
+### ALBA
 
 > [!WARNING]
 > It's unclear whether or not KES signatures are [non malleable]() which is a requirement
@@ -247,11 +253,17 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 ### Benchmarks
 
+In the following tables we compare some interesting metrics between the two differnt kind of certificates we studied, Mithril certificates (using BLS signatures) and ALBA certificates (using KES signatures): Size of certificate in bytes, proving time (eg. the time to construct a single vote), aggregation time (the time to build a certificate), and verification time.
+
+For Mithril certificates:
+
 |---------------------------------|-------|
 | Certificate size                | 56kB  |
 | Proving time (per vote)         | ~70ms |
 | Aggregation time                | 1.2s  |
 | Verification time (certificate) | 17ms  |
+
+For ALBA certificates:
 
 |---------------------------------|--------|
 | Certificate size                | 47kB   |
@@ -259,6 +271,8 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 | Aggregation time                | ~5ms   |
 | Verification time (certificate) | 15ms   |
 |                                 |        |
+
+## Vote diffusion
 
 # Constraints on Peras Parameters
 
@@ -303,7 +317,7 @@ $ peras-simulate --help
 
 peras-simulate: simulate Peras protocol
 
-Usage: peras-simulate [--version] [--in-file FILE] [--out-file FILE] 
+Usage: peras-simulate [--version] [--in-file FILE] [--out-file FILE]
                       [--trace-file FILE]
 
   This command-line tool simulates the Peras protocol.
@@ -373,7 +387,7 @@ Available options:
   --dot-file FILE          Path to output GraphViz DOT file containing
                            visualization.
 ```
-  
+
 ## Protocol visualization
 
 The results of simulations can be viewed graphically in a web application (see https://peras-simulation.cardano-scaling.org/) that lets one explore the operation of the Peras protocol and the influence that each of the protocol parameters has upon the evolution of the block tree. This can be used for education, for studying voting behavior, for selecting optimal values of the protocol parameters, or for debugging a simulation.
@@ -411,7 +425,7 @@ $ peras-server --help
 
 peras-server: server Peras simulations
 
-Usage: peras-server [--version] [--port PORT] 
+Usage: peras-server [--version] [--port PORT]
                     [--username STRING --password STRING]
 
   This server provides Peras simulations.
@@ -812,12 +826,12 @@ $ peras-simulation-test --match "/Peras.Conformance.Test/" --qc-max-success=1000
 
 Peras.Conformance.Test
   Prototype node
-    Simulation respects model [✔]       
+    Simulation respects model [✔]
       +++ OK, passed 1000 tests.
-      
+
       Action polarity (50500 in total):
       100.000% +
-      
+
       Actions (50500 in total):
       38.487% +NewVote
       30.816% +Tick
@@ -918,13 +932,44 @@ There are still opportunities for syntactic sugar that would make the code more 
 - Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
 - Creating a full eDSL might be a better approach, but that would involved significantly more effort.
 
+
 # Community feedback
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
-- **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e. how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc. 
+- **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e. how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc.
 - **Transparency and Rationale**: Stakeholders want clarity on the cost of Peras (in terms of ADA, fees, or resources) and a clear explanation of why this solution is possible now when it wasn't before.
 - **Speed and Efficiency**: Some stakeholders emphasize the need for a faster development process, suggesting that the formal specification could be developed in parallel with the technical implementation.
 - **Timeline**: Stakeholders are curious about the timeline for Peras development and implementation.
+
+# Resources impact of Peras
+
+## Network
+
+We did some quick research on network pricing for a few major Cloud or VPS providers: https://docs.google.com/document/d/1JJJk4XPqmP61eNWYNfqL8FSbKAF9cWazKWFZP6tMGa0/edit
+
+Comparison table in USD/mo for different outgoing data transfer volumes expressed as bytes/seconds and similar VMs (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs:
+
+| Provider     | VM     | 50kB/s | 125kB/s | 250kB/s |
+|--------------|--------|--------|---------|---------|
+| DigitalOcean | $188   | $188   | $188    | $188    |
+| Google Cloud | $200   | $213.6 | $234    | $268    |
+| AWS          | $150 ? | $161.1 | $177.9  | $205.8  |
+| Azure        | $175   | $186   | $202    | $230    |
+| OVH          | $70    | $70    | $70     | $70     |
+| Hetzner      | $32    | $32    | $32     | $32     |
+
+Notes:
+
+* the AWS cost is quite hard to estimate up-front, obviously on purpose. The $150 base price is a rough average of various instances options in the target range
+* Google, AWS and Azure prices are based on 100% uptime and at least 1-year reservation for discounts
+
+![Typical node inbound & outbound traffic](../static/img/node-average-traffic.jpg)
+
+Assuming $U ~ 100$, a committee size of 2000 SPOs, a single vote size of 700 bytes, means we will be adding 14kB/s to the expected traffic to each node. For an AWS hosted SPO, which represents a [significant share](https://pooltool.io/networkhealth) of the SPOs, this would lead to cost increase of $3.4/mo (33GB times $0.11/GB).
+
+## Storage
+
+## CPU
 
 # Conclusion
 
