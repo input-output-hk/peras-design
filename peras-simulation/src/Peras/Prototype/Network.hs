@@ -143,7 +143,7 @@ instance A.FromJSON SimControl
 instance A.ToJSON SimControl
 
 instance Default SimControl where
-  def = MkSimControl 100_000 SimRun
+  def = MkSimControl 200_000 SimRun
 
 simulate :: forall m. (MonadDelay m, MonadSTM m) => Tracer m PerasLog -> TVar m SimControl -> SimConfig -> m (PerasResult SimConfig)
 simulate tracer controlVar initial =
