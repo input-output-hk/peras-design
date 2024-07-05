@@ -185,10 +185,35 @@ The first algorithm is basically identical to the one used for [Mithril](https:/
   * $f$ is the fraction of slots that are "active" for voting
   * $m$ is the number of _lottery_ each voter should try to get a vote for,
   * $k$ is the target total number of votes for each round (eg. quorum). $k$ should be chosen such that $k = m \dot \phi(0.5)$ to reach a majority quorum,
-* When its turn to vote comes, a node
+* When its turn to vote comes, each node run iterates over an index $i \in \[1 \dots m\]$, computes a hash from the _nonce_ and the index $i$, and compares this hash with $f(\sigma)$: if it's lower than or equal, then the node has one vote
+  * Note the computation $f(\sigma)$ is exactly identical to the one used for [leader election](https://github.com/intersectmbo/cardano-ledger/blob/f0d71456e5df5a05a29dc7c0ac9dd3d61819edc8/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L434)
+
+We [prototyped](https://github.com/input-output-hk/peras-design/blob/73eabecd272c703f1e1ed0be7eeb437d937e1179/peras-vote/src/Peras/Voting/Vote.hs#L311) this approach in Haskell.
 
 ### Sortition-like voting
 
+The second algorithm is based on the _sortition_ process initially invented by [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) and [implemented](https://github.com/algorand/sortition/blob/main/sortition.cpp) in their node. It's based on the same idea, ie. that a node should have a number of votes proportional to their fraction of total stake, given a target "committee size" expressed as a fraction of total stake $p$. And it uses the fact the number of votes a single node should get based on these parameters follows a binomial distribution.
+
+The process for voting is thus:
+
+* Compute the individual probability of each "coin" to win a single vote $p$ as the ratio of expected committee size over total stake
+* Compute the binomial distribution $B(n,p)$ where $n$ is the node's stake
+* Compute a random number between 0 and 1 using _nonce_ as the denominator over maximum possible value (eg. all bits set to 1) for the nonce as denominator
+* Use [bisection method](https://en.wikipedia.org/wiki/Bisection_method) to find the value corresponding to this probability in the CDF for the aforementioned distribution
+
+This yields a vote with some _weight_ attached to it "randomly" computed so that the overall sum of weights should be around expected committee size.
+
+This method has also been [prototyped in Haskell](https://github.com/input-output-hk/peras-design/blob/73eabecd272c703f1e1ed0be7eeb437d937e1179/peras-vote/src/Peras/Voting/Vote.hs#L174).
+
+### Benchmarks
+
+The [peras-vote](../../peras-vote/) package provides some benchmarks comparing the 2 approaches, which gives us:
+
+* Single Voting (Binomial): 139.5 μs
+* Single Verification (binomial): 160.9 μs
+* Single Voting (Taylor): 47.02 ms
+
+**Note**: The implementation takes some liberty with the necessary rigor suitable for cryptographic code, but the timings provided should be consistent with real-world production grade code. In particular, when using _nonce_ as a random value, we only use the low order 64 bits of the nonce, not the full 256 bits.
 
 ## ALBA Certificates
 
@@ -219,6 +244,21 @@ For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{r
 Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
 ![Proof size vs. λ and honest votes ratio](../diagrams/alba-proof-size-lambda.svg)
+
+### Benchmarks
+
+|---------------------------------|-------|
+| Certificate size                | 56kB  |
+| Proving time (per vote)         | ~70ms |
+| Aggregation time                | 1.2s  |
+| Verification time (certificate) | 17ms  |
+
+|---------------------------------|--------|
+| Certificate size                | 47kB   |
+| Proving time (per vote)         | ~133us |
+| Aggregation time                | ~5ms   |
+| Verification time (certificate) | 15ms   |
+|                                 |        |
 
 # Constraints on Peras Parameters
 
