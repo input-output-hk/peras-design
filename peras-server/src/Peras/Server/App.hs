@@ -16,7 +16,7 @@ import Data.Functor (void)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
-import Peras.Prototype.Network (SimControl (delay, pause, stop), simulate)
+import Peras.Prototype.Network (SimAction (..), SimControl (action, delay), simulate)
 import Peras.Prototype.Network.Arbitrary (genSimConfigIO)
 import Peras.Prototype.Types (PerasParams (..))
 
@@ -37,7 +37,9 @@ data AppControl
       , activeSlots :: Double
       , delayMicroseconds :: Int
       , rngSeed :: Int
+      , step :: Bool
       }
+  | Step
   | Pause
   | Resume
   | Stop
@@ -62,7 +64,7 @@ wsapp pending = do
       WS.receiveData conn
         >>= \case
           Simulate{..} -> do
-            modifyControl $ \c -> c{delay = delayMicroseconds, stop = False, pause = False}
+            modifyControl $ \c -> c{delay = delayMicroseconds, action = if step then SimStep else SimRun}
             simConfig <-
               genSimConfigIO
                 def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasT = t, perasΔ = delta}
@@ -73,6 +75,7 @@ wsapp pending = do
                 rngSeed
             let tracer = Tracer . emit $ WS.sendTextData conn . decodeUtf8 . A.encode
             void . forkIO . void $ simulate tracer control simConfig
-          Pause -> modifyControl $ \c -> c{pause = True}
-          Resume -> modifyControl $ \c -> c{pause = False}
-          Stop -> modifyControl $ \c -> c{stop = True}
+          Step -> modifyControl $ \c -> c{action = SimStep}
+          Pause -> modifyControl $ \c -> c{action = SimPause}
+          Resume -> modifyControl $ \c -> c{action = SimRun}
+          Stop -> modifyControl $ \c -> c{action = SimStop}
