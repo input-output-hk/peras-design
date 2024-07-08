@@ -127,6 +127,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open import Data.Nat using (_≥_; _≥?_; _>?_)
 
+    postulate
+      certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+        → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
+
 {-
     postulate
       hash-genesis : (hashBytes (Hashable.hash hashBlock (Network.block₀ network))) ≡ emptyBS
@@ -175,9 +179,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
     vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
-      rewrite (proj₂ ∃tree)
-      rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
-      = {!!} P., {!!}
+      rewrite sym (certS-equ s p ∃tree)
+      = x P., y
 
     record Invariant (s : State) : Set where
       field
