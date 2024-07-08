@@ -113,7 +113,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
-        validVote      : (VotingRule-1A r tree) ⊎ (VotingRule-2A r tree P.× VotingRule-2B r tree) -- FIXME: all voting rules
+        validVote      : VotingRule slot tree
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ tree) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid
@@ -150,17 +150,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       = cong getRoundNumber (sym x)
 
     vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → let
-          m = modelState s p
-          block = case (votingBlock m) of
-                   λ { (Just block) → block
-                     ; Nothing → Network.block₀ network
-                     }
-          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
-        in
-          extends block cert' (allChains m) ≡ True
-      → VotingRule-1B (proj₁ ∃tree)
-    vr-1b⇒VotingRule-1B = {!!}
+      → let m = modelState s p
+        in Vr1B m
+      → VotingRule-1B (clock m) (proj₁ ∃tree)
+    vr-1b⇒VotingRule-1B s p ∃tree x = {!!}
 
     vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
@@ -212,7 +205,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           f₃ = vr-2a⇒VotingRule-2A  s (creatorId vote) (hasTree inv (creatorId vote))
           f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
         in
-          S.map (proj₁ ∘ P.map₁ f₁) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
+          S.map (P.map f₁ f₂) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
@@ -249,7 +242,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                               validSignature'
                               startOfRound
                               axiom-everyoneIsOnTheCommittee
-                              {!!} -- FIXME: validVote
+                              validVote
                             )
                           -- TODO: also deliver the vote message to establish Fetched s₁
                           ↣ ∎
