@@ -631,7 +631,75 @@ Restrictions:
 
 ## Formally verified test executions
 
-## Community feedback
+# Conformance testing
+
+Conformance testing is linked to the Peras paper via the following chain of evidence:
+
+- The protocol defined in the Peras paper is encoded in Agda as a relational specification.
+- The proofs in the Peras paper will be encoded as Agda proofs.
+- The protocol is also implemented as an executable specification in Agda.
+- Soundness proofs demonstrate that the executable specification correctly implements the relational specification.
+- The `agda2hs` tool generates Haskell code implementing the Agda executable specification.
+- That Haskell code is used as the *state model* in the `quickcheck-dynamic` state-machine, property-based-testing framework.
+- The implementation being tested is used as the *run model*.
+- The `quickcheck-dynamic` tool generates arbitrary test cases and verifies that the run model obeys the properties of the state model.
+
+The following types in the Agda executable specification are exported to Haskell.
+
+```agda
+record NodeModel : Set where
+  field
+    clock            : SlotNumber
+    protocol         : PerasParams
+    allChains        : List Chain
+    allVotes         : List Vote
+    allSeenCerts     : List Certificate
+
+data EnvAction : Set where
+  Tick     : EnvAction
+  NewChain : Chain → EnvAction
+  NewVote  : Vote → EnvAction
+
+initialModelState : NodeModel
+
+transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
+```
+
+This is used in the Haskell state model as follows.
+
+```haskell
+instance StateModel NodeModel where
+  data Action NodeModel a where
+    Step :: EnvAction -> Action NodeModel [Vote]
+  initialState = initialModelState
+  precondition s (Step a) = isJust (transition s a)
+  nextState s (Step a) _ = snd . fromJust $ transition s a
+```
+
+The present implementation focuses on the voting behavior, not on the block-production and network-diffusion behavior. For demonstration purposes, the `RunModel` is the Peras prototype/reference simulation describe in an earlier section of this document. Other implementations can be wired into the conformance tests via inter-process communication techniques.
+
+```console
+$ peras-simulation-test --match "/Peras.Conformance.Test/" --qc-max-success=1000
+
+Peras.Conformance.Test
+  Prototype node
+    Simulation respects model [✔]       
+      +++ OK, passed 1000 tests.
+      
+      Action polarity (50500 in total):
+      100.000% +
+      
+      Actions (50500 in total):
+      38.487% +NewVote
+      30.816% +Tick
+      30.697% +NewChain
+
+Finished in 4.7193 seconds
+1 example, 0 failures
+
+```
+
+# Community feedback
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
 - **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e. how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc. 
