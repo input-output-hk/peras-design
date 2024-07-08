@@ -323,6 +323,16 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
+#### Preagreement
+
+```agda
+    Preagreement : SlotNumber → T → Block
+    Preagreement (MkSlotNumber s) t =
+      let
+        Cpref = preferredChain t
+        bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
+      in fromMaybe block₀ (head bs)
+```
 #### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
@@ -336,25 +346,38 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
-    VotingRule-1B : T → Set
-    VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
+    chainExtends' : Block → Certificate → Chain → Set
+    chainExtends' b c =
+      Any (λ block → (hash block ≡ blockRef c))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+
+    chainExtends : SlotNumber → T → Chain → Set
+    chainExtends s t = chainExtends' (Preagreement s t) (latestCertSeen t)
+
+    VotingRule-1B : SlotNumber → T → Set
+    VotingRule-1B s t = Any (chainExtends s t) (allChains t)
 ```
 ```agda
-    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
-    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+    chainExtends? : (s : SlotNumber) → (t : T) → (c : Chain) → Dec (chainExtends s t c)
+    chainExtends? s t =
+      any? (λ block → (hash block ≟-BlockHash blockRef (latestCertSeen t)))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash (Preagreement s t)))
+
+    VotingRule-1B? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1B s t)
+    VotingRule-1B? s t = any? (chainExtends? s t) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
-    VotingRule-1 : RoundNumber → T → Set
-    VotingRule-1 r t =
-        VotingRule-1A r t
-      × VotingRule-1B t
+    VotingRule-1 : SlotNumber → T → Set
+    VotingRule-1 s t =
+        VotingRule-1A (v-round s) t
+      × VotingRule-1B s t
 ```
 ```agda
-    VotingRule-1? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
-    VotingRule-1? r t =
-            VotingRule-1A? r t
-      ×-dec VotingRule-1B? t
+    VotingRule-1? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1 s t)
+    VotingRule-1? s t =
+            VotingRule-1A? (v-round s) t
+      ×-dec VotingRule-1B? s t
 ```
 VR-2A: The last certificate a party has seen is from a round at least R rounds back
 ```agda
@@ -400,16 +423,16 @@ VR-2: Both VR-2A and VR-2B hold
 ```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
-    VotingRule : RoundNumber → T → Set
-    VotingRule r t =
-        VotingRule-1 r t
-      ⊎ VotingRule-2 r t
+    VotingRule : SlotNumber → T → Set
+    VotingRule s t =
+        VotingRule-1 s t
+      ⊎ VotingRule-2 (v-round s) t
 ```
 ```agda
-    VotingRule? : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
-    VotingRule? r t =
-            VotingRule-1? r t
-      ⊎-dec VotingRule-2? r t
+    VotingRule? : (s : SlotNumber) → (t : T) → Dec (VotingRule s t)
+    VotingRule? s t =
+            VotingRule-1? s t
+      ⊎-dec VotingRule-2? (v-round s) t
 ```
 ### State
 
@@ -474,9 +497,8 @@ transitioning from one voting round to another.
 ```agda
     RequiredVotes : State → Type
     RequiredVotes M =
-      let r = v-round clock
-       in Any (VotingRule r ∘ proj₂) blockTrees
-        → Any (hasVote r ∘ proj₂) blockTrees
+         Any (VotingRule clock ∘ proj₂) blockTrees
+       → Any (hasVote (v-round clock) ∘ proj₂) blockTrees
       where open State M
 ```
 Ticking the global clock increments the slot number and decrements the delay of
@@ -548,16 +570,7 @@ An adversarial party might delay a message
             }
 ```
 ## Voting
-#### Preagreement
-**TODO**: Needs to be finalized in the Peras paper
-```agda
-    Preagreement : SlotNumber → T → Block
-    Preagreement (MkSlotNumber s) t =
-      let
-        Cpref = preferredChain t
-        bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
-      in fromMaybe block₀ (head bs)
-```
+
 Helper function for creating a vote
 ```agda
     createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
@@ -595,7 +608,7 @@ is added to be consumed immediately.
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
         ∙ IsCommitteeMember p r π
-        ∙ VotingRule r t
+        ∙ VotingRule s t
           ───────────────────────────────────
           Honest {p} ⊢
             M ⇉ add (VoteMsg v , 𝟘 , p) to t
