@@ -585,10 +585,18 @@ function(s, B, p, q)
 
 # Recommendations for Peras parameters
 
-> [!IMPORTANT]
-> List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
+Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake.
 
-## Conclusion
+| Parameter              | Symbol | Units   | Value | Rationale                                                             |
+|------------------------|--------|---------|------:|-----------------------------------------------------------------------|
+| Round length           | $U$    | slots   |   400 | 1 ppm probability of 10% adversarial chain receiving boost.           |
+| Certificate expiration | $A$    | slots   | 43200 | Determined by security parameter.                                     |
+| Chain ignorance period | $R$    | rounds  |   108 | Determined by security parameter and round length.                    |
+| Cool-down period       | $K$    | rounds  |   108 | Determined by security parameter and round length.                    |
+| Certification boost    | $B$    | blocks  |    10 | 1 ppm probability of not healing from boost in 40% adversarial chain. |
+| Committee size         | $n$    | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.       |
+| Quorum size            | $\tau$ | parties |   675 | Three-quarters of committee size.                                     |
+| Security parameter     | $k$    | blocks  |  2160 | The Ouroboros Praos security parameter.                               |
 
 # Formal specification in Agda
 
