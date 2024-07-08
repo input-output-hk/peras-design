@@ -982,15 +982,31 @@ There are still opportunities for syntactic sugar that would make the code more 
 
 # Resources impact of Peras
 
+In this section, we evaluate the impact on the day-to-day operations of the Cardano network and cardano nodes of the deployment of Peras protocol, based on the data gathered over the course of project.
+
 ## Network
 
-> [!WARNING]
->
-> Work in progress
+### Network traffic
 
-We did some quick research on network pricing for a few major Cloud or VPS providers: https://docs.google.com/document/d/1JJJk4XPqmP61eNWYNfqL8FSbKAF9cWazKWFZP6tMGa0/edit
+For a fully synced nodes, the impact of Peras on network traffic is modest:
 
-Comparison table in USD/mo for different outgoing data transfer volumes expressed as bytes/seconds and similar VMs (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs:
+* For votes, assuming $U ~ 100$, a committee size of 2000 SPOs, a single vote size of 700 bytes, means we will be adding an average of 14kB/s to the expected traffic to each node,
+* For certificates, assuming an average of 50kB size (half way between Mithril and ALBA sizes) means an negligible increase of 0.5kB/s on average. Note that a node will download either votes or certificate for a given round,  but never both so these numbers are not cumulative.
+
+A non fully synced nodes will have to catch-up with the _tip_ of the chain and therefore download all relevant blocks _and_ certificates. At 50% load (current [monthly load](https://cexplorer.io/usage) is 34% as of this writing), the chain produces a 45kB block every 20s on average. Here are back-of-the-napkin estimates of the amount of data a node would have to download (and store) for synchronising, depending on how long it's been offline:
+
+| Time offline | Blocks (GB) | Certificates (GB) |
+|--------------|-------------|-------------------|
+| 1 month      | 5.56        | 1.23              |
+| 3 months     | 16.68       | 3.69              |
+| 6 months     | 33.36       | 7.38              |
+
+Certificates storage therefore increases node's storage by about **20%**.
+
+### Network costs
+
+We did some quick research on network pricing for a few major Cloud and well-known VPS providers, based on the [share](https://pooltool.io/networkhealth) of stakes each provider is reported to support.
+The following table compares the cost (in US$/month) for different outgoing data transfer volumes expressed as bytes/seconds, on similar VMs tailored to cardano-node's [hardware requirements](https://developers.cardano.org/docs/operate-a-stake-pool/hardware-requirements/) (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs depending on transfer rate.
 
 | Provider     | VM     | 50kB/s | 125kB/s | 250kB/s |
 |--------------|--------|--------|---------|---------|
@@ -1008,7 +1024,7 @@ Notes:
 
 ![Typical node inbound & outbound traffic](../static/img/node-average-traffic.jpg)
 
-Assuming $U ~ 100$, a committee size of 2000 SPOs, a single vote size of 700 bytes, means we will be adding 14kB/s to the expected traffic to each node. For an AWS hosted SPO, which represents a [significant share](https://pooltool.io/networkhealth) of the SPOs, this would lead to cost increase of $3.4/mo (33GB times $0.11/GB).
+For an AWS hosted SPO, which represents a  of the SPOs, this would lead to cost increase of $3.4/mo (33GB times $0.11/GB).
 
 ## Storage
 
