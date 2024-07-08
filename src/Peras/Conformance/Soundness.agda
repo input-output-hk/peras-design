@@ -2,6 +2,7 @@
 module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude
+open import Haskell.Prim.Tuple
 open import Haskell.Law.Equality
 
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
@@ -112,7 +113,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
-        validVote      : (VotingRule-1A r tree) ⊎ (VotingRule-2A r tree) -- FIXME: all voting rules
+        validVote      : (VotingRule-1A r tree) ⊎ (VotingRule-2A r tree P.× VotingRule-2B r tree) -- FIXME: all voting rules
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ tree) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid
@@ -126,8 +127,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open import Data.Nat using (_≥_; _≥?_; _>?_)
 
+{-
     postulate
-      hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
+      hash-genesis : (hashBytes (Hashable.hash hashBlock (Network.block₀ network))) ≡ emptyBS
+      sign-genesis : (bytesS (signature (Network.block₀ network))) ≡ emptyBS
+-}
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
@@ -168,12 +172,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           m = modelState s p
         in
             (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
-          × (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
+          P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
-    vr-2b⇒VotingRule-2B s p ∃tree x
+    vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
       rewrite (proj₂ ∃tree)
       rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
-      = {!!}
+      = {!!} P., {!!}
 
     record Invariant (s : State) : Set where
       field
@@ -190,10 +194,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
          | isYes (checkVotingRules (modelState s (creatorId vote))) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True | True
-      rewrite hash-genesis
---      rewrite sym hash-genesis
-      =
+    newVote-preconditions s vote inv refl | True | True | True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
@@ -207,10 +208,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           f₂ = vr-1b⇒VotingRule-1B  s (creatorId vote) (hasTree inv (creatorId vote))
           f₃ = vr-2a⇒VotingRule-2A  s (creatorId vote) (hasTree inv (creatorId vote))
           f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
-          vrs =
-              S.map₂ (λ { (x , y) → (f₃ x)})
-            $ S.map₁ (λ { (x , y) → (f₁ x)}) witness
-        in vrs -- need to check the VR logic also for environment votes
+        in
+          S.map (proj₁ ∘ P.map₁ f₁) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --

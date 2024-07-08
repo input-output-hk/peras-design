@@ -242,7 +242,7 @@ The block-tree type is defined as follows:
       certs : T → List Certificate
 
     cert₀ : Certificate
-    cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
+    cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS) -- TODO: hash block₀ ?
 
     field
       is-TreeType : IsTreeType

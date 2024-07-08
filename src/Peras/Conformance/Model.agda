@@ -14,6 +14,7 @@ open import Agda.Builtin.Maybe hiding (Maybe)
 open import Data.Bool using ()
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
+open import Data.Product as P using ()
 
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
@@ -270,11 +271,11 @@ private
   variable
     A B : Set
 
-_×-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A × B) (a && b)
-_×-reflects_ {A} {B} {True} {True} x y = x , y
-_×-reflects_ {A} {B} {True} {False} _ y = λ { (_ , y₁) → y y₁ }
-_×-reflects_ {A} {B} {False} {True} x _ = λ { (x₁ , _) → x x₁ }
-_×-reflects_ {A} {B} {False} {False} x _ = λ { (x₁ , _) → x x₁ }
+_×-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
+_×-reflects_ {A} {B} {True} {True} x y = x P., y
+_×-reflects_ {A} {B} {True} {False} _ y = λ { (_ P., y₁) → y y₁ }
+_×-reflects_ {A} {B} {False} {True} x _ = λ { (x₁ P., _) → x x₁ }
+_×-reflects_ {A} {B} {False} {False} x _ = λ { (x₁ P., _) → x x₁ }
 
 _⊎-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
 _⊎-reflects_ {A} {B} {True} {True} x _ = inj₁ x
@@ -282,7 +283,7 @@ _⊎-reflects_ {A} {B} {True} {False} x _ = inj₁ x
 _⊎-reflects_ {A} {B} {False} {True} _ y = inj₂ y
 _⊎-reflects_ {A} {B} {False} {False} x y = [ x , y ]
 
-decP : Dec A → Dec B → Dec (A × B)
+decP : Dec A → Dec B → Dec (A P.× B)
 decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
 
 {-# COMPILE AGDA2HS decP #-}
@@ -355,7 +356,7 @@ vr2A s = ge (getRoundNumber (rFromSlot s)) (getRoundNumber (round (cert' s)) + p
 
 Vr2B : NodeModel → Set
 Vr2B s = ((getRoundNumber (rFromSlot s)) Data.Nat.> (getRoundNumber (round (certS s))))
-       × ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+       P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
 
 vr2B : (s : NodeModel) → Dec (Vr2B s)
 vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s))))
@@ -364,7 +365,7 @@ vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s
 {-# COMPILE AGDA2HS vr2B #-}
 
 CheckVotingRules : NodeModel → Set
-CheckVotingRules s = (Vr1A s × Vr1B s) ⊎ (Vr2A s × Vr2B s)
+CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
 checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
 checkVotingRules s = decS (decP (vr1A s) (vr1B s)) (decP (vr2A s) (vr2B s))
