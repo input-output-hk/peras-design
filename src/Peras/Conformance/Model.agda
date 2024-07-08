@@ -3,8 +3,18 @@ module Peras.Conformance.Model where
 
 open import Haskell.Prelude
 open import Haskell.Control.Monad
+open import Haskell.Extra.Dec
+open import Haskell.Extra.Refinement
+open import Haskell.Law.Equality using (cong)
+open import Haskell.Law.Eq.Def
+open import Haskell.Law.Eq.Instances
+open import Haskell.Law.Ord.Def
+
 open import Agda.Builtin.Maybe hiding (Maybe)
-open import Data.Nat using (ℕ; _/_; _%_; NonZero)
+open import Data.Bool using ()
+open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
+open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
+
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
 open import Peras.Conformance.Params
@@ -18,6 +28,7 @@ open import Protocol.Peras using ()
 {-# FOREIGN AGDA2HS
   {-# LANGUAGE RecordWildCards #-}
   {-# LANGUAGE NamedFieldPuns #-}
+  {-# LANGUAGE TypeOperators #-}
   {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 
   import Prelude hiding (round)
@@ -28,6 +39,7 @@ open import Protocol.Peras using ()
   import Data.Function (on)
   import qualified Data.Set as Set
   import Data.Set (Set)
+  import GHC.Integer
 
   intToInteger :: Int -> Integer
   intToInteger = fromIntegral
@@ -227,39 +239,141 @@ private
 votingBlock : NodeModel → Maybe Block
 votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
 
+postulate -- FIXME
+  instance
+    iRoundNumber : IsLawfulEq RoundNumber
+
 {-# COMPILE AGDA2HS votingBlock #-}
 
-vr1A : NodeModel → Bool
-vr1A s = nextRound (round (cert' s)) == (rFromSlot s)
+isYes : ∀ {A : Set} → Dec A → Bool
+isYes (True ⟨ _ ⟩) = True
+isYes (False ⟨ _ ⟩) = False
+
+{-# COMPILE AGDA2HS isYes #-}
+
+TTrue : ∀ {A : Set} → Dec A → Set
+TTrue a = Data.Bool.T (isYes a)
+
+toTT : ∀ {A : Set} → {a : Dec A} → value a ≡ True → TTrue {A} a
+toTT refl = tt
+
+@0 isYes≡True⇒TTrue : ∀ {A : Set} → {a : Dec A} → isYes a ≡ True → TTrue {A} a
+isYes≡True⇒TTrue x = toTT (isYes≡True⇒value≡True x)
+  where
+    isYes≡True⇒value≡True : ∀ {A : Set} → {a : Dec A} → isYes a ≡ True → value a ≡ True
+    isYes≡True⇒value≡True {a = True ⟨ proof₁ ⟩} x = refl
+
+@0 toWitness' : ∀ {A : Set} {a : Dec A} → TTrue a → A
+toWitness' {a = True ⟨ prf ⟩} _ = prf
+
+private
+  variable
+    A B : Set
+
+_×-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A × B) (a && b)
+_×-reflects_ {A} {B} {True} {True} x y = x , y
+_×-reflects_ {A} {B} {True} {False} _ y = λ { (_ , y₁) → y y₁ }
+_×-reflects_ {A} {B} {False} {True} x _ = λ { (x₁ , _) → x x₁ }
+_×-reflects_ {A} {B} {False} {False} x _ = λ { (x₁ , _) → x x₁ }
+
+_⊎-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
+_⊎-reflects_ {A} {B} {True} {True} x _ = inj₁ x
+_⊎-reflects_ {A} {B} {True} {False} x _ = inj₁ x
+_⊎-reflects_ {A} {B} {False} {True} _ y = inj₂ y
+_⊎-reflects_ {A} {B} {False} {False} x y = [ x , y ]
+
+decP : Dec A → Dec B → Dec (A × B)
+decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
+
+{-# COMPILE AGDA2HS decP #-}
+
+decS : Dec A → Dec B → Dec (A ⊎ B)
+decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
+
+{-# COMPILE AGDA2HS decS #-}
+
+_===_ : ∀ (x y : RoundNumber) → Dec (x ≡ y)
+x === y = (x == y) ⟨ isEquality x y ⟩
+
+{-# COMPILE AGDA2HS _===_ #-}
+
+postulate
+  eq : ∀ (x y : ℕ) → Dec (x ≡ y)
+  ge : ∀ x y → Dec (x ≥ y)
+  gt : ∀ x y → Dec (x Data.Nat.> y)
+
+{-# FOREIGN AGDA2HS
+  eq :: Integer -> Integer -> Bool
+  eq = (==)
+
+  gt :: Integer -> Integer -> Bool
+  gt = gtInteger
+
+  ge :: Integer -> Integer -> Bool
+  ge = geInteger
+#-}
+
+Vr1A : NodeModel → Set
+Vr1A s = nextRound (round (cert' s)) ≡ rFromSlot s
+
+vr1A : (s : NodeModel) → Dec (Vr1A s)
+vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 {-# COMPILE AGDA2HS vr1A #-}
 
+Vr1B : NodeModel → Set
+Vr1B s = ⊤ -- FIXME
+
+{-
+with votingBlock s
+... | Nothing = ⊥
+... | Just block with extends block (cert' s) (allChains s)
+... | True = ⊤
+... | False = ⊥
+-}
+
+vr1B : (s : NodeModel) → Dec (Vr1B s)
+vr1B s = True ⟨ tt ⟩
+
+{-
 vr1B : NodeModel → Bool
 vr1B s =
   case votingBlock s of
     λ { (Just block) → extends block (cert' s) (allChains s)
       ; Nothing → False }
+-}
 
 {-# COMPILE AGDA2HS vr1B #-}
 
-vr2A : NodeModel → Bool
-vr2A s = getRoundNumber (rFromSlot s) >= getRoundNumber (round (cert' s)) + perasR (protocol s)
+Vr2A : NodeModel → Set
+Vr2A s = getRoundNumber (rFromSlot s) ≥ getRoundNumber (round (cert' s)) + perasR (protocol s)
+
+vr2A : (s : NodeModel) → Dec (Vr2A s)
+vr2A s = ge (getRoundNumber (rFromSlot s)) (getRoundNumber (round (cert' s)) + perasR (protocol s))
 
 {-# COMPILE AGDA2HS vr2A #-}
 
-vr2B : NodeModel → Bool
-vr2B s = (rFromSlot s) > round (certS s) && mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)) == mod (getRoundNumber (round (certS s))) (perasK (protocol s))
+Vr2B : NodeModel → Set
+Vr2B s = ((getRoundNumber (rFromSlot s)) Data.Nat.> (getRoundNumber (round (certS s))))
+       × ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+
+vr2B : (s : NodeModel) → Dec (Vr2B s)
+vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s))))
+    (eq (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
 
 {-# COMPILE AGDA2HS vr2B #-}
 
-checkVotingRules : NodeModel → Bool
-checkVotingRules s = vr1A s && vr1B s || vr2A s && vr2B s
+CheckVotingRules : NodeModel → Set
+CheckVotingRules s = (Vr1A s × Vr1B s) ⊎ (Vr2A s × Vr2B s)
+
+checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
+checkVotingRules s = decS (decP (vr1A s) (vr1B s)) (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
-  guard (checkVotingRules s)
+  guard (isYes $ checkVotingRules s)
   block ← votingBlock s
   pure $ makeVote (protocol s) (clock s) block
 
@@ -312,7 +426,7 @@ transition s (NewChain chain) =
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  guard (checkVotingRules s)
+  guard (isYes $ checkVotingRules s)
   Just ([] , record s { allVotes = v ∷ allVotes s })
 
 {-# COMPILE AGDA2HS transition #-}

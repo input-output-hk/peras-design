@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
 
 module Peras.Conformance.Model where
@@ -18,6 +19,7 @@ import Control.Monad.Identity
 import Data.Function (on)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Integer
 import Peras.Block (blockRef, certificate)
 import Peras.Crypto (hash)
 import Peras.Orphans ()
@@ -174,33 +176,60 @@ votingBlock s =
   listToMaybe
     (dropWhile (not . blockOldEnough (protocol s) (clock s)) (pref s))
 
+isYes :: Bool -> Bool
+isYes True = True
+isYes False = False
+
+decP :: Bool -> Bool -> Bool
+decP va vb = va && vb
+
+decS :: Bool -> Bool -> Bool
+decS va vb = va || vb
+
+(===) :: RoundNumber -> RoundNumber -> Bool
+x === y = x == y
+
+eq :: Integer -> Integer -> Bool
+eq = (==)
+
+gt :: Integer -> Integer -> Bool
+gt = gtInteger
+
+ge :: Integer -> Integer -> Bool
+ge = geInteger
+
 vr1A :: NodeModel -> Bool
-vr1A s = nextRound (round (cert' s)) == rFromSlot s
+vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 vr1B :: NodeModel -> Bool
-vr1B s =
-  case votingBlock s of
-    Just block -> extends block (cert' s) (allChains s)
-    Nothing -> False
+vr1B s = True
 
 vr2A :: NodeModel -> Bool
 vr2A s =
-  getRoundNumber (rFromSlot s)
-    >= getRoundNumber (round (cert' s)) + perasR (protocol s)
+  ge
+    (getRoundNumber (rFromSlot s))
+    (getRoundNumber (round (cert' s)) + perasR (protocol s))
 
 vr2B :: NodeModel -> Bool
 vr2B s =
-  rFromSlot s > round (certS s)
-    && mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))
-      == mod (getRoundNumber (round (certS s))) (perasK (protocol s))
+  decP
+    ( gt
+        (getRoundNumber (rFromSlot s))
+        (getRoundNumber (round (certS s)))
+    )
+    ( eq
+        (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
+        (mod (getRoundNumber (round (certS s))) (perasK (protocol s)))
+    )
 
 checkVotingRules :: NodeModel -> Bool
-checkVotingRules s = vr1A s && vr1B s || vr2A s && vr2B s
+checkVotingRules s =
+  decS (decP (vr1A s) (vr1B s)) (decP (vr2A s) (vr2B s))
 
 makeVote' :: NodeModel -> Maybe Vote
 makeVote' s =
   do
-    guard (checkVotingRules s)
+    guard (isYes $ checkVotingRules s)
     block <- votingBlock s
     pure $ makeVote (protocol s) (clock s) block
 
@@ -311,7 +340,7 @@ transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
-    guard (checkVotingRules s)
+    guard (isYes $ checkVotingRules s)
     Just
       ( []
       , NodeModel

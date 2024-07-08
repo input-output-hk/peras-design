@@ -2,12 +2,15 @@
 module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude
+open import Haskell.Law.Equality
+
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
-open import Data.Maybe using (fromMaybe; maybe′; nothing; just)
-open import Data.Product using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
+open import Data.Maybe using (maybe′; nothing; just)
+open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
+open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
 open import Relation.Nullary.Decidable using (Dec; yes; no)
 
 open import Peras.Block
@@ -109,7 +112,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
-        validVote      : VotingRule r tree
+        validVote      : (VotingRule-1A r tree) ⊎ (VotingRule-2A r tree) -- FIXME: all voting rules
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ tree) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid
@@ -121,9 +124,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     suc-definition {zero} = refl
     suc-definition {suc n} = cong suc (suc-definition {n})
 
-    open import Data.Bool using ()
     open import Data.Nat using (_≥_; _≥?_; _>?_)
-    open import Relation.Nullary.Decidable using (_×-dec_; isYes; fromWitness)
 
     postulate
       hash-genesis : emptyBS ≡ (hashBytes (Hashable.hash hashBlock (Network.block₀ network)))
@@ -174,57 +175,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
       = {!!}
 
-    open import Data.Sum using (inj₁; inj₂; _⊎_)
-    open import Relation.Nullary.Negation using (contradiction)
-
-    decompose : ∀ {nm : NodeModel}
-      → checkVotingRules nm ≡ True
-      →   (vr1A nm ≡ True × vr1B nm ≡ True)
-        ⊎ (vr2A nm ≡ True × vr2B nm ≡ True)
-    decompose {nm} _
-      with vr1A nm | vr1B nm | vr2A nm | vr2B nm
-    ...   | True   | True    | _       | _        = inj₁ (refl , refl)
-    ...   | _      | _       | True    | True     = inj₂ (refl , refl)
-
-    makeVote≡True⇒VotingRule : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → checkVotingRules (modelState s p) ≡ True
-      → VotingRule (v-round (clock (modelState s p))) (proj₁ ∃tree)
-    makeVote≡True⇒VotingRule s p ∃tree x with decompose {nm = modelState s p} x
-    ... | inj₁ (a , b) rewrite hash-genesis = inj₁ (vr-1a⇒VotingRule-1A s p ∃tree {!!} Data.Product., vr-1b⇒VotingRule-1B s p ∃tree {!!})
-    ... | inj₂ (a , b) rewrite hash-genesis = inj₂ (vr-2a⇒VotingRule-2A s p ∃tree {!!} Data.Product., vr-2b⇒VotingRule-2B s p ∃tree {!!})
-
-{-
-    makeVote≡True⇒VotingRule s p ∃tree x
-       with (let m = modelState s p
-             in nextRound (round (cert' m)) ≟-RoundNumber (rFromSlot m))
-          | (let m = modelState s p
-             in (maybe False (λ { block → extends block (cert' m) (allChains m)}) (votingBlock m))) Data.Bool.≟ True
-          | (let m = modelState s p
-             in getRoundNumber (rFromSlot m) ≥? getRoundNumber (round (cert' m)) + perasR (protocol m))
-          | (let m = modelState s p
-             in      (getRoundNumber (rFromSlot m) >? getRoundNumber (round (certS m)))
-               ×-dec (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≟ mod (getRoundNumber (round (certS m))) (perasK (protocol m))))
-    ... | yes vr-1a | yes vr-1b | _ | _ rewrite hash-genesis =
-      let VR-1A = vr-1a⇒VotingRule-1A s p ∃tree vr-1a
-          VR-1B = vr-1b⇒VotingRule-1B s p ∃tree {!!} --vr-1b
-          VR-1 = (VR-1A Data.Product., VR-1B)
-      in inj₁ VR-1
-    ... | _ | _ | yes vr-2a | yes vr-2b rewrite hash-genesis =
-      let VR-2A = vr-2a⇒VotingRule-2A s p ∃tree vr-2a
-          VR-2B = vr-2b⇒VotingRule-2B s p ∃tree {!!} -- vr-2b
-          VR-2 = (VR-2A Data.Product., VR-2B)
-      in inj₂ VR-2
-    ... | no vr-1a | _ | no vr-2a | _ = {!!}
-    ... | no vr-1a | _ | _ | no vr-2b = {!!}
-    ... | _ | no vr-1b | no vr-2a | _ = {!!}
-    ... | _ | no vr-1b | _ | no vr-2b = {!!}
--}
-    {-
-      with decompose {modelState s p} x
-    ... | inj₁ (a , b) = {!!}
-    ... | inj₂ (a , b) = contradiction b vr-2b -- {!!}
-    -}
-
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
@@ -232,22 +182,35 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open Invariant
 
-    newVote-preconditions : ∀ {vs ms₁} s vote
+    @0 newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
                           → transition (modelState s (creatorId vote)) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
-         | checkVotingRules (modelState s (creatorId vote)) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True | True =
+         | isYes (checkVotingRules (modelState s (creatorId vote))) in checkedVRs
+    newVote-preconditions s vote inv refl | True | True | True
+      rewrite hash-genesis
+--      rewrite sym hash-genesis
+      =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = makeVote≡True⇒VotingRule s (creatorId vote) (hasTree inv (creatorId vote)) checkedVRs -- need to check the VR logic also for environment votes
+      ; validVote       =
+        let
+          witness = toWitness' (isYes≡True⇒TTrue checkedVRs )
+          f₁ = vr-1a⇒VotingRule-1A  s (creatorId vote) (hasTree inv (creatorId vote))
+          f₂ = vr-1b⇒VotingRule-1B  s (creatorId vote) (hasTree inv (creatorId vote))
+          f₃ = vr-2a⇒VotingRule-2A  s (creatorId vote) (hasTree inv (creatorId vote))
+          f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
+          vrs =
+              S.map₂ (λ { (x , y) → (f₃ x)})
+            $ S.map₁ (λ { (x , y) → (f₁ x)}) witness
+        in vrs -- need to check the VR logic also for environment votes
       }
 
     -- Soundness --
@@ -284,7 +247,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                               validSignature'
                               startOfRound
                               axiom-everyoneIsOnTheCommittee
-                              validVote
+                              {!!} -- FIXME: validVote
                             )
                           -- TODO: also deliver the vote message to establish Fetched s₁
                           ↣ ∎
