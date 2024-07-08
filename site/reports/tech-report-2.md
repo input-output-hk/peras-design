@@ -23,9 +23,8 @@ monofont: Monaco
 > - The initial set of certificates is the genesis certificate, not the empty set.
 > - Clarified ambiguities.
 > - Omit irrelevant details.
-
-> [!TIP]
-> In the sections below, should we specify how equivocation is handled?
+> - Made chain-preference deterministic.
+> - Sequenced operations.
 
 ## Variables
 
@@ -38,16 +37,24 @@ The protocol keeps track of the following variables, initialized to the values b
 - `In5`: $\mathsf{cert}^\prime \gets \mathsf{cert}_\text{genesis}$: the latest certificate seen;
 - `In6`: $\mathsf{cert}^* \gets \mathsf{cert}_\text{genesis}$: the latest certificate on chain.
 
-## Fetching
+## Sequence
 
-> [!TIP]
-> In `Fe4`, do we want to specify that a new preferred chain is chosen only if the previously preferred chain is less weightier? As it stands now, a node might keep switching its preferred chain if there is a tie.
+The protocol operations occur sequentially in the following order:
+
+- Fetching
+- Block Creation
+- Voting
+
+## Fetching
 
 At the beginning of each slot:
 - `Fe1`: Fetch new chains $\mathcal{C}_\text{new}$ and votes $\mathcal{V}_\text{new}$.
 - `Fe2`: Add any new chains in $\mathcal{C}_\text{new}$ to $\mathcal{C}$, add any new certificates contained in chains in $\mathcal{C}_\text{new}$ to $\mathsf{Certs}$.
+	- `Fe2x`: Discard any equivocated blocks or certificates: i.e., do not add them to $\mathcal{C}$ or $\mathsf{Certs}$.
 - `Fe3`: Add $\mathcal{V}_\text{new}$ to $\mathcal{V}$ and turn any new quorum in $\mathcal{V}$ into a certificate $\mathsf{cert}$ and add $\mathsf{cert}$ to $\mathsf{Certs}$.
-- `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t.\ $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
+	- `Fe3x`: Discard any equivocated votes: i.e., do not add the to $\mathcal{V}$.
+- `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t. $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
+	- `Fe4x`: *If several chains have the same weight, select the one whose tip has the smallest block hash as the preferred one.*
     - Each party $\mathsf{P}$ assigns a certain weight to every chain $C$, based on $C$'s length and all certificates that vote for blocks in $C$ that $\mathsf{P}$ has seen so far (and thus stored in a local list $\mathsf{Certs}$).
     - `CW1`: Let $\mathsf{certCount}_\mathsf{P}(C)$ denote the number of such certificates, i.e., $\mathsf{certCount}_\mathsf{P}(C) := \left| \left\{ \mathsf{cert} \in \mathsf{Certs} : \mathsf{cert} \text{ votes for a block on } C \right\} \right|$.
     - `CW2`: Then, the weight of the chain $C$ in $\mathsf{P}$'s view is $\mathsf{Wt}_\mathsf{P}(C) := \mathsf{len}(C) + B \cdot \mathsf{certCount}_\mathsf{P}(C)$ for a protocol parameter $B$.
@@ -55,9 +62,6 @@ At the beginning of each slot:
 - `Fe6`: Set $\mathsf{cert}^*$ to the certificate with the highest round number on (i.e., included in) $C_\text{pref}$.
 
 ## Block creation
-
-> [!TIP]
-> Do we want to specify that block creation occurs after fetching?
 
 Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some round $r$:
 
@@ -71,9 +75,6 @@ Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some roun
 - `BC8` Extend $C_\text{pref}$ by $\mathsf{block}$, add the new $C_\text{pref}$ to $\mathcal{C}$ and diffuse it.
 
 ## Voting
-
-> [!TIP]
-> Do we want to specify that voting occurs after fetching and block creation?
 
 Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
