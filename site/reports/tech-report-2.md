@@ -50,11 +50,11 @@ The protocol operations occur sequentially in the following order:
 At the beginning of each slot:
 - `Fe1`: Fetch new chains $\mathcal{C}_\text{new}$ and votes $\mathcal{V}_\text{new}$.
 - `Fe2`: Add any new chains in $\mathcal{C}_\text{new}$ to $\mathcal{C}$, add any new certificates contained in chains in $\mathcal{C}_\text{new}$ to $\mathsf{Certs}$.
-	- `Fe2x`: Discard any equivocated blocks or certificates: i.e., do not add them to $\mathcal{C}$ or $\mathsf{Certs}$.
+    - `Fe2x`: Discard any equivocated blocks or certificates: i.e., do not add them to $\mathcal{C}$ or $\mathsf{Certs}$.
 - `Fe3`: Add $\mathcal{V}_\text{new}$ to $\mathcal{V}$ and turn any new quorum in $\mathcal{V}$ into a certificate $\mathsf{cert}$ and add $\mathsf{cert}$ to $\mathsf{Certs}$.
-	- `Fe3x`: Discard any equivocated votes: i.e., do not add the to $\mathcal{V}$.
+    - `Fe3x`: Discard any equivocated votes: i.e., do not add the to $\mathcal{V}$.
 - `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t. $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
-	- `Fe4x`: *If several chains have the same weight, select the one whose tip has the smallest block hash as the preferred one.*
+    - `Fe4x`: *If several chains have the same weight, select the one whose tip has the smallest block hash as the preferred one.*
     - Each party $\mathsf{P}$ assigns a certain weight to every chain $C$, based on $C$'s length and all certificates that vote for blocks in $C$ that $\mathsf{P}$ has seen so far (and thus stored in a local list $\mathsf{Certs}$).
     - `CW1`: Let $\mathsf{certCount}_\mathsf{P}(C)$ denote the number of such certificates, i.e., $\mathsf{certCount}_\mathsf{P}(C) := \left| \left\{ \mathsf{cert} \in \mathsf{Certs} : \mathsf{cert} \text{ votes for a block on } C \right\} \right|$.
     - `CW2`: Then, the weight of the chain $C$ in $\mathsf{P}$'s view is $\mathsf{Wt}_\mathsf{P}(C) := \mathsf{len}(C) + B \cdot \mathsf{certCount}_\mathsf{P}(C)$ for a protocol parameter $B$.
@@ -161,9 +161,9 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 The Peras simulator is a prototype/reference implementation of the Peras protocol in Haskell. The implementation aims to encode the pseudo-code for the protocol specification in as literal and transparent a manner as possible, regardless of the performance drawbacks of such literalness. Note that it simulates the Peras protocol in the abstract and does not include a simulation of network diffusion. Its core contains four modules:
 
 - `Peras.Prototype.Fetching` handles the receipt of new chains and new votes. It includes the following logic:
-	- creates new certificates when a new quorum of votes is reached,
-	- selects the preferred chain, and
-	- updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
+    - creates new certificates when a new quorum of votes is reached,
+    - selects the preferred chain, and
+    - updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
 - `Peras.Prototype.BlockCreation` forges new blocks and, optionally, includes a certificate in the new block.
 - `Peras.Prototype.Preagreement` selects the block that a party will vote upon.
 - `Peras.Prototype.Voting` casts votes.
@@ -265,16 +265,16 @@ The screenshot below shows the user interface for the Peras simulation web appli
 The screenshot below shows the visualization of the Peras block tree:
 
 - Light blue rectangles represent blocks that do not record Peras certificates, whereas dark blue rectangles represent blocks that do record Peras certificates recorded in them.
-	- Block lines point to the parent block.
-	- The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
+    - Block lines point to the parent block.
+    - The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
 - Salmon-colored circles represent votes for blocks, whereas olive-colored circles represent situation were a party was on the voting committee but not allowed to vote.
-	- Salmon-colored dashed lines point to the block being voted for.
-	- The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
+    - Salmon-colored dashed lines point to the block being voted for.
+    - The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
 - Certificates are aqua rectangles.
-	- Aqua dashed lines point to the block being certified.
+    - Aqua dashed lines point to the block being certified.
 - Nodes are red circles.
-	- The red dashed lines point to the tip of their preferred blockchain.
-	- The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
+    - The red dashed lines point to the tip of their preferred blockchain.
+    - The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
 
 ![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
 
@@ -320,14 +320,14 @@ In this section we use the following notation:
 - Fraction of adversarial stake: $f$
 - Mean size of the voting committee: $n$
 - Per-slot probability of a block:
-	- Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
-	- Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
+    - Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
+    - Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
 - Binomial distribution of $n$ trials each with probability $p$ :
-	- Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
-	- Cumulative probability function: $\mathbf{P}_\text{binom}(m,n,p) = \sum_{k=0}^m \mathbf{p}(k,n,p)$
+    - Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
+    - Cumulative probability function: $\mathbf{P}_\text{binom}(m,n,p) = \sum_{k=0}^m \mathbf{p}(k,n,p)$
 - Normal distribution with mean $\mu$ and standard deviation $\sigma$:
-	- Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
-	- Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
+    - Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
+    - Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
 
 > [!IMPORTANT]
 > Discuss the relationship between per-slot probabilities and per-block probabilities.
