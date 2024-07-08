@@ -1,5 +1,33 @@
 ## 2024-07-08
 
+### Adversarial testing for Peras
+
+- Four posssible areas
+    1. Equivocations
+        - blocks
+        - votes
+        - certificates
+    2. Delayed receipt
+        - chains
+        - votes
+    3. Non-receipt
+        - chains
+        - votes
+    4. Invalid cryptographic proofs, garbled data, etc.
+- We can test for the first three in the protocol conformance test, but should wait on the node conformance test for the fourth.
+- Approach
+    - Equivocation
+        - Update Agda executable spec to handle equivocation.
+        - Add action(s) for receipt of equivocated information (block/vote/certificate).
+        - Add generators that use the model state to create equivocated information.
+    - Delayed receipt or non-receipt (= non-prompt delivery)
+        - Add action for non-prompt delivery .
+        - Add generators for creating non-prompty chains and votes.
+- Other discussion
+    - Negative tests are not generally useful for protocol state-machine testing because protocols do not through error messages.
+    - No blacklisting of nodes in current specification, so this does not need testing.
+    - Consider having separate soundness proofs for an honest vs a dishonest environment.
+
 ### Determinism in Peras
 
 - The protocol in the Peras paper is not deterministic in at least these areas:
