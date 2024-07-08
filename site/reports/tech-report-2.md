@@ -984,6 +984,10 @@ There are still opportunities for syntactic sugar that would make the code more 
 
 ## Network
 
+> [!WARNING]
+>
+> Work in progress
+
 We did some quick research on network pricing for a few major Cloud or VPS providers: https://docs.google.com/document/d/1JJJk4XPqmP61eNWYNfqL8FSbKAF9cWazKWFZP6tMGa0/edit
 
 Comparison table in USD/mo for different outgoing data transfer volumes expressed as bytes/seconds and similar VMs (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs:
