@@ -2,6 +2,7 @@
 module CommonTypes where
 
 open import Haskell.Prelude
+open import Haskell.Law.Equality using (cong)
 open import Data.Nat.Base using (ℕ)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
