@@ -4,12 +4,18 @@ author:
   - Arnaud Bailly
   - Brian W. Bush
   - Yves Hauser
+  - Hans Lahe
 date: 2024-04-17
 monofont: Monaco
 ---
 
 > [!IMPORTANT]
 > Unlike for the first tech report, we should only include analyses that conform to the latest version of the protocol.
+
+# Executive summary
+
+> [!IMPORTANT]
+> Summarize approach, results, and findings
 
 # Protocol definition
 
@@ -665,6 +671,9 @@ initialModelState : NodeModel
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 ```
 
+> [!IMPORTANT]
+> Update the above after adversarial tests have been added.
+
 This is used in the Haskell state model as follows.
 
 ```haskell
@@ -797,4 +806,10 @@ There are still opportunities for syntactic sugar that would make the code more 
 - **Speed and Efficiency**: Some stakeholders emphasize the need for a faster development process, suggesting that the formal specification could be developed in parallel with the technical implementation.
 - **Timeline**: Stakeholders are curious about the timeline for Peras development and implementation.
 
-    
+# Conclusion
+
+## The case for Peras
+
+
+## Next steps
+
