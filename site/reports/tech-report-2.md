@@ -4,12 +4,18 @@ author:
   - Arnaud Bailly
   - Brian W. Bush
   - Yves Hauser
+  - Hans Lahe
 date: 2024-04-17
 monofont: Monaco
 ---
 
 > [!IMPORTANT]
 > Unlike for the first tech report, we should only include analyses that conform to the latest version of the protocol.
+
+# Executive summary
+
+> [!IMPORTANT]
+> Summarize approach, results, and findings
 
 # Protocol definition
 
@@ -23,9 +29,8 @@ monofont: Monaco
 > - The initial set of certificates is the genesis certificate, not the empty set.
 > - Clarified ambiguities.
 > - Omit irrelevant details.
-
-> [!TIP]
-> In the sections below, should we specify how equivocation is handled?
+> - Made chain-preference deterministic.
+> - Sequenced operations.
 
 ## Variables
 
@@ -38,16 +43,24 @@ The protocol keeps track of the following variables, initialized to the values b
 - `In5`: $\mathsf{cert}^\prime \gets \mathsf{cert}_\text{genesis}$: the latest certificate seen;
 - `In6`: $\mathsf{cert}^* \gets \mathsf{cert}_\text{genesis}$: the latest certificate on chain.
 
-## Fetching
+## Sequence
 
-> [!TIP]
-> In `Fe4`, do we want to specify that a new preferred chain is chosen only if the previously preferred chain is less weightier? As it stands now, a node might keep switching its preferred chain if there is a tie.
+The protocol operations occur sequentially in the following order:
+
+- Fetching
+- Block Creation
+- Voting
+
+## Fetching
 
 At the beginning of each slot:
 - `Fe1`: Fetch new chains $\mathcal{C}_\text{new}$ and votes $\mathcal{V}_\text{new}$.
 - `Fe2`: Add any new chains in $\mathcal{C}_\text{new}$ to $\mathcal{C}$, add any new certificates contained in chains in $\mathcal{C}_\text{new}$ to $\mathsf{Certs}$.
+    - `Fe2x`: Discard any equivocated blocks or certificates: i.e., do not add them to $\mathcal{C}$ or $\mathsf{Certs}$.
 - `Fe3`: Add $\mathcal{V}_\text{new}$ to $\mathcal{V}$ and turn any new quorum in $\mathcal{V}$ into a certificate $\mathsf{cert}$ and add $\mathsf{cert}$ to $\mathsf{Certs}$.
-- `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t.\ $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
+    - `Fe3x`: Discard any equivocated votes: i.e., do not add the to $\mathcal{V}$.
+- `Fe4`: Set $C_\text{pref}$ to the heaviest (w.r.t. $\mathsf{Wt}_\mathsf{P}(\cdot)$) valid chain in $\mathcal{C}$.
+    - `Fe4x`: *If several chains have the same weight, select the one whose tip has the smallest block hash as the preferred one.*
     - Each party $\mathsf{P}$ assigns a certain weight to every chain $C$, based on $C$'s length and all certificates that vote for blocks in $C$ that $\mathsf{P}$ has seen so far (and thus stored in a local list $\mathsf{Certs}$).
     - `CW1`: Let $\mathsf{certCount}_\mathsf{P}(C)$ denote the number of such certificates, i.e., $\mathsf{certCount}_\mathsf{P}(C) := \left| \left\{ \mathsf{cert} \in \mathsf{Certs} : \mathsf{cert} \text{ votes for a block on } C \right\} \right|$.
     - `CW2`: Then, the weight of the chain $C$ in $\mathsf{P}$'s view is $\mathsf{Wt}_\mathsf{P}(C) := \mathsf{len}(C) + B \cdot \mathsf{certCount}_\mathsf{P}(C)$ for a protocol parameter $B$.
@@ -55,9 +68,6 @@ At the beginning of each slot:
 - `Fe6`: Set $\mathsf{cert}^*$ to the certificate with the highest round number on (i.e., included in) $C_\text{pref}$.
 
 ## Block creation
-
-> [!TIP]
-> Do we want to specify that block creation occurs after fetching?
 
 Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some round $r$:
 
@@ -71,9 +81,6 @@ Whenever party $\mathsf{P}$ is slot leader in a slot $s$, belonging to some roun
 - `BC8` Extend $C_\text{pref}$ by $\mathsf{block}$, add the new $C_\text{pref}$ to $\mathcal{C}$ and diffuse it.
 
 ## Voting
-
-> [!TIP]
-> Do we want to specify that voting occurs after fetching and block creation?
 
 Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
@@ -135,23 +142,23 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 # Constraints on Peras Parameters
 
-| Parameter | Symbol | Units | Description | Constraints | Rationale |
-| ---- | ---- | ---- | ---- | ---- | ---- |
-| Round length | $U$ | slots | The duration of each voting round. | $U \geq \Delta$ | All of a round's votes must be received before the end of the round. |
-| Chain ignorance period | $R$ | rounds | The number of rounds for which to ignore certificates after entering a cool-down period. | $R = \left\lceil A / U \right\rceil$ | Ensure chain-ignorance period lasts long enough to include a certificate on the chain. |
-| Cool-down period | $K$ | rounds | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix. |
-| Certificate expiration | $A$ | slots | The maximum age for a certificate to be included in a block. | $A = T_\text{heal}+T_\text{CQ}$ | After a quorum failure, the chain must heal and achieve quality. |
-| Certification boost | $B$ | blocks | The extra chain weight that a certificate gives to a block. | $B \gt 0$ | Peras requires that some blocks be boosted. |
-| Quorum size | $\tau$ | parties | The number of votes required to create a certificate. | $\tau \gt 3 n / 4$ | Guard against a minority (<50%) of adversarial voters. |
-| Committee size | $n$ | parties | The number of members on the voting committee. | $n \gt 0$ | Peras requires a voting committee. |
-| Network diffusion time | $\Delta$ | slots | Upper limit on the time needed to diffuse a message to all nodes. | $\Delta \gt 0$ | Messages have a finite delay. |
-| Active slot coefficient | $f$ | 1/slots | The probability that a party will be the slot leader for a particular slot. | $0 \lt f \leq 1$ | Blocks must be produced. |
-| Healing time | $T_\text{heal}$ | slots | Healing period to mitigate a strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B^2 / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |
-| Chain-quality time | $T_\text{CQ}$ | slots | Ensure the presence of at least one honest block on the chain. | $T_\text{CQ} ≟ \mathcal{O} (k)$ | A least one honest block must be produced. |
-| Common-prefix time | $T_\text{CP}$ | slots | Achieve settlement. | $T_\text{CP} \approx k / \alpha$ | The Ouroboros Praos security parameter defines the time for having a common prefix. |
-| Security parameter | $k$ | blocks | The Ouroboros Praos security parameter. | $k = 2160$ | Value for the Cardano mainnet. |
+| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                 |
+| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                      |
+| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                          |
+| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.    |
+| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix. |
+| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                               |
+| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                    |
+| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                        |
+| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                             |
+| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                  |
+| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} ≟ \mathcal{O}\left( B^2 / f \right)$      | Sufficient blocks must be produced to overcome an adversarially boosted block.            |
+| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                |
+| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CQ} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.       |
+| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                            |
 
-*Note that parameters $T$ and $\Delta$ are not used in this initial specification of the Peras protocol.*
+*Note that parameters $T$ and $\Delta$ are not used in this pre-alpha specification of the Peras protocol.*
 
 # Simulating Peras
 
@@ -160,9 +167,9 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 The Peras simulator is a prototype/reference implementation of the Peras protocol in Haskell. The implementation aims to encode the pseudo-code for the protocol specification in as literal and transparent a manner as possible, regardless of the performance drawbacks of such literalness. Note that it simulates the Peras protocol in the abstract and does not include a simulation of network diffusion. Its core contains four modules:
 
 - `Peras.Prototype.Fetching` handles the receipt of new chains and new votes. It includes the following logic:
-	- creates new certificates when a new quorum of votes is reached,
-	- selects the preferred chain, and
-	- updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
+    - creates new certificates when a new quorum of votes is reached,
+    - selects the preferred chain, and
+    - updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
 - `Peras.Prototype.BlockCreation` forges new blocks and, optionally, includes a certificate in the new block.
 - `Peras.Prototype.Preagreement` selects the block that a party will vote upon.
 - `Peras.Prototype.Voting` casts votes.
@@ -264,16 +271,16 @@ The screenshot below shows the user interface for the Peras simulation web appli
 The screenshot below shows the visualization of the Peras block tree:
 
 - Light blue rectangles represent blocks that do not record Peras certificates, whereas dark blue rectangles represent blocks that do record Peras certificates recorded in them.
-	- Block lines point to the parent block.
-	- The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
+    - Block lines point to the parent block.
+    - The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
 - Salmon-colored circles represent votes for blocks, whereas olive-colored circles represent situation were a party was on the voting committee but not allowed to vote.
-	- Salmon-colored dashed lines point to the block being voted for.
-	- The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
+    - Salmon-colored dashed lines point to the block being voted for.
+    - The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
 - Certificates are aqua rectangles.
-	- Aqua dashed lines point to the block being certified.
+    - Aqua dashed lines point to the block being certified.
 - Nodes are red circles.
-	- The red dashed lines point to the tip of their preferred blockchain.
-	- The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
+    - The red dashed lines point to the tip of their preferred blockchain.
+    - The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
 
 ![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
 
@@ -319,14 +326,14 @@ In this section we use the following notation:
 - Fraction of adversarial stake: $f$
 - Mean size of the voting committee: $n$
 - Per-slot probability of a block:
-	- Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
-	- Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
+    - Honest block: $p = 1 - (1 - \alpha)^{1 - f} \approx \alpha \cdot (1 - f)$
+    - Adversarial block: $q = 1 - (1 - \alpha)^f \approx \alpha \cdot f$
 - Binomial distribution of $n$ trials each with probability $p$ :
-	- Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
-	- Cumulative probability function: $\mathbf{P}_\text{binom}(m,n,p) = \sum_{k=0}^m \mathbf{p}(k,n,p)$
+    - Probability density function: $\mathbf{p}_\text{binom}(k,n,p)= {n\choose{k}} \cdot p^k \cdot (1 - p)^{n-k}$
+    - Cumulative probability function: $\mathbf{P}_\text{binom}(m,n,p) = \sum_{k=0}^m \mathbf{p}(k,n,p)$
 - Normal distribution with mean $\mu$ and standard deviation $\sigma$:
-	- Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
-	- Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
+    - Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
+    - Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
 
 > [!IMPORTANT]
 > Discuss the relationship between per-slot probabilities and per-block probabilities.
@@ -584,10 +591,18 @@ function(s, B, p, q)
 
 # Recommendations for Peras parameters
 
-> [!IMPORTANT]
-> List the recommended ranges for Peras parameters, based on theoretical guidance, analytic results, and simulation studies.
+Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake.
 
-## Conclusion
+| Parameter              | Symbol | Units   | Value | Rationale                                                             |
+|------------------------|--------|---------|------:|-----------------------------------------------------------------------|
+| Round length           | $U$    | slots   |   400 | 1 ppm probability of 10% adversarial chain receiving boost.           |
+| Certificate expiration | $A$    | slots   | 43200 | Determined by security parameter.                                     |
+| Chain ignorance period | $R$    | rounds  |   108 | Determined by security parameter and round length.                    |
+| Cool-down period       | $K$    | rounds  |   108 | Determined by security parameter and round length.                    |
+| Certification boost    | $B$    | blocks  |    10 | 1 ppm probability of not healing from boost in 40% adversarial chain. |
+| Committee size         | $n$    | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.       |
+| Quorum size            | $\tau$ | parties |   675 | Three-quarters of committee size.                                     |
+| Security parameter     | $k$    | blocks  |  2160 | The Ouroboros Praos security parameter.                               |
 
 # Formal specification in Agda
 
@@ -622,7 +637,168 @@ Restrictions:
 
 ## Formally verified test executions
 
-## Community feedback
+# Conformance testing
+
+Conformance testing is linked to the Peras paper via the following chain of evidence:
+
+- The protocol defined in the Peras paper is encoded in Agda as a relational specification.
+- The proofs in the Peras paper will be encoded as Agda proofs.
+- The protocol is also implemented as an executable specification in Agda.
+- Soundness proofs demonstrate that the executable specification correctly implements the relational specification.
+- The `agda2hs` tool generates Haskell code implementing the Agda executable specification.
+- That Haskell code is used as the *state model* in the `quickcheck-dynamic` state-machine, property-based-testing framework.
+- The implementation being tested is used as the *run model*.
+- The `quickcheck-dynamic` tool generates arbitrary test cases and verifies that the run model obeys the properties of the state model.
+
+The following types in the Agda executable specification are exported to Haskell.
+
+```agda
+record NodeModel : Set where
+  field
+    clock        : SlotNumber
+    protocol     : PerasParams
+    allChains    : List Chain
+    allVotes     : List Vote
+    allSeenCerts : List Certificate
+
+data EnvAction : Set where
+  Tick     : EnvAction
+  NewChain : Chain → EnvAction
+  NewVote  : Vote → EnvAction
+
+initialModelState : NodeModel
+
+transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
+```
+
+> [!IMPORTANT]
+> Update the above after adversarial tests have been added.
+
+This is used in the Haskell state model as follows.
+
+```haskell
+instance StateModel NodeModel where
+  data Action NodeModel a where
+    Step :: EnvAction -> Action NodeModel [Vote]
+  initialState = initialModelState
+  precondition s (Step a) = isJust (transition s a)
+  nextState s (Step a) _ = snd . fromJust $ transition s a
+```
+
+The present implementation focuses on the voting behavior, not on the block-production and network-diffusion behavior. For demonstration purposes, the `RunModel` is the Peras prototype/reference simulation describe in an earlier section of this document. Other implementations can be wired into the conformance tests via inter-process communication techniques.
+
+```console
+$ peras-simulation-test --match "/Peras.Conformance.Test/" --qc-max-success=1000
+
+Peras.Conformance.Test
+  Prototype node
+    Simulation respects model [✔]       
+      +++ OK, passed 1000 tests.
+      
+      Action polarity (50500 in total):
+      100.000% +
+      
+      Actions (50500 in total):
+      38.487% +NewVote
+      30.816% +Tick
+      30.697% +NewChain
+
+Finished in 4.7193 seconds
+1 example, 0 failures
+
+```
+
+## Lessons learned from experiments with Agda-to-Haskell workflows
+
+Aside from the workflow that we finally settle upon and that is described above, we explored several workflows for connecting the relational specification in Agda to `quickcheck-dynamic` tests in Haskell. This involves accommodating or working around several tensions:
+
+- The relational specification uses the Agda Standard Library, which is not compatible with `agda2hs`.
+    - Many of the Agda function names containing unicode characters or name patterns are not valid Haskell identifiers.
+    - The MAlonzo representation of primitive types such as `Maybe` or tuples differs from the `agda2hs` representation of them in Haskell.
+    - Type erasure via `@0` in Agda can remove non-essential portions of an Agda type that depend upon the standard library.
+    - The use of any non-compatible identifiers or types in the arguments or implementation of an Agda function prevents its use in Haskell.
+    - Module parameters appear in the export of functions made by `agda2hs`.
+- The MAlonzo code generated by Agda's GHC backend contains mangled names, making it difficult to call from Haskell.
+    - The `{-# COMPILE GHC ... as ... #-}` pragmas are not comprehensive enough to deeply rename Agda constructs for use in Haskell.
+    - Judicious use of the `FOREIGN` and `COMPILE` pragmas for both the `GHC` and `AGDA2HS` backends can achieve a seamlessness that avoids ever having to deal with mangled names. The basic strategy is to use Agda to define types that can be exported to Haskell, but then to import those back into Agda for its use in MAlonzo.
+        - The data types used by Haskell clients must be created use `Haskell.Prelude` and be created by `agda2hs` via the `{-# COMPILE AGDA2HS ... #-}` pragma.
+            - Types involving natural numbers must be hand-coded using `{-# FOREIGN AGDA2HS ... #-}` because they compile to `Integer` in `MAlonzo` but to `Natural` in `agda2hs`.
+            - Fields may not contain identifiers that violate Haskell naming requirements.
+        - Those types are used as the concrete implementation in the very module where they are defined via the `{-# COMPILE GHC ... = data ... #-}` pragma.
+        - Functions that are called by Haskell are annotated with the `{-# COMPILE GHC ... as ... #-}` pragma.
+            - Every argument must be of a type that was generated with `{-# COMPILE AGDA2HS #-}` or is a basic numeric type or unit.
+            - Functions cannot have arguments using natural numbers, tuples, `Maybe` etc.
+            - Functions may contain identifiers that violate Haskell naming requirements.
+        - The `agda --compile --ghc-dont-call-ghc --no-main` command generates mangled Haskell under `MAlonzo.Code.Peras`, except that is uses the unmangled types in `Peras` and has unmangled function names.
+- The situation would be far simplier if one could use a pure Agda state-machine testing framework instead of having to export code to Haskell and then test there.
+- The `StateModel` and `RunModel` of `quickcheck-dynamic` seem a little out of sync with this use case where the model and its properties are known to be correct because of Agda proofs and only the implementation is being tested.
+
+The following picture attempts to clarify the relationship between Agda and Haskell as it has been explored in a hybrid Agda/Haskell specification/testing implementation:
+
+* Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than `agda2hs` and Haskell's `Prelude` obviously
+* Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (Eg. numbers, lists, tuples, etc.)
+* The Agda code separates `Types` from `Impl`ementation in order to ease generation
+* `Types` are generated using agda2hs to provide unmangled names and simple structures on the Haskell side
+* `Impl` is generate usign GHC to enable full use of stdlib stuff, with toplevel _interface_ functions generated with unmangled names
+* `Types` are also taken into account when compiling using GHC but they are only "virtual", eg. the compiler makes the GHC-generated code depend on the `agda2hs` generated types
+* Hand-written Haskell code can call unmangled types and functions
+
+![Agda-Haskell Interactions](../diagrams/agda-haskell-interactions.jpg)
+
+We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs significantly slower, likely because it involves more than two hundred Haskell modules.
+
+* `agda2hs` version: 4m 45.206s (250 tests)
+* `MAlonzo` version: 10m 46.280s (250 tests)
+
+We also experimented with create a small embedded monadic DSL for writing the Peras specification in Agda in a manner so that it reads as pseudo-code understandable by non-Agda and non-Haskell programmers. For example, the executable specification for *fetching* looks like the following in this eDSL:
+
+```agda
+-- Enter a new slot and record the new chains and votes received.
+fetching : List Chain → List Vote → NodeOperation
+fetching newChains newVotes =
+  do
+    -- Increment the slot number.
+    currentSlot ≕ addOne
+    -- Update the round number.
+    u ← peras U
+    now ← use currentSlot
+    currentRound ≔ divideNat now u
+    -- Add any new chains and certificates.
+    updateChains newChains
+    -- Add new votes.
+    votes ≕ insertVotes newVotes
+    -- Turn any new quorums into certificates.
+    newCerts ← certificatesForNewQuorums
+    certs ≕ insertCerts newCerts
+    -- Make the heaviest chain the preferred one.
+    boost ← peras B
+    heaviest ← heaviestChain boost <$> use certs <*> use chains
+    preferredChain ≔ heaviest
+    -- Record the latest certificate seen.
+    updateLatestCertSeen
+    -- Record the latest certificate on the preferred chain.
+    updateLatestCertOnChain
+    -- No messages need to be diffused.
+    diffuse
+```
+
+There are still opportunities for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc. Other lessons learned follow:
+
+- Lenses improve readability.
+- Using a `List` for the "set" data structure of the paper creates inefficiencies in the implementation.
+    - Set invariants are not trivially enforced.
+    - Access and query functions are slow.
+- It might be difficult prove this executable specification matches the properties that are being formally proved.
+- Even though the Agda code is written to look imperative, it has quite a few artifacts of functional style that could be an impediment to some implementors.
+    - It might be better to use `let` statements instead of `← pure $`. Unfortunately, it would be quite difficult to design an assignment operator to replace monadic `let` in Agda.
+    - The functional style avoids introducing lots of intermediate variables, but maybe that would be preferable to using functions as modifiers to monadic state (e.g., `_≕_ : Lens' s a → (a → a) → State s ⊤`).
+    - The `use` and `pure` functions could be eliminated by defining operators (including logical and arithmetic ones) that hide them.
+- Overall, the Agda code is more verbose than the textual specification.
+- It might be difficult to create Agda code that is simultaneously easily readable by mathematical audiences (e.g., researchers) and software audiences (e.g., implementors).
+- Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
+- Creating a full eDSL might be a better approach, but that would involved significantly more effort.
+
+# Community feedback
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
 - **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e. how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc. 
@@ -630,4 +806,66 @@ Restrictions:
 - **Speed and Efficiency**: Some stakeholders emphasize the need for a faster development process, suggesting that the formal specification could be developed in parallel with the technical implementation.
 - **Timeline**: Stakeholders are curious about the timeline for Peras development and implementation.
 
-    
+# Conclusion
+
+## The case for Peras
+
+Peras provides demonstrably fast settlement without weakening security or burdening nodes. The settlement time varies as a function of the protocol-parameter settings and the prevalence of adversarial stake.
+
+> [!IMPORTANT]
+> Provide here a summary table of settlement time vs adversarial stake for a selection or protocol parameters.
+
+The impact of Peras upon nodes falls into four categories: bandwidth, CPU, memory, bandwidth, and storage. Our ΔQ studies demonstrate that diffusion of Peras votes and certificates consumes minimal bandwidth and would not interfere with other node operations such as memory-pool and block diffusion. We have provided evidence that the CPU time required to construct and verify votes and certificates is much smaller than the duration of a voting round. Similarly, the memory needed to cache votes and certificates and the disk space needed to persist certificates is trivial compared to the memory needed for the UTXO set and the disk needed for the blocks.
+
+> [!IMPORTANT]
+> Put specific numbers in the paragraph above.
+
+In terms of development impacts and resources, Peras requires only a minimal modification to the ledger CDDL and block header. Around cool-down periods, a certificate hash will need to be included in the block header and the certificate itself in the block. Implementing Peras does not require any new cryptographic keys, as the existing VRF/KES will be leveraged. It will require an implementation of the ALBA algorithm for creating certificates. It does require a new mini-protocol for diffusion of votes and certificates. The node's logic for computing the chain weight needs to be modified to account for the boosts provided by certificates. Nodes will have to persist all certificates and will have to cache unexpired votes. They will need a thread (or equivalent) for verifying votes and certificates. Peras only interacts with Genesis and Leios in the chain-selection function and it is compatible with the historical evolution of the blockchain. A node-level specification and conformance test will also need to be written.
+
+> [!WARNING]
+> Dare we assert that implementation of Peras in the Cardano node would take approximately three person years, provided the team already has familiarity with the node and stays focused?
+
+In no way does Peras weaken any of the security guarantees provided by Praos or Genesis. Under strongly adversarial conditions, where an adversary can trigger a Peras voting cool-down period, the protocol in essence reverts to the Praos protocol, but for a duration somewhat longer than the Praos security parameter. Otherwise, settlement occurs after each Peras round. This document has approximately mapped the trade-off between having a short duration for each round (and hence faster settlement) versus having a high resistance to an adversary forcing the protocol into a cool-down period. It also estimates the tradeoff between giving chains a larger boost for each certificate (and hence stronger anchoring of that chain) versus keeping the cool-down period shorter.
+
+## Recommended next steps
+
+- Complete proofs.
+    - Voting strings.
+    - Liveness of the protocol.
+    - Soundness of the executable specification.
+    - Synchronize with Praos formalization.
+    - Prepare a publication or online supplement.
+- Complete conformance suite.
+    - Tests for non-voting parts of the protocol.
+    - Serialization format and inter-process communication for testing third-party implementations.
+    - Package for easy installation and use.
+- Recommend parameter values.
+    - Seek and analyze stakeholder requirements, especially from partner chains.
+    - Develop a parameter-evaluation tool (based on the Markov-chain simulator) that provides a full set of impact metrics for a given set of parameters.
+- Reach out to stakeholders.
+    - Populate website with latest results.
+    - Online versions of all analysis, simulation, and visualization tools.
+    - Organize a stakeholder workshop and/or a Intersect Consensus Technical WG.
+        - Feedback on specification format.
+        - Feedback on conformance suite.
+        - Feedback on and refinement of the draft CIP.
+- Tooling fixes and enhancements
+    - Improve the usability, efficiency, and testing of the ΔQ software.
+        - Provide out-of-the-box and possibly interactive visualization.
+        - Provide faster numeric computations (e.g. using discretized CDFs and fast vector operations, possibly offloaded to GPU).
+        - Provide additional combinators (e.g., quantile-arrival time) for the DSL.
+    - Improve the protocol visualizer.
+        - Allow users to inject adversarial behavior or network disruptions (e.g., "split brain" scenarios).
+        - Make visualization scalable in the browser to long chains (i.e., hours of simulated block production) and large networks.
+    - Improve the prototype simulator.
+        - Add an efficient implementation suitable for large networks and long simulations.
+        - Create a simple DSL for inputting simulation scenarios for both honest and adversarial behavior.
+    - Improve the Markov-chain analyzer.
+        - Add a DSL for defining scenarios.
+        - Add visualization and analysis tools.
+    - Collaborate with higher-resolution network simulation efforts, potentially implementing Peras on them.
+        - PeerNet
+        - ce-netsim
+- Move from the "pre-alpha" to the "alpha" version of the protocol.
+    - Requires completion of the Peras paper.
+    - Formalize and implement the preagreement YOSO abstraction.

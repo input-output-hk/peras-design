@@ -1,3 +1,55 @@
+## 2024-07-08
+
+### Adversarial testing for Peras
+
+- Four posssible areas
+    1. Equivocations
+        - blocks
+        - votes
+        - certificates
+    2. Delayed receipt
+        - chains
+        - votes
+    3. Non-receipt
+        - chains
+        - votes
+    4. Invalid cryptographic proofs, garbled data, etc.
+- We can test for the first three in the protocol conformance test, but should wait on the node conformance test for the fourth.
+- Approach
+    - Equivocation
+        - Update Agda executable spec to handle equivocation.
+        - Add action(s) for receipt of equivocated information (block/vote/certificate).
+        - Add generators that use the model state to create equivocated information.
+    - Delayed receipt or non-receipt (= non-prompt delivery)
+        - Add action for non-prompt delivery .
+        - Add generators for creating non-prompty chains and votes.
+- Other discussion
+    - Negative tests are not generally useful for protocol state-machine testing because protocols do not through error messages.
+    - No blacklisting of nodes in current specification, so this does not need testing.
+    - Consider having separate soundness proofs for an honest vs a dishonest environment.
+
+### Determinism in Peras
+
+- The protocol in the Peras paper is not deterministic in at least these areas:
+    - Selection of preferred chain when there is a tie.
+    - Sequencing of operations.
+- The executable specification necessarily become deterministic.
+- QuickCheck Dynamic could handle non-determinism (somewhat awkwardly) through these mechanisims:
+    - Have the state model be aware on non-determinism and track it.
+    - Use symbolic variables to track and account for the presence of non-determism.
+- However, for Peras conformance tests we want determinism:
+    - This has to be specified in a way that different implementation languages can handle easily.
+    - This needs to be documented in the version of the specification realized for conformance tests.
+    - The latest version of the the specification in the tech report adds rules to force determinism:
+        - Choose the preferred chain whose tip's block hash is smallest.
+            - QUESTION: Does this open up an oportunity for grinding attacks?
+        - Fetch, then create blocks, then vote.
+- The non-determinisim in the fundamental protocol can be identified via completess proofs.
+    - The proof would be conditioned upon the existence of functions that make the executable specification deterministic: "completeness up to *x*".
+    - For example, "for all possible functions that select the preferred chain among chains of equal length, the test specification is complete".
+    - An instantiation of the executable specification would use a particular tie-breaking function: i.e., implementations would not be free to break ties differently.
+    - The proof would explicitly identify all areas of non-determinism.
+
 ## 2024-07-04
 
 ### Fixing conformance tests
