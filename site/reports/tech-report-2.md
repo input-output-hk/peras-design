@@ -221,27 +221,34 @@ The [peras-vote](../../peras-vote/) package provides some benchmarks comparing t
 
 ### Mithril certificates
 
+Mithril certificates' construction is described in details in the [Mithril](https://iohk.io/en/research/library/papers/mithril-stake-based-threshold-multisignatures/) paper and is implemented in the [mithril network](https://github.com/input-output-hk/mithril). It's also described in the [Leios paper](https://iohk.io/en/research/library/papers/high-throughput-blockchain-consensus-under-realistic-network-assumptions/), in the appendix, as a potential voting scheme for Leios, and implicitly Peras.
+
+Mithril certificates have the following features:
+
+* They depend on BLS-curve signatures aggregation to produce a so-called _State based Threshold Multi-Signature_ that's easy to verify,
+* Each node relies on a _random lottery_ as described in the [previous section](#leader-election-like-voting) to produce a vote weighted by their share of total stake,
+* The use of BLS signatures implies nodes will need to generate and exchange specialised keys for the purpose of voting, something we know from [Mithril](https://mithril.network/doc/mithril/mithril-protocol/certificates) is somewhat tricky as it requires some form of consensus to guarantee all nodes have the exact same view of the key set.
+
 ### ALBA
 
 > [!WARNING]
-> It's unclear whether or not KES signatures are [non malleable]() which is a requirement
+> At the time of this writing, we don't know for sure if KES signatures are malleable or not, which is a strong requirement for using ALBA certificates.
 
-* [ALBAs](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) appears to provide a good basis for Peras certificates
-* The [Prototype implementation in Haskell](https://github.com/cardano-scaling/alba) provides some evidence this construction could be feasible in the context of Peras
+[Approximate Lower Bound Arguments](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) or _ALBAs_ in short, are a novel cryptographic algorithm based on a _telescope_ construction providing a fast way to build compact certificates out of a large number of _unique_ items. A lot more details are provided in the paper, on the [website](https://alba.cardano-scaling.org) and the [GitHub repository](https://github.com/cardano-scaling/alba) where implementation is being developed, we only provide here some key information relevant to the use of ALBAs in Peras.
 
-### Proving & Verification time
+#### Proving & Verification time
 
-The following picture plots the time needed (in milliseconds) to build certificate for varying number of votes, assuming a security parameter of 128, honest share of 67% and vote size of 256 bytes.
+ALBA expected proving time is benchmarked in the following picture which shows mean execution time for generating a proof depending on: The _total_ number of votes, the actual number of votes ($s_p$), the honest ratio ($n_p$). Note that as proving time increases exponentially when $s_p \rightarrow total \dot n_p$, we only show here the situation when $s_p = total$ and $s_p = total - total n_p / 2$ to ensure graph stays legible.
 
-![ALBA Proving time](../diagrams/alba-cpu.svg)
+![ALBA Proving Time](../static/img/alba-proving.png)
 
-We can observe that even in some extreme cases proving time stays consistently under 20ms and on the average is between 10 and 15ms for even large number of items. The wild variation in proving time for different number of input set is explained by the non-deterministic nature of the algorithm: We construct the proof through depth-first search, by repeatedly comparing hash values _modulo_ the expected number of honest items, so the number of comparisons and hashes to make may vary significantly depending on how the ordering of the list of items.
+The following diagram is an excerpt from the ALBA benchmarks highlighting verification. Note these numbers do not take into account the time for verifying individual votes. As one can observe directly from these graphs, verification time is independent from the number of items and only depends on the $n_p/n_f$ ratio.
 
-It's worth considering whether or not this dependency on the ordering of the items could be an attack vector as proving time could easily explode in case we need to explore more than a small fraction of the tree.
+![ALBA Verification Time](../static/img/alba-verifying.png)
 
-Verification time has not been plotted but is lower than 1ms in all the cases considered as it is tied to the number of hash computation one has to make which is $O(u)$.
+In practice, as the number of votes is expected to be in the 1000-2000 range, and there's ample time in a round to guarantee those votes are properly delivered to all potential voting nodes (see below), we can safely assume proving time of about 5ms, and verification time under a millisecond.
 
-### Certificate size
+#### Certificate size
 
 For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{rel}$, and $n_p/n_f$ the proof size is perfectly linear and only depends on the size of each vote:
 
@@ -253,9 +260,9 @@ Varying the security parameter and the honest votes ratio for a fixed set of 100
 
 ### Benchmarks
 
-In the following tables we compare some interesting metrics between the two differnt kind of certificates we studied, Mithril certificates (using BLS signatures) and ALBA certificates (using KES signatures): Size of certificate in bytes, proving time (eg. the time to construct a single vote), aggregation time (the time to build a certificate), and verification time.
+In the following tables we compare some relevant metrics between the two different kind of certificates we studied, Mithril certificates (using BLS signatures) and ALBA certificates (using KES signatures): Size of certificate in bytes, proving time (eg. the time to construct a single vote), aggregation time (the time to build a certificate), and verification time.
 
-For Mithril certificates:
+For Mithril certificates, assuming parameters similar to mainnet's ($k=2422, m=20973, f=0.2$):
 
 |---------------------------------|-------|
 | Certificate size                | 56kB  |
@@ -263,7 +270,7 @@ For Mithril certificates:
 | Aggregation time                | 1.2s  |
 | Verification time (certificate) | 17ms  |
 
-For ALBA certificates:
+For ALBA certificates, assuming 1000 votes, a honest to faulty ratio of 80/20, and security parameter $λ=128$. Note the proving time _does not_ take into account individual vote verification time, whereas certificate's verification time _includes_ votes verification time.
 
 |---------------------------------|--------|
 | Certificate size                | 47kB   |
