@@ -103,8 +103,6 @@ Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
 
 This section details the Peras voting process, from the casting and detailed structure of votes, to the creation, diffusion, and storage of certificates.
 
-# Votes & Certificates
-
 ## Votes
 
 ### Overview
@@ -264,6 +262,7 @@ In the following tables we compare some relevant metrics between the two differe
 
 For Mithril certificates, assuming parameters similar to mainnet's ($k=2422, m=20973, f=0.2$):
 
+| Feature                         |       |
 |---------------------------------|-------|
 | Certificate size                | 56kB  |
 | Proving time (per vote)         | ~70ms |
@@ -272,6 +271,7 @@ For Mithril certificates, assuming parameters similar to mainnet's ($k=2422, m=2
 
 For ALBA certificates, assuming 1000 votes, a honest to faulty ratio of 80/20, and security parameter $λ=128$. Note the proving time _does not_ take into account individual vote verification time, whereas certificate's verification time _includes_ votes verification time.
 
+| Feature                         |        |
 |---------------------------------|--------|
 | Certificate size                | 47kB   |
 | Proving time (per vote)         | ~133us |
@@ -280,6 +280,32 @@ For ALBA certificates, assuming 1000 votes, a honest to faulty ratio of 80/20, a
 |                                 |        |
 
 ## Vote diffusion
+
+Building on [previous work](./tech-report-1#network-performance-analysis), we built a ΔQ model to evaluate the expected delay to reach _quorum_.
+The model works as follows:
+
+* We start from a base uniform distribution of single MTU latency between 2 nodes, assuming a vote fits in a single TCP frame. The base latencies are identical as the one used in previous report,
+* We then use the expected distribution of paths length for a random graph with 15 average connections, to model the latency distribution across the network, again reusing previously known values,
+* We then apply the `NToFinish 75` combinator to this distribution to compute the expected distribution to reach 75% of the votes (quorum)
+* An important assumption is that each vote diffusion across the network is expected to be independent from all other votes,
+* Verification time for a single vote is drawn from the above benchmarks, but we also want to take into account the verification time of a single vote, which we do in 2 different ways:
+  * One distribution assumes a node does all verifications sequentially, one vote at a time
+  * Another assumes all verifications can be done in parallel
+  * Of course, the actual verification time should be expected to be in between those 2 extremes
+
+Using the "old" version of ΔQ library based on numerical (eg. Monte-Carlo) sampling, yields the following graph:
+
+![Vote diffusion](../static/img/vote-diffusion.svg)
+
+This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1s most of the time to compare with a round length of about 2 minutes.
+
+> [!NOTE]
+>
+> ### Notes about ΔQ libraries
+>
+> At the time of this writing, a newer version of the ΔQ library based on _piecewise polynomials_ is [available](https://github.com/DeltaQ-SD/dqsd-piecewise-poly). Our [attempts](https://github.com/input-output-hk/peras-design/blob/01206e5d4d3d5132c59bff18564ad63adc924488/Logbook.md#L302) to use it to model votes diffusion were blocked by the high computational cost of this approach and the time it takes to compute a model, eg. about 10 minutes in our case. The code for this experiment is available as a [draft PR #166](https://github.com/input-output-hk/peras-design/pull/166).
+>
+> In the old version of ΔQ based on numerical sampling, we introduced a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
 
 # Constraints on Peras Parameters
 
