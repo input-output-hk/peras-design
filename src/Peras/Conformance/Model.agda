@@ -220,16 +220,15 @@ blockOldEnough params clock record{slotNumber = slot} =
 
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
+chainExtends : Block → Certificate → Chain → Bool
+chainExtends b c =
+  any (λ block → Hashable.hash hashBlock block == blockRef c)
+    ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock b)
+
+{-# COMPILE AGDA2HS chainExtends #-}
+
 extends : Block → Certificate → List Chain → Bool
-extends block cert chain =
-  if cert == genesisCert
-    then True
-    else any chainExtends chain
-    where
-      chainExtends : Chain → Bool
-      chainExtends =
-        any (λ block → Hashable.hash hashBlock block == blockRef cert)
-          ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock block)
+extends block cert chains = any (chainExtends block cert) chains
 
 {-# COMPILE AGDA2HS extends #-}
 
@@ -323,26 +322,28 @@ vr1A s = nextRound (round (cert' s)) === rFromSlot s
 {-# COMPILE AGDA2HS vr1A #-}
 
 Vr1B : NodeModel → Set
-Vr1B s = ⊤ -- FIXME
-
-{-
-with votingBlock s
+Vr1B s
+  with votingBlock s
 ... | Nothing = ⊥
-... | Just block with extends block (cert' s) (allChains s)
+... | Just block
+  with extends block (cert' s) (allChains s)
 ... | True = ⊤
 ... | False = ⊥
--}
+
+vr1B' : NodeModel → Bool
+vr1B' s =
+  case votingBlock s of
+    λ { Nothing → False
+      ; (Just block) → extends block (cert' s) (allChains s)
+      }
+
+{-# COMPILE AGDA2HS vr1B' #-}
+
+postulate
+  vr1B-prf : ∀ {s} → Reflects (Vr1B s) (vr1B' s)
 
 vr1B : (s : NodeModel) → Dec (Vr1B s)
-vr1B s = True ⟨ tt ⟩
-
-{-
-vr1B : NodeModel → Bool
-vr1B s =
-  case votingBlock s of
-    λ { (Just block) → extends block (cert' s) (allChains s)
-      ; Nothing → False }
--}
+vr1B s = vr1B' s ⟨ vr1B-prf {s} ⟩
 
 {-# COMPILE AGDA2HS vr1B #-}
 

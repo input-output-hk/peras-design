@@ -162,14 +162,13 @@ blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
   getSlotNumber slot + perasL params + perasT params
     <= getSlotNumber clock
 
+chainExtends :: Block -> Certificate -> Chain -> Bool
+chainExtends b c =
+  any (\block -> hash block == blockRef c)
+    . dropWhile (\block' -> hash block' /= hash b)
+
 extends :: Block -> Certificate -> [Chain] -> Bool
-extends block cert chain =
-  if cert == genesisCert then True else any chainExtends chain
- where
-  chainExtends :: Chain -> Bool
-  chainExtends =
-    any (\block -> hash block == blockRef cert)
-      . dropWhile (\block' -> hash block' /= hash block)
+extends block cert chains = any (chainExtends block cert) chains
 
 votingBlock :: NodeModel -> Maybe Block
 votingBlock s =
@@ -201,8 +200,14 @@ ge = geInteger
 vr1A :: NodeModel -> Bool
 vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
+vr1B' :: NodeModel -> Bool
+vr1B' s =
+  case votingBlock s of
+    Nothing -> False
+    Just block -> extends block (cert' s) (allChains s)
+
 vr1B :: NodeModel -> Bool
-vr1B s = True
+vr1B s = vr1B' s
 
 vr2A :: NodeModel -> Bool
 vr2A s =

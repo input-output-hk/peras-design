@@ -346,25 +346,28 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
-    chainExtends' : Block → Certificate → Chain → Set
-    chainExtends' b c =
+    ChainExtends' : Block → Certificate → Chain → Set
+    ChainExtends' b c =
       Any (λ block → (hash block ≡ blockRef c))
         ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
 
-    chainExtends : SlotNumber → T → Chain → Set
-    chainExtends s t = chainExtends' (Preagreement s t) (latestCertSeen t)
+    ChainExtends : SlotNumber → T → Chain → Set
+    ChainExtends s t = ChainExtends' (Preagreement s t) (latestCertSeen t)
 
     VotingRule-1B : SlotNumber → T → Set
-    VotingRule-1B s t = Any (chainExtends s t) (allChains t)
+    VotingRule-1B s t = Any (ChainExtends s t) (allChains t)
 ```
 ```agda
-    chainExtends? : (s : SlotNumber) → (t : T) → (c : Chain) → Dec (chainExtends s t c)
-    chainExtends? s t =
-      any? (λ block → (hash block ≟-BlockHash blockRef (latestCertSeen t)))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash (Preagreement s t)))
+    ChainExtends'? : (b : Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends' b c ch)
+    ChainExtends'? b c =
+      any? (λ block → (hash block ≟-BlockHash blockRef c))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+
+    ChainExtends? : (s : SlotNumber) → (t : T) → (c : Chain) → Dec (ChainExtends s t c)
+    ChainExtends? s t = ChainExtends'? (Preagreement s t) (latestCertSeen t)
 
     VotingRule-1B? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1B s t)
-    VotingRule-1B? s t = any? (chainExtends? s t) (allChains t)
+    VotingRule-1B? s t = any? (ChainExtends? s t) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
