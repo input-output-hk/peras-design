@@ -1,3 +1,27 @@
+## 2024-07-08
+
+### Determinism in Peras
+
+- The protocol in the Peras paper is not deterministic in at least these areas:
+    - Selection of preferred chain when there is a tie.
+    - Sequencing of operations.
+- The executable specification necessarily become deterministic.
+- QuickCheck Dynamic could handle non-determinism (somewhat awkwardly) through these mechanisims:
+    - Have the state model be aware on non-determinism and track it.
+    - Use symbolic variables to track and account for the presence of non-determism.
+- However, for Peras conformance tests we want determinism:
+    - This has to be specified in a way that different implementation languages can handle easily.
+    - This needs to be documented in the version of the specification realized for conformance tests.
+    - The latest version of the the specification in the tech report adds rules to force determinism:
+        - Choose the preferred chain whose tip's block hash is smallest.
+            - QUESTION: Does this open up an oportunity for grinding attacks?
+        - Fetch, then create blocks, then vote.
+- The non-determinisim in the fundamental protocol can be identified via completess proofs.
+    - The proof would be conditioned upon the existence of functions that make the executable specification deterministic: "completeness up to *x*".
+    - For example, "for all possible functions that select the preferred chain among chains of equal length, the test specification is complete".
+    - An instantiation of the executable specification would use a particular tie-breaking function: i.e., implementations would not be free to break ties differently.
+    - The proof would explicitly identify all areas of non-determinism.
+
 ## 2024-07-04
 
 ### Fixing conformance tests
