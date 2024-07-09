@@ -14,8 +14,75 @@ monofont: Monaco
 
 # Executive summary
 
-> [!IMPORTANT]
-> Summarize approach, results, and findings
+This section lists a number of findings, conclusions, ideas, and known risks that we have garnered as part of the Peras innovation project.
+
+## Product
+
+## Process
+
+The following pictures shows how our R&D process evolved over the course of the past few months.
+
+![](../static/img/peras-process.jpg)
+
+Some notable points:
+
+* Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers
+* The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strenghthened thanks to fruitful collaboration with Quviq:
+  * The _Test model_ aka. _executable  specification_ is defined in Agda then projected to Haskell for direct reuse by `quickcheck-dynamic` execution engine
+  * A _Soundness proof_ ensures it's consistent with the (higher level) formal specification
+  * We haven't yet covered _adversarial behaviour_ but most scenarios should be straightforward to implement
+* We have discontinued Rust prototype support, from want of time but we haven't changed how tests are run so we have strong confidence any implementation with a compatible API should be testable
+* We have built [Markov chains](#markov-chain-simulation)-based models to simulate various interesting large scale behaviours of Peras probabilistically, providing a wealth of insights on parameters interaction
+* We have continued investigating the use of ΔQ formalism, trying to leverage more recent implementations for modelling [vote diffusion](#vote-diffusion)
+* While there remain some work to be done on that front, we should be able to make Peras work including the present report fully public
+
+# Introduction
+
+## Software Readiness Level
+
+SRL 3
+
+| Questions to resolve                                                                                          | Status  |
+|---------------------------------------------------------------------------------------------------------------|---------|
+| Critical functions/components of the concept/application identified?                                          | Done    |
+| Subsystem or component analytical predictions made?                                                           | Done    |
+| Subsystem or component performance assessed by Modeling and Simulation?                                       | Done    |
+| Preliminary performance metrics established for key parameters?                                               | Done    |
+| Laboratory tests and test environments established?                                                           | Done    |
+| Laboratory test support equipment and computing environment completed for component/proof-of-concept testing? | N/A     |
+| Component acquisition/coding completed?                                                                       | Partial |
+| Component verification and validation completed?                                                              | Mostly  |
+| Analysis of test results completed establishing key performance metrics for components/ subsystems?           | Done    |
+| Analytical verification of critical functions from proof-of-concept made?                                     | Done    |
+| Analytical and experimental proof-of-concept documented?                                                      | Done    |
+
+SRL 4
+
+| Questions to resolve                                                                                                                     | Status  |
+|------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| Concept/application translated into detailed system/subsystem/component level software architecture design?                              | Partial |
+| Preliminary definition of operational environment completed?                                                                             | Done    |
+| Laboratory tests and test environments defined for integrated component testing?                                                         | Partial |
+| Pre-test predictions of integrated component performance in a laboratory environment assessed by Modeling and Simulation?                | Done    |
+| Key parameter performance metrics established for integrated component laboratory tests?                                                 | Done    |
+| Laboratory test support equipment and computing environment completed for integrated component testing?                                  | Partial |
+| System/subsystem/component level coding completed?                                                                                       | Partial |
+| Integrated component tests completed?                                                                                                    | Partial |
+| Analysis of test results completed verifying performance relative to predictions?                                                        | Done    |
+| Preliminary system requirements defined for end users' application?                                                                      | Done    |
+| Critical test environments and performance predictions defined relative operating environment?                                           | Done    |
+| Relevant test environment defined?                                                                                                       | Done    |
+| Integrated component tests completed for reused code?                                                                                    | Done    |
+| Integrated component performance results verifying analytical predictions and definition of relevant operational environment documented? | Done    |
+
+Relevant documents:
+
+| document                 | status  |
+|--------------------------|---------|
+| Detailed Design Document | Partial |
+| Formal Specification     | Done    |
+| Proofs                   | Done    |
+| Simulations              | Done    |
 
 # Protocol definition
 
