@@ -115,7 +115,6 @@ record Postulates : Set₁ where
 
 record Network : Set₁ where
   field
-    block₀ : Block
     Δ : ℕ
 ```
 ```agda
@@ -253,9 +252,6 @@ module _ ⦃ _ : Hashable Block ⦄
 ```agda
   data ValidChain : Chain → Set where
 
-    Genesis :
-      ValidChain (block₀ ∷ [])
-
     Cons : ∀ {c₁ c₂ : Chain} {b₁ b₂ : Block}
       → IsBlockSignature b₁ (signature b₁)
       → IsSlotLeader (creatorId b₁) (slotNumber b₁) (leadershipProof b₁)
@@ -266,12 +262,10 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 ```agda
   tip : ∀ {c : Chain} → ValidChain c → Block
-  tip Genesis = block₀
   tip (Cons {b₁ = b} _ _ refl refl _) = b
 ```
 ```agda
   uncons : ∀ {c : Chain} → (v : ValidChain c) → Σ[ (b , d) ∈ Block × Chain ] (c ≡ b ∷ d)
-  uncons {block₀ ∷ .[]} Genesis = (block₀ , []) , refl
   uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₁ , (b₂ ∷ c₁)) , cong (_∷ (b₂ ∷ c₁)) refl
 ```
 ```agda

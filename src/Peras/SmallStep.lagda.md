@@ -169,19 +169,13 @@ as proposed in the paper.
 
 ```agda
       instantiated :
-        preferredChain tree₀ ≡ block₀ ∷ []
+        preferredChain tree₀ ≡ []
 
       instantiated-certs :
         certs tree₀ ≡ cert₀ ∷ []
 
       instantiated-votes :
         votes tree₀ ≡ []
-
-      genesis-block-slotnumber :
-        getSlotNumber (slotNumber block₀) ≡ 0
-
-      genesis-block-no-certificate :
-        certificate block₀ ≡ nothing
 
       extendable-chain : ∀ (t : T) (c : Chain)
         → certs (newChain t c) ≡ certsFromChain c ++ certs t
@@ -242,7 +236,7 @@ The block-tree type is defined as follows:
       certs : T → List Certificate
 
     cert₀ : Certificate
-    cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS) -- TODO: hash block₀ ?
+    cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
 
     field
       is-TreeType : IsTreeType
@@ -326,12 +320,12 @@ cool-down phase.
 #### Preagreement
 
 ```agda
-    Preagreement : SlotNumber → T → Block
+    Preagreement : SlotNumber → T → Maybe Block
     Preagreement (MkSlotNumber s) t =
       let
         Cpref = preferredChain t
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
-      in fromMaybe block₀ (head bs)
+      in head bs
 ```
 #### Voting rules
 
@@ -346,8 +340,9 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
-    ChainExtends' : Block → Certificate → Chain → Set
-    ChainExtends' b c =
+    ChainExtends' : Maybe Block → Certificate → Chain → Set
+    ChainExtends' nothing _ _ = ⊥
+    ChainExtends' (just b) c =
       Any (λ block → (hash block ≡ blockRef c))
         ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
 
@@ -358,8 +353,9 @@ VR-1B: The  extends the block certified by cert-r−1,
     VotingRule-1B s t = Any (ChainExtends s t) (allChains t)
 ```
 ```agda
-    ChainExtends'? : (b : Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends' b c ch)
-    ChainExtends'? b c =
+    ChainExtends'? : (b : Maybe Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends' b c ch)
+    ChainExtends'? nothing _ _ = no id
+    ChainExtends'? (just b) c =
       any? (λ block → (hash block ≟-BlockHash blockRef c))
         ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
 
@@ -576,15 +572,13 @@ An adversarial party might delay a message
 
 Helper function for creating a vote
 ```agda
-    createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
-    createVote s p prf sig t =
+    createVote : SlotNumber → PartyId → MembershipProof → Signature → Hash Block → Vote
+    createVote s p prf sig hb =
       record
         { votingRound = v-round s
         ; creatorId = p
         ; proofM = prf
-        ; blockHash =
-            let b = Preagreement s t
-            in hash b
+        ; blockHash = hb
         ; signature = sig
         }
 ```
@@ -600,13 +594,14 @@ is added to be consumed immediately.
 
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
-      honest : ∀ {p} {t} {M} {π} {σ}
+      honest : ∀ {p} {t} {M} {π} {σ} {b}
         → let
             open State
             s = clock M
             r = v-round s
-            v = createVote s p π σ t
+            v = createVote s p π σ (hash b)
           in
+        ∙ Preagreement s t ≡ just b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r

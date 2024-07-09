@@ -253,11 +253,33 @@ module TreeInstance
          ⦃ _ : Network ⦄
          ⦃ _ : Postulates ⦄
        where
-  postulate
-    isTreeType :
-      IsTreeType initialModelState newChain' allChains
-               pref addVote' allVotes allSeenCerts genesisCert
 
+{-
+  valid-NodeModel : ∀ (m : NodeModel) → ValidChain (pref m)
+  valid-NodeModel m with pref m
+  ... | [] = {!!}
+  ... | x ∷ xxx = {!!}
+-}
+  postulate
+    isTreeType : IsTreeType initialModelState newChain' allChains
+                          pref addVote' allVotes allSeenCerts genesisCert
+{-
+  isTreeType = record
+                 { instantiated = {!!}
+                 ; instantiated-certs = refl
+                 ; instantiated-votes = refl
+                 ; genesis-block-slotnumber = {!!}
+                 ; genesis-block-no-certificate = {!!}
+                 ; extendable-chain = {!!}
+                 ; valid = λ t → {!!}
+                 ; optimal = {!!}
+                 ; self-contained = {!!}
+                 ; valid-votes = {!!}
+                 ; unique-votes = {!!}
+                 ; no-equivocations = {!!}
+                 ; quorum-cert = {!!}
+                 }
+-}
   NodeModelTree : TreeType NodeModel
   NodeModelTree = record {
     tree₀ = initialModelState ;

@@ -84,9 +84,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
     sutVotesInStep (Fetch _) = []
-    sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} _ _ _ _ _)) =
+    sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _)) =
       case p ≟ sutId of λ where
-        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ t) ∷ []
+        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ (Hashable.hash hashBlock b)) ∷ []
         (no _)  → []
     sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _ _) = []
@@ -113,10 +113,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
-        correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ tree
+        correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
         validVote      : VotingRule slot tree
 
-      validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ tree) σ
+      validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid
 
     lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
@@ -128,23 +128,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open import Data.Nat using (_≥_; _≥?_; _>?_)
 
-{-
+    params-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → Params.B params ≡ perasB (protocol (proj₁ ∃tree))
+    params-equ s p ∃tree = {!refl!}
+
     pref-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → pref (modelState s p) ≡ prefChain (proj₁ ∃tree)
-    pref-equ s p ∃tree = {!refl!}
--}
+    pref-equ s p ∃tree rewrite params-equ s p ∃tree = {!refl!}
 
     certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
-    certS-equ s p ∃tree -- rewrite pref-equ s p ∃tree
+    certS-equ s p ∃tree rewrite pref-equ s p ∃tree
       = {!refl!}
 
-{-
-    postulate
-      hash-genesis : (hashBytes (Hashable.hash hashBlock (Network.block₀ network))) ≡ emptyBS
-      sign-genesis : (bytesS (signature (Network.block₀ network))) ≡ emptyBS
--}
-{-
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
@@ -182,7 +178,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
       rewrite sym (certS-equ s p ∃tree)
       = x P., y
--}
+
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
@@ -205,8 +201,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = {!!}
-      {-
+      ; validVote       =
         let
           witness = toWitness' (isYes≡True⇒TTrue checkedVRs )
           f₁ = vr-1a⇒VotingRule-1A  s (creatorId vote) (hasTree inv (creatorId vote))
@@ -215,7 +210,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
-      -}
       }
 
     -- Soundness --
