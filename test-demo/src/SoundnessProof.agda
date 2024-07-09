@@ -7,7 +7,9 @@ open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
 open import Data.List using (_++_)
 open import Haskell.Prelude hiding (_×_; _×_×_; _,_,_; b; s; t; ⊥; _<>_; _++_) renaming (_,_ to _,ʰ_; _<_ to _<ʰ_)
-open import Relation.Binary.PropositionalEquality using (_≢_)
+open import Relation.Binary.PropositionalEquality
+open Relation.Binary.PropositionalEquality.≡-Reasoning
+
 open import Relation.Nullary using (¬_)
 open import Data.Empty
 
