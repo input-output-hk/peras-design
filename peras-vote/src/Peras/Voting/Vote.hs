@@ -47,25 +47,28 @@ data Vote block = MkVote
   , membershipProof :: MembershipProof
   , votingWeight :: VotingWeight
   , sigKesPeriod :: KES.Period
+  , kesVerKey :: KES.VerKeyKES (KES.Sum6KES Ed25519DSIGN Blake2b_256)
   , signature :: Signature
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData)
 
 instance ToCBOR block => ToCBOR (Vote block) where
-  toCBOR MkVote{creatorId, votingRound, blockHash, membershipProof, votingWeight, sigKesPeriod, signature} =
+  toCBOR MkVote{creatorId, votingRound, blockHash, membershipProof, votingWeight, sigKesPeriod, kesVerKey, signature} =
     toCBOR creatorId
       <> toCBOR votingRound
       <> toCBOR blockHash
       <> toCBOR membershipProof
       <> toCBOR votingWeight
       <> toCBOR sigKesPeriod
+      <> toCBOR kesVerKey
       <> toCBOR signature
 
 instance FromCBOR block => FromCBOR (Vote block) where
   fromCBOR =
     MkVote
       <$> fromCBOR
+      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -184,6 +187,7 @@ castVote blockHash totalStake (MkMembershipInput h) (CommitteeSize committeeSize
               , membershipProof = certVRF
               , votingWeight = n
               , sigKesPeriod = kesPeriod
+              , kesVerKey
               , signature = certKES
               }
 
@@ -326,6 +330,7 @@ castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} r
               , membershipProof = certVRF
               , votingWeight = fromIntegral n
               , sigKesPeriod = kesPeriod
+              , kesVerKey
               , signature = certKES
               }
 

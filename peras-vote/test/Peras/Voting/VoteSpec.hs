@@ -76,10 +76,10 @@ spec = do
         prop_selectVotersEveryRoundWithTaylorExpansion voters
 
   prop "can serialise and deserialise vote" prop_serialiseDeserialiseVote
-  it "size of serialized vote for block hash is 676 bytes" $ do
+  it "size of serialized vote for block hash is 710 bytes" $ do
     vote <- generate genOneVote
     let serialized = serialize' vote
-    BS.length serialized `shouldBe` 676
+    BS.length serialized `shouldBe` 710
 
 prop_asIntegerDistributesHashesUniformly :: Property
 prop_asIntegerDistributesHashesUniformly =

@@ -41,15 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   [uiStop, uiPause, uiResume].forEach(ui => ui.disabled = true);
 
-  uiSimulate.addEventListener('click', () => {
+  function startSimulation(step) {
     network.body.data.nodes.clear();
     network.body.data.edges.clear();
     [uiDuration, uiParties, uiU, uiA, uiR, uiK, uiL, uiTau, uiB, uiT, uiCommittee, uiDelta, uiAlpha, uiDelay, uiSeed].forEach( ui => ui.disabled = true)
     uiSimulate.disabled = true;
-    uiResume.disabled = true;
-    uiRandomize.disabled = true;
+    uiStep.disabled = !step;
     uiStop.disabled = false;
-    uiPause.disabled = false;
+    uiPause.disabled = step;
+    uiResume.disabled = !step;
+    uiRandomize.disabled = true;
     ws.send(JSON.stringify({
         tag: "Simulate"
       , duration: parseInt(uiDuration.value)
@@ -67,34 +68,50 @@ document.addEventListener('DOMContentLoaded', () => {
       , activeSlots: parseFloat(uiAlpha.value)
       , delayMicroseconds: Math.round(parseFloat(uiDelay.value) * 1000000)
       , rngSeed: parseInt(uiSeed.value)
+      , step: step
     }));
+  }
+
+  uiSimulate.addEventListener('click', () =>
+    startSimulation(false)
+  );
+  
+  uiStep.addEventListener('click', () => {
+    if (uiSimulate.disabled) {
+      ws.send(JSON.stringify({tag: "Step"}));
+    } else {
+      startSimulation(true);
+    }
   });
 
   uiStop.addEventListener('click', () => {
     [uiDuration, uiParties, uiU, uiA, uiR, uiK, uiL, uiTau, uiB, uiT, uiCommittee, uiDelta, uiAlpha, uiDelay, uiSeed].forEach( ui => ui.disabled = false)
     uiSimulate.disabled = false;
-    uiResume.disabled = true;
-    uiRandomize.disabled = false;
+    uiStep.disabled = false;
     uiStop.disabled = true;
     uiPause.disabled = true;
+    uiResume.disabled = true;
+    uiRandomize.disabled = false;
     ws.send(JSON.stringify({tag: "Stop"}));
   });
 
   uiPause.addEventListener('click', () => {
     uiSimulate.disabled = true;
-    uiResume.disabled = false;
-    uiRandomize.disabled = true;
+    uiStep.disabled = false;
     uiStop.disabled = false;
     uiPause.disabled = true;
+    uiResume.disabled = false;
+    uiRandomize.disabled = true;
     ws.send(JSON.stringify({tag: "Pause"}));
   });
 
   uiResume.addEventListener('click', () => {
     uiSimulate.disabled = true;
-    uiResume.disabled = true;
-    uiRandomize.disabled = true;
+    uiStep.disabled = true;
     uiStop.disabled = false;
     uiPause.disabled = false;
+    uiResume.disabled = true;
+    uiRandomize.disabled = true;
     ws.send(JSON.stringify({tag: "Resume"}));
   });
 

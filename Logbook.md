@@ -1,3 +1,154 @@
+## 2024-07-08
+
+### Adversarial testing for Peras
+
+- Four posssible areas
+    1. Equivocations
+        - blocks
+        - votes
+        - certificates
+    2. Delayed receipt
+        - chains
+        - votes
+    3. Non-receipt
+        - chains
+        - votes
+    4. Invalid cryptographic proofs, garbled data, etc.
+- We can test for the first three in the protocol conformance test, but should wait on the node conformance test for the fourth.
+- Approach
+    - Equivocation
+        - Update Agda executable spec to handle equivocation.
+        - Add action(s) for receipt of equivocated information (block/vote/certificate).
+        - Add generators that use the model state to create equivocated information.
+    - Delayed receipt or non-receipt (= non-prompt delivery)
+        - Add action for non-prompt delivery .
+        - Add generators for creating non-prompty chains and votes.
+- Other discussion
+    - Negative tests are not generally useful for protocol state-machine testing because protocols do not through error messages.
+    - No blacklisting of nodes in current specification, so this does not need testing.
+    - Consider having separate soundness proofs for an honest vs a dishonest environment.
+
+### Determinism in Peras
+
+- The protocol in the Peras paper is not deterministic in at least these areas:
+    - Selection of preferred chain when there is a tie.
+    - Sequencing of operations.
+- The executable specification necessarily become deterministic.
+- QuickCheck Dynamic could handle non-determinism (somewhat awkwardly) through these mechanisims:
+    - Have the state model be aware on non-determinism and track it.
+    - Use symbolic variables to track and account for the presence of non-determism.
+- However, for Peras conformance tests we want determinism:
+    - This has to be specified in a way that different implementation languages can handle easily.
+    - This needs to be documented in the version of the specification realized for conformance tests.
+    - The latest version of the the specification in the tech report adds rules to force determinism:
+        - Choose the preferred chain whose tip's block hash is smallest.
+            - QUESTION: Does this open up an oportunity for grinding attacks?
+        - Fetch, then create blocks, then vote.
+- The non-determinisim in the fundamental protocol can be identified via completess proofs.
+    - The proof would be conditioned upon the existence of functions that make the executable specification deterministic: "completeness up to *x*".
+    - For example, "for all possible functions that select the preferred chain among chains of equal length, the test specification is complete".
+    - An instantiation of the executable specification would use a particular tie-breaking function: i.e., implementations would not be free to break ties differently.
+    - The proof would explicitly identify all areas of non-determinism.
+
+## 2024-07-04
+
+### Fixing conformance tests
+
+Started tracking the reason why our first conformance test is failing. The test reports that the node has voted where it should not have.
+
+* I have added traces on both sides to check the round number and they are identical
+* The `Test` module does not call the `tickNode` function, only the `voting` function which _always_ vote.
+  Moved the guard from `tickNode` to `voting` function which now takes a slot and not a round.
+  This makes the logic in `tickNode` more uniform and simple, but the test still fails
+* Seems like we don't update the clock in the `Model` ?? => :no:
+  In the `perform` of the test, we _first_ increase the clock before choosing to vote or not.
+  This is consistent with the `postcondition` where we check whether or not we should vote according to the _destination_ state, not the initial state.
+* Tried to remove shrinking which might have some "side-effects" but adding `noShrinking` to the property does not work, I still see `Assertion failed (after 6 tests and 2 shrinks):`
+
+So it appears the issue stems from the voting logic in the model not taking into account the blocks. Pursued some lead but it was a red herring: The block selection in `Model` takes into account `perasT` but not the implementation (it only checks `perasL`), however `perasT = 0` so this is not the source of the problem.
+
+Tracing the vote creation process in the model shows the `preferredChain` to be always empty, even though some block has been diffused.
+
+This is obviously wrong:
+
+```
+Checking blocks in [[MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 2}, creatorId = -4, parentBlock = "0300040200020201", certificate = Nothing, leadershipProof = "0402040302000303", signature = "0101010200010404", bodyHash = "0303020400020002"},MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 1}, creatorId = -4, parentBlock = "0000000000000000", certificate = Nothing, leadershipProof = "0101000003010400", signature = "0300040200020201", bodyHash = "0201000302040101"}],[MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 1}, creatorId = -4, parentBlock = "0000000000000000", certificate = Nothing, leadershipProof = "0101000003010400",signature = "0300040200020201", bodyHash = "0201000302040101"}],[]], preferred = []
+```
+
+The preferred chain should not be empty in this case!
+
+Got to the bottom of _one_ issue: the `maximumBy` function had its branches inverted which lead to it being actually `minimumBy`!
+Fixing that leads me into a different issue, with an interesting failure:
+
+```
+           -- round: 1
+           --      got: [Vote {round     = 1
+                               creator   = 1
+                               blockHash = "0602080800000107"
+                               proofM    = "8cacfd4bd1f4a6b1"
+                               signature = "bad333f8e2548088"}]
+           -- expected: [Vote {round     = 1
+                               creator   = 1
+                               blockHash = "0605000300020205"
+                               proofM    = "8cacfd4bd1f4a6b1"
+                               signature = "cd9830e7358506cd"}]
+```
+
+so it's probably now just a problem in choosing which of 2 chains are longest in case of ties on the weight.
+
+Haskell's `maximumBy` function favors the last element in a list:
+
+```
+> maximumBy (compare `on` snd) [(1,1), (2,1), (3,1)]
+(3,1)
+```
+
+which is consistent with `Peras.Util`'s :
+
+```
+> U.maximumBy (0,0) (compare `on` snd) [(1,1), (2,1), (3,1)]
+(3,1)
+```
+
+Finally got to the bottom of it: known chains are defined in the implementation as
+
+```
+    let chains' = chains `Set.union` newChains
+```
+
+whereas in Model we just use a `[Chain]` so this is an ordering issue.
+
+We can't require the implementation to behave like a list, but we can
+refine the comparison function used to find the best chain, so I
+resorted to implementing a specific comparison function to ensure
+chains comparison matches, enforcing an ordering when chaing weights
+are equal: In case of match for weight, compare slots, then creatorId,
+then block hash
+
+To enable coverage, I added the following to `cabal.project.local` (coverage is not supported for internal libraries):
+
+```
+
+package *
+  coverage: True
+  library-coverage: True
+
+package dns
+  coverage: False
+  library-coverage: False
+```
+
+Then running the test generates coverage report which shows that `Voting` implementation module is fully covered by our conformance test :tada: as well as the `Model` code.
+
+![](site/static/img/voting-coverage.png)
+
+> [!IMPORTANT]
+> Some takeaways from this experiment:
+>
+> * Reimplementing even basic functions on the model side should be done with great care!
+> * We need the _soundness proof_ to guarantee the behaviour of the model is consistent with the formal specification
+> * Writing a test model _and running_ it is very useful to identify blindspots, implicit assumptions, and ensure proper coverage of implementation
+
 ## 2024-07-03
 
 ### Playing with faster convolutions
