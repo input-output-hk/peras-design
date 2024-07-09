@@ -25,7 +25,7 @@ open import Prelude.AssocList
 open import Prelude.DecEq using (DecEq)
 import Peras.SmallStep as SmallStep
 
-open import Peras.Conformance.Model
+import Peras.Conformance.Model as Model
 open import Peras.Conformance.Params
 
 -- TODO: ProofPrelude
@@ -37,15 +37,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
          ⦃ network    : Network ⦄
          ⦃ postulates : Postulates ⦄
-
-         {T : Set} {blockTree : SmallStep.TreeType T}
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
          {parties : Parties} -- TODO: use parties from blockTrees
     where
 
-  open SmallStep.Semantics {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
-  open SmallStep.TreeType blockTree renaming (allChains to chains)
+  open Params ⦃...⦄
+  open Network ⦃...⦄
+
+  open Model -- using (NodeModel; sutId)
+  open Model.TreeInstance using (NodeModelTree)
+
+  open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
+  open SmallStep.TreeType NodeModelTree renaming (allChains to chains; preferredChain to prefChain)
 
   module Assumptions
            (let open Postulates postulates)
@@ -65,12 +69,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; perasτ = τ
       ; perasB = B
       ; perasK = K
-      ; perasT = 0      -- TODO: Missing from Params
+      ; perasT = 0 -- TODO: Missing from Params
       ; perasΔ = Δ
       }
-      where
-        open Params params
-        open Network network
 
     modelState : State → ℕ → NodeModel
     modelState s p = record
@@ -108,7 +109,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       r    = v-round slot
       σ    = signature vote
       field
-        {tree}         : T
+        {tree}         : NodeModel
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
@@ -127,16 +128,23 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open import Data.Nat using (_≥_; _≥?_; _>?_)
 
-    postulate
-      certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-        → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
+{-
+    pref-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → pref (modelState s p) ≡ prefChain (proj₁ ∃tree)
+    pref-equ s p ∃tree = {!refl!}
+-}
+
+    certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+      → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
+    certS-equ s p ∃tree -- rewrite pref-equ s p ∃tree
+      = {!refl!}
 
 {-
     postulate
       hash-genesis : (hashBytes (Hashable.hash hashBlock (Network.block₀ network))) ≡ emptyBS
       sign-genesis : (bytesS (signature (Network.block₀ network))) ≡ emptyBS
 -}
-
+{-
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
           m = modelState s p
@@ -174,7 +182,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
       rewrite sym (certS-equ s p ∃tree)
       = x P., y
-
+-}
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
@@ -197,7 +205,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       =
+      ; validVote       = {!!}
+      {-
         let
           witness = toWitness' (isYes≡True⇒TTrue checkedVRs )
           f₁ = vr-1a⇒VotingRule-1A  s (creatorId vote) (hasTree inv (creatorId vote))
@@ -206,6 +215,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
+      -}
       }
 
     -- Soundness --

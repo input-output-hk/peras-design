@@ -1,4 +1,3 @@
-
 module Peras.Conformance.Model where
 
 open import Haskell.Prelude
@@ -239,6 +238,38 @@ private
 votingBlock : NodeModel → Maybe Block
 votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
 
+newChain' : NodeModel → Chain → NodeModel
+newChain' s c = record s { allChains = c ∷ (allChains s) }
+
+addVote' : NodeModel → Vote → NodeModel
+addVote' s v = record s { allVotes = v ∷ (allVotes s) }
+
+open import Peras.Params
+open Hashable
+
+module TreeInstance
+         ⦃ _ : Hashable (List Tx) ⦄
+         ⦃ _ : Params ⦄
+         ⦃ _ : Network ⦄
+         ⦃ _ : Postulates ⦄
+       where
+  postulate
+    isTreeType :
+      IsTreeType initialModelState newChain' allChains
+               pref addVote' allVotes allSeenCerts genesisCert
+
+  NodeModelTree : TreeType NodeModel
+  NodeModelTree = record {
+    tree₀ = initialModelState ;
+    allChains = allChains ;
+    votes = allVotes ;
+    certs = allSeenCerts ;
+    newChain = newChain' ;
+    preferredChain = pref;
+    addVote = addVote' ;
+    is-TreeType = isTreeType
+    }
+
 postulate -- FIXME
   instance
     iRoundNumber : IsLawfulEq RoundNumber
@@ -402,11 +433,8 @@ makeVote' s = do
 
 votesInState : NodeModel → List Vote
 votesInState s = maybeToList do
-  guard (slotInRound params slot == 0)
+  guard (slotInRound (protocol s) (clock s) == 0)
   makeVote' s
-  where
-    params = protocol s
-    slot   = clock s
 
 {-# COMPILE AGDA2HS votesInState #-}
 

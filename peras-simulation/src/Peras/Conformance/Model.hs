@@ -242,14 +242,9 @@ votesInState :: NodeModel -> [Vote]
 votesInState s =
   maybeToList
     ( do
-        guard (slotInRound params slot == 0)
+        guard (slotInRound (protocol s) (clock s) == 0)
         makeVote' s
     )
- where
-  params :: PerasParams
-  params = protocol s
-  slot :: SlotNumber
-  slot = clock s
 
 newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
 newQuora _ _ [] = []
