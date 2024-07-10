@@ -28,8 +28,8 @@ data PerasLog
   | NewCertPrime {partyId :: PartyId, newCertPrime :: Certificate}
   | NewCertStar {partyId :: PartyId, newCertStar :: Certificate}
   | CastVote {partyId :: PartyId, vote :: Vote}
-  | PreagreementBlock {partyId :: PartyId, block :: Block, weight :: VotingWeight}
-  | PreagreementNone {partyId :: PartyId}
+  | SelectedBlock {partyId :: PartyId, block :: Block, weight :: VotingWeight}
+  | NoBlockSelected {partyId :: PartyId}
   | ForgingLogic {partyId :: PartyId, bc1a :: Bool, bc1b :: Bool, bc1c :: Bool, block :: Block}
   | VotingLogic {partyId :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
   | DiffuseChain {partyId :: PartyId, chain :: Chain}

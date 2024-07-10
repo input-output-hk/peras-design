@@ -18,7 +18,7 @@ import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.Preagreement (preagreement)
+import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Trace (PerasLog (..))
 import Peras.Prototype.Types (
   Payload,
@@ -90,4 +90,4 @@ tickNode tracer diffuser params party state s r payload newChains newVotes =
     ExceptT $ blockCreation tracer params party state s payload (diffuseChain diffuser)
     -- 4. Invoke voting if committee member.
     ExceptT $
-      voting tracer params party state s (preagreement tracer) (diffuseVote diffuser)
+      voting tracer params party state s (selectBlock tracer) (diffuseVote diffuser)

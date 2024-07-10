@@ -35,10 +35,10 @@ import Peras.Chain
 import Peras.Conformance.Model
 import Peras.Crypto
 import Peras.Numbering
+import Peras.Prototype.BlockSelection
 import Peras.Prototype.Crypto
 import Peras.Prototype.Diffusion
 import Peras.Prototype.Fetching
-import Peras.Prototype.Preagreement
 import Peras.Prototype.Trace qualified as Trace
 import Peras.Prototype.Types
 import Peras.Prototype.Voting
@@ -129,8 +129,8 @@ instance Pretty Trace.PerasLog where
     Trace.NewCertPrime{newCertPrime} -> hang "NewCertPrime:" 2 (pPrint newCertPrime)
     Trace.NewCertStar{newCertStar} -> hang "NewCertStar:" 2 (pPrint newCertStar)
     Trace.CastVote{vote} -> hang "CastVote:" 2 (pPrint vote)
-    Trace.PreagreementBlock{block} -> hang "PreagreementBlock:" 2 $ pPrint block
-    Trace.PreagreementNone{} -> "PreagreementNone"
+    Trace.SelectedBlock{block} -> hang "SelectedBlock:" 2 $ pPrint block
+    Trace.NoBlockSelected{} -> "NoBlockSelected"
     Trace.ForgingLogic{} -> "ForgingLogic"
     Trace.VotingLogic{vr1a, vr1b, vr2a, vr2b} ->
       hang "VotingLogic:" 2 $
@@ -233,9 +233,9 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
         _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
         let roundNumber = inRound clock' protocol
             party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
-            preagreement' = preagreement nullTracer
+            selectBlock' = selectBlock nullTracer
             diffuser = diffuseVote diffuserVar
-        _ <- voting tracer protocol party stateVar clock' preagreement' diffuser
+        _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
         (cs, vs) <- popChainsAndVotes diffuserVar clock'
         pure $ Set.toList vs
     NewChain c -> do

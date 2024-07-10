@@ -36,7 +36,7 @@ record PerasParams : Set where
     perasB : ℕ
     -- ^ Certificate boost, in blocks
     perasT : ℕ
-    -- ^ Termination bound for preagreement, in slots
+    -- ^ Termination bound for block selection, in slots
     perasΔ : ℕ
     -- ^ Delivery guarantee for diffusion, in slots
     @0 ⦃ perasNonZeroU ⦄ : NonZero perasU
