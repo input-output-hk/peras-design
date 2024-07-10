@@ -110,7 +110,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       σ    = signature vote
       field
         {tree}         : NodeModel
+--        {block}        : Block
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
+--        blockExists    : Preagreement (State.clock s) tree ≡ just block
+--        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -130,7 +133,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     params-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → Params.B params ≡ perasB (protocol (proj₁ ∃tree))
-    params-equ s p ∃tree = {!refl!}
+    params-equ s p ∃tree = {!!}
 
     pref-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → pref (modelState s p) ≡ prefChain (proj₁ ∃tree)
@@ -198,6 +201,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
       ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
+--      ; blockExists     = {!!}
+--      ; blockVote       = refl
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
@@ -236,12 +241,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           open SmallStep.Message
       in
         record
-          { s₁          = let v = createVote slot (creatorId vote) (proofM vote) σ tree
+          { s₁          = let v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
                           in VoteMsg v , fzero , creatorId v , addVote tree v ⇑ s₀
           ; invariant₀  = inv
           ; invariant₁  = {!!}
           ; trace       = CreateVote (invFetched inv)
                             (honest {σ = Vote.signature vote}
+                              {!!}
                               creatorExists
                               validSignature'
                               startOfRound

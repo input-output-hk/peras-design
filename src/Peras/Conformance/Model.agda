@@ -260,18 +260,16 @@ module TreeInstance
   ... | [] = {!!}
   ... | x ∷ xxx = {!!}
 -}
+
   postulate
-    isTreeType : IsTreeType initialModelState newChain' allChains
-                          pref addVote' allVotes allSeenCerts genesisCert
+    isTreeType : IsTreeType initialModelState newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
 {-
   isTreeType = record
-                 { instantiated = {!!}
+                 { instantiated = refl
                  ; instantiated-certs = refl
                  ; instantiated-votes = refl
-                 ; genesis-block-slotnumber = {!!}
-                 ; genesis-block-no-certificate = {!!}
                  ; extendable-chain = {!!}
-                 ; valid = λ t → {!!}
+                 ; valid = valid-NodeModel
                  ; optimal = {!!}
                  ; self-contained = {!!}
                  ; valid-votes = {!!}
@@ -280,6 +278,7 @@ module TreeInstance
                  ; quorum-cert = {!!}
                  }
 -}
+
   NodeModelTree : TreeType NodeModel
   NodeModelTree = record {
     tree₀ = initialModelState ;
