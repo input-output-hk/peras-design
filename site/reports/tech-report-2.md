@@ -1109,6 +1109,29 @@ A node is expected to need to keep in memory:
 
 Peras should not have any significant impact on the memory requirements of a node.
 
+# Integration into Cardano Node
+
+In the [previous](tech-report-1.md) report, we already studied how Peras could be concretely implemented in a Cardano node. Most of the comments there are still valid, and we only provide here corrections and additions when needed. We have addressed resources-related issue in a previous section.
+
+The following picture summarizes a possible architecture for Peras highlighting its interactions with other components of the system.
+
+![Peras High-level Architecture](../static/img/peras-architecture.jpg)
+
+The main impacts identified so far are:
+
+* There is no impact in the existing block diffusion process, and no changes to block headers structure
+* Block body structure needs to be changed to accomodate for a certificate when entering _cooldown_ period
+* Consensus _best chain_ selection algorithm needs to be aware of the existence of a _quorum_ to compute the _weight_ of a possible chain, which is manifested by a _certificate_ from the Peras component
+  * Consensus will need to maintain or query a list of valid certificates (eg. similar to _volatile_ blocks) as they are received or produced
+  * Chain selection and headers diffusion is not dependent on individual votes
+* Peras component can be treated as another _chain follower_ to which new blocks and rollbacks are reported
+  * Peras component will also need to be able to retrieve current _stake distribution_
+  * It needs to have access to VRF and KES keys for voting, should we decide to forfeit BLS signature scheme
+* Dedicated long term storage will be needed for certificates
+* Networking layer will need to accomodate (at least) two new mini-protocols for votes and certificates diffusion
+  * This seems to align nicely with current joint effort on [Mithril integration](https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view)
+* Our remarks regarding the possible development of a standalone prototype interacting with a modifified adhoc node still stands and could be a good next step
+
 # Conclusion
 
 ## The case for Peras
