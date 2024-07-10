@@ -80,6 +80,7 @@ run LongerChain{..} =
   do
     peras <- decodeFileThrow paramFile
     hout <- openFile outFile WriteMode
+    hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
         initial = def
         go i prior
@@ -103,6 +104,7 @@ run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
     hout <- openFile outFile WriteMode
+    hPutStrLn hout $ intercalate "\t" ["Slot", "Honest - Adversary", "Probability"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
         initial = def
         go i prior
@@ -234,7 +236,7 @@ scenarioParser =
         O.info (Lengths <$> εOption <*> slotOption <*> stakeOption <*> paramOption) $
           O.progDesc "Compute the mean lengths of the honest and adversarial chains."
     commonCandidateDemoCommand =
-      O.command "command-candidate-demo" $
+      O.command "common-candidate-demo" $
         O.info (pure CommonCandidateDemo) $
           O.progDesc "Demonstrate a common-candidate simulation."
     separateChainsDemoCommand =
