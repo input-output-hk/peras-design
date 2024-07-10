@@ -651,8 +651,7 @@ Helper function for creating a block
         ; creatorId = p
         ; parentBlock =
             let open IsTreeType
-                (h , _) , _ = uncons (is-TreeType .valid t)
-            in hash h
+            in tipHash (is-TreeType .valid t)
         ; certificate =
             let r = v-round s
             in needCert r t

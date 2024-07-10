@@ -130,8 +130,11 @@ Final state after the execution of all the steps
 ```
 Properties of cert₀
 ```agda
+{-
       cert₀PointsIntoValidChain : ∀ {c} → ValidChain c → cert₀ PointsInto c
+      cert₀PointsIntoValidChain {.[]} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
+-}
 ```
 Based on properties of the blocktree we can show the following
 ```agda
@@ -197,13 +200,13 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
+{-
         validChain₁ : ValidChain chain₁
         validChain₁ =
           let v = is-TreeType .valid tree₀
               ((_ , d), pr) = uncons v
           in Cons {c₁ = d} isBlockSignature isSlotLeader refl pr v
 
-{-
         _ : initialState ↝⋆ finalState
         _ = NextSlot empty refl                           -- slot 1
           ↣ CreateBlock empty (honest refl validChain₁)
