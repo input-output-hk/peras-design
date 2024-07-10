@@ -21,7 +21,7 @@ import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
 import Peras.Prototype.Crypto (createMembershipProof, createSignedVote, isCommitteeMember)
 import Peras.Prototype.Trace (PerasLog (..))
-import Peras.Prototype.Types (DiffuseVote, PerasParams (..), PerasResult, PerasState (..), Preagreement, genesisCert, inRound, newRound)
+import Peras.Prototype.Types (BlockSelection, DiffuseVote, PerasParams (..), PerasResult, PerasState (..), genesisCert, inRound, newRound)
 
 -- Party P does the following at the beginning of each voting round r:
 voting ::
@@ -31,15 +31,15 @@ voting ::
   Party ->
   TVar m PerasState ->
   SlotNumber ->
-  Preagreement m ->
+  BlockSelection m ->
   DiffuseVote m ->
   m (PerasResult ())
-voting tracer params@MkPerasParams{perasR, perasK, perasU, perasT, perasΔ} party perasState slotNumber preagreement diffuseVote =
+voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasState slotNumber blockSelection diffuseVote =
   if newRound slotNumber params
     then runExceptT $ do
       MkPerasState{..} <- lift $ readTVarIO perasState
-      -- 1. Invoke Preagreement(r) when in the first slot of r to get valid voting candidate B in slot r U + T.
-      ExceptT (preagreement params party perasState roundNumber) >>= \case
+      -- 1. Invoke BlockSelection(r) when in the first slot of r to get valid voting candidate B in slot r U + T.
+      ExceptT (blockSelection params party perasState roundNumber) >>= \case
         Nothing -> pure ()
         Just (block, stake) ->
           -- 2. If party P is (voting) committee member in a round r,
@@ -69,9 +69,7 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasT, perasΔ} part
                 vote <- ExceptT $ createSignedVote party roundNumber (hash block) proofM stake
                 -- Add v to V and diffuse it.
                 lift $ atomically $ modifyTVar' perasState $ \s -> s{votes = vote `Set.insert` votes}
-                -- FIXME: Instead of waiting `T` slots for preagreement, we just queue the message
-                -- `T` slots later. This will have to be fixed when the preagreement algorithm is settled.
-                ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU + perasT) vote
+                ExceptT $ diffuseVote (fromIntegral $ fromIntegral roundNumber * perasU) vote
                 lift $ traceWith tracer $ CastVote (pid party) vote
     else pure $ pure ()
  where

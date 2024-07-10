@@ -341,7 +341,7 @@ The Peras simulator is a prototype/reference implementation of the Peras protoco
     - selects the preferred chain, and
     - updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
 - `Peras.Prototype.BlockCreation` forges new blocks and, optionally, includes a certificate in the new block.
-- `Peras.Prototype.Preagreement` selects the block that a party will vote upon.
+- `Peras.Prototype.BlockSelection` selects the block that a party will vote upon.
 - `Peras.Prototype.Voting` casts votes.
 
 Additional, non-core modules handle the diffusion of votes, the interactions between multiple nodes, and visualization of results. The simulator's voting behavior has been tested against the Agda-derived executable specification via the `quickcheck-dynamic` property-based state-machine testing framework: see `Peras.Conformance.Test`.
@@ -373,7 +373,7 @@ The input configuration file specifies the protocol parameters, the initial stat
 
 ```json
 {
-  "params":{"U":20,"A":200,"R":10,"K":17,"L":10,"τ":2,"B":10,"T":15,"Δ":5},
+  "params":{"U":20,"A":200,"R":10,"K":17,"L":10,"τ":2,"B":10,"Δ":5},
   "start":0,
   "finish":300,
   "payloads":{},
@@ -390,7 +390,7 @@ The input configuration file specifies the protocol parameters, the initial stat
 The output configuration file reveals all of the chains, votes, etc. tracked by each node/party. The trace file is a JSON array of events occurring in the simulation. The trace file converted to a GraphViz `.dot` file for visualization. Traces can also be piped into tools for real-time analysis.
 
 | Tag                         | Event                                                      |
-| --------------------------- | ---------------------------------------------------------- |
+|-----------------------------|------------------------------------------------------------|
 | `Protocol`                  | new protocol parameters                                    |
 | `Tick`                      | new slot                                                   |
 | `NewChainAndVotes`          | new chains and votes received                              |
@@ -401,8 +401,8 @@ The output configuration file reveals all of the chains, votes, etc. tracked by 
 | `NewCertStar`               | node selected a new $\mathsf{cert}^*$                      |
 | `ForgingLogic`              | logic for including a certificate in a new block           |
 | `DiffuseChain`              | chain extended by a new block                              |
-| `PreagreementBlock`         | preagreement on a block to be voted upon                   |
-| `PreagreementNone`          | no preagreement for voting                                 |
+| `SelectedBlock`             | block to be voted upon                                     |
+| `NoBlockSelected`           | no block voted for                                         |
 | `VotingLogic`               | logic for casting a vote                                   |
 | `DiffuseVote`               | diffuse a new vote                                         |
 

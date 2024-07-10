@@ -23,7 +23,7 @@ library
                       Peras.MarkovSim.Decoupled
                       Peras.MarkovSim.Types
     build-depends:    QuickCheck,
-                      base ^>=4.18.1.0,
+                      base,
                       containers,
                       data-default,
                       numeric-prelude,
@@ -37,7 +37,7 @@ executable  peras-markov
     hs-source-dirs:   app
     main-is:          Main.hs
     other-modules:    Paths_peras_markov
-    build-depends:    base ^>=4.18.1.0,
+    build-depends:    base,
                       containers,
                       data-default,
                       numeric-prelude,
@@ -56,7 +56,7 @@ test-suite peras-markov-test
                       Peras.Markov.Adversary.TwoChainSpec
                       Peras.Markov.PolynomialSpec
     build-depends:    QuickCheck,
-                      base ^>=4.18.1.0,
+                      base,
                       containers,
                       data-default,
                       hspec,

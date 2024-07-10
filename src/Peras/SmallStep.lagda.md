@@ -548,11 +548,11 @@ An adversarial party might delay a message
             }
 ```
 ## Voting
-#### Preagreement
+#### BlockSelection
 **TODO**: Needs to be finalized in the Peras paper
 ```agda
-    Preagreement : SlotNumber → T → Block
-    Preagreement (MkSlotNumber s) t =
+    BlockSelection : SlotNumber → T → Block
+    BlockSelection (MkSlotNumber s) t =
       let
         Cpref = preferredChain t
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
@@ -567,7 +567,7 @@ Helper function for creating a vote
         ; creatorId = p
         ; proofM = prf
         ; blockHash =
-            let b = Preagreement s t
+            let b = BlockSelection s t
             in hash b
         ; signature = sig
         }

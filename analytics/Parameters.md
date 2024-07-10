@@ -10,7 +10,6 @@
 | Certification boost | $B$ | blocks | The extra chain weight that a certificate gives to a block. | $B \gt 0$ | Peras requires that some blocks be boosted. |
 | Quorum size | $\tau$ | parties | The number of votes required to create a certificate. | $\tau \gt 3 n / 4$ | Guard against a minority (<50%) of adversarial voters. |
 | Committee size | $n$ | parties | The number of members on the voting committee. | $n \gt 0$ | Peras requires a voting committee. |
-| Preagreement termination | $T$ | slots | The maximum number of slots needed for preagreement. | $T \lt U$ | Preagreement must complete before the round ends. |
 | Network diffusion time | $\Delta$ | slots | Upper limit on the time needed to diffuse a message to all nodes. | $\Delta \gt 0$ | Messages have a finite delay. |
 | Active slot coefficient | $\alpha$ | 1/slots | The probability that a party will be the slot leader for a particular slot. | $0 \lt \alpha \leq 1$ | Blocks must be produced. |
 | Healing time | $T_\text{heal}$ | slots | Healing period to mitigate strong (25-50%) adversary. | $T_\text{heal} ≟ \mathcal{O}\left( B / \alpha \right)$ | Sufficient blocks must be produced to overcome an adversarially boosted block. |

@@ -8,7 +8,19 @@ import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
 import Peras.Chain (Chain, Vote (blockHash, votingRound))
-import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
+import Peras.Conformance.Params (
+  PerasParams (
+    MkPerasParams,
+    perasA,
+    perasB,
+    perasK,
+    perasL,
+    perasR,
+    perasU,
+    perasτ
+  ),
+  defaultPerasParams,
+ )
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
@@ -63,7 +75,6 @@ initialModelState =
         1
         1
         (perasB defaultPerasParams)
-        0
         0
     )
     [genesisChain]
@@ -138,12 +149,11 @@ makeVote params slot block =
 
 blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
 blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
-  getSlotNumber slot + perasL params + perasT params
-    <= getSlotNumber clock
+  getSlotNumber slot + perasL params <= getSlotNumber clock
 
 extends :: Block -> Certificate -> [Chain] -> Bool
 extends block cert chain =
-  if cert == genesisCert then True else any chainExtends chain
+  (cert == genesisCert) || any chainExtends chain
  where
   chainExtends :: Chain -> Bool
   chainExtends =

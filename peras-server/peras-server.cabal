@@ -16,7 +16,7 @@ library
     exposed-modules:  Peras.Server
                       Peras.Server.App
     build-depends:    aeson,
-                      base ^>=4.18.1.0,
+                      base ,
                       bytestring,
                       contra-tracer,
                       data-default,
@@ -38,7 +38,7 @@ executable peras-server
     ghc-options:  -threaded -rtsopts
     main-is:          Main.hs
     other-modules:    Paths_peras_server
-    build-depends:    base ^>=4.18.1.0,
+    build-depends:    base ,
                       optparse-applicative,
                       peras-server,
                       text,
@@ -52,7 +52,7 @@ executable peras-app
     main-is:          App.hs
     other-modules:    Paths_peras_server
     build-depends:    aeson,
-                      base ^>=4.18.1.0,
+                      base ,
                       bytestring,
                       data-default,
                       io-classes,

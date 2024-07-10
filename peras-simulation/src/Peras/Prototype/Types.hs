@@ -54,9 +54,9 @@ type Fetching m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> Set
 
 type BlockCreation m = PerasParams -> Party -> TVar m PerasState -> SlotNumber -> [Tx] -> DiffuseChain m -> m (Either PerasError ())
 
-type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> Preagreement m -> DiffuseVote m -> m (Either PerasError ())
+type Voting m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> BlockSelection m -> DiffuseVote m -> m (Either PerasError ())
 
-type Preagreement m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
+type BlockSelection m = PerasParams -> Party -> TVar m PerasState -> RoundNumber -> m (Either PerasError (Maybe (Block, VotingWeight)))
 
 type DiffuseChain m = SlotNumber -> Chain -> m (PerasResult ())
 
