@@ -136,7 +136,7 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
     round = inRound peras slot
     vote chain@MkChain{..} =
       let vr1a = certPrime == round - 1
-          vr1b = True -- FIXME: True by definition in these simulations.
+          vr1b = True -- FIXME: True by definition in these decoupled simulations.
           vr2a = round > certPrime + r
           vr2b = (round - certStar) `mod` k == 0
        in if vr1a && vr1b || vr2a && vr2b
@@ -145,7 +145,7 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
                 { -- Boost the chain.
                   weight = weight + b
                 , -- Record the certificate.
-                  certStarNext = Just round
+                  certPrimeNext = Just round
                 }
             else chain
    in
