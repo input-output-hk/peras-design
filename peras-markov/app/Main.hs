@@ -54,7 +54,7 @@ data Scenario
       , stake :: (Int, Int)
       , paramFile :: FilePath
       , outFile :: FilePath
-      , stop :: Bool
+      , stop :: Double
       , progress :: Bool
       }
   | LengthDifference
@@ -78,28 +78,29 @@ data Scenario
 run :: Scenario -> IO ()
 run LongerChain{..} =
   do
+    print stake
     peras <- decodeFileThrow paramFile
     hout <- openFile outFile WriteMode
-    hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)"]
+    hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)", "Error bound"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
         initial = def
         go i prior
           | i > slots = return ()
           | otherwise =
               do
-                when progress . hPutStr stderr $ "\rSlot: " <> show i
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (>) MarkovSim.weight honest adversary) $
                         MarkovSim.getEvolution posterior
-                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary]
+                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . abs $ 1 - sum summary]
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup False summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (stop && Map.size summary < 2) $
+                unless (minimum summary < stop) $
                   go (i + 1) posterior
     hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr "                       "
+    hPutStrLn stderr $ replicate 80 ' '
 run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -216,12 +217,12 @@ print' = print . pretty
 scenarioParser :: O.ParserInfo Scenario
 scenarioParser =
   let
-    εOption = O.option O.auto $ O.long "epsilon" <> O.value 1e-20 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Threshhold for discarding small probabilities."
+    εOption = O.option O.auto $ O.long "epsilon" <> O.value 1e-30 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Threshhold for discarding small probabilities."
     slotOption = O.option O.auto $ O.long "slots" <> O.value 1000 <> O.showDefault <> O.metavar "NATURAL" <> O.help "Number of slots to simulate."
-    stakeOption = fmap (\x -> (1000 - round (10 * x :: Double), round (10 * x))) . O.option O.auto $ O.long "adversarial-stake" <> O.value 5 <> O.showDefault <> O.metavar "PERCENTAGE" <> O.help "Percentage of adversarial stake."
+    stakeOption = fmap (\x -> (1000 - round (1000 * x :: Double), round (1000 * x))) . O.option O.auto $ O.long "adversarial-stake" <> O.value 0.05 <> O.showDefault <> O.metavar "FRACTION" <> O.help "Fraction [%/100] of adversarial stake."
     paramOption = O.strOption $ O.long "param-file" <> O.metavar "FILE" <> O.help "Path to input YAML file containing the Peras protocol parameters."
     outOption = O.strOption $ O.long "out-file" <> O.value "/dev/stdout" <> O.showDefault <> O.metavar "FILE" <> O.help "Path to output TSV file containing the simulation results."
-    stopOption = O.switch $ O.long "stop" <> O.help "Stop simulation when probabilities are smaller than epsilon."
+    stopOption = O.option O.auto $ O.long "stop" <> O.value 0 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Stop simulation when probabilities are smaller than this value."
     progressOption = O.switch $ O.long "progress" <> O.help "Show the progress of the simulation."
     longerChainCommand =
       O.command "longer-chain" $
