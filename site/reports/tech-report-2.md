@@ -389,23 +389,22 @@ This graph tends to demonstrate vote diffusion should be non-problematic, with a
 
 # Constraints on Peras Parameters
 
-| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                 |
-| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                      |
-| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                          |
-| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.    |
-| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix. |
-| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                               |
-| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                    |
-| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                        |
-| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                             |
-| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                  |
-| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} ≟ \mathcal{O}\left( B^2 / f \right)$      | Sufficient blocks must be produced to overcome an adversarially boosted block.            |
-| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                |
-| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CP} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.       |
-| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                            |
-
-*Note that parameters $T$ and $\Delta$ are not used in this pre-alpha specification of the Peras protocol.*
+| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                    |
+| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                         |
+| Block selection offset  | $L$             | slots   | The minimum age of a candidate block for being voted upon.                                | $\Delta \lt L \leq U$                                    | Rule VR-1B will fail if the candidate block is older than the most recently certified block. |
+| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                             |
+| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.       |
+| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix.    |
+| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                                  |
+| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                       |
+| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                           |
+| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                                |
+| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                     |
+| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} = \mathcal{O}\left( B / f \right)$        | Sufficient blocks must be produced to overcome an adversarially boosted block.               |
+| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                   |
+| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CP} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.          |
+| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                               |
 
 # Simulating Peras
 
@@ -826,7 +825,7 @@ function(s, p, q)
 
 In the estimates below, we define the *non-settlement probability* as the probability that a transaction (or block) is rolled back. Note that this does not preclude the possibility that the transaction could be included in a later block because it remained in the memory pool of a node that produced a subsequent block. Because there are approximately 1.5 million blocks produced per year, even small probabilities of non-settlement can amount to an appreciable number of discarded blocks.
 
-## Case 1: blocks without boosted descendants
+## Case 1: Blocks without boosted descendants
 
 Blocks that are not cemented by a boost to one of their descendant (successor) blocks are most at risk for being rolled back because they are not secured by the extra weight provided by a boost.
 
@@ -844,20 +843,22 @@ Note that this is different from the situation where a transaction is included o
 
 The active-slot coefficient (assumed to be 5%), the length of the rounds, and the adversary's fraction of stake determine the probability of non-settlement in such a scenario. The table below estimates this probability. For example, in the presence of a 5% adversary and a round length of 360 slots, one could expect about two blocks to be reverted per year in such an attack.
 
-| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary |
-| -----------: | -----------: | ------------: | ------------: | ------------: |
-|           60 |     1.35e-02 |      3.64e-02 |      6.99e-02 |      1.15e-01 |
-|          120 |     2.16e-03 |      9.16e-03 |      2.47e-02 |      5.31e-02 |
-|          180 |     3.40e-04 |      2.36e-03 |      9.08e-03 |      2.55e-02 |
-|          240 |     5.46e-05 |      6.27e-04 |      3.42e-03 |      1.25e-02 |
-|          300 |     8.91e-06 |      1.69e-04 |      1.31e-03 |      6.27e-03 |
-|          360 |     1.47e-06 |      4.63e-05 |      5.11e-04 |      3.18e-03 |
-|          420 |     2.46e-07 |      1.28e-05 |      2.00e-04 |      1.63e-03 |
-|          480 |     4.12e-08 |      3.56e-06 |      7.92e-05 |      8.37e-04 |
-|          540 |     6.97e-09 |      9.96e-07 |      3.15e-05 |      4.33e-04 |
-|          600 |     1.18e-09 |      2.80e-07 |      1.26e-05 |      2.25e-04 |
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     1.35e-02 |      3.64e-02 |      6.99e-02 |      1.15e-01 |      4.81e-01 |
+|           90 |     5.45e-03 |      1.82e-02 |      4.14e-02 |      7.77e-02 |      4.64e-01 |
+|          120 |     2.16e-03 |      9.16e-03 |      2.47e-02 |      5.31e-02 |      4.48e-01 |
+|          150 |     8.55e-04 |      4.63e-03 |      1.49e-02 |      3.66e-02 |      4.34e-01 |
+|          180 |     3.40e-04 |      2.36e-03 |      9.08e-03 |      2.55e-02 |      4.22e-01 |
+|          240 |     5.46e-05 |      6.27e-04 |      3.42e-03 |      1.25e-02 |      4.00e-01 |
+|          300 |     8.91e-06 |      1.69e-04 |      1.31e-03 |      6.27e-03 |      3.81e-01 |
+|          360 |     1.47e-06 |      4.63e-05 |      5.11e-04 |      3.18e-03 |      3.65e-01 |
+|          420 |     2.46e-07 |      1.28e-05 |      2.00e-04 |      1.63e-03 |      3.51e-01 |
+|          480 |     4.12e-08 |      3.56e-06 |      7.92e-05 |      8.37e-04 |      3.37e-01 |
+|          540 |     6.97e-09 |      9.96e-07 |      3.15e-05 |      4.33e-04 |      3.25e-01 |
+|          600 |     1.18e-09 |      2.80e-07 |      1.26e-05 |      2.25e-04 |      3.14e-01 |
 
-## Case 2: blocks with boosted descendants
+## Case 2: Blocks with boosted descendants
 
 Once one of a block's descendants (successors) has been boosted by a certificate, it is much more difficult for an adversary to cause it to be rolled back because they adversary must overcome both count of blocks on the preferred, honest chain and the boost that chain has already received.
 
@@ -871,48 +872,79 @@ The *Healing from adversarial boost* section above provides the machinery for es
 
 Typically, the adversary would only have a round's length of slots to build sufficient blocks to overcome the boosted, honest, preferred fork. After that, the preferred fork would typically receive another boost, making it even more difficult for the adversary to overcome it. The table below shows the probability that of non-settlement for a block after the common prefix but not after the subsequent boosted block on the honest chain, given a 5% active slot coefficient and a 5 blocks/certificate boost.
 
-| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary |
-| -----------: | -----------: | ------------: | ------------: | ------------: |
-|           60 |     3.09e-08 |      1.08e-06 |      8.94e-06 |      4.07e-05 |
-|          120 |     6.32e-08 |      2.73e-06 |      2.70e-05 |      1.44e-04 |
-|          180 |     3.31e-08 |      1.94e-06 |      2.45e-05 |      1.59e-04 |
-|          240 |     1.07e-08 |      8.98e-07 |      1.51e-05 |      1.23e-04 |
-|          300 |     2.73e-09 |      3.44e-07 |      7.88e-06 |      8.19e-05 |
-|          360 |     6.15e-10 |      1.20e-07 |      3.78e-06 |      5.04e-05 |
-|          420 |     1.29e-10 |      3.94e-08 |      1.73e-06 |      2.96e-05 |
-|          480 |     2.57e-11 |      1.25e-08 |      7.65e-07 |      1.70e-05 |
-|          540 |     4.98e-12 |      3.88e-09 |      3.33e-07 |      9.56e-06 |
-|          600 |     9.43e-13 |      1.19e-09 |      1.43e-07 |      5.32e-06 |
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     3.09e-08 |      1.08e-06 |      8.94e-06 |      4.07e-05 |      3.10e-03 |
+|           90 |     5.91e-08 |      2.27e-06 |      2.03e-05 |      9.91e-05 |      9.36e-03 |
+|          120 |     6.32e-08 |      2.73e-06 |      2.70e-05 |      1.44e-04 |      1.74e-02 |
+|          150 |     5.01e-08 |      2.49e-06 |      2.77e-05 |      1.62e-04 |      2.57e-02 |
+|          180 |     3.31e-08 |      1.94e-06 |      2.45e-05 |      1.59e-04 |      3.37e-02 |
+|          240 |     1.07e-08 |      8.98e-07 |      1.51e-05 |      1.23e-04 |      4.74e-02 |
+|          300 |     2.73e-09 |      3.44e-07 |      7.88e-06 |      8.19e-05 |      5.80e-02 |
+|          360 |     6.15e-10 |      1.20e-07 |      3.78e-06 |      5.04e-05 |      6.62e-02 |
+|          420 |     1.29e-10 |      3.94e-08 |      1.73e-06 |      2.96e-05 |      7.23e-02 |
+|          480 |     2.57e-11 |      1.25e-08 |      7.65e-07 |      1.70e-05 |      7.70e-02 |
+|          540 |     4.98e-12 |      3.88e-09 |      3.33e-07 |      9.56e-06 |      8.05e-02 |
+|          600 |     9.43e-13 |      1.19e-09 |      1.43e-07 |      5.32e-06 |      8.31e-02 |
 
 A boost of 10 blocks/certificate makes the successful adversarial behavior even less likely.
 
-| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary |
-| -----------: | -----------: | ------------: | ------------: | ------------: |
-|           60 |     0.00e-00 |      4.92e-14 |      2.98e-12 |      5.56e-11 |
-|          120 |     3.55e-15 |      4.47e-12 |      3.01e-10 |      6.15e-09 |
-|          180 |     1.38e-14 |      2.01e-11 |      1.59e-09 |      3.70e-08 |
-|          240 |     1.60e-14 |      2.97e-11 |      2.87e-09 |      7.93e-08 |
-|          300 |     1.05e-14 |      2.53e-11 |      3.08e-09 |      1.03e-07 |
-|          360 |     4.77e-15 |      1.57e-11 |      2.48e-09 |      1.02e-07 |
-|          420 |     1.55e-15 |      7.98e-12 |      1.67e-09 |      8.59e-08 |
-|          480 |     4.44e-16 |      3.56e-12 |      9.96e-10 |      6.46e-08 |
-|          540 |     4.44e-16 |      1.45e-12 |      5.49e-10 |      4.52e-08 |
-|          600 |     2.22e-16 |      5.54e-13 |      2.86e-10 |      3.00e-08 |
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     0.00e+00 |      4.92e-14 |      2.98e-12 |      5.56e-11 |      2.23e-07 |
+|           90 |     7.77e-16 |      8.89e-13 |      5.65e-11 |      1.10e-09 |      4.98e-06 |
+|          120 |     3.55e-15 |      4.47e-12 |      3.01e-10 |      6.15e-09 |      3.27e-05 |
+|          150 |     8.88e-15 |      1.16e-11 |      8.39e-10 |      1.82e-08 |      1.16e-04 |
+|          180 |     1.38e-14 |      2.01e-11 |      1.59e-09 |      3.70e-08 |      2.90e-04 |
+|          240 |     1.60e-14 |      2.97e-11 |      2.87e-09 |      7.93e-08 |      9.83e-04 |
+|          300 |     1.05e-14 |      2.53e-11 |      3.08e-09 |      1.03e-07 |      2.13e-03 |
+|          360 |     4.77e-15 |      1.57e-11 |      2.48e-09 |      1.02e-07 |      3.62e-03 |
+|          420 |     1.55e-15 |      7.98e-12 |      1.67e-09 |      8.59e-08 |      5.31e-03 |
+|          480 |     4.44e-16 |      3.56e-12 |      9.96e-10 |      6.46e-08 |      7.08e-03 |
+|          540 |     4.44e-16 |      1.45e-12 |      5.49e-10 |      4.52e-08 |      8.85e-03 |
+|          600 |     2.22e-16 |      5.54e-13 |      2.86e-10 |      3.00e-08 |      1.06e-02 |
+
+A boost of 15 blocks/certificate makes the successful adversarial behavior even less likely.
+
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     0.00e+00 |      0.00e+00 |      0.00e+00 |      0.00e+00 |      9.81e-13 |
+|           90 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      8.88e-16 |      2.24e-10 |
+|          120 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      2.39e-14 |      6.59e-09 |
+|          150 |     1.11e-16 |      1.11e-16 |      2.78e-15 |      2.19e-13 |      6.90e-08 |
+|          180 |     0.00e+00 |      2.22e-16 |      1.18e-14 |      1.07e-12 |      3.91e-07 |
+|          240 |     0.00e+00 |      3.33e-16 |      7.89e-14 |      8.19e-12 |      4.29e-06 |
+|          300 |     3.33e-16 |      4.44e-16 |      2.16e-13 |      2.61e-11 |      2.07e-05 |
+|          360 |     1.11e-16 |      5.55e-16 |      3.49e-13 |      5.01e-11 |      6.26e-05 |
+|          420 |     0.00e+00 |      6.66e-16 |      4.01e-13 |      6.97e-11 |      1.42e-04 |
+|          480 |     0.00e+00 |      2.22e-16 |      3.68e-13 |      7.81e-11 |      2.65e-04 |
+|          540 |     3.33e-16 |      2.22e-16 |      2.88e-13 |      7.53e-11 |      4.35e-04 |
+|          600 |     2.22e-16 |      3.33e-16 |      2.00e-13 |      6.51e-11 |      6.47e-04 |
 
 # Recommendations for Peras parameters
 
-Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake.
+Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake. This set of parameters is focused on the use case of knowing soon whether a block is settled or rolled back; other sets of parameters would be optimal for use cases that reduce the probability of roll-back at the expense of waiting longer for settlement.
 
-| Parameter              | Symbol | Units   | Value | Rationale                                                       |
-| ---------------------- | ------ | ------- | ----: | --------------------------------------------------------------- |
-| Round length           | $U$    | slots   |   400 | 1 ppm probability of block rolled back by 5% adversary.         |
-| Certificate expiration | $A$    | slots   | 21600 | Determined by security parameter and boost.                     |
-| Chain ignorance period | $R$    | rounds  |    54 | Determined by security parameter, round length, and boost.      |
-| Cool-down period       | $K$    | rounds  |   108 | Determined by security parameter and round length.              |
-| Certification boost    | $B$    | blocks  |    10 | Chain ignorance period is 50% of security parameter.            |
-| Committee size         | $n$    | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake. |
-| Quorum size            | $\tau$ | parties |   675 | Three-quarters of committee size.                               |
-| Security parameter     | $k$    | blocks  |  2160 | The Ouroboros Praos security parameter.                         |
+| Parameter              | Symbol           | Units   | Value | Rationale                                                            |
+| ---------------------- | ---------------- | ------- | ----: | -------------------------------------------------------------------- |
+| Round length           | $U$              | slots   |    90 | Settlement/non-settlement in under two minutes.                      |
+| Block-selection offset | $L$              | slots   |    30 | Several multiples of $\Delta$ to ensure block diffusion.             |
+| Certification boost    | $B$              | blocks  |    15 | Negligible probability to roll back boosted block.                   |
+| Security parameter     | $k_\text{peras}$ | blocks  |  3150 | Determined by the Praos security parameter and the boost.            |
+| Certificate expiration | $A$              | slots   | 27000 | Determined by the Praos security parameter and boost.                |
+| Chain-ignorance period | $R$              | rounds  |   300 | Determined by the Praos security parameter, round length, and boost. |
+| Cool-down period       | $K$              | rounds  |   780 | Determined by the Praos security parameter, round length and boost.  |
+| Committee size         | $n$              | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.      |
+| Quorum size            | $\tau$           | parties |   675 | Three-quarters of committee size.                                    |
+
+A *block-selection offset* of $L = 30 \text{\,slots}$ allows plenty of time for blocks to diffuse to voters before a vote occurs. Combining this with a *round length* of $U = 90 \text{\, slots}$ ensures that there is certainty in $U + L = 120 \text{\,slots}$ as to whether a block has been cemented onto the preferred chain by the presence of a certificate for a subsequent block. That certainty of not rolling back certified blocks is provided by a *certification boost* of $B = 15 \text{\,blocks}$ because of the infinitesimal probability of forging that many blocks on a non-preferred fork within the time $U$. Thus, anyone seeing a transaction appearing in a block need wait no more than two minutes to be certain whether the transaction is on the preferred chain (effectively permanently, less than a one in a trillion probability even at 45% adversarial stake) versus discarded because of a roll back. Unless the transaction has a stringent time-to-live (TTL) constraint, it can be resubmitted in the first $U - L = 60 \text{\,slots}$ of the current round, or in a subsequent round.
+
+> [!WARNING]
+> The security-related computations in the next paragraph are not rigorous with respect to the healing, chain-quality, and common-prefix times, so they need correction after the research team reviews them and proposes a better approach. 
+
+The Praos security parameter $k_\text{praos} = 2160 \text{\,blocks} \approx 43200 \text{\,slots} = 12 \text{\,hours}$ implies a ~17% probability of longer private adversarial chain at 49% adversarial stake. At that same probability, having to overcome a $B = 15 \text{\,blocks}$ adversarial boost would require $k_\text{peras} \approx 70200 \text{\,slots} = 3510 \text{\,blocks} = 19.5 \text{\,hours}$. This determines the *certificate-expiration time* as $A = k_\text{peras} - k_\text{praos} = 27000 \text{\,slots}$, the *chain-ignorance period* as $R = \left\lceil A / U \right\rceil = 300 \text{\,rounds}$, and the *cool-down period* as $K = \left\lceil k_\text{peras} / U \right\rceil = 780 \text{\,rounds}$.
+
+The *committee size* of $n = 900 \text{\,parties}$ corresponds to a one in a million chance of not reaching a quorum if 10% of the parties do not vote for the majority block (either because they are adversarial, offline, didn't receive the block, or chose to vote for a block on a non-preferred fork). This "no quorum" probability is equivalent to one missed quorum in every 1.2 years. The *quorum size* of $\tau = \left\lceil 3 n / 4 \right\rceil = 675 \text{\,parties}$ is computed from this.
 
 # Formal specification in Agda
 
