@@ -215,7 +215,7 @@ In the optimistic case, Peras is expected to provide the level of settlement Pra
 
 * Committee size $S = 2000$,
 * Boost per certificate $B = k / 10 = 216$,
-* Quorum $\tau = 3, S / 4 = 1500$,
+* Quorum $\tau = 3 S / 4 = 1500$,
 * Round length $U = 10$ slots.
 
 we can expect a negligible ($< 10^{-60}$) probability of settlement failure after 10 rounds or 100 slots, which is less than 2 minutes. In other words, Peras improves settlement upper bound over Praos by a factor of 1000, in the _optimistic case_, e.g. outside of a _cool-down period_.

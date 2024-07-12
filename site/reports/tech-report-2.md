@@ -18,13 +18,22 @@ This section lists a number of findings, conclusions, ideas, and known risks tha
 
 ## Product
 
+We have refined our analysis and understanding of Peras protocol, taking into account its latest evolutions:
+
+* A promising solution for votes and certificates construction has been identified based on existing VRF/KES keys and ALBAs certificates
+  * This solution relies on existing nodes' infrastructure and cryptographic primitives and therefore should be straightforward to implement and deploy
+* Peras' votes and certificates handling will have a negligible impact on existing node CPU, network bandwidth, and memory requirements.
+  * They will have a moderate impact on storage requirements leading to a potential increase of disk storage of 15 to 20%.
+  * Peras might have a modereate economical impact for SPOs running their nodes with Cloud providers due to increasing network _egress traffic_
+* Peras impact on settlement probabilities is still _unclear_ and will require some more time to analyse
+  * Latest adversarial scenarios analysis lead to an increase in expected settlement time to roughly 30 minutes
+* We think development of a pre-alpha prototype integrated with the cardano-node should be able to proceed
+
 ## Process
 
 The following pictures shows how our R&D process evolved over the course of the past few months.
 
 ![](../static/img/peras-process.jpg)
-
-Some notable points:
 
 * Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers
 * The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strenghthened thanks to fruitful collaboration with Quviq:
@@ -32,6 +41,7 @@ Some notable points:
   * A _Soundness proof_ ensures it's consistent with the (higher level) formal specification
   * We haven't yet covered _adversarial behaviour_ but most scenarios should be straightforward to implement
 * We have discontinued Rust prototype support, from want of time but we haven't changed how tests are run so we have strong confidence any implementation with a compatible API should be testable
+* We have built a user-facing simulation tool that proved helpful to better understand the protocol's behaviour, spot potential issues, and align all stakeholders over an umanbiguous prototype
 * We have built [Markov chains](#markov-chain-simulation)-based models to simulate various interesting large scale behaviours of Peras probabilistically, providing a wealth of insights on parameters interaction
 * We have continued investigating the use of ΔQ formalism, trying to leverage more recent implementations for modelling [vote diffusion](#vote-diffusion)
 * While there remain some work to be done on that front, we should be able to make Peras work including the present report fully public
