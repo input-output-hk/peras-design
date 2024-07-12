@@ -50,7 +50,7 @@ The following pictures shows how our R&D process evolved over the course of the 
 
 ## Software Readiness Level
 
-SRL 3
+### Last stage (SRL 3)
 
 | Questions to resolve                                                                                          | Status  |
 |---------------------------------------------------------------------------------------------------------------|---------|
@@ -66,7 +66,7 @@ SRL 3
 | Analytical verification of critical functions from proof-of-concept made?                                     | Done    |
 | Analytical and experimental proof-of-concept documented?                                                      | Done    |
 
-SRL 4
+### Current stage (SRL 4)
 
 | Questions to resolve                                                                                                                     | Status  |
 |------------------------------------------------------------------------------------------------------------------------------------------|---------|
