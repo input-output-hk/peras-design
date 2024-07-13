@@ -95,7 +95,7 @@ run LongerChain{..} =
                 hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . abs $ 1 - sum summary]
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup False summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (minimum summary < stop) $
+                unless (maybe True (< stop) $ Map.lookup False summary) $
                   go (i + 1) posterior
     hPutStrLn stderr ""
     go (1 :: Int) initial
@@ -112,13 +112,13 @@ run LengthDifference{..} =
           | i > slots = return ()
           | otherwise =
               do
-                when progress . hPutStr stderr $ "\rSlot: " <> show i
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.toList
                         . Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
                         $ MarkovSim.getEvolution posterior
                 hPutStr hout $ unlines $ (\(k, v) -> show i <> "\t" <> show k <> "\t" <> show v) <$> summary
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
     hPutStrLn stderr ""

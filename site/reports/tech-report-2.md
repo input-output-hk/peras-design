@@ -555,8 +555,48 @@ Available options:
 
 ## Markov-chain simulation
 
-> [!IMPORTANT]
-> Discuss the Markov-chain simulation and results
+The prototype high-fidelity simulation of the Peras protocol that was presented in the previous section has the drawback that it is relatively slow because of its faithfulness to details of the protocol. The protocol operates the same (in terms of block-creation, voting, cool-down, etc.) regardless irrelevant details such as the specific hashes of various object and parts of the block-tree history. Simulating the *behavior* of the protocol only requires a subset of the full information embedded in the objects that the protocol specifies.
+
+Furthermore, certain significant adversarial scenarios can be approximately modeled by just considering two chains, and honest one and and adversarial one. Typically, the adversary builds their chain privately until they gain some advantage by revealing it to the honest parties. A worst-case adversarial scenarios is when all the adversaries collude to build a single chain, as opposed to competing with each other by building separate adversarial chains. (Note, however, that some adversarial scenarios involve the adversaries building several "equivocated" chains in private.) In the routine course of forging blocks, honest parties might create short honest forks that are soon resolved into a preferred chain. One can idealize this process by just considering the honestly preferred chain, ignoring the short honest forks and renormalizing the probability of forging an honest block to account for the "wasted" forging of short forks that are quickly abandoned.
+
+With these simplifications, one can model a Peras chain with a minimum of information required by the Protocol's logic. In the two-chain case, both the honest and adversarial parties maintain this information about their own chains.
+
+- The current weight of the chain (i.e., length plus number of boosts)
+- The round number for the block voted upon by $\mathsf{cert}^\prime$ 
+- The pending new $\mathsf{cert}^\prime$ for the next round, if any
+- The round number for the block voted upon by $\mathsf{cert}^*$ 
+- The pending new $\mathsf{cert}^*$ for the next round, if any
+- Whether there are round $r$, round $r - 1$, and/or round $r -2$ certificates
+
+Additionally, the protocol requires tracking a few pieces of block-tree information.
+
+- The current slot number
+- The slot number for the last common prefix of the individual chains
+
+Static values of the fraction of honest and adversarial stake result in eight constant per-slot or per-round probabilities. These are the transition probabilities of a Markov chain.
+
+- Forging
+    - No block produced in the slot
+    - Only an honest block produced in the slot
+    - Only an adversarial block produced in the slot
+    - Both an honest and and adversarial block produced in the slot
+- Voting
+    - No quorum
+    - Quorum of honest parties
+    - Quorum of adversarial parties
+    - Quorum requiring both honest and adversarial parties
+
+Each slot that is not the start of a voting round involves a fourfold transition and each slot that is the start of a voting round involves a sixteen-fold transition. Instead of performing a Monte-Carlo simulation where only one of these four or sixteen transitions is selected according to a random variable, we can track all transitions with a data structure that assigns the cumulative probability to each outgoing state. In principle, this involves a computing a rapidly expanding state space. In practice, however, one can prune this state space by discarding states with vanishingly small probabilities. Typically, one might discard any states with probability less than $10^{-30}$ in order to keep modest the memory footprint of the Markov-chain simulation. For Peras, this results in only having to track a million or so states, even for simulations of tens of thousands of slots.
+
+Honest behavior proceeds according to the protocol. Adversarial behavior may differ from the protocol, but must respect the transition probabilities because those probabilities represent the incorruptible sortition rules for slot leadership or voting-committee membership. Here are examples of easily-encoded adversarial behavior:
+
+1. The adversary never joins honest parties in creating a quorum. Thus, the probability of no certificate being created for a round is $\mathcal{P}(\text{No quorum}) + \mathcal{P}(\text{Quorum requiring both honest and adversarial parties})$ .
+2. The adversary builds their chain privately, in which case the global state variable "$\text{The slot number for the last common prefix of the individual chains}$" is never updated to reflect communication from the adversarial to the honest party.
+3. The adversary builds their chain privately until it becomes weightier than the honest chain. In this case, that global state variable and the honest chain would be updated occasionally, indicating honest parties adopt the adversarial chain when it is visibly weightier.
+
+The Markov simulation results in a probability distribution of possible states of the block tree, given the adversary's strategy. The probability distribution of metrics of interest can be computed from that. For example, the diagram below shows the evolution of the probability distribution for the difference of the honest chain's weight minus the adversarial chain's weight for the situation where the adversary builds their chain privately and never assists the honest parties in forming a quorum. Note the jump in the distribution at multiples of slot 150, when there is a high probability that the honest party's chain gains a certificate.
+
+![Example evolution of the margin metric in a Markov-chain simulation](../diagrams/markov.gif)
 
 ## Application of Praos margin and reach simulation to Peras
 
