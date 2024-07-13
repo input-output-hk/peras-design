@@ -782,6 +782,37 @@ function(s, B, p, q)
 
 ![Probability of not healing from an adversarial boost, given 5% active slots.](../diagrams/healing-from-adversarial-boost.plot.png)
 
+This healing time scales approximately linearly with the boost parameter. The diagram below shows the relationship between these two parameters along with a linear fit at different probabilities of not healing and different adversarial stakes.
+
+![Scaling of healing time as a function of boost](../diagrams/boost-scaling.png)
+
+If we fit this dataset to a linear model, we find the following relationships and quality of fit. Note that this model is no suitable for use outside of the ranges of the training data: in particular, there is a much stronger dependence on boost for small probabilities and large adversarial stakes.
+
+```
+Call:
+lm(formula = `Healing Time` ~ (`Boost` + `Adversarial Stake`)^2 + log(`Probability of Not Healing`))
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-539.43 -141.38  -39.61  168.45  437.53 
+
+Coefficients:
+                                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                       -1142.2130    79.5507  -14.36   <2e-16 ***
+`Boost`                              21.8229     0.3509   62.19   <2e-16 ***
+`Adversarial Stake`                6200.4250   380.9661   16.28   <2e-16 ***
+log(`Probability of Not Healing`)  -102.2989     4.0128  -25.49   <2e-16 ***
+`Boost`:`Adversarial Stake`         102.4693     2.5627   39.99   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 206.6 on 395 degrees of freedom
+Multiple R-squared:  0.9945,	Adjusted R-squared:  0.9945 
+F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
+```
+
+![Linear model fit for healing time's scaling as a function of boost](../diagrams/boost-scaling-model.png)
+
 ## No honest block
 
 ***Question:*** What is the probability of not having an honest block during a given period of time?
