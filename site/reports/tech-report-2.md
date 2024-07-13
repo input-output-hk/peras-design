@@ -558,6 +558,12 @@ Available options:
 > [!IMPORTANT]
 > Discuss the Markov-chain simulation and results
 
+## Application of Praos margin and reach simulation to Peras
+
+The article [Practical Settlement Bounds for Longest-Chain Consensus by Gaži, Ren, and Russell, (2023)](https://doi.org/10.1007/978-3-031-38557-5_4) provides recurrence relations for *margin* and *reach* that can be solved numerically to determine the probability of settlement failure. The computations are relevant for Peras (i) after one block has been certified and before a subsequent block is certified and (ii) during the cool-down period. We used their software (see https://github.com/renling/LCanalysis) to repeat their computation and extend it to more blocks. This approach accounts for the diffusion time Δ, computes in terms of blocks instead of slots, does not make the two-chain (one honest and one adversarial) assumption, and is supported by mathematical rigor.
+
+![Failure probabilities computed from margin and reach recurrence relations for Praos.](../diagrams/LCanalysis.png)
+
 # Analyses of adversarial scenarios
 
 > [!CAUTION]
@@ -842,12 +848,6 @@ function(s, p, q)
 ***Example:*** Plot the probability of the adversarial chain being at least as long as the honest chain, as a function of the common-prefix time $s$, under the assumption that the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ a.
 
 ![Probability of not achieving the common-prefix time, given 5% active slots.](../diagrams/no-common-prefix.plot.png)
-
-## Settlement failure in Praos
-
-The article [Practical Settlement Bounds for Longest-Chain Consensus by Gaži, Ren, and Russell, (2023)](https://doi.org/10.1007/978-3-031-38557-5_4) provides recurrence relations for *margin* and *reach* that can be solved numerically to determine the probability of settlement failure. The computations are relevant for Peras (i) after one block has been certified and before a subsequent block is certified and (ii) during the cool-down period. We used their software (see https://github.com/renling/LCanalysis) to repeat their computation and extend it to more blocks. This approach accounts for the diffusion time Δ, computes in terms of blocks instead of slots, does not make the two-chain (one honest and one adversarial) assumption, and is supported by mathematical rigor.
-
-![Failure probabilities computed from margin and reach recurrence relations for Praos.](../diagrams/LCanalysis.png)
 
 # Settlement probabilities
 
