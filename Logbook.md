@@ -1,3 +1,33 @@
+## 2024-07-10
+
+### Healing time
+
+Here are empirical results for the scaling behavior for the healing time, which determines the chain-ignorance parameter $R$. We had vaguely conjectured that it scales as the square of the boost, but were unsure. Here are some analytic results that indicate that it scales super-exponentially. Perhaps that makes sense because the number of slots needed to overcome the boost is related to the asymptotic behavior of the gamma function.
+
+Consider a 5% active slot coefficient and 20% adversarial stake. The probability of not overcoming a boost $B = 1$ by slot 1000 happens to be `4.73e-6`. The table below shows how many slots one has to wait until achieving a similar probability at higher boosts $B$.
+
+| Boost B | Slots for Healing |
+|--------:|------------------:|
+|       1 |              1000 |
+|      10 |              1551 |
+|     100 |              5731 |
+|    1000 |             39762 |
+
+Change the adversarial stake to 49% and consider not overcoming a boost B = 1 by slot 43200: the probability here is `0.178`. The table below shows how many slots one has to wait until achieving a similar probability.
+
+| Boost B | Slots for Healing |
+|--------:|------------------:|
+|       1 |             43200 |
+|      10 |             59900 |
+|     100 |            189000 |
+|    1000 |           1227000 |
+
+Is there theoretical guidance for setting the boost $B$? Or is there an intuitive estimate for an appropriate boost strength? It looks like $B = 10$ only modestly increases the healing time, but as the boost gets larger, the healing time increases disproportionately.
+
+Is this analysis even relevant to setting $B$? It was inspired by the following comment in the paper. The worry is that the parties (honest and adversarial) would boost an adversarial block and that a competing fork of honest blocks would have to overcome that.
+
+> During the initial “healing” phase of the cooldown period, parties continue with standard Nakamoto block creation until the potential advantage of $B$ that the adversary could gain with a certificate is neutralized.
+
 ## 2024-07-08
 
 ### Adversarial testing for Peras
