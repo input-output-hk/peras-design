@@ -112,6 +112,7 @@ Relevant documents:
 > [!IMPORTANT]
 > Do we want to provide a detailed description of the protocol here?
 > Seems to me we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
+> If we delete this section, then we need to document how the executable specification varies from the paper and/or the relational specification.
 
 ## Variables
 
@@ -389,6 +390,8 @@ This graph tends to demonstrate vote diffusion should be non-problematic, with a
 
 # Constraints on Peras Parameters
 
+The following constraints on Peras parameters arise for both theoretical and practical considerations.
+
 | Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                    |
 | ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                         |
@@ -558,11 +561,9 @@ Available options:
 # Analyses of adversarial scenarios
 
 > [!CAUTION]
-> 1. Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
-> 2. Check all of the mathematical derivations in this section.
-> 3. Explain the scenarios more clearly.
+> Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
 
-In this section we use the following notation:
+The probability of adversarial success can be computed analytically, either exactly or approximately, for some scenarios. Such analytic computations are typically faster and more comprehensive than running ensembles of simulations and analyzing those results. The scenarios analyzed in this section are intended to provide guidance on how the probability of adversarial success depends upon Peras parameters, so that the parameters can be set appropriately for stakeholder user cases. In this section we use the following notation:
 
 - Active-slot coefficient: $\alpha$
 - Round length: $U$
@@ -580,12 +581,6 @@ In this section we use the following notation:
 - Normal distribution with mean $\mu$ and standard deviation $\sigma$:
     - Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
     - Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
-
-> [!IMPORTANT]
-> Discuss the relationship between per-slot probabilities and per-block probabilities.
-
-> [!IMPORTANT]
-> Add paragraphs discussing how to interpret probabilities in terms of the security of a long-running blockchain.
 
 ## No honest quorum in round
 
@@ -682,13 +677,9 @@ function(A, f, alpha)
 
 ## Adversarial chain receives boost
 
-> [!IMPORTANT]
-> Discuss why there are several variants here.
+Here we examine two approaches to computing the probability that an adversarial chain receives a voting boost.
 
 ### Variant 1
-
-> [!CAUTION]
-> This variant needs reworking!
 
 ***Question.*** What is the probability that an adversarial chain receives the next boost?
 
@@ -1067,9 +1058,6 @@ initialModelState : NodeModel
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 ```
 
-> [!IMPORTANT]
-> Update the above after adversarial tests have been added.
-
 This is used in the Haskell state model as follows.
 
 ```haskell
@@ -1101,7 +1089,6 @@ Peras.Conformance.Test
 
 Finished in 4.7193 seconds
 1 example, 0 failures
-
 ```
 
 ## Lessons learned from experiments with Agda-to-Haskell workflows
@@ -1193,7 +1180,6 @@ There are still opportunities for syntactic sugar that would make the code more 
 - It might be difficult to create Agda code that is simultaneously easily readable by mathematical audiences (e.g., researchers) and software audiences (e.g., implementors).
 - Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
 - Creating a full eDSL might be a better approach, but that would involved significantly more effort.
-
 
 # Community feedback
 
@@ -1295,19 +1281,13 @@ The main impacts identified so far are:
 
 ## The case for Peras
 
-Peras provides demonstrably fast settlement without weakening security or burdening nodes. The settlement time varies as a function of the protocol-parameter settings and the prevalence of adversarial stake.
-
-> [!IMPORTANT]
-> Provide here a summary table of settlement time vs adversarial stake for a selection or protocol parameters.
+Peras provides demonstrably fast settlement without weakening security or burdening nodes. The settlement time varies as a function of the protocol-parameter settings and the prevalence of adversarial stake. For a use case that emphasizes rapid determination of whether a block is effectively finally incorporated into the preferred chain, it is possible to achieve settlement times as short as two minutes, but at the expense of having to resubmit rolled-back transactions in cases where there is a strong adversarial stake.
 
 The impact of Peras upon nodes falls into four categories: network, CPU, memory, and storage. We have provided [evidence](#votes--certificates) that the CPU time required to construct and verify votes and certificates is much smaller than the duration of a voting round. Similarly, the [memory](#memory) needed to cache votes and certificates and the [disk space](#persistent-storage) needed to persist certificates is trivial compared to the memory needed for the UTXO set and the disk needed for the blocks.
 
 On the networking side, our [ΔQ studies](#vote-diffusion) demonstrate that diffusion of Peras votes and certificates consumes minimal bandwidth and would not interfere with other node operations such as memory-pool and block diffusion. However, [diffusion of votes and certificates](#network-traffic) across a network will still have a noticeable impact on the _volume_ of data transfer, in the order of 20%, which might translate to increased operating costs for nodes deployed in cloud providers.
 
 In terms of development impacts and resources, Peras requires only a minimal modification to the ledger CDDL and block header. Around cool-down periods, a certificate hash will need to be included in the block header and the certificate itself in the block. Implementing Peras does not require any new cryptographic keys, as the existing VRF/KES will be leveraged. It will require an implementation of the ALBA algorithm for creating certificates. It does require a new mini-protocol for diffusion of votes and certificates. The node's logic for computing the chain weight needs to be modified to account for the boosts provided by certificates. Nodes will have to persist all certificates and will have to cache unexpired votes. They will need a thread (or equivalent) for verifying votes and certificates. Peras only interacts with Genesis and Leios in the chain-selection function and it is compatible with the historical evolution of the blockchain. A node-level specification and conformance test will also need to be written.
-
-> [!WARNING]
-> Dare we assert that implementation of Peras in the Cardano node would take approximately three person years, provided the team already has familiarity with the node and stays focused?
 
 In no way does Peras weaken any of the security guarantees provided by Praos or Genesis. Under strongly adversarial conditions, where an adversary can trigger a Peras voting cool-down period, the protocol in essence reverts to the Praos protocol, but for a duration somewhat longer than the Praos security parameter. Otherwise, settlement occurs after each Peras round. This document has approximately mapped the trade-off between having a short duration for each round (and hence faster settlement) versus having a high resistance to an adversary forcing the protocol into a cool-down period. It also estimates the tradeoff between giving chains a larger boost for each certificate (and hence stronger anchoring of that chain) versus keeping the cool-down period shorter.
 
