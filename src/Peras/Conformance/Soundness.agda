@@ -27,11 +27,7 @@ import Peras.SmallStep as SmallStep
 
 import Peras.Conformance.Model as Model
 open import Peras.Conformance.Params
-
--- TODO: ProofPrelude
-eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
-eqℕ-sound {zero}  {zero}   _   = refl
-eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
+open import Peras.Conformance.ProofPrelude
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
@@ -97,12 +93,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
     -- Preconditions ---
-    private
-      mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
-      mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
-
-      div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
-      div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
 
     record NewVotePreconditions (s : State) (vote : Vote) : Set where
       slot = State.clock s
@@ -110,10 +100,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       σ    = signature vote
       field
         {tree}         : NodeModel
---        {block}        : Block
+        {block}        : Block
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
---        blockExists    : BlockSelection (State.clock s) tree ≡ just block
---        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
+        blockExists    : BlockSelection (State.clock s) tree ≡ just block
+        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -122,12 +112,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with valid ← validSignature rewrite correctVote = valid
 
-    lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
-    lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
-
-    suc-definition : ∀ {n} → suc n ≡ n + 1
-    suc-definition {zero} = refl
-    suc-definition {suc n} = cong suc (suc-definition {n})
+      blockExists' : BlockSelection (State.clock s) tree ≡ just
+          record block { signature = MkSignature (hashBytes (blockHash vote)) }
+      blockExists' with b ← blockExists rewrite (sym blockVote) = {!!}
 
     open import Data.Nat using (_≥_; _≥?_; _>?_)
 
@@ -141,8 +128,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
-    certS-equ s p ∃tree rewrite pref-equ s p ∃tree
-      = {!refl!}
+    certS-equ s p ∃tree rewrite pref-equ s p ∃tree = {!!}
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
@@ -200,15 +186,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv refl | True | True | True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
+      ; block           = {!!}
       ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
---      ; blockExists     = {!!}
---      ; blockVote       = refl
+      ; blockExists     = {!!}
+      ; blockVote       = refl
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
       ; validVote       =
         let
-          witness = toWitness' (isYes≡True⇒TTrue checkedVRs )
+          witness = toWitness (isYes≡True⇒TTrue checkedVRs )
           f₁ = vr-1a⇒VotingRule-1A  s (creatorId vote) (hasTree inv (creatorId vote))
           f₂ = vr-1b⇒VotingRule-1B  s (creatorId vote) (hasTree inv (creatorId vote))
           f₃ = vr-2a⇒VotingRule-2A  s (creatorId vote) (hasTree inv (creatorId vote))
@@ -247,7 +234,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; invariant₁  = {!!}
           ; trace       = CreateVote (invFetched inv)
                             (honest {σ = Vote.signature vote}
-                              {!!}
+                              blockExists'
                               creatorExists
                               validSignature'
                               startOfRound

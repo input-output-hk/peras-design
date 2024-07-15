@@ -326,6 +326,13 @@ cool-down phase.
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
       in head bs
 ```
+```agda
+    ChainExtends : Maybe Block → Certificate → Chain → Set
+    ChainExtends nothing _ _ = ⊥
+    ChainExtends (just b) c =
+      Any (λ block → (hash block ≡ blockRef c))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+```
 #### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
@@ -339,17 +346,9 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
-    ChainExtends' : Maybe Block → Certificate → Chain → Set
-    ChainExtends' nothing _ _ = ⊥
-    ChainExtends' (just b) c =
-      Any (λ block → (hash block ≡ blockRef c))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
-
-    ChainExtends : SlotNumber → T → Chain → Set
-    ChainExtends s t = ChainExtends' (BlockSelection s t) (latestCertSeen t)
-
     VotingRule-1B : SlotNumber → T → Set
-    VotingRule-1B s t = Any (ChainExtends s t) (allChains t)
+    VotingRule-1B s t =
+      Any (ChainExtends (BlockSelection s t) (latestCertSeen t)) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda

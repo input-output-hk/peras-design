@@ -257,8 +257,8 @@ module TreeInstance
 {-
   valid-NodeModel : ∀ (m : NodeModel) → ValidChain (pref m)
   valid-NodeModel m with pref m
-  ... | [] = {!!}
-  ... | x ∷ xxx = {!!}
+  ... | [] = Genesis
+  ... | x ∷ xxx = Cons {!!} {!!} {!!} {!!} {!!}
 -}
 
   postulate
@@ -313,33 +313,29 @@ toTT refl = tt
 isYes≡True⇒TTrue x = toTT (isYes≡True⇒value≡True x)
   where
     isYes≡True⇒value≡True : ∀ {A : Set} → {a : Dec A} → isYes a ≡ True → value a ≡ True
-    isYes≡True⇒value≡True {a = True ⟨ proof₁ ⟩} x = refl
+    isYes≡True⇒value≡True {a = True ⟨ _ ⟩} _ = refl
 
-@0 toWitness' : ∀ {A : Set} {a : Dec A} → TTrue a → A
-toWitness' {a = True ⟨ prf ⟩} _ = prf
+@0 toWitness : ∀ {A : Set} {a : Dec A} → TTrue a → A
+toWitness {a = True ⟨ prf ⟩} _ = prf
 
-private
-  variable
-    A B : Set
+_×-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
+_×-reflects_ {True} {True} x y = x P., y
+_×-reflects_ {True} {False} _ y = λ { (_ P., y₁) → y y₁ }
+_×-reflects_ {False} {True} x _ = λ { (x₁ P., _) → x x₁ }
+_×-reflects_ {False} {False} x _ = λ { (x₁ P., _) → x x₁ }
 
-_×-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
-_×-reflects_ {A} {B} {True} {True} x y = x P., y
-_×-reflects_ {A} {B} {True} {False} _ y = λ { (_ P., y₁) → y y₁ }
-_×-reflects_ {A} {B} {False} {True} x _ = λ { (x₁ P., _) → x x₁ }
-_×-reflects_ {A} {B} {False} {False} x _ = λ { (x₁ P., _) → x x₁ }
+_⊎-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
+_⊎-reflects_ {True} {True} x _ = inj₁ x
+_⊎-reflects_ {True} {False} x _ = inj₁ x
+_⊎-reflects_ {False} {True} _ y = inj₂ y
+_⊎-reflects_ {False} {False} x y = [ x , y ]
 
-_⊎-reflects_ : ∀ {a b} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
-_⊎-reflects_ {A} {B} {True} {True} x _ = inj₁ x
-_⊎-reflects_ {A} {B} {True} {False} x _ = inj₁ x
-_⊎-reflects_ {A} {B} {False} {True} _ y = inj₂ y
-_⊎-reflects_ {A} {B} {False} {False} x y = [ x , y ]
-
-decP : Dec A → Dec B → Dec (A P.× B)
+decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
 decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
 
 {-# COMPILE AGDA2HS decP #-}
 
-decS : Dec A → Dec B → Dec (A ⊎ B)
+decS : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⊎ B)
 decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
 
 {-# COMPILE AGDA2HS decS #-}
@@ -440,7 +436,10 @@ CheckVotingRules : NodeModel → Set
 CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
 checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
-checkVotingRules s = decS (decP (vr1A s) (vr1B s)) (decP (vr2A s) (vr2B s))
+checkVotingRules s =
+  decS
+    (decP (vr1A s) (vr1B s))
+    (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
