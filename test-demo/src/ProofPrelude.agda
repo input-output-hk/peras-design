@@ -2,6 +2,7 @@
 module ProofPrelude where
 
 open import Haskell.Prelude renaming (_<_ to _<ʰ_)
+open import Haskell.Law.Equality using (cong)
 open import Data.Nat.Base
 open import Data.Sum
 open import Relation.Binary.PropositionalEquality using (_≢_)

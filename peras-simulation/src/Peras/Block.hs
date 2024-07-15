@@ -62,4 +62,4 @@ instance Eq BlockBody where
   x == y = blockHash x == blockHash y && payload x == payload y
 
 instance Hashable Block where
-  hash = \b -> MkHash (bytesS (signature b))
+  hash = \x -> MkHash (bytesS (signature x))

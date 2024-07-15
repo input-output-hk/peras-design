@@ -10,9 +10,13 @@
       url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
-    agda2nix = {
-      url = "github:agda/agda2hs/b269164e15da03b74cf43b51c522f4f052b4af80";
+    agda2hs = {
+      url = "github:agda/agda2hs/f5ac455b0d6e4364f4195918fe1cf215a3e8c434";
       flake = false;
+    };
+    agda2hsFlake = {
+      url = "github:agda/agda2hs/f5ac455b0d6e4364f4195918fe1cf215a3e8c434";
+      flake = true;
     };
     crane.url = "github:ipetkov/crane";
     crane.inputs.nixpkgs.follows = "nixpkgs";
