@@ -20,7 +20,7 @@ import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import Data.Set as Set (fromList, intersection, map, notMember, size, union)
-import Peras.Block (Block (certificate), Certificate (..), Party (pid))
+import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Crypto (Hash, hash)
 import Peras.Numbering (SlotNumber)
@@ -62,9 +62,11 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
 
     -- 4. Set Cpref to the heaviest (w.r.t. WtP(·)) valid chain in C .
     --
-    -- FIXME: Figure 2 of the protocol does not specify which chain is preferred
-    -- when there is a tie for heaviest chain.
-    let chainPref' = maximumBy (compare `on` chainWeight perasB (Map.keysSet certs')) chains'
+    -- NOTE: Resolve ties by comparing, in that order:
+    --  * The slot number
+    --  * The creator Id of the block
+    --  * The hash of the block
+    let chainPref' = maximumBy (compareChains perasB certs') chains'
     when (chainPref' /= chainPref) . lift $ traceWith tracer (NewChainPref (pid party) chainPref')
 
     -- 5. Set cert' to the certificate with the highest round number in Certs.
@@ -94,6 +96,18 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
         , certPrime = certPrime'
         , certStar = certStar'
         }
+
+compareChains perasB certs' a b =
+  case (compare `on` chainWeight perasB (Map.keysSet certs')) a b of
+    EQ ->
+      let blocka = head a
+          blockb = head b
+       in case (compare `on` slotNumber) blocka blockb of
+            EQ -> case (compare `on` creatorId) blocka blockb of
+              EQ -> (compare `on` signature) blocka blockb
+              x -> x
+            x -> x
+    x -> x
 
 -- Find the new certificates in a set of chains.
 extractNewCertificates :: Set Certificate -> Set Chain -> [Certificate]

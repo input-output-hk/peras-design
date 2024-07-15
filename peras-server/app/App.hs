@@ -30,7 +30,6 @@ data AppControl = Simulate
   , l :: Integer
   , tau :: Integer
   , b :: Integer
-  , t :: Integer
   , committee :: Integer
   , delta :: Integer
   , activeSlots :: Double
@@ -50,7 +49,7 @@ main =
     controlVar <- newTVarIO $ def{delay = 0}
     simConfig <-
       genSimConfigIO
-        def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasT = t, perasΔ = delta}
+        def{perasU = u, perasA = a, perasR = r, perasK = k, perasL = l, perasτ = tau, perasB = b, perasΔ = delta}
         activeSlots
         parties
         committee

@@ -65,7 +65,7 @@ import Peras.Prototype.Diffusion (
   popChainsAndVotes,
  )
 import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.Preagreement (preagreement)
+import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Types (
   Payload,
   PerasError (MultipleItemsDiffused),
@@ -178,10 +178,10 @@ votingModeled isMember node@MkNodeModel{self, clock, protocol, state} =
       stateVar <- newTVarIO state
       diffuserVar <- newTVarIO $ defaultDiffuser 0
       let party = mkCommitteeMember self protocol clock isMember
-          preagreement' = preagreement nullTracer
+          selectBlock' = selectBlock nullTracer
           diffuser = diffuseVote diffuserVar
       fmap (either (error . show) id) . runExceptT $ do
-        ExceptT $ voting nullTracer protocol party stateVar clock preagreement' diffuser
+        ExceptT $ voting nullTracer protocol party stateVar clock selectBlock' diffuser
         s <- lift $ readTVarIO stateVar
         newVote <- assertOneVote =<< lift (popChainsAndVotes diffuserVar clock)
         pure (newVote, node{state = s})
@@ -323,10 +323,10 @@ instance MonadSTM m => RunModel NodeModel (RunMonad m) where
         runExceptT $ do
           Node.MkNodeState{..} <- get
           let party = mkCommitteeMember self protocol clock isMember
-              preagreement' = preagreement nullTracer
+              selectBlock' = selectBlock nullTracer
           ExceptT . lift $ do
             atomically $ writeTVar diffuserVar $ defaultDiffuser 0
-            voting nullTracer protocol party stateVar (inRound clock protocol) preagreement' $ diffuseVote diffuserVar
+            voting nullTracer protocol party stateVar (inRound clock protocol) selectBlock' $ diffuseVote diffuserVar
           (lift . lift $ popChainsAndVotes diffuserVar clock)
               >>= assertOneVote
 
@@ -395,10 +395,10 @@ instance Monad m => RunModel NodeModel (RunMonad m) where
                 stateVar <- newTVarIO state
                 diffuserVar <- newTVarIO $ defaultDiffuser 0
                 let party = mkCommitteeMember self protocol clock isMember
-                    preagreement' = preagreement nullTracer
+                    selectBlock' = selectBlock nullTracer
                     diffuser = diffuseVote diffuserVar
                 runExceptT $ do
-                  ExceptT $ voting nullTracer protocol party stateVar clock preagreement' diffuser
+                  ExceptT $ voting nullTracer protocol party stateVar clock selectBlock' diffuser
                   (,)
                     <$> (assertOneVote =<< lift (popChainsAndVotes diffuserVar clock))
                     <*> lift (readTVarIO stateVar)

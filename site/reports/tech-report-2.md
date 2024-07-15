@@ -14,8 +14,85 @@ monofont: Monaco
 
 # Executive summary
 
-> [!IMPORTANT]
-> Summarize approach, results, and findings
+This section lists a number of findings, conclusions, ideas, and known risks that we have garnered as part of the Peras innovation project.
+
+## Product
+
+We have refined our analysis and understanding of Peras protocol, taking into account its latest evolutions:
+
+* A promising solution for votes and certificates construction has been identified based on existing VRF/KES keys and ALBAs certificates
+  * This solution relies on existing nodes' infrastructure and cryptographic primitives and therefore should be straightforward to implement and deploy
+* Peras' votes and certificates handling will have a negligible impact on existing node CPU, network bandwidth, and memory requirements.
+  * They will have a moderate impact on storage requirements leading to a potential increase of disk storage of 15 to 20%.
+  * Peras might have a modereate economical impact for SPOs running their nodes with Cloud providers due to increasing network _egress traffic_
+* Peras impact on settlement probabilities is still _unclear_ and will require some more time to analyse
+  * Latest adversarial scenarios analysis lead to an increase in expected settlement time to roughly 30 minutes
+* We think development of a pre-alpha prototype integrated with the cardano-node should be able to proceed
+
+## Process
+
+The following pictures shows how our R&D process evolved over the course of the past few months.
+
+![](../static/img/peras-process.jpg)
+
+* Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers
+* The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strenghthened thanks to fruitful collaboration with Quviq:
+  * The _Test model_ aka. _executable  specification_ is defined in Agda then projected to Haskell for direct reuse by `quickcheck-dynamic` execution engine
+  * A _Soundness proof_ ensures it's consistent with the (higher level) formal specification
+  * We haven't yet covered _adversarial behaviour_ but most scenarios should be straightforward to implement
+* We have discontinued Rust prototype support, from want of time but we haven't changed how tests are run so we have strong confidence any implementation with a compatible API should be testable
+* We have built a user-facing simulation tool that proved helpful to better understand the protocol's behaviour, spot potential issues, and align all stakeholders over an umanbiguous prototype
+* We have built [Markov chains](#markov-chain-simulation)-based models to simulate various interesting large scale behaviours of Peras probabilistically, providing a wealth of insights on parameters interaction
+* We have continued investigating the use of ΔQ formalism, trying to leverage more recent implementations for modelling [vote diffusion](#vote-diffusion)
+* While there remain some work to be done on that front, we should be able to make Peras work including the present report fully public
+
+# Introduction
+
+## Software Readiness Level
+
+### Last stage (SRL 3)
+
+| Questions to resolve                                                                                          | Status  |
+|---------------------------------------------------------------------------------------------------------------|---------|
+| Critical functions/components of the concept/application identified?                                          | Done    |
+| Subsystem or component analytical predictions made?                                                           | Done    |
+| Subsystem or component performance assessed by Modeling and Simulation?                                       | Done    |
+| Preliminary performance metrics established for key parameters?                                               | Done    |
+| Laboratory tests and test environments established?                                                           | Done    |
+| Laboratory test support equipment and computing environment completed for component/proof-of-concept testing? | N/A     |
+| Component acquisition/coding completed?                                                                       | Partial |
+| Component verification and validation completed?                                                              | Mostly  |
+| Analysis of test results completed establishing key performance metrics for components/ subsystems?           | Done    |
+| Analytical verification of critical functions from proof-of-concept made?                                     | Done    |
+| Analytical and experimental proof-of-concept documented?                                                      | Done    |
+
+### Current stage (SRL 4)
+
+| Questions to resolve                                                                                                                     | Status  |
+|------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| Concept/application translated into detailed system/subsystem/component level software architecture design?                              | Partial |
+| Preliminary definition of operational environment completed?                                                                             | Done    |
+| Laboratory tests and test environments defined for integrated component testing?                                                         | Partial |
+| Pre-test predictions of integrated component performance in a laboratory environment assessed by Modeling and Simulation?                | Done    |
+| Key parameter performance metrics established for integrated component laboratory tests?                                                 | Done    |
+| Laboratory test support equipment and computing environment completed for integrated component testing?                                  | Partial |
+| System/subsystem/component level coding completed?                                                                                       | Partial |
+| Integrated component tests completed?                                                                                                    | Partial |
+| Analysis of test results completed verifying performance relative to predictions?                                                        | Done    |
+| Preliminary system requirements defined for end users' application?                                                                      | Done    |
+| Critical test environments and performance predictions defined relative operating environment?                                           | Done    |
+| Relevant test environment defined?                                                                                                       | Done    |
+| Integrated component tests completed for reused code?                                                                                    | Done    |
+| Integrated component performance results verifying analytical predictions and definition of relevant operational environment documented? | Done    |
+
+Relevant documents:
+
+| document                 | status  |
+|--------------------------|---------|
+| Detailed Design Document | Partial |
+| Formal Specification     | Done    |
+| Proofs                   | Done    |
+| Simulations              | Done    |
 
 # Protocol definition
 
@@ -35,6 +112,7 @@ monofont: Monaco
 > [!IMPORTANT]
 > Do we want to provide a detailed description of the protocol here?
 > Seems to me we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
+> If we delete this section, then we need to document how the executable specification varies from the paper and/or the relational specification.
 
 ## Variables
 
@@ -312,23 +390,24 @@ This graph tends to demonstrate vote diffusion should be non-problematic, with a
 
 # Constraints on Peras Parameters
 
-| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                 |
-| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                      |
-| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                          |
-| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.    |
-| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix. |
-| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                               |
-| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                    |
-| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                        |
-| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                             |
-| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                  |
-| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} ≟ \mathcal{O}\left( B^2 / f \right)$      | Sufficient blocks must be produced to overcome an adversarially boosted block.            |
-| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                |
-| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CQ} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.       |
-| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                            |
+The following constraints on Peras parameters arise for both theoretical and practical considerations.
 
-*Note that parameters $T$ and $\Delta$ are not used in this pre-alpha specification of the Peras protocol.*
+| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                    |
+| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                         |
+| Block selection offset  | $L$             | slots   | The minimum age of a candidate block for being voted upon.                                | $\Delta \lt L \leq U$                                    | Rule VR-1B will fail if the candidate block is older than the most recently certified block. |
+| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                             |
+| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.       |
+| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix.    |
+| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                                  |
+| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                       |
+| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                           |
+| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                                |
+| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                     |
+| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} = \mathcal{O}\left( B / f \right)$        | Sufficient blocks must be produced to overcome an adversarially boosted block.               |
+| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                   |
+| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CP} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.          |
+| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                               |
 
 # Simulating Peras
 
@@ -341,7 +420,7 @@ The Peras simulator is a prototype/reference implementation of the Peras protoco
     - selects the preferred chain, and
     - updates $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$.
 - `Peras.Prototype.BlockCreation` forges new blocks and, optionally, includes a certificate in the new block.
-- `Peras.Prototype.Preagreement` selects the block that a party will vote upon.
+- `Peras.Prototype.BlockSelection` selects the block that a party will vote upon.
 - `Peras.Prototype.Voting` casts votes.
 
 Additional, non-core modules handle the diffusion of votes, the interactions between multiple nodes, and visualization of results. The simulator's voting behavior has been tested against the Agda-derived executable specification via the `quickcheck-dynamic` property-based state-machine testing framework: see `Peras.Conformance.Test`.
@@ -373,7 +452,7 @@ The input configuration file specifies the protocol parameters, the initial stat
 
 ```json
 {
-  "params":{"U":20,"A":200,"R":10,"K":17,"L":10,"τ":2,"B":10,"T":15,"Δ":5},
+  "params":{"U":20,"A":200,"R":10,"K":17,"L":10,"τ":2,"B":10,"Δ":5},
   "start":0,
   "finish":300,
   "payloads":{},
@@ -390,7 +469,7 @@ The input configuration file specifies the protocol parameters, the initial stat
 The output configuration file reveals all of the chains, votes, etc. tracked by each node/party. The trace file is a JSON array of events occurring in the simulation. The trace file converted to a GraphViz `.dot` file for visualization. Traces can also be piped into tools for real-time analysis.
 
 | Tag                         | Event                                                      |
-| --------------------------- | ---------------------------------------------------------- |
+|-----------------------------|------------------------------------------------------------|
 | `Protocol`                  | new protocol parameters                                    |
 | `Tick`                      | new slot                                                   |
 | `NewChainAndVotes`          | new chains and votes received                              |
@@ -401,8 +480,8 @@ The output configuration file reveals all of the chains, votes, etc. tracked by 
 | `NewCertStar`               | node selected a new $\mathsf{cert}^*$                      |
 | `ForgingLogic`              | logic for including a certificate in a new block           |
 | `DiffuseChain`              | chain extended by a new block                              |
-| `PreagreementBlock`         | preagreement on a block to be voted upon                   |
-| `PreagreementNone`          | no preagreement for voting                                 |
+| `SelectedBlock`             | block to be voted upon                                     |
+| `NoBlockSelected`           | no block voted for                                         |
 | `VotingLogic`               | logic for casting a vote                                   |
 | `DiffuseVote`               | diffuse a new vote                                         |
 
@@ -476,17 +555,61 @@ Available options:
 
 ## Markov-chain simulation
 
-> [!IMPORTANT]
-> Discuss the Markov-chain simulation and results
+The prototype high-fidelity simulation of the Peras protocol that was presented in the previous section has the drawback that it is relatively slow because of its faithfulness to details of the protocol. The protocol operates the same (in terms of block-creation, voting, cool-down, etc.) regardless irrelevant details such as the specific hashes of various object and parts of the block-tree history. Simulating the *behavior* of the protocol only requires a subset of the full information embedded in the objects that the protocol specifies.
+
+Furthermore, certain significant adversarial scenarios can be approximately modeled by just considering two chains, and honest one and and adversarial one. Typically, the adversary builds their chain privately until they gain some advantage by revealing it to the honest parties. A worst-case adversarial scenarios is when all the adversaries collude to build a single chain, as opposed to competing with each other by building separate adversarial chains. (Note, however, that some adversarial scenarios involve the adversaries building several "equivocated" chains in private.) In the routine course of forging blocks, honest parties might create short honest forks that are soon resolved into a preferred chain. One can idealize this process by just considering the honestly preferred chain, ignoring the short honest forks and renormalizing the probability of forging an honest block to account for the "wasted" forging of short forks that are quickly abandoned.
+
+With these simplifications, one can model a Peras chain with a minimum of information required by the Protocol's logic. In the two-chain case, both the honest and adversarial parties maintain this information about their own chains.
+
+- The current weight of the chain (i.e., length plus number of boosts)
+- The round number for the block voted upon by $\mathsf{cert}^\prime$ 
+- The pending new $\mathsf{cert}^\prime$ for the next round, if any
+- The round number for the block voted upon by $\mathsf{cert}^*$ 
+- The pending new $\mathsf{cert}^*$ for the next round, if any
+- Whether there are round $r$, round $r - 1$, and/or round $r -2$ certificates
+
+Additionally, the protocol requires tracking a few pieces of block-tree information.
+
+- The current slot number
+- The slot number for the last common prefix of the individual chains
+
+Static values of the fraction of honest and adversarial stake result in eight constant per-slot or per-round probabilities. These are the transition probabilities of a Markov chain.
+
+- Forging
+    - No block produced in the slot
+    - Only an honest block produced in the slot
+    - Only an adversarial block produced in the slot
+    - Both an honest and and adversarial block produced in the slot
+- Voting
+    - No quorum
+    - Quorum of honest parties
+    - Quorum of adversarial parties
+    - Quorum requiring both honest and adversarial parties
+
+Each slot that is not the start of a voting round involves a fourfold transition and each slot that is the start of a voting round involves a sixteen-fold transition. Instead of performing a Monte-Carlo simulation where only one of these four or sixteen transitions is selected according to a random variable, we can track all transitions with a data structure that assigns the cumulative probability to each outgoing state. In principle, this involves a computing a rapidly expanding state space. In practice, however, one can prune this state space by discarding states with vanishingly small probabilities. Typically, one might discard any states with probability less than $10^{-30}$ in order to keep modest the memory footprint of the Markov-chain simulation. For Peras, this results in only having to track a million or so states, even for simulations of tens of thousands of slots.
+
+Honest behavior proceeds according to the protocol. Adversarial behavior may differ from the protocol, but must respect the transition probabilities because those probabilities represent the incorruptible sortition rules for slot leadership or voting-committee membership. Here are examples of easily-encoded adversarial behavior:
+
+1. The adversary never joins honest parties in creating a quorum. Thus, the probability of no certificate being created for a round is $\mathcal{P}(\text{No quorum}) + \mathcal{P}(\text{Quorum requiring both honest and adversarial parties})$ .
+2. The adversary builds their chain privately, in which case the global state variable "$\text{The slot number for the last common prefix of the individual chains}$" is never updated to reflect communication from the adversarial to the honest party.
+3. The adversary builds their chain privately until it becomes weightier than the honest chain. In this case, that global state variable and the honest chain would be updated occasionally, indicating honest parties adopt the adversarial chain when it is visibly weightier.
+
+The Markov simulation results in a probability distribution of possible states of the block tree, given the adversary's strategy. The probability distribution of metrics of interest can be computed from that. For example, the diagram below shows the evolution of the probability distribution for the difference of the honest chain's weight minus the adversarial chain's weight for the situation where the adversary builds their chain privately and never assists the honest parties in forming a quorum. Note the jump in the distribution at multiples of slot 150, when there is a high probability that the honest party's chain gains a certificate.
+
+![Example evolution of the margin metric in a Markov-chain simulation](../diagrams/markov.gif)
+
+## Application of Praos margin and reach simulation to Peras
+
+The article [Practical Settlement Bounds for Longest-Chain Consensus by Gaži, Ren, and Russell, (2023)](https://doi.org/10.1007/978-3-031-38557-5_4) provides recurrence relations for *margin* and *reach* that can be solved numerically to determine the probability of settlement failure. The computations are relevant for Peras (i) after one block has been certified and before a subsequent block is certified and (ii) during the cool-down period. We used their software (see https://github.com/renling/LCanalysis) to repeat their computation and extend it to more blocks. This approach accounts for the diffusion time Δ, computes in terms of blocks instead of slots, does not make the two-chain (one honest and one adversarial) assumption, and is supported by mathematical rigor.
+
+![Failure probabilities computed from margin and reach recurrence relations for Praos.](../diagrams/LCanalysis.png)
 
 # Analyses of adversarial scenarios
 
 > [!CAUTION]
-> 1. Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
-> 2. Check all of the mathematical derivations in this section.
-> 3. Explain the scenarios more clearly.
+> Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
 
-In this section we use the following notation:
+The probability of adversarial success can be computed analytically, either exactly or approximately, for some scenarios. Such analytic computations are typically faster and more comprehensive than running ensembles of simulations and analyzing those results. The scenarios analyzed in this section are intended to provide guidance on how the probability of adversarial success depends upon Peras parameters, so that the parameters can be set appropriately for stakeholder user cases. In this section we use the following notation:
 
 - Active-slot coefficient: $\alpha$
 - Round length: $U$
@@ -504,12 +627,6 @@ In this section we use the following notation:
 - Normal distribution with mean $\mu$ and standard deviation $\sigma$:
     - Probability density function: $\mathbf{p}_\text{normal}(x, \mu, \sigma) = \frac{1}{\sqrt{2 \pi \sigma^2}} e^{- \frac{(x - \mu)^2}{2 \sigma^2}}$
     - Cumulative probability function: $\mathbf{P}_\text{normal}(x,\mu,\sigma) = \int_{-\infty}^x dt \, \mathbf{p}_\text{normal}(t, \mu, \sigma)$
-
-> [!IMPORTANT]
-> Discuss the relationship between per-slot probabilities and per-block probabilities.
-
-> [!IMPORTANT]
-> Add paragraphs discussing how to interpret probabilities in terms of the security of a long-running blockchain.
 
 ## No honest quorum in round
 
@@ -606,13 +723,9 @@ function(A, f, alpha)
 
 ## Adversarial chain receives boost
 
-> [!IMPORTANT]
-> Discuss why there are several variants here.
+Here we examine two approaches to computing the probability that an adversarial chain receives a voting boost.
 
 ### Variant 1
-
-> [!CAUTION]
-> This variant needs reworking!
 
 ***Question.*** What is the probability that an adversarial chain receives the next boost?
 
@@ -706,6 +819,37 @@ function(s, B, p, q)
 
 ![Probability of not healing from an adversarial boost, given 5% active slots.](../diagrams/healing-from-adversarial-boost.plot.png)
 
+This healing time scales approximately linearly with the boost parameter. The diagram below shows the relationship between these two parameters along with a linear fit at different probabilities of not healing and different adversarial stakes.
+
+![Scaling of healing time as a function of boost](../diagrams/boost-scaling.png)
+
+If we fit this dataset to a linear model, we find the following relationships and quality of fit. Note that this model is no suitable for use outside of the ranges of the training data: in particular, there is a much stronger dependence on boost for small probabilities and large adversarial stakes.
+
+```
+Call:
+lm(formula = `Healing Time` ~ (`Boost` + `Adversarial Stake`)^2 + log(`Probability of Not Healing`))
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-539.43 -141.38  -39.61  168.45  437.53 
+
+Coefficients:
+                                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                       -1142.2130    79.5507  -14.36   <2e-16 ***
+`Boost`                              21.8229     0.3509   62.19   <2e-16 ***
+`Adversarial Stake`                6200.4250   380.9661   16.28   <2e-16 ***
+log(`Probability of Not Healing`)  -102.2989     4.0128  -25.49   <2e-16 ***
+`Boost`:`Adversarial Stake`         102.4693     2.5627   39.99   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 206.6 on 395 degrees of freedom
+Multiple R-squared:  0.9945,	Adjusted R-squared:  0.9945 
+F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
+```
+
+![Linear model fit for healing time's scaling as a function of boost](../diagrams/boost-scaling-model.png)
+
 ## No honest block
 
 ***Question:*** What is the probability of not having an honest block during a given period of time?
@@ -737,7 +881,7 @@ $$
 and can be computed by the following R function:
 
 ```R
-function(s, B, p, q)
+function(s, p, q)
   sum(pbinom(0:s, s, p) * dbinom(0:s, s, q))
 ```
 
@@ -745,34 +889,147 @@ function(s, B, p, q)
 
 ![Probability of not achieving the common-prefix time, given 5% active slots.](../diagrams/no-common-prefix.plot.png)
 
-## Block rolled back
+# Settlement probabilities
 
-***Question:***
+In the estimates below, we define the *non-settlement probability* as the probability that a transaction (or block) is rolled back. Note that this does not preclude the possibility that the transaction could be included in a later block because it remained in the memory pool of a node that produced a subsequent block. Because there are approximately 1.5 million blocks produced per year, even small probabilities of non-settlement can amount to an appreciable number of discarded blocks.
 
-***Relevance:***
+## Case 1: Blocks without boosted descendants
 
-***Risk:***
+Blocks that are not cemented by a boost to one of their descendant (successor) blocks are most at risk for being rolled back because they are not secured by the extra weight provided by a boost.
 
-***Scenario:***
+The *Variant 2* scenario in the *Adversarial chain receives boost* section above dominates the situation where a transaction is recorded in a block but an adversarial fork later is boosted by a certificate to become the preferred chain. This scenario plays out as follows:
 
-***Analysis:***
+1. Both the honest chain and an initially private adversarial chain have a common prefix that follows the last boosted block.
+2. The adversary privately grows their chain and does not include transactions in the memory pool.
+3. When the time comes where the last block is first eligible for later being voted upon, the adversarial chain is published and all parties see that it is longer than the honest chain.
+4. Hence the newly published adversarial chain becomes the preferred chain, and all parties build upon that.
+5. Later, when voting occurs, the chain that had been adversarial will received the boost.
+6. Because the adversarial prefix has been boosted, there is a negligible probability that the discarded portion of the honest chain will ever become part of the preferred chain.
+7. Therefore the preferred chain does not include any transactions that were in blocks of the honest chain after the common prefix and before the adversarially boosted block.
 
-***Example:***
+Note that this is different from the situation where a transaction is included on honest forks because such a transaction typically reaches the memory pool of the block producers on each fork and is included on each. The adversary refrains from including the transaction on their private chain.
+
+The active-slot coefficient (assumed to be 5%), the length of the rounds, and the adversary's fraction of stake determine the probability of non-settlement in such a scenario. The table below estimates this probability. For example, in the presence of a 5% adversary and a round length of 360 slots, one could expect about two blocks to be reverted per year in such an attack.
+
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     1.35e-02 |      3.64e-02 |      6.99e-02 |      1.15e-01 |      4.81e-01 |
+|           90 |     5.45e-03 |      1.82e-02 |      4.14e-02 |      7.77e-02 |      4.64e-01 |
+|          120 |     2.16e-03 |      9.16e-03 |      2.47e-02 |      5.31e-02 |      4.48e-01 |
+|          150 |     8.55e-04 |      4.63e-03 |      1.49e-02 |      3.66e-02 |      4.34e-01 |
+|          180 |     3.40e-04 |      2.36e-03 |      9.08e-03 |      2.55e-02 |      4.22e-01 |
+|          240 |     5.46e-05 |      6.27e-04 |      3.42e-03 |      1.25e-02 |      4.00e-01 |
+|          300 |     8.91e-06 |      1.69e-04 |      1.31e-03 |      6.27e-03 |      3.81e-01 |
+|          360 |     1.47e-06 |      4.63e-05 |      5.11e-04 |      3.18e-03 |      3.65e-01 |
+|          420 |     2.46e-07 |      1.28e-05 |      2.00e-04 |      1.63e-03 |      3.51e-01 |
+|          480 |     4.12e-08 |      3.56e-06 |      7.92e-05 |      8.37e-04 |      3.37e-01 |
+|          540 |     6.97e-09 |      9.96e-07 |      3.15e-05 |      4.33e-04 |      3.25e-01 |
+|          600 |     1.18e-09 |      2.80e-07 |      1.26e-05 |      2.25e-04 |      3.14e-01 |
+
+Using the approach of Gaži, Ren, and Russell (2023) and setting $\Delta = 5 \text{\,slots}$ to compute the upper bound on the probability of failure to settle results in similar, but not identical probabilities.
+
+| Blocks | ≈ Slots | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary |
+| -----: | ------: | -----------: | ------------: | ------------: | ------------: |
+|      3 |      60 |     6.13e-02 |      1.41e-01 |      2.53e-01 |      3.89e-01 |
+|      4 |      80 |     2.73e-02 |      8.15e-02 |      1.73e-01 |      3.01e-01 |
+|      5 |     100 |     1.22e-02 |      4.73e-02 |      1.19e-01 |      2.34e-01 |
+|      6 |     120 |     5.46e-03 |      2.75e-02 |      8.26e-02 |      1.83e-01 |
+|      9 |     180 |     4.95e-04 |      5.55e-03 |      2.80e-02 |      8.89e-02 |
+|     12 |     240 |     4.51e-05 |      1.13e-03 |      9.65e-03 |      4.40e-02 |
+|     15 |     300 |     4.11e-06 |      2.32e-04 |      3.35e-03 |      2.20e-02 |
+|     18 |     360 |     3.75e-07 |      4.77e-05 |      1.17e-03 |      1.11e-02 |
+|     21 |     420 |     3.42e-08 |      9.83e-06 |      4.11e-04 |      5.60e-03 |
+|     24 |     480 |     3.13e-09 |      2.03e-06 |      1.44e-04 |      2.83e-03 |
+|     27 |     540 |     2.85e-10 |      4.17e-07 |      5.06e-05 |      1.44e-03 |
+|     30 |     600 |     2.60e-11 |      8.60e-08 |      1.78e-05 |      7.30e-04 |
+
+## Case 2: Blocks with boosted descendants
+
+Once one of a block's descendants (successors) has been boosted by a certificate, it is much more difficult for an adversary to cause it to be rolled back because they adversary must overcome both count of blocks on the preferred, honest chain and the boost that chain has already received.
+
+The *Healing from adversarial boost* section above provides the machinery for estimating the probability of an adversary building a private fork that has more weight than a preferred, honest chain that has been boosted. The scenario plays out as follows:
+
+1. Both the honest chain and an initially private adversarial chain have a common prefix that precedes the last boosted block.
+2. The adversary privately grows their chain.
+3. When the adversary's chain is becomes long enough to overcome both the honest blocks and the boost, the adversarial chain is published and all parties see that it is longer than the honest chain.
+4. Hence the newly published adversarial chain becomes the preferred chain, and all parties build upon that.
+5. Therefore the preferred chain does not include any transactions that were in blocks of the honest chain after the common prefix.
+
+Typically, the adversary would only have a round's length of slots to build sufficient blocks to overcome the boosted, honest, preferred fork. After that, the preferred fork would typically receive another boost, making it even more difficult for the adversary to overcome it. The table below shows the probability that of non-settlement for a block after the common prefix but not after the subsequent boosted block on the honest chain, given a 5% active slot coefficient and a 5 blocks/certificate boost.
+
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     3.09e-08 |      1.08e-06 |      8.94e-06 |      4.07e-05 |      3.10e-03 |
+|           90 |     5.91e-08 |      2.27e-06 |      2.03e-05 |      9.91e-05 |      9.36e-03 |
+|          120 |     6.32e-08 |      2.73e-06 |      2.70e-05 |      1.44e-04 |      1.74e-02 |
+|          150 |     5.01e-08 |      2.49e-06 |      2.77e-05 |      1.62e-04 |      2.57e-02 |
+|          180 |     3.31e-08 |      1.94e-06 |      2.45e-05 |      1.59e-04 |      3.37e-02 |
+|          240 |     1.07e-08 |      8.98e-07 |      1.51e-05 |      1.23e-04 |      4.74e-02 |
+|          300 |     2.73e-09 |      3.44e-07 |      7.88e-06 |      8.19e-05 |      5.80e-02 |
+|          360 |     6.15e-10 |      1.20e-07 |      3.78e-06 |      5.04e-05 |      6.62e-02 |
+|          420 |     1.29e-10 |      3.94e-08 |      1.73e-06 |      2.96e-05 |      7.23e-02 |
+|          480 |     2.57e-11 |      1.25e-08 |      7.65e-07 |      1.70e-05 |      7.70e-02 |
+|          540 |     4.98e-12 |      3.88e-09 |      3.33e-07 |      9.56e-06 |      8.05e-02 |
+|          600 |     9.43e-13 |      1.19e-09 |      1.43e-07 |      5.32e-06 |      8.31e-02 |
+
+A boost of 10 blocks/certificate makes the successful adversarial behavior even less likely.
+
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     0.00e+00 |      4.92e-14 |      2.98e-12 |      5.56e-11 |      2.23e-07 |
+|           90 |     7.77e-16 |      8.89e-13 |      5.65e-11 |      1.10e-09 |      4.98e-06 |
+|          120 |     3.55e-15 |      4.47e-12 |      3.01e-10 |      6.15e-09 |      3.27e-05 |
+|          150 |     8.88e-15 |      1.16e-11 |      8.39e-10 |      1.82e-08 |      1.16e-04 |
+|          180 |     1.38e-14 |      2.01e-11 |      1.59e-09 |      3.70e-08 |      2.90e-04 |
+|          240 |     1.60e-14 |      2.97e-11 |      2.87e-09 |      7.93e-08 |      9.83e-04 |
+|          300 |     1.05e-14 |      2.53e-11 |      3.08e-09 |      1.03e-07 |      2.13e-03 |
+|          360 |     4.77e-15 |      1.57e-11 |      2.48e-09 |      1.02e-07 |      3.62e-03 |
+|          420 |     1.55e-15 |      7.98e-12 |      1.67e-09 |      8.59e-08 |      5.31e-03 |
+|          480 |     4.44e-16 |      3.56e-12 |      9.96e-10 |      6.46e-08 |      7.08e-03 |
+|          540 |     4.44e-16 |      1.45e-12 |      5.49e-10 |      4.52e-08 |      8.85e-03 |
+|          600 |     2.22e-16 |      5.54e-13 |      2.86e-10 |      3.00e-08 |      1.06e-02 |
+
+A boost of 15 blocks/certificate makes the successful adversarial behavior even less likely.
+
+| Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
+| -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
+|           60 |     0.00e+00 |      0.00e+00 |      0.00e+00 |      0.00e+00 |      9.81e-13 |
+|           90 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      8.88e-16 |      2.24e-10 |
+|          120 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      2.39e-14 |      6.59e-09 |
+|          150 |     1.11e-16 |      1.11e-16 |      2.78e-15 |      2.19e-13 |      6.90e-08 |
+|          180 |     0.00e+00 |      2.22e-16 |      1.18e-14 |      1.07e-12 |      3.91e-07 |
+|          240 |     0.00e+00 |      3.33e-16 |      7.89e-14 |      8.19e-12 |      4.29e-06 |
+|          300 |     3.33e-16 |      4.44e-16 |      2.16e-13 |      2.61e-11 |      2.07e-05 |
+|          360 |     1.11e-16 |      5.55e-16 |      3.49e-13 |      5.01e-11 |      6.26e-05 |
+|          420 |     0.00e+00 |      6.66e-16 |      4.01e-13 |      6.97e-11 |      1.42e-04 |
+|          480 |     0.00e+00 |      2.22e-16 |      3.68e-13 |      7.81e-11 |      2.65e-04 |
+|          540 |     3.33e-16 |      2.22e-16 |      2.88e-13 |      7.53e-11 |      4.35e-04 |
+|          600 |     2.22e-16 |      3.33e-16 |      2.00e-13 |      6.51e-11 |      6.47e-04 |
 
 # Recommendations for Peras parameters
 
-Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake.
+Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake. This set of parameters is focused on the use case of knowing soon whether a block is settled or rolled back; other sets of parameters would be optimal for use cases that reduce the probability of roll-back at the expense of waiting longer for settlement.
 
-| Parameter              | Symbol | Units   | Value | Rationale                                                             |
-|------------------------|--------|---------|------:|-----------------------------------------------------------------------|
-| Round length           | $U$    | slots   |   400 | 1 ppm probability of 10% adversarial chain receiving boost.           |
-| Certificate expiration | $A$    | slots   | 43200 | Determined by security parameter.                                     |
-| Chain ignorance period | $R$    | rounds  |   108 | Determined by security parameter and round length.                    |
-| Cool-down period       | $K$    | rounds  |   108 | Determined by security parameter and round length.                    |
-| Certification boost    | $B$    | blocks  |    10 | 1 ppm probability of not healing from boost in 40% adversarial chain. |
-| Committee size         | $n$    | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.       |
-| Quorum size            | $\tau$ | parties |   675 | Three-quarters of committee size.                                     |
-| Security parameter     | $k$    | blocks  |  2160 | The Ouroboros Praos security parameter.                               |
+| Parameter              | Symbol           | Units   | Value | Rationale                                                            |
+| ---------------------- | ---------------- | ------- | ----: | -------------------------------------------------------------------- |
+| Round length           | $U$              | slots   |    90 | Settlement/non-settlement in under two minutes.                      |
+| Block-selection offset | $L$              | slots   |    30 | Several multiples of $\Delta$ to ensure block diffusion.             |
+| Certification boost    | $B$              | blocks  |    15 | Negligible probability to roll back boosted block.                   |
+| Security parameter     | $k_\text{peras}$ | blocks  |  3150 | Determined by the Praos security parameter and the boost.            |
+| Certificate expiration | $A$              | slots   | 27000 | Determined by the Praos security parameter and boost.                |
+| Chain-ignorance period | $R$              | rounds  |   300 | Determined by the Praos security parameter, round length, and boost. |
+| Cool-down period       | $K$              | rounds  |   780 | Determined by the Praos security parameter, round length and boost.  |
+| Committee size         | $n$              | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.      |
+| Quorum size            | $\tau$           | parties |   675 | Three-quarters of committee size.                                    |
+
+A *block-selection offset* of $L = 30 \text{\,slots}$ allows plenty of time for blocks to diffuse to voters before a vote occurs. Combining this with a *round length* of $U = 90 \text{\, slots}$ ensures that there is certainty in $U + L = 120 \text{\,slots}$ as to whether a block has been cemented onto the preferred chain by the presence of a certificate for a subsequent block. That certainty of not rolling back certified blocks is provided by a *certification boost* of $B = 15 \text{\,blocks}$ because of the infinitesimal probability of forging that many blocks on a non-preferred fork within the time $U$. Thus, anyone seeing a transaction appearing in a block need wait no more than two minutes to be certain whether the transaction is on the preferred chain (effectively permanently, less than a one in a trillion probability even at 45% adversarial stake) versus discarded because of a roll back. Unless the transaction has a stringent time-to-live (TTL) constraint, it can be resubmitted in the first $U - L = 60 \text{\,slots}$ of the current round, or in a subsequent round.
+
+> [!WARNING]
+> The security-related computations in the next paragraph are not rigorous with respect to the healing, chain-quality, and common-prefix times, so they need correction after the research team reviews them and proposes a better approach. 
+
+The Praos security parameter $k_\text{praos} = 2160 \text{\,blocks} \approx 43200 \text{\,slots} = 12 \text{\,hours}$ implies a ~17% probability of a longer private adversarial chain at 49% adversarial stake. At that same probability, having to overcome a $B = 15 \text{\,blocks}$ adversarial boost would require $k_\text{peras} \approx 70200 \text{\,slots} = 3510 \text{\,blocks} = 19.5 \text{\,hours}$. This determines the *certificate-expiration time* as $A = k_\text{peras} - k_\text{praos} = 27000 \text{\,slots}$, the *chain-ignorance period* as $R = \left\lceil A / U \right\rceil = 300 \text{\,rounds}$, and the *cool-down period* as $K = \left\lceil k_\text{peras} / U \right\rceil = 780 \text{\,rounds}$.
+
+The *committee size* of $n = 900 \text{\,parties}$ corresponds to a one in a million chance of not reaching a quorum if 10% of the parties do not vote for the majority block (either because they are adversarial, offline, didn't receive the block, or chose to vote for a block on a non-preferred fork). This "no quorum" probability is equivalent to one missed quorum in every 1.2 years. The *quorum size* of $\tau = \left\lceil 3 n / 4 \right\rceil = 675 \text{\,parties}$ is computed from this.
 
 # Formal specification in Agda
 
@@ -841,9 +1098,6 @@ initialModelState : NodeModel
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 ```
 
-> [!IMPORTANT]
-> Update the above after adversarial tests have been added.
-
 This is used in the Haskell state model as follows.
 
 ```haskell
@@ -875,7 +1129,6 @@ Peras.Conformance.Test
 
 Finished in 4.7193 seconds
 1 example, 0 failures
-
 ```
 
 ## Lessons learned from experiments with Agda-to-Haskell workflows
@@ -968,7 +1221,6 @@ There are still opportunities for syntactic sugar that would make the code more 
 - Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
 - Creating a full eDSL might be a better approach, but that would involved significantly more effort.
 
-
 # Community feedback
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
@@ -1042,23 +1294,40 @@ A node is expected to need to keep in memory:
 
 Peras should not have any significant impact on the memory requirements of a node.
 
+# Integration into Cardano Node
+
+In the [previous](tech-report-1.md) report, we already studied how Peras could be concretely implemented in a Cardano node. Most of the comments there are still valid, and we only provide here corrections and additions when needed. We have addressed resources-related issue in a previous section.
+
+The following picture summarizes a possible architecture for Peras highlighting its interactions with other components of the system.
+
+![Peras High-level Architecture](../static/img/peras-architecture.jpg)
+
+The main impacts identified so far are:
+
+* There is no impact in the existing block diffusion process, and no changes to block headers structure
+* Block body structure needs to be changed to accomodate for a certificate when entering _cooldown_ period
+* Consensus _best chain_ selection algorithm needs to be aware of the existence of a _quorum_ to compute the _weight_ of a possible chain, which is manifested by a _certificate_ from the Peras component
+  * Consensus will need to maintain or query a list of valid certificates (eg. similar to _volatile_ blocks) as they are received or produced
+  * Chain selection and headers diffusion is not dependent on individual votes
+* Peras component can be treated as another _chain follower_ to which new blocks and rollbacks are reported
+  * Peras component will also need to be able to retrieve current _stake distribution_
+  * It needs to have access to VRF and KES keys for voting, should we decide to forfeit BLS signature scheme
+* Dedicated long term storage will be needed for certificates
+* Networking layer will need to accomodate (at least) two new mini-protocols for votes and certificates diffusion
+  * This seems to align nicely with current joint effort on [Mithril integration](https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view)
+* Our remarks regarding the possible development of a standalone prototype interacting with a modifified adhoc node still stands and could be a good next step
+
 # Conclusion
 
 ## The case for Peras
 
-Peras provides demonstrably fast settlement without weakening security or burdening nodes. The settlement time varies as a function of the protocol-parameter settings and the prevalence of adversarial stake.
-
-> [!IMPORTANT]
-> Provide here a summary table of settlement time vs adversarial stake for a selection or protocol parameters.
+Peras provides demonstrably fast settlement without weakening security or burdening nodes. The settlement time varies as a function of the protocol-parameter settings and the prevalence of adversarial stake. For a use case that emphasizes rapid determination of whether a block is effectively finally incorporated into the preferred chain, it is possible to achieve settlement times as short as two minutes, but at the expense of having to resubmit rolled-back transactions in cases where there is a strong adversarial stake.
 
 The impact of Peras upon nodes falls into four categories: network, CPU, memory, and storage. We have provided [evidence](#votes--certificates) that the CPU time required to construct and verify votes and certificates is much smaller than the duration of a voting round. Similarly, the [memory](#memory) needed to cache votes and certificates and the [disk space](#persistent-storage) needed to persist certificates is trivial compared to the memory needed for the UTXO set and the disk needed for the blocks.
 
 On the networking side, our [ΔQ studies](#vote-diffusion) demonstrate that diffusion of Peras votes and certificates consumes minimal bandwidth and would not interfere with other node operations such as memory-pool and block diffusion. However, [diffusion of votes and certificates](#network-traffic) across a network will still have a noticeable impact on the _volume_ of data transfer, in the order of 20%, which might translate to increased operating costs for nodes deployed in cloud providers.
 
 In terms of development impacts and resources, Peras requires only a minimal modification to the ledger CDDL and block header. Around cool-down periods, a certificate hash will need to be included in the block header and the certificate itself in the block. Implementing Peras does not require any new cryptographic keys, as the existing VRF/KES will be leveraged. It will require an implementation of the ALBA algorithm for creating certificates. It does require a new mini-protocol for diffusion of votes and certificates. The node's logic for computing the chain weight needs to be modified to account for the boosts provided by certificates. Nodes will have to persist all certificates and will have to cache unexpired votes. They will need a thread (or equivalent) for verifying votes and certificates. Peras only interacts with Genesis and Leios in the chain-selection function and it is compatible with the historical evolution of the blockchain. A node-level specification and conformance test will also need to be written.
-
-> [!WARNING]
-> Dare we assert that implementation of Peras in the Cardano node would take approximately three person years, provided the team already has familiarity with the node and stays focused?
 
 In no way does Peras weaken any of the security guarantees provided by Praos or Genesis. Under strongly adversarial conditions, where an adversary can trigger a Peras voting cool-down period, the protocol in essence reverts to the Praos protocol, but for a duration somewhat longer than the Praos security parameter. Otherwise, settlement occurs after each Peras round. This document has approximately mapped the trade-off between having a short duration for each round (and hence faster settlement) versus having a high resistance to an adversary forcing the protocol into a cool-down period. It also estimates the tradeoff between giving chains a larger boost for each certificate (and hence stronger anchoring of that chain) versus keeping the cool-down period shorter.
 

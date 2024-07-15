@@ -29,7 +29,6 @@ spec = do
           , perasL = 30
           , perasτ = 75
           , perasB = 100
-          , perasT = 0
           , perasΔ = 5
           }
       roundNumber = 430
@@ -37,7 +36,7 @@ spec = do
       someChain = arbitrary `generateWith` 42
       someCertificate = (arbitrary `generateWith` 42){round = roundNumber - 1, blockRef = hash (head someChain)}
       someBlock = (arbitrary `generateWith` 12){parentBlock = blockRef someCertificate}
-      preagreement _ _ _ _ = pure $ Right $ Just (someBlock, 1)
+      selectBlock _ _ _ _ = pure $ Right $ Just (someBlock, 1)
       committeeMember = mkParty (arbitrary `generateWith` 42) [] [roundNumber]
       nonCommitteeMember = mkParty (arbitrary `generateWith` 42) [] []
       steadyState =
@@ -48,7 +47,7 @@ spec = do
           }
 
   {- FIXME: Needs a better generator.
-    it "votes on preagreement's block given party is committee member" $ do
+    it "votes on selectBlock's block given party is committee member" $ do
       perasState <- newTVarIO steadyState
       diffuser <- newTVarIO $ defaultDiffuser 0
 
@@ -59,7 +58,7 @@ spec = do
           committeeMember
           perasState
           roundNumber
-          preagreement
+          selectBlock
           (diffuseVote diffuser)
 
       Set.size . pendingVotes <$> readTVarIO diffuser `shouldReturn` 1
@@ -76,7 +75,7 @@ spec = do
         nonCommitteeMember
         perasState
         slotNumber
-        preagreement
+        selectBlock
         (diffuseVote diffuser)
 
     allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
@@ -94,7 +93,7 @@ spec = do
         committeeMember
         perasState
         slotNumber
-        preagreement
+        selectBlock
         (diffuseVote diffuser)
 
     allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
@@ -102,7 +101,7 @@ spec = do
   describe "VR1-B" $ do
     it "does not vote if block does not extend last seen certificate" $ do
       let blockOnFork = someBlock{parentBlock = arbitrary `generateWith` 41}
-          preagreementSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
+          selectBlockSelectsFork _ _ _ _ = pure $ Right $ Just (blockOnFork, 1)
       perasState <- newTVarIO steadyState
       diffuser <- newTVarIO $ defaultDiffuser 0
 
@@ -113,14 +112,14 @@ spec = do
           committeeMember
           perasState
           slotNumber
-          preagreementSelectsFork
+          selectBlockSelectsFork
           (diffuseVote diffuser)
 
       allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
     it "does vote if block is same as the one from last seen certificate" $ do
       let certifiedBlock = head someChain
-          preagreementSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
+          selectBlockSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
       perasState <- newTVarIO steadyState
       diffuser <- newTVarIO $ defaultDiffuser 0
 
@@ -131,14 +130,14 @@ spec = do
           committeeMember
           perasState
           slotNumber
-          preagreementSelectsCertifiedBlock
+          selectBlockSelectsCertifiedBlock
           (diffuseVote diffuser)
 
       Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
     it "only vote at beginning of round" $ do
       let certifiedBlock = head someChain
-          preagreementSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
+          selectBlockSelectsCertifiedBlock _ _ _ _ = pure $ Right $ Just (certifiedBlock, 1)
       perasState <- newTVarIO steadyState
       diffuser <- newTVarIO $ defaultDiffuser 0
 
@@ -149,12 +148,12 @@ spec = do
           committeeMember
           perasState
           (slotNumber + 1)
-          preagreementSelectsCertifiedBlock
+          selectBlockSelectsCertifiedBlock
           (diffuseVote diffuser)
 
       allPendingVotes <$> readTVarIO diffuser `shouldReturn` mempty
 
-  it "VR2-A - votes on preagreement's block given last seen certificate is older than cooldown period" $ do
+  it "VR2-A - votes on selectBlock's block given last seen certificate is older than cooldown period" $ do
     let cooldownState = steadyState{certPrime = someCertificate{round = roundNumber - fromInteger perasR}, certStar = someCertificate{round = 430 - 2 * 100}}
     perasState <- newTVarIO cooldownState
     diffuser <- newTVarIO $ defaultDiffuser 0
@@ -166,7 +165,7 @@ spec = do
         committeeMember
         perasState
         slotNumber
-        preagreement
+        selectBlock
         (diffuseVote diffuser)
 
     Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
@@ -187,7 +186,7 @@ spec = do
         committeeMember
         perasState
         slotNumber
-        preagreement
+        selectBlock
         (diffuseVote diffuser)
 
     Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1

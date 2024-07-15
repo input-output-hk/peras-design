@@ -112,7 +112,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         {tree}         : NodeModel
 --        {block}        : Block
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
---        blockExists    : Preagreement (State.clock s) tree ≡ just block
+--        blockExists    : BlockSelection (State.clock s) tree ≡ just block
 --        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ

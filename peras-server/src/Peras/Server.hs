@@ -14,7 +14,7 @@ import Network.Wai.Middleware.HttpAuth (
   CheckCreds,
   basicAuth,
  )
-import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Network.Wai.Middleware.RequestLogger (logStdout)
 import Network.Wai.Middleware.Static (static)
 import qualified Network.WebSockets as WS
 import Peras.Server.App (wsapp)
@@ -33,7 +33,7 @@ scottyApp authorizedCreds =
       . Sc.middleware
       $ checkCreds authorizedCreds `basicAuth` "Peras Realm"{authIsProtected = const $ pure True}
 
-    Sc.middleware logStdoutDev
+    Sc.middleware logStdout
 
     Sc.get "/" $
       Sc.redirect "/index.html"

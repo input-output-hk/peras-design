@@ -41,7 +41,7 @@ library
                      Peras.Prototype.Network.Arbitrary
                      Peras.Prototype.Node
                      Peras.Prototype.Node.Model
-                     Peras.Prototype.Preagreement
+                     Peras.Prototype.BlockSelection
                      Peras.Prototype.Trace
                      Peras.Prototype.Types
                      Peras.Prototype.Visualizer
@@ -62,7 +62,7 @@ library
     other-modules:   Peras.Prototype.BytesModulo
     build-depends:    QuickCheck,
                       aeson,
-                      base ^>=4.18.1.0,
+                      base ,
                       base16-bytestring,
                       bytestring,
                       cereal,
@@ -91,7 +91,7 @@ executable  peras-simulate
     main-is:          Simulate.hs
     other-modules:    Paths_peras_simulation
     build-depends:    aeson
-                    , base ^>=4.18.1.0
+                    , base
                     , bytestring
                     , data-default
                     , io-classes
@@ -106,7 +106,7 @@ executable  peras-visualize
     main-is:          Visualize.hs
     other-modules:    Paths_peras_simulation
     build-depends:    aeson
-                    , base ^>=4.18.1.0
+                    , base
                     , bytestring
                     , optparse-applicative
                     , peras-simulation
@@ -126,7 +126,7 @@ test-suite peras-simulation-test
     hs-source-dirs:   test
     main-is:          Main.hs
     build-depends:  QuickCheck
-                  , base ^>=4.18.1.0
+                  , base
                   , containers
                   , contra-tracer
                   , data-default

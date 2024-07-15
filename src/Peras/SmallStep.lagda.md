@@ -317,11 +317,10 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
-#### Preagreement
-
+#### BlockSelection
 ```agda
-    Preagreement : SlotNumber → T → Maybe Block
-    Preagreement (MkSlotNumber s) t =
+    BlockSelection : SlotNumber → T → Maybe Block
+    BlockSelection (MkSlotNumber s) t =
       let
         Cpref = preferredChain t
         bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
@@ -347,7 +346,7 @@ VR-1B: The  extends the block certified by cert-r−1,
         ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
 
     ChainExtends : SlotNumber → T → Chain → Set
-    ChainExtends s t = ChainExtends' (Preagreement s t) (latestCertSeen t)
+    ChainExtends s t = ChainExtends' (BlockSelection s t) (latestCertSeen t)
 
     VotingRule-1B : SlotNumber → T → Set
     VotingRule-1B s t = Any (ChainExtends s t) (allChains t)
@@ -360,7 +359,7 @@ VR-1B: The  extends the block certified by cert-r−1,
         ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
 
     ChainExtends? : (s : SlotNumber) → (t : T) → (c : Chain) → Dec (ChainExtends s t c)
-    ChainExtends? s t = ChainExtends'? (Preagreement s t) (latestCertSeen t)
+    ChainExtends? s t = ChainExtends'? (BlockSelection s t) (latestCertSeen t)
 
     VotingRule-1B? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1B s t)
     VotingRule-1B? s t = any? (ChainExtends? s t) (allChains t)
@@ -601,7 +600,7 @@ is added to be consumed immediately.
             r = v-round s
             v = createVote s p π σ (hash b)
           in
-        ∙ Preagreement s t ≡ just b
+        ∙ BlockSelection s t ≡ just b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
