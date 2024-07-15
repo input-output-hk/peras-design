@@ -6,7 +6,7 @@ open import Haskell.Prim.Tuple
 open import Haskell.Law.Equality
 
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
-open import Data.Nat using (NonZero; ℕ; _≡ᵇ_)
+open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
 open import Data.Nat.Properties using (_≟_)
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
@@ -92,32 +92,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace ∎              = []
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
-    -- Preconditions ---
-
-    record NewVotePreconditions (s : State) (vote : Vote) : Set where
-      slot = State.clock s
-      r    = v-round slot
-      σ    = signature vote
-      field
-        {tree}         : NodeModel
-        {block}        : Block
-        creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
-        blockExists    : BlockSelection (State.clock s) tree ≡ just block
-        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
-        startOfRound   : StartOfRound slot r
-        validSignature : IsVoteSignature vote σ
-        correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
-        validVote      : VotingRule slot tree
-
-      validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
-      validSignature' with valid ← validSignature rewrite correctVote = valid
-
-      blockExists' : BlockSelection (State.clock s) tree ≡ just
-          record block { signature = MkSignature (hashBytes (blockHash vote)) }
-      blockExists' with b ← blockExists rewrite (sym blockVote) = {!!}
-
-    open import Data.Nat using (_≥_; _≥?_; _>?_)
-
     params-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → Params.B params ≡ perasB (protocol (proj₁ ∃tree))
     params-equ s p ∃tree = {!!}
@@ -168,6 +142,30 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       rewrite sym (certS-equ s p ∃tree)
       = x P., y
 
+    -- Preconditions ---
+
+    record NewVotePreconditions (s : State) (vote : Vote) : Set where
+      slot = State.clock s
+      r    = v-round slot
+      σ    = signature vote
+      field
+        {tree}         : NodeModel
+        {block}        : Block
+        creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
+        blockExists    : BlockSelection (State.clock s) tree ≡ just block
+        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
+        startOfRound   : StartOfRound slot r
+        validSignature : IsVoteSignature vote σ
+        correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
+        validVote      : VotingRule slot tree
+
+      validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
+      validSignature' with valid ← validSignature rewrite correctVote = valid
+
+      blockExists' : BlockSelection (State.clock s) tree ≡ just
+          record block { signature = MkSignature (hashBytes (blockHash vote)) }
+      blockExists' with b ← blockExists rewrite blockVote = b
+
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
@@ -205,6 +203,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       }
 
     -- Soundness --
+
     record Soundness (s₀ : State) (ms₁ : NodeModel) (vs : List (SlotNumber × Vote)) : Set where
       field
         s₁          : State
