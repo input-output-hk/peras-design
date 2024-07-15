@@ -5,12 +5,9 @@ author:
   - Brian W. Bush
   - Yves Hauser
   - Hans Lahe
-date: 2024-04-17
+date: 2024-07-15
 monofont: Monaco
 ---
-
-> [!IMPORTANT]
-> Unlike for the first tech report, we should only include analyses that conform to the latest version of the protocol.
 
 # Executive summary
 
@@ -18,16 +15,17 @@ This section lists a number of findings, conclusions, ideas, and known risks tha
 
 ## Product
 
-We have refined our analysis and understanding of Peras protocol, taking into account its latest evolutions:
+We have refined our analysis and understanding of Peras protocol, taking into account its latest evolution:
 
-* A promising solution for votes and certificates construction has been identified based on existing VRF/KES keys and ALBAs certificates
-  * This solution relies on existing nodes' infrastructure and cryptographic primitives and therefore should be straightforward to implement and deploy
-* Peras' votes and certificates handling will have a negligible impact on existing node CPU, network bandwidth, and memory requirements.
-  * They will have a moderate impact on storage requirements leading to a potential increase of disk storage of 15 to 20%.
-  * Peras might have a modereate economical impact for SPOs running their nodes with Cloud providers due to increasing network _egress traffic_
-* Peras impact on settlement probabilities is still _unclear_ and will require some more time to analyse
-  * Latest adversarial scenarios analysis lead to an increase in expected settlement time to roughly 30 minutes
-* We think development of a pre-alpha prototype integrated with the cardano-node should be able to proceed
+* A promising solution for votes and certificates construction has been identified based on existing VRF/KES keys and ALBAs certificates.
+    * This solution relies on existing nodes' infrastructure and cryptographic primitives and therefore should be straightforward to implement and deploy.
+* Peras's votes and certificates handling will have a negligible impact on existing node CPU, network bandwidth, and memory requirements.
+    * They will have a moderate impact on storage requirements leading to a potential increase of disk storage of 15 to 20%..
+    * Peras might have a moderate economical impact for SPOs running their nodes with cloud providers due to increasing network _egress traffic_.
+* Peras's impact on settlement probabilities depends strongly upon the specific choices for protocol parameters and what stakeholder use case(s) those have been tuned for.
+    * Settlement can be as fast as two minutes, with an infinitesimal probability of rollback after that, but there is an appreciable probability of rollback prior to that time if a strong adversary attacks.
+    * Stakeholders will have to reach consensus about the relative importance of settlement time versus resistance to attacks prior to that time.
+* We think development of a *pre-alpha* prototype integrated with the cardano-node should be able to proceed.
 
 ## Process
 
@@ -35,20 +33,21 @@ The following pictures shows how our R&D process evolved over the course of the 
 
 ![](../static/img/peras-process.jpg)
 
-* Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers
-* The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strenghthened thanks to fruitful collaboration with Quviq:
-  * The _Test model_ aka. _executable  specification_ is defined in Agda then projected to Haskell for direct reuse by `quickcheck-dynamic` execution engine
-  * A _Soundness proof_ ensures it's consistent with the (higher level) formal specification
-  * We haven't yet covered _adversarial behaviour_ but most scenarios should be straightforward to implement
-* We have discontinued Rust prototype support, from want of time but we haven't changed how tests are run so we have strong confidence any implementation with a compatible API should be testable
-* We have built a user-facing simulation tool that proved helpful to better understand the protocol's behaviour, spot potential issues, and align all stakeholders over an umanbiguous prototype
-* We have built [Markov chains](#markov-chain-simulation)-based models to simulate various interesting large scale behaviours of Peras probabilistically, providing a wealth of insights on parameters interaction
-* We have continued investigating the use of ΔQ formalism, trying to leverage more recent implementations for modelling [vote diffusion](#vote-diffusion)
-* While there remain some work to be done on that front, we should be able to make Peras work including the present report fully public
+* Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers.
+* The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strengthened thanks to fruitful collaboration with Quviq:
+    * The _Test model_ aka. _executable  specification_ is defined in Agda then projected to Haskell for direct reuse by `quickcheck-dynamic` execution engine.
+    * A _Soundness proof_ ensures it's consistent with the (higher level) formal specification.
+    * We haven't yet covered _adversarial behavior_ but most scenarios should be straightforward to implement.
+* We have discontinued Rust prototype support, from want of time, but we haven't changed how tests are run so we have strong confidence any implementation with a compatible API should be testable.
+* We have built [a user-facing simulation tool](#simulating-peras) that proved helpful to better understand the protocol's behavior, spot potential issues, and align all stakeholders over an unambiguous prototype.
+* We have built [analytic and](#analyses-of-adversarial-scenarios) [Markov-chain](#markov-chain-simulation) models to simulate various interesting large scale behaviors of Peras probabilistically, providing a wealth of insights on parameters interaction and performance in response to adversarial conditions.
+* We have continued investigating the use of ΔQ formalism, trying to leverage more recent implementations for modelling [vote diffusion](#vote-diffusion).
+* We have documented [constraints on the Peras protocol parameters](#constraints-on-peras-paraemters) and [recommended interim default values](#recommendations-for-peras-parameters) for them.
+* While there remain some work to be done on that front, we should be able to make Peras work including the present report and interactive tools fully public.
 
 # Introduction
 
-## Software Readiness Level
+## Software readiness level
 
 ### Last stage (SRL 3)
 
@@ -85,7 +84,7 @@ The following pictures shows how our R&D process evolved over the course of the 
 | Integrated component tests completed for reused code?                                                                                    | Done    |
 | Integrated component performance results verifying analytical predictions and definition of relevant operational environment documented? | Done    |
 
-Relevant documents:
+*Relevant documents:*
 
 | document                 | status  |
 |--------------------------|---------|
@@ -111,8 +110,9 @@ Relevant documents:
 
 > [!IMPORTANT]
 > Do we want to provide a detailed description of the protocol here?
-> Seems to me we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
-> If we delete this section, then we need to document how the executable specification varies from the paper and/or the relational specification.
+> - It seems that we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
+> - If we delete this section, then we need to document how the executable specification varies from the paper and/or the relational specification.
+> - Alternatively, we could move this section to an appendix or to the web site and indicate that it is non-normative.
 
 ## Variables
 
@@ -177,7 +177,7 @@ Party $\mathsf{P}$ does the following at the beginning of each voting round $r$:
     - `Vo3`: then create a vote $v = (r, \mathsf{P}, h,...)$,
     - `Vo4`: Add $v$ to $\mathcal{V}$ and diffuse it.
 
-# Votes & Certificates
+# Votes & certificates
 
 This section details the Peras voting process, from the casting and detailed structure of votes, to the creation, diffusion, and storage of certificates.
 
@@ -185,16 +185,16 @@ This section details the Peras voting process, from the casting and detailed str
 
 ### Overview
 
-Voting in Peras is mimicked after the _sortition_ algorithm used in Praos, e.g it is based on the use of a _Verifiable Random Function_ by each stake-pool operator guaranteeing the following properties:
+Voting in Peras is mimicked after the _sortition_ algorithm used in Praos, e.g it is based on the use of a _Verifiable Random Function_ (VRF) by each stake-pool operator guaranteeing the following properties:
 
 * The probability for each voter to cast their vote in a given round is correlated to their share of total stake,
 * It should be computationally impossible to predict a given SPO's schedule without access to their secret key VRF key,
 * Verification of a voter's right to vote in a round should be efficiently computable,
-* Vote should be unique and non-malleable (this is a requirement for the use of efficient certificates aggregation, see [below](#alba-certificates)).
+* A vote should be unique and non-malleable (this is a requirement for the use of efficient certificates aggregation, see [below](#alba-certificates)).
 
 Additionally we would like the following property to be provided by our voting scheme:
 
-* Voting should require minimal additional configuration (ie. key management) for SPOs,
+* Voting should require minimal additional configuration (i.e., key management) for SPOs,
 * Voting and certificates construction should be fast in order to ensure we do not interfere with other operations happening in the node.
 
 We have experimented with two different algorithms for voting, which we detail below.
@@ -256,28 +256,28 @@ A vote is _cast_ by a node using the following process which paraphrases the [ac
 
 ### Leader-election like voting
 
-The first algorithm is basically identical to the one used for [Mithril](https://mithril.network) signatures, and is also the one envisioned for [Leios](https://leios.cardano-scaling.org) (see Appendix D of the paper). It's based on the following principles:
+The first algorithm is basically identical to the one used for [Mithril](https://mithril.network) signatures, and is also the one envisioned for [Leios](https://leios.cardano-scaling.org) (see Appendix D of the recent Leios paper). It is based on the following principles:
 
 * The goal of the algorithm is to produce a number of votes targeting a certain threshold such that each voter receives a number of vote proportionate to $\sigma$, their fraction of total stake, according to the basic probability function $\phi(\sigma) = 1 - (1 - f)^\sigma$,
 * There are various parameters to the algorithm:
-  * $f$ is the fraction of slots that are "active" for voting
-  * $m$ is the number of _lottery_ each voter should try to get a vote for,
-  * $k$ is the target total number of votes for each round (eg. quorum). $k$ should be chosen such that $k = m \dot \phi(0.5)$ to reach a majority quorum,
-* When its turn to vote comes, each node run iterates over an index $i \in \[1 \dots m\]$, computes a hash from the _nonce_ and the index $i$, and compares this hash with $f(\sigma)$: if it's lower than or equal, then the node has one vote
-  * Note the computation $f(\sigma)$ is exactly identical to the one used for [leader election](https://github.com/intersectmbo/cardano-ledger/blob/f0d71456e5df5a05a29dc7c0ac9dd3d61819edc8/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L434)
+    * $f$ is the fraction of slots that are "active" for voting
+    * $m$ is the number of _lotteries_ each voter should try to get a vote for,
+    * $k$ is the target total number of votes for each round (e.g., quorum) $k$ should be chosen such that $k = m \cdot \phi(0.5)$ to reach a majority quorum,
+* When its turn to vote comes, each node run iterates over an index $i \in [1 \dots m]$, computes a hash from the _nonce_ and the index $i$, and compares this hash with $f(\sigma)$: if it's lower than or equal, then the node has one vote.
+    * Note the computation $f(\sigma)$ is exactly identical to the one used for [leader election](https://github.com/intersectmbo/cardano-ledger/blob/f0d71456e5df5a05a29dc7c0ac9dd3d61819edc8/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L434).
 
 We [prototyped](https://github.com/input-output-hk/peras-design/blob/73eabecd272c703f1e1ed0be7eeb437d937e1179/peras-vote/src/Peras/Voting/Vote.hs#L311) this approach in Haskell.
 
 ### Sortition-like voting
 
-The second algorithm is based on the _sortition_ process initially invented by [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) and [implemented](https://github.com/algorand/sortition/blob/main/sortition.cpp) in their node. It's based on the same idea, ie. that a node should have a number of votes proportional to their fraction of total stake, given a target "committee size" expressed as a fraction of total stake $p$. And it uses the fact the number of votes a single node should get based on these parameters follows a binomial distribution.
+The second algorithm is based on the _sortition_ process initially invented by [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) and [implemented](https://github.com/algorand/sortition/blob/main/sortition.cpp) in their node. It's based on the same idea, namely that a node should have a number of votes proportional to their fraction of total stake, given a target "committee size" expressed as a fraction of total stake $p$. And it uses the fact the number of votes a single node should get based on these parameters follows a binomial distribution.
 
 The process for voting is thus:
 
-* Compute the individual probability of each "coin" to win a single vote $p$ as the ratio of expected committee size over total stake
-* Compute the binomial distribution $B(n,p)$ where $n$ is the node's stake
-* Compute a random number between 0 and 1 using _nonce_ as the denominator over maximum possible value (eg. all bits set to 1) for the nonce as denominator
-* Use [bisection method](https://en.wikipedia.org/wiki/Bisection_method) to find the value corresponding to this probability in the CDF for the aforementioned distribution
+* Compute the individual probability of each "coin" to win a single vote $p$ as the ratio of expected committee size over total stake.
+* Compute the binomial distribution $B(n,p)$ where $n$ is the node's stake.
+* Compute a random number between 0 and 1 using _nonce_ as the denominator over maximum possible value (eg. all bits set to 1) for the nonce as denominator.
+* Use [bisection method](https://en.wikipedia.org/wiki/Bisection_method) to find the value corresponding to this probability in the CDF for the aforementioned distribution.
 
 This yields a vote with some _weight_ attached to it "randomly" computed so that the overall sum of weights should be around expected committee size.
 
@@ -303,15 +303,15 @@ Mithril certificates have the following features:
 
 * They depend on BLS-curve signatures aggregation to produce a so-called _State based Threshold Multi-Signature_ that's easy to verify,
 * Each node relies on a _random lottery_ as described in the [previous section](#leader-election-like-voting) to produce a vote weighted by their share of total stake,
-* The use of BLS signatures implies nodes will need to generate and exchange specialised keys for the purpose of voting, something we know from [Mithril](https://mithril.network/doc/mithril/mithril-protocol/certificates) is somewhat tricky as it requires some form of consensus to guarantee all nodes have the exact same view of the key set.
+* The use of BLS signatures implies nodes will need to generate and exchange specialized keys for the purpose of voting, something we know from [Mithril](https://mithril.network/doc/mithril/mithril-protocol/certificates) is somewhat tricky as it requires some form of consensus to guarantee all nodes have the exact same view of the key set.
 
 ### ALBA
 
 [Approximate Lower Bound Arguments](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) or _ALBAs_ in short, are a novel cryptographic algorithm based on a _telescope_ construction providing a fast way to build compact certificates out of a large number of _unique_ items. A lot more details are provided in the paper, on the [website](https://alba.cardano-scaling.org) and the [GitHub repository](https://github.com/cardano-scaling/alba) where implementation is being developed, we only provide here some key information relevant to the use of ALBAs in Peras.
 
-#### Proving & Verification time
+#### Proving & verification time
 
-ALBA expected proving time is benchmarked in the following picture which shows mean execution time for generating a proof depending on: The _total_ number of votes, the actual number of votes ($s_p$), the honest ratio ($n_p$). Note that as proving time increases exponentially when $s_p \rightarrow total \dot n_p$, we only show here the situation when $s_p = total$ and $s_p = total - total n_p / 2$ to ensure graph stays legible.
+ALBA expected proving time is benchmarked in the following picture which shows mean execution time for generating a proof depending on: The _total_ number of votes, the actual number of votes ($s_p$), the honest ratio ($n_p$). Note that as proving time increases exponentially when $s_p \rightarrow total \cdot n_p$, we only show here the situation when $s_p = total$ and $s_p = total - total \cdot n_p / 2$ to ensure graph stays legible.
 
 ![ALBA Proving Time](../static/img/alba-proving.png)
 
@@ -319,7 +319,7 @@ The following diagram is an excerpt from the ALBA benchmarks highlighting verifi
 
 ![ALBA Verification Time](../static/img/alba-verifying.png)
 
-In practice, as the number of votes is expected to be in the 1000-2000 range, and there's ample time in a round to guarantee those votes are properly delivered to all potential voting nodes (see below), we can safely assume proving time of about 5ms, and verification time under a millisecond.
+In practice, as the number of votes is expected to be in the 1000-2000 range, and there's ample time in a round to guarantee those votes are properly delivered to all potential voting nodes (see below), we can safely assume proving time of about 5 ms, and verification time under a millisecond.
 
 #### Certificate size
 
@@ -337,42 +337,42 @@ In the following tables we compare some relevant metrics between the two differe
 
 For Mithril certificates, assuming parameters similar to mainnet's ($k=2422, m=20973, f=0.2$):
 
-| Feature                         |       |
-|---------------------------------|-------|
-| Certificate size                | 56kB  |
-| Proving time (per vote)         | ~70ms |
-| Aggregation time                | 1.2s  |
-| Verification time (certificate) | 17ms  |
+| Feature                         | Metric |
+| ------------------------------- | ------ |
+| Certificate size                | 56 kB  |
+| Proving time (per vote)         | ~70 ms |
+| Aggregation time                | 1.2 s  |
+| Verification time (certificate) | 17 ms  |
 
 For ALBA certificates, assuming 1000 votes, a honest to faulty ratio of 80/20, and security parameter $λ=128$. Note the proving time _does not_ take into account individual vote verification time, whereas certificate's verification time _includes_ votes verification time.
 
-| Feature                         |        |
-|---------------------------------|--------|
-| Certificate size                | 47kB   |
-| Proving time (per vote)         | ~133us |
-| Aggregation time                | ~5ms   |
-| Verification time (certificate) | 15ms   |
-|                                 |        |
+| Feature                         | Metric  |
+| ------------------------------- | ------- |
+| Certificate size                | 47 kB   |
+| Proving time (per vote)         | ~133 us |
+| Aggregation time                | ~5 ms   |
+| Verification time (certificate) | 15 ms   |
+|                                 |         |
 
 ## Vote diffusion
 
 Building on [previous work](./tech-report-1#network-performance-analysis), we built a ΔQ model to evaluate the expected delay to reach _quorum_.
 The model works as follows:
 
-* We start from a base uniform distribution of single MTU latency between 2 nodes, assuming a vote fits in a single TCP frame. The base latencies are identical as the one used in previous report,
-* We then use the expected distribution of paths length for a random graph with 15 average connections, to model the latency distribution across the network, again reusing previously known values,
-* We then apply the `NToFinish 75` combinator to this distribution to compute the expected distribution to reach 75% of the votes (quorum)
-* An important assumption is that each vote diffusion across the network is expected to be independent from all other votes,
+* We start from a base uniform distribution of single MTU latency between 2 nodes, assuming a vote fits in a single TCP frame. The base latencies are identical as the one used in previous report.
+* We then use the expected distribution of paths length for a random graph with 15 average connections, to model the latency distribution across the network, again reusing previously known values.
+* We then apply the `NToFinish 75` combinator to this distribution to compute the expected distribution to reach 75% of the votes (quorum).
+* An important assumption is that each vote diffusion across the network is expected to be independent from all other votes.
 * Verification time for a single vote is drawn from the above benchmarks, but we also want to take into account the verification time of a single vote, which we do in 2 different ways:
-  * One distribution assumes a node does all verifications sequentially, one vote at a time
-  * Another assumes all verifications can be done in parallel
-  * Of course, the actual verification time should be expected to be in between those 2 extremes
+    * One distribution assumes a node does all verifications sequentially, one vote at a time
+    * Another assumes all verifications can be done in parallel
+    * Of course, the actual verification time should be expected to be in between those 2 extremes
 
-Using the "old" version of ΔQ library based on numerical (eg. Monte-Carlo) sampling, yields the following graph:
+Using the "old" version of ΔQ library based on numerical (e.g., Monte-Carlo) sampling, yields the following graph:
 
 ![Vote diffusion](../static/img/vote-diffusion.svg)
 
-This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1s most of the time to compare with a round length of about 2 minutes.
+This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1 second most of the time to compare with a round length of about 2 minutes.
 
 > [!NOTE]
 >
@@ -466,7 +466,7 @@ The input configuration file specifies the protocol parameters, the initial stat
 }
 ```
 
-The output configuration file reveals all of the chains, votes, etc. tracked by each node/party. The trace file is a JSON array of events occurring in the simulation. The trace file converted to a GraphViz `.dot` file for visualization. Traces can also be piped into tools for real-time analysis.
+The output configuration file reveals all of the chains, votes, etc. tracked by each node/party. The trace file is a JSON array of events occurring in the simulation. The trace file can be converted to a GraphViz `.dot` file for visualization. Traces can also be piped into tools for real-time analysis.
 
 | Tag                         | Event                                                      |
 |-----------------------------|------------------------------------------------------------|
@@ -520,16 +520,16 @@ The screenshot below shows the user interface for the Peras simulation web appli
 The screenshot below shows the visualization of the Peras block tree:
 
 - Light blue rectangles represent blocks that do not record Peras certificates, whereas dark blue rectangles represent blocks that do record Peras certificates recorded in them.
-    - Block lines point to the parent block.
+    - Block arrows point to the parent block.
     - The three ⊤ and ⊥ symbols in the block indicate whether each of the three certificate-inclusion rules are true or false, respectively.
 - Salmon-colored circles represent votes for blocks, whereas olive-colored circles represent situation were a party was on the voting committee but not allowed to vote.
-    - Salmon-colored dashed lines point to the block being voted for.
+    - Salmon-colored dashed arrows point to the block being voted for.
     - The four ⊤ and ⊥ symbols in the block indicate whether each of the four voting rules are true or false, respectively.
 - Certificates are aqua rectangles.
-    - Aqua dashed lines point to the block being certified.
+    - Aqua dashed arrows point to the block being certified.
 - Nodes are red circles.
-    - The red dashed lines point to the tip of their preferred blockchain.
-    - The orange dashed lines point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
+    - The red dashed arrows point to the tip of their preferred blockchain.
+    - The orange dashed arrows point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
 
 ![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
 
@@ -555,9 +555,9 @@ Available options:
 
 ## Markov-chain simulation
 
-The prototype high-fidelity simulation of the Peras protocol that was presented in the previous section has the drawback that it is relatively slow because of its faithfulness to details of the protocol. The protocol operates the same (in terms of block-creation, voting, cool-down, etc.) regardless irrelevant details such as the specific hashes of various object and parts of the block-tree history. Simulating the *behavior* of the protocol only requires a subset of the full information embedded in the objects that the protocol specifies.
+The prototype high-fidelity simulation of the Peras protocol that was presented in the previous section has the drawback that it is relatively slow because of its faithfulness to details of the protocol. The protocol operates the same (in terms of block-creation, voting, cool-down, etc.) regardless of irrelevant details such as the specific values of hashes of various object and parts of the block-tree history. Simulating the *behavior* of the protocol only requires a subset of the full information embedded in the objects that the protocol specifies.
 
-Furthermore, certain significant adversarial scenarios can be approximately modeled by just considering two chains, and honest one and and adversarial one. Typically, the adversary builds their chain privately until they gain some advantage by revealing it to the honest parties. A worst-case adversarial scenarios is when all the adversaries collude to build a single chain, as opposed to competing with each other by building separate adversarial chains. (Note, however, that some adversarial scenarios involve the adversaries building several "equivocated" chains in private.) In the routine course of forging blocks, honest parties might create short honest forks that are soon resolved into a preferred chain. One can idealize this process by just considering the honestly preferred chain, ignoring the short honest forks and renormalizing the probability of forging an honest block to account for the "wasted" forging of short forks that are quickly abandoned.
+Furthermore, certain significant adversarial scenarios can be approximately modeled by just considering two chains, an honest one an and adversarial one. Typically, the adversary builds their chain privately until they gain some advantage by revealing it to the honest parties. A worst-case adversarial scenarios is when all the adversaries collude to build a single chain, as opposed to competing with each other by building separate adversarial chains. (Note, however, that some adversarial scenarios involve the adversaries building several "equivocated" chains in private.) In the routine course of forging blocks, honest parties might create short honest forks that are soon resolved into a preferred chain. One can idealize this process by just considering the honestly preferred chain, ignoring the short honest forks and renormalizing the probability of forging an honest block to account for the "wasted" forging of short forks that are quickly abandoned.
 
 With these simplifications, one can model a Peras chain with a minimum of information required by the Protocol's logic. In the two-chain case, both the honest and adversarial parties maintain this information about their own chains.
 
@@ -586,9 +586,9 @@ Static values of the fraction of honest and adversarial stake result in eight co
     - Quorum of adversarial parties
     - Quorum requiring both honest and adversarial parties
 
-Each slot that is not the start of a voting round involves a fourfold transition and each slot that is the start of a voting round involves a sixteen-fold transition. Instead of performing a Monte-Carlo simulation where only one of these four or sixteen transitions is selected according to a random variable, we can track all transitions with a data structure that assigns the cumulative probability to each outgoing state. In principle, this involves a computing a rapidly expanding state space. In practice, however, one can prune this state space by discarding states with vanishingly small probabilities. Typically, one might discard any states with probability less than $10^{-30}$ in order to keep modest the memory footprint of the Markov-chain simulation. For Peras, this results in only having to track a million or so states, even for simulations of tens of thousands of slots.
+Each slot that is not the start of a voting round involves a fourfold transition and each slot that is the start of a voting round involves a sixteen-fold transition. Instead of performing a Monte-Carlo simulation where only one of these four or sixteen transitions is selected according to a random variable, we can track all transitions with a data structure that assigns the cumulative probability to each outgoing state. In principle, this involves a computations on a rapidly expanding state space. In practice, however, one can prune this state space by discarding states with vanishingly small probabilities. Typically, one might discard any states with probability less than $10^{-30}$ in order to keep modest the memory footprint of the Markov-chain simulation. For Peras, this results in only having to track a million or so states, even for simulations of tens of thousands of slots.
 
-Honest behavior proceeds according to the protocol. Adversarial behavior may differ from the protocol, but must respect the transition probabilities because those probabilities represent the incorruptible sortition rules for slot leadership or voting-committee membership. Here are examples of easily-encoded adversarial behavior:
+Honest behavior proceeds according to the protocol. Adversarial behavior may differ from the protocol, but must respect the transition probabilities because those probabilities represent the incorruptible sortition rules for slot leadership or voting-committee membership. Here are some examples of easily-encoded adversarial behavior:
 
 1. The adversary never joins honest parties in creating a quorum. Thus, the probability of no certificate being created for a round is $\mathcal{P}(\text{No quorum}) + \mathcal{P}(\text{Quorum requiring both honest and adversarial parties})$ .
 2. The adversary builds their chain privately, in which case the global state variable "$\text{The slot number for the last common prefix of the individual chains}$" is never updated to reflect communication from the adversarial to the honest party.
@@ -700,11 +700,11 @@ function(f, n)
 
 ***Relevance:*** This analysis can be used to set the certificate-expiration parameter $A$.
 
-***Risk:*** An adversary can trigger a premature ending of the cool-down period (via rule VR-2B) by preventing a new *cert\** from being recorded in a block.
+***Risk:*** An adversary can trigger a premature ending of the cool-down period (via rule VR-2B) by preventing a new $\mathsf{cert}^*$ from being recorded in a block.
 
-***Scenario:***  Consider the situation where the voting certificate must be included on the chain (via rule Block Creation 1b), but no honest blocks are forged before the last *cert′* expires and adversaries abstain from updating *cert′* when they forge blocks.
+***Scenario:***  Consider the situation where the voting certificate must be included on the chain (via rule Block Creation 1b), but no honest blocks are forged before the last $\mathsf{cert}^\prime$ expires and adversaries abstain from updating $\mathsf{cert}^\prime$ when they forge blocks.
 
-***Analysis:***. The probability that adversaries forge every block during the period when the certificate hasn't expired is
+***Analysis:***. The probability that adversaries forge every block during the period when the certificate has not expired is
 
 $$
 P = (1 - p)^A = (1 - \alpha)^{(1 - f) \cdot A}
@@ -815,7 +815,7 @@ function(s, B, p, q)
   sum(pbinom((B-1):(s+B-1), s, p) * dbinom(0:s, s, q))
 ```
 
-***Example:*** Plot the probability of the honest chain not healing from an adversarial boost, as a function of the healing time $s$ and the boost $B$, under the assumption that the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ a.
+***Example:*** Plot the probability of the honest chain not healing from an adversarial boost, as a function of the healing time $s$ and the boost $B$, under the assumption that the active-slot coefficient is $\alpha = 0.05 \, \text{slot}^{-1}$.
 
 ![Probability of not healing from an adversarial boost, given 5% active slots.](../diagrams/healing-from-adversarial-boost.plot.png)
 
@@ -885,7 +885,7 @@ function(s, p, q)
   sum(pbinom(0:s, s, p) * dbinom(0:s, s, q))
 ```
 
-***Example:*** Plot the probability of the adversarial chain being at least as long as the honest chain, as a function of the common-prefix time $s$, under the assumption that the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ a.
+***Example:*** Plot the probability of the adversarial chain being at least as long as the honest chain, as a function of the common-prefix time $s$, under the assumption that the active-slot coefficient is $\alpha = 0.05 \, \text{slot}^{-1}$.
 
 ![Probability of not achieving the common-prefix time, given 5% active slots.](../diagrams/no-common-prefix.plot.png)
 
@@ -976,7 +976,7 @@ A boost of 10 blocks/certificate makes the successful adversarial behavior even 
 
 | Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
 | -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
-|           60 |     0.00e+00 |      4.92e-14 |      2.98e-12 |      5.56e-11 |      2.23e-07 |
+|           60 |      < 1e-16 |      4.92e-14 |      2.98e-12 |      5.56e-11 |      2.23e-07 |
 |           90 |     7.77e-16 |      8.89e-13 |      5.65e-11 |      1.10e-09 |      4.98e-06 |
 |          120 |     3.55e-15 |      4.47e-12 |      3.01e-10 |      6.15e-09 |      3.27e-05 |
 |          150 |     8.88e-15 |      1.16e-11 |      8.39e-10 |      1.82e-08 |      1.16e-04 |
@@ -993,16 +993,16 @@ A boost of 15 blocks/certificate makes the successful adversarial behavior even 
 
 | Round Length | 5% Adversary | 10% Adversary | 15% Adversary | 20% Adversary | 45% Adversary |
 | -----------: | -----------: | ------------: | ------------: | ------------: | ------------: |
-|           60 |     0.00e+00 |      0.00e+00 |      0.00e+00 |      0.00e+00 |      9.81e-13 |
-|           90 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      8.88e-16 |      2.24e-10 |
-|          120 |     0.00e+00 |      0.00e+00 |      2.22e-16 |      2.39e-14 |      6.59e-09 |
+|           60 |      < 1e-16 |       < 1e-16 |       < 1e-16 |       < 1e-16 |      9.81e-13 |
+|           90 |      < 1e-16 |       < 1e-16 |      2.22e-16 |      8.88e-16 |      2.24e-10 |
+|          120 |      < 1e-16 |       < 1e-16 |      2.22e-16 |      2.39e-14 |      6.59e-09 |
 |          150 |     1.11e-16 |      1.11e-16 |      2.78e-15 |      2.19e-13 |      6.90e-08 |
-|          180 |     0.00e+00 |      2.22e-16 |      1.18e-14 |      1.07e-12 |      3.91e-07 |
-|          240 |     0.00e+00 |      3.33e-16 |      7.89e-14 |      8.19e-12 |      4.29e-06 |
+|          180 |      < 1e-16 |      2.22e-16 |      1.18e-14 |      1.07e-12 |      3.91e-07 |
+|          240 |      < 1e-16 |      3.33e-16 |      7.89e-14 |      8.19e-12 |      4.29e-06 |
 |          300 |     3.33e-16 |      4.44e-16 |      2.16e-13 |      2.61e-11 |      2.07e-05 |
 |          360 |     1.11e-16 |      5.55e-16 |      3.49e-13 |      5.01e-11 |      6.26e-05 |
-|          420 |     0.00e+00 |      6.66e-16 |      4.01e-13 |      6.97e-11 |      1.42e-04 |
-|          480 |     0.00e+00 |      2.22e-16 |      3.68e-13 |      7.81e-11 |      2.65e-04 |
+|          420 |      < 1e-16 |      6.66e-16 |      4.01e-13 |      6.97e-11 |      1.42e-04 |
+|          480 |      < 1e-16 |      2.22e-16 |      3.68e-13 |      7.81e-11 |      2.65e-04 |
 |          540 |     3.33e-16 |      2.22e-16 |      2.88e-13 |      7.53e-11 |      4.35e-04 |
 |          600 |     2.22e-16 |      3.33e-16 |      2.00e-13 |      6.51e-11 |      6.47e-04 |
 
@@ -1022,7 +1022,7 @@ Based on the analysis of adversarial scenarios, a reasonable set of default prot
 | Committee size         | $n$              | parties |   900 | 1 ppm probability of no honest quorum at 10% adversarial stake.      |
 | Quorum size            | $\tau$           | parties |   675 | Three-quarters of committee size.                                    |
 
-A *block-selection offset* of $L = 30 \text{\,slots}$ allows plenty of time for blocks to diffuse to voters before a vote occurs. Combining this with a *round length* of $U = 90 \text{\, slots}$ ensures that there is certainty in $U + L = 120 \text{\,slots}$ as to whether a block has been cemented onto the preferred chain by the presence of a certificate for a subsequent block. That certainty of not rolling back certified blocks is provided by a *certification boost* of $B = 15 \text{\,blocks}$ because of the infinitesimal probability of forging that many blocks on a non-preferred fork within the time $U$. Thus, anyone seeing a transaction appearing in a block need wait no more than two minutes to be certain whether the transaction is on the preferred chain (effectively permanently, less than a one in a trillion probability even at 45% adversarial stake) versus discarded because of a roll back. Unless the transaction has a stringent time-to-live (TTL) constraint, it can be resubmitted in the first $U - L = 60 \text{\,slots}$ of the current round, or in a subsequent round.
+A *block-selection offset* of $L = 30 \text{\,slots}$ allows plenty of time for blocks to diffuse to voters before a vote occurs. Combining this with a *round length* of $U = 90 \text{\, slots}$ ensures that there is certainty in $U + L = 120 \text{\,slots}$ as to whether a block has been cemented onto the preferred chain by the presence of a certificate for a subsequent block. That certainty of not rolling back certified blocks is provided by a *certification boost* of $B = 15 \text{\,blocks}$ because of the infinitesimal probability of forging that many blocks on a non-preferred fork within the time $U$. Thus, anyone seeing a transaction appearing in a block need wait no more than two minutes to be certain whether the transaction is on the preferred chain (effectively permanently, less than a one in a trillion probability even at 45% adversarial stake) versus having been discarded because of a roll back. Unless the transaction has a stringent time-to-live (TTL) constraint, it can be resubmitted in the first $U - L = 60 \text{\,slots}$ of the current round, or in a subsequent round.
 
 > [!WARNING]
 > The security-related computations in the next paragraph are not rigorous with respect to the healing, chain-quality, and common-prefix times, so they need correction after the research team reviews them and proposes a better approach. 
@@ -1037,8 +1037,7 @@ In the following subsections we explain how the formal specification of Ouroboro
 
 ## Formal specification
 
-The formal specification is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time.
-Computational aspects in general are not considered, but are only defined by types, which might be refined by properties. The block-tree is an example of such a type that is not implemented in the formal specification, but on the other hand defined by properties specifying the behavior of an implementation of this data structure.
+The formal specification is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time. Computational aspects in general are not considered, but are only defined by types, which might be refined by properties. The block-tree is an example of such a type that is not implemented in the formal specification, but on the other hand defined by properties specifying the behavior of an implementation of this data structure.
 
 This is different approach to for example the formal ledger specification, where the formal specification is also directly executable.
 
@@ -1133,7 +1132,7 @@ Finished in 4.7193 seconds
 
 ## Lessons learned from experiments with Agda-to-Haskell workflows
 
-Aside from the workflow that we finally settle upon and that is described above, we explored several workflows for connecting the relational specification in Agda to `quickcheck-dynamic` tests in Haskell. This involves accommodating or working around several tensions:
+Aside from the workflow that we finally settled upon and that is described above, we explored several workflows for connecting the relational specification in Agda to `quickcheck-dynamic` tests in Haskell. This involves accommodating or working around several tensions:
 
 - The relational specification uses the Agda Standard Library, which is not compatible with `agda2hs`.
     - Many of the Agda function names containing unicode characters or name patterns are not valid Haskell identifiers.
@@ -1158,17 +1157,17 @@ Aside from the workflow that we finally settle upon and that is described above,
 
 The following picture attempts to clarify the relationship between Agda and Haskell as it has been explored in a hybrid Agda/Haskell specification/testing implementation:
 
-* Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than `agda2hs` and Haskell's `Prelude` obviously
-* Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (Eg. numbers, lists, tuples, etc.)
-* The Agda code separates `Types` from `Impl`ementation in order to ease generation
-* `Types` are generated using agda2hs to provide unmangled names and simple structures on the Haskell side
-* `Impl` is generate usign GHC to enable full use of stdlib stuff, with toplevel _interface_ functions generated with unmangled names
-* `Types` are also taken into account when compiling using GHC but they are only "virtual", eg. the compiler makes the GHC-generated code depend on the `agda2hs` generated types
-* Hand-written Haskell code can call unmangled types and functions
+* Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than `agda2hs` and Haskell's `Prelude` obviously.
+* Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (e.g., numbers, lists, tuples, etc.).
+* The Agda code separates `Types` from `Implementation` in order to ease generation.
+* `Types` are generated using agda2hs to provide unmangled names and simple structures on the Haskell side.
+* `Impl` is generate usign GHC to enable full use of stdlib stuff, with toplevel _interface_ functions generated with unmangled names.
+* `Types` are also taken into account when compiling using GHC but they are only "virtual", namely the compiler makes the GHC-generated code depend on the `agda2hs` generated types.
+* Hand-written Haskell code can call unmangled types and functions.
 
 ![Agda-Haskell Interactions](../diagrams/agda-haskell-interactions.jpg)
 
-We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A new `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs significantly slower, likely because it involves more than two hundred Haskell modules.
+We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs significantly slower, likely because it involves more than two hundred Haskell modules.
 
 * `agda2hs` version: 4m 45.206s (250 tests)
 * `MAlonzo` version: 10m 46.280s (250 tests)
@@ -1224,7 +1223,7 @@ There are still opportunities for syntactic sugar that would make the code more 
 # Community feedback
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
-- **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e. how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc.
+- **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e., how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc.
 - **Transparency and Rationale**: Stakeholders want clarity on the cost of Peras (in terms of ADA, fees, or resources) and a clear explanation of why this solution is possible now when it wasn't before.
 - **Speed and Efficiency**: Some stakeholders emphasize the need for a faster development process, suggesting that the formal specification could be developed in parallel with the technical implementation.
 - **Timeline**: Stakeholders are curious about the timeline for Peras development and implementation.
@@ -1239,10 +1238,10 @@ In this section, we evaluate the impact on the day-to-day operations of the Card
 
 For a fully synced nodes, the impact of Peras on network traffic is modest:
 
-* For votes, assuming $U ~ 100$, a committee size of 2000 SPOs, a single vote size of 700 bytes, means we will be adding an average of 14kB/s to the expected traffic to each node,
-* For certificates, assuming an average of 50kB size (half way between Mithril and ALBA sizes) means an negligible increase of 0.5kB/s on average. Note that a node will download either votes or certificate for a given round, but never both so these numbers are not cumulative.
+* For votes, assuming $U \approx 100$, a committee size of 2000 SPOs, a single vote size of 700 bytes, means we will be adding an average of 14 kB/s to the expected traffic to each node,
+* For certificates, assuming an average of 50 kB size (half way between Mithril and ALBA sizes) means an negligible increase of 0.5 kB/s on average. Note that a node will download either votes or certificate for a given round, but never both so these numbers are not cumulative.
 
-A non fully synced nodes will have to catch-up with the _tip_ of the chain and therefore download all relevant blocks _and_ certificates. At 50% load (current [monthly load](https://cexplorer.io/usage) is 34% as of this writing), the chain produces a 45kB block every 20s on average. Here are back-of-the-napkin estimates of the amount of data a node would have to download (and store) for synchronising, depending on how long it's been offline:
+A non fully synced nodes will have to catch-up with the _tip_ of the chain and therefore download all relevant blocks _and_ certificates. At 50% load (current [monthly load](https://cexplorer.io/usage) is 34% as of this writing), the chain produces a 45 kB block every 20 s on average. Here are back-of-the-napkin estimates of the amount of data a node would have to download (and store) for synchronizing, depending on how long it has been offline:
 
 | Time offline | Blocks (GB) | Certificates (GB) |
 |--------------|-------------|-------------------|
@@ -1258,22 +1257,22 @@ We did some research on network pricing for a few major Cloud and well-known VPS
 
 The next table compares the cost (in US$/month) for different outgoing data transfer volumes expressed as bytes/seconds, on similar VMs tailored to cardano-node's [hardware requirements](https://developers.cardano.org/docs/operate-a-stake-pool/hardware-requirements/) (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs depending on transfer rate.
 
-| Provider     | VM     | 50kB/s | 125kB/s | 250kB/s |
-|--------------|--------|--------|---------|---------|
-| DigitalOcean | $188   | $188   | $188    | $188    |
-| Google Cloud | $200   | $213.6 | $234    | $268    |
-| AWS          | $150 ? | $161.1 | $177.9  | $205.8  |
-| Azure        | $175   | $186   | $202    | $230    |
-| OVH          | $70    | $70    | $70     | $70     |
-| Hetzner      | $32    | $32    | $32     | $32     |
+| Provider     | VM     | 50 kB/s | 125 kB/s | 250 kB/s |
+| ------------ | ------ | ------- | -------- | -------- |
+| DigitalOcean | $188   | $188    | $188     | $188     |
+| Google Cloud | $200   | $213.6  | $234     | $268     |
+| AWS          | $150 ? | $161.1  | $177.9   | $205.8   |
+| Azure        | $175   | $186    | $202     | $230     |
+| OVH          | $70    | $70     | $70      | $70      |
+| Hetzner      | $32    | $32     | $32      | $32      |
 
 **Notes**:
 
-* the AWS cost is quite hard to estimate up-front, obviously on purpose. The $150 base price is a rough average of various instances options in the target range
-* Google, AWS and Azure prices are based on 100% uptime and at least 1-year reservation for discounts
+* The AWS cost is quite hard to estimate up-front, obviously on purpose. The $150 base price is a rough average of various instances options in the target range.
+* Google, AWS and Azure prices are based on 100% uptime and at least 1-year reservation for discounts.
 * Cloud providers only charge _outgoing_ network traffic. The actual cost per GB depends on the destination, this table assumes all outbound traffic will be targeted outside of the provider which obviously won't be true, so it should be treated as an upper bound.
 
-For an AWS hosted SPO, which represent about 20% of the SPOs, a 14kB/s increase in traffic would lead to a cost increase of **$3.8/mo** (34GB times $0.11/GB). This represents an average across the whole network: depending on the source of the vote and its diffusion pattern, some nodes might need to send a vote to more than one downstream peer which will increase their traffic, while other nodes might end up not needing to send a single vote to their own peers. Any single node in the network is expected to download each vote _at most_ once.
+For an AWS hosted SPO, which represent about 20% of the SPOs, a 14 kB/s increase in traffic would lead to a cost increase of **$3.8/mo** (34 GB times $0.11/GB). This represents an average across the whole network: depending on the source of the vote and its diffusion pattern, some nodes might need to send a vote to more than one downstream peer which will increase their traffic, while other nodes might end up not needing to send a single vote to their own peers. Any single node in the network is expected to download each vote _at most_ once.
 
 ## Persistent storage
 
@@ -1289,8 +1288,8 @@ In the [Votes & Certificates](#votes--certificates) section we've provided some 
 
 A node is expected to need to keep in memory:
 
-* Votes for the latest voting round: For a committee size of 1000 and individual vote size of 700 bytes, that's 700kB.
-* Cached certificates for voting rounds up to settlement depth, for fast delivery to downstream nodes: With a boost of 10/certificate, settlement depth would be in the order of 216 blocks, or 4320 seconds, which represent about 10 rounds of 400 slots. Each certificate weighing 50kB, that's another 500kB of data a node would need to cache in memory.
+* Votes for the latest voting round: For a committee size of 1000 and individual vote size of 700 bytes, that's 700 kB.
+* Cached certificates for voting rounds up to settlement depth, for fast delivery to downstream nodes: With a boost of 10/certificate, settlement depth would be in the order of 216 blocks, or 4320 seconds, which represent about 10 rounds of 400 slots. Each certificate weighing 50 kB, that's another 500 kB of data a node would need to cache in memory.
 
 Peras should not have any significant impact on the memory requirements of a node.
 
@@ -1304,18 +1303,18 @@ The following picture summarizes a possible architecture for Peras highlighting 
 
 The main impacts identified so far are:
 
-* There is no impact in the existing block diffusion process, and no changes to block headers structure
-* Block body structure needs to be changed to accomodate for a certificate when entering _cooldown_ period
-* Consensus _best chain_ selection algorithm needs to be aware of the existence of a _quorum_ to compute the _weight_ of a possible chain, which is manifested by a _certificate_ from the Peras component
-  * Consensus will need to maintain or query a list of valid certificates (eg. similar to _volatile_ blocks) as they are received or produced
-  * Chain selection and headers diffusion is not dependent on individual votes
-* Peras component can be treated as another _chain follower_ to which new blocks and rollbacks are reported
-  * Peras component will also need to be able to retrieve current _stake distribution_
-  * It needs to have access to VRF and KES keys for voting, should we decide to forfeit BLS signature scheme
-* Dedicated long term storage will be needed for certificates
-* Networking layer will need to accomodate (at least) two new mini-protocols for votes and certificates diffusion
-  * This seems to align nicely with current joint effort on [Mithril integration](https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view)
-* Our remarks regarding the possible development of a standalone prototype interacting with a modifified adhoc node still stands and could be a good next step
+* There is no impact in the existing block diffusion process, and no changes to block headers structure.
+* Block body structure needs to be changed to accomodate for a certificate when entering _cooldown_ period.
+* Consensus _best chain_ selection algorithm needs to be aware of the existence of a _quorum_ to compute the _weight_ of a possible chain, which is manifested by a _certificate_ from the Peras component.
+    * Consensus will need to maintain or query a list of valid certificates (eg. similar to _volatile_ blocks) as they are received or produced.
+    * Chain selection and headers diffusion is not dependent on individual votes.
+* Peras component can be treated as another _chain follower_ to which new blocks and rollbacks are reported.
+    * Peras component will also need to be able to retrieve current _stake distribution_.
+    * It needs to have access to VRF and KES keys for voting, should we decide to forfeit BLS signature scheme.
+* Dedicated long term storage will be needed for certificates.
+* Networking layer will need to accomodate (at least) two new mini-protocols for votes and certificates diffusion.
+    * This seems to align nicely with current joint effort on [Mithril integration](https://hackmd.io/yn9643iKTVezLbiVb-BzJA?view).
+* Our remarks regarding the possible development of a standalone prototype interacting with a modifified adhoc node still stands and could be a good next step.
 
 # Conclusion
 
@@ -1332,6 +1331,8 @@ In terms of development impacts and resources, Peras requires only a minimal mod
 In no way does Peras weaken any of the security guarantees provided by Praos or Genesis. Under strongly adversarial conditions, where an adversary can trigger a Peras voting cool-down period, the protocol in essence reverts to the Praos protocol, but for a duration somewhat longer than the Praos security parameter. Otherwise, settlement occurs after each Peras round. This document has approximately mapped the trade-off between having a short duration for each round (and hence faster settlement) versus having a high resistance to an adversary forcing the protocol into a cool-down period. It also estimates the tradeoff between giving chains a larger boost for each certificate (and hence stronger anchoring of that chain) versus keeping the cool-down period shorter.
 
 ## Recommended next steps
+
+The Peras workshop recently held in Edinburgh identified the following possible next steps for prototyping and analysis of the protocol:
 
 - Complete proofs.
     - Voting strings.
