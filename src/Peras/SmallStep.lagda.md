@@ -351,19 +351,6 @@ VR-1B: The  extends the block certified by cert-r−1,
     VotingRule-1B : SlotNumber → T → Set
     VotingRule-1B s t = Any (ChainExtends s t) (allChains t)
 ```
-```agda
-    ChainExtends'? : (b : Maybe Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends' b c ch)
-    ChainExtends'? nothing _ _ = no id
-    ChainExtends'? (just b) c =
-      any? (λ block → (hash block ≟-BlockHash blockRef c))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
-
-    ChainExtends? : (s : SlotNumber) → (t : T) → (c : Chain) → Dec (ChainExtends s t c)
-    ChainExtends? s t = ChainExtends'? (BlockSelection s t) (latestCertSeen t)
-
-    VotingRule-1B? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1B s t)
-    VotingRule-1B? s t = any? (ChainExtends? s t) (allChains t)
-```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
     VotingRule-1 : SlotNumber → T → Set
@@ -371,20 +358,10 @@ VR-1: Both VR-1A and VR-1B hold
         VotingRule-1A (v-round s) t
       × VotingRule-1B s t
 ```
-```agda
-    VotingRule-1? : (s : SlotNumber) → (t : T) → Dec (VotingRule-1 s t)
-    VotingRule-1? s t =
-            VotingRule-1A? (v-round s) t
-      ×-dec VotingRule-1B? s t
-```
 VR-2A: The last certificate a party has seen is from a round at least R rounds back
 ```agda
     VotingRule-2A : RoundNumber → T → Set
     VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
-```
-```agda
-    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
-    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
 ```
 VR-2B: The last certificate included in a party's current chain is from a round exactly
 c⋆K rounds ago for some c : ℕ, c ≥ 0
@@ -400,12 +377,6 @@ c⋆K rounds ago for some c : ℕ, c ≥ 0
         r > roundNumber (latestCertOnChain t)
       × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
 ```
-```agda
-    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
-    VotingRule-2B? (MkRoundNumber r) t =
-            r >? roundNumber (latestCertOnChain t)
-      ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
-```
 VR-2: Both VR-2A and VR-2B hold
 ```agda
     VotingRule-2 : RoundNumber → T → Set
@@ -413,24 +384,12 @@ VR-2: Both VR-2A and VR-2B hold
         VotingRule-2A r t
       × VotingRule-2B r t
 ```
-```agda
-    VotingRule-2? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
-    VotingRule-2? r t =
-            VotingRule-2A? r t
-      ×-dec VotingRule-2B? r t
-```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
     VotingRule : SlotNumber → T → Set
     VotingRule s t =
         VotingRule-1 s t
       ⊎ VotingRule-2 (v-round s) t
-```
-```agda
-    VotingRule? : (s : SlotNumber) → (t : T) → Dec (VotingRule s t)
-    VotingRule? s t =
-            VotingRule-1? s t
-      ⊎-dec VotingRule-2? (v-round s) t
 ```
 ### State
 
