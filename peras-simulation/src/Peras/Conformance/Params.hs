@@ -17,12 +17,13 @@ data PerasParams = MkPerasParams
   , perasL :: Integer
   , perasτ :: Integer
   , perasB :: Integer
+  , perasT :: Integer
   , perasΔ :: Integer
   }
   deriving (Eq, Generic, Show)
 
 defaultPerasParams :: PerasParams
-defaultPerasParams = MkPerasParams 20 200 10 17 10 3 15 5
+defaultPerasParams = MkPerasParams 20 200 10 17 10 3 10 15 5
 
 instance FromJSON PerasParams where
   parseJSON =
@@ -34,6 +35,7 @@ instance FromJSON PerasParams where
       perasL <- o A..: "L"
       perasτ <- o A..: "τ"
       perasB <- o A..: "B"
+      perasT <- o A..: "T"
       perasΔ <- o A..: "Δ"
       pure MkPerasParams{..}
 
@@ -47,6 +49,7 @@ instance ToJSON PerasParams where
       , "L" A..= perasL
       , "τ" A..= perasτ
       , "B" A..= perasB
+      , "T" A..= perasT
       , "Δ" A..= perasΔ
       ]
 
