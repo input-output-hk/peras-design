@@ -1037,31 +1037,23 @@ In the following subsections we explain how the formal specification of Ouroboro
 
 ## Formal specification
 
-The formal specification is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time. Computational aspects in general are not considered, but are only defined by types, which might be refined by properties. The block-tree is an example of such a type that is not implemented in the formal specification, but on the other hand defined by properties specifying the behavior of an implementation of this data structure.
+The formal specification of Ouroboros Peras is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time.
 
-This is different approach to for example the formal ledger specification, where the formal specification is also directly executable.
+Computational aspects in general are not considered and in many cases even left abstract. We make use of parameterization of modules to refer to those entities. The block-tree is an example of such a type that is not implemented in the formal specification, but on the other hand defined by properties specifying the behavior of an implementation of this data structure.
 
-We considered and investigated the following approaches to link the formal specification with an executable specification in Haskell
+This is a different approach to the formal ledger specification, where the formal specification is also executable.
 
-* Relational specification, make it decidable and use that executable version as reference implementation
-    Pro: yields an executable specification in Haskell.
-    Con: requires decidable versions of each small step.
+We considered the following approaches to link the formal specification with an executable specification in Haskell
 
-* Relational specification, formulate test properties and prove that test properties conform
-    Pro: yields properties in Haskell
-    Con: no executable specification in Haskell
+* *Decidable, relational specification in Agda*: This would yield an executable specification, that can also be used in Haskell via the MAlonzo backend. Unfortunately agda2hs can not be used for code extraction, as the formal specification relies on the Agda standard library which is not supported by agda2hs
 
-* Relational specification together with an executable specification and prove their equivalence
-    Pro: yields an executable specification in Haskell
-    Con: consistency and completeness proofs may be difficult
+* *Relational specification together with an executable test specification*: The test specification can be lifted from Haskell into Agda and proven sound with respect to the formal specification in Agda. This approach does not provide us with a full executable specification, but this is also not required and just focusing on the properties to be executed in the test-cases is sufficient. This approach has been chosen and implemented, see *Conformance testing* below
 
-Restrictions:
+In order for the formal specification to also establish a link with research, we started prototyping properties and proofs needed to show safety and liveness for Ouroboros Peras protocol. Those first attempts look promising and could potentially replace pen and paper proofs.
+
+Restrictions of the formal specifications:
 
 * fixed set of participants
-
-## Formally verified properties from the research paper
-
-## Formally verified test executions
 
 # Conformance testing
 
