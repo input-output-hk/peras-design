@@ -31,7 +31,7 @@ We have refined our analysis and understanding of Peras protocol, taking into ac
 
 The following pictures shows how our R&D process evolved over the course of the past few months.
 
-![](../static/img/peras-process.jpg)
+![](/img/peras-process.jpg)
 
 * Formal specification work has focused on aligning with _pre-alpha_ version of the protocol and writing safety proofs for Peras using _characteristic string_ technique similar to the one used in various Praos-related papers.
 * The link between the _Formal specification_ and implementation through [_Conformance tests_](#conformance-testing) has been strengthened thanks to fruitful collaboration with Quviq:
@@ -312,12 +312,10 @@ Mithril certificates have the following features:
 #### Proving & verification time
 
 ALBA expected proving time is benchmarked in the following picture which shows mean execution time for generating a proof depending on: The _total_ number of votes, the actual number of votes ($s_p$), the honest ratio ($n_p$). Note that as proving time increases exponentially when $s_p \rightarrow total \cdot n_p$, we only show here the situation when $s_p = total$ and $s_p = total - total \cdot n_p / 2$ to ensure graph stays legible.
-
-![ALBA Proving Time](../static/img/alba-proving.png)
+![ALBA Proving Time](/img/alba-proving.png)
 
 The following diagram is an excerpt from the ALBA benchmarks highlighting verification. Note these numbers do not take into account the time for verifying individual votes. As one can observe directly from these graphs, verification time is independent from the number of items and only depends on the $n_p/n_f$ ratio.
-
-![ALBA Verification Time](../static/img/alba-verifying.png)
+![ALBA Verification Time](/img/alba-verifying.png)
 
 In practice, as the number of votes is expected to be in the 1000-2000 range, and there's ample time in a round to guarantee those votes are properly delivered to all potential voting nodes (see below), we can safely assume proving time of about 5 ms, and verification time under a millisecond.
 
@@ -325,11 +323,11 @@ In practice, as the number of votes is expected to be in the 1000-2000 range, an
 
 For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{rel}$, and $n_p/n_f$ the proof size is perfectly linear and only depends on the size of each vote:
 
-![Proof size / vote size](../diagrams/alba-proof-size-fixed-params.svg)
+![Proof size / vote size](/img/alba-proof-size-fixed-params.svg)
 
 Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
-![Proof size vs. λ and honest votes ratio](../diagrams/alba-proof-size-lambda.svg)
+![Proof size vs. λ and honest votes ratio](/img/alba-proof-size-lambda.svg)
 
 ### Benchmarks
 
@@ -369,8 +367,7 @@ The model works as follows:
     * Of course, the actual verification time should be expected to be in between those 2 extremes
 
 Using the "old" version of ΔQ library based on numerical (e.g., Monte-Carlo) sampling, yields the following graph:
-
-![Vote diffusion](../static/img/vote-diffusion.svg)
+![Vote diffusion](/img/vote-diffusion.svg)
 
 This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1 second most of the time to compare with a round length of about 2 minutes.
 
@@ -383,8 +380,8 @@ This graph tends to demonstrate vote diffusion should be non-problematic, with a
     > In the old version of ΔQ based on numerical sampling, which have [vendored in our codebase](https://github.com/input-output-hk/peras-design/blob/a755cd033e4898c23ee4bacc9b677145497ac454/peras-delta-q/README.md#L1), we introduced a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
 >
 > Given convolutions are the most computationally intensive part of a ΔQ model, it seems to us a modeling approach based on discrete sampling and vector/matrices operations would be quite efficient. We did some experiment in that direction, assessing various approaches in Haskell: A naive direct computation using [Vector](https://hackage.haskell.org/package/vector)s, FFT-based convolution using vectors, and [hmatrix](https://hackage.haskell.org/package/hmatrix)' convolution function.
->
-> ![Computing Convolutions](../static/img/convolutions.png)
+
+> ![Computing Convolutions](/img/convolutions.png)
 >
 > This quick-and-dirty spike lead us to believe we could provide a fast and accurate ΔQ modelling library using native vector operations provided by all modern architectures, and even scale to very large model using GPU libraries.
 
@@ -400,7 +397,7 @@ The following constraints on Peras parameters arise for both theoretical and pra
 | Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.       |
 | Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix.    |
 | Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                                  |
-| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (<50%) of adversarial voters.                                       |
+| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (< 50%) of adversarial voters.                                       |
 | Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                           |
 | Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                                |
 | Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                     |
@@ -515,7 +512,7 @@ The screenshot below shows the user interface for the Peras simulation web appli
 - Buttons allow the user to run, step singly, pause or stop the simulation.
 - A zoomable display visualizes the simulated block tree.
 
-![Screenshot of Peras visualization web application](../diagrams/simvis-parameters.png)
+![Screenshot of Peras visualization web application](/img/simvis-parameters.png)
 
 The screenshot below shows the visualization of the Peras block tree:
 
@@ -531,7 +528,7 @@ The screenshot below shows the visualization of the Peras block tree:
     - The red dashed arrows point to the tip of their preferred blockchain.
     - The orange dashed arrows point to their $\mathsf{cert}^\prime$ and $\mathsf{cert}^*$ certificates.
 
-![Blocktree display in the Peras visualization web application](../diagrams/simvis-blocktree.png)
+![Blocktree display in the Peras visualization web application](/img/simvis-blocktree.png)
 
 The visualizer can be deployed as a server via Docker. It supports multiple simultaneous web clients running each their own simulations and it supports basic HTTP authentication.
 
@@ -562,9 +559,9 @@ Furthermore, certain significant adversarial scenarios can be approximately mode
 With these simplifications, one can model a Peras chain with a minimum of information required by the Protocol's logic. In the two-chain case, both the honest and adversarial parties maintain this information about their own chains.
 
 - The current weight of the chain (i.e., length plus number of boosts)
-- The round number for the block voted upon by $\mathsf{cert}^\prime$ 
+- The round number for the block voted upon by $\mathsf{cert}^\prime$
 - The pending new $\mathsf{cert}^\prime$ for the next round, if any
-- The round number for the block voted upon by $\mathsf{cert}^*$ 
+- The round number for the block voted upon by $\mathsf{cert}^*$
 - The pending new $\mathsf{cert}^*$ for the next round, if any
 - Whether there are round $r$, round $r - 1$, and/or round $r -2$ certificates
 
@@ -596,13 +593,13 @@ Honest behavior proceeds according to the protocol. Adversarial behavior may dif
 
 The Markov simulation results in a probability distribution of possible states of the block tree, given the adversary's strategy. The probability distribution of metrics of interest can be computed from that. For example, the diagram below shows the evolution of the probability distribution for the difference of the honest chain's weight minus the adversarial chain's weight for the situation where the adversary builds their chain privately and never assists the honest parties in forming a quorum. Note the jump in the distribution at multiples of slot 150, when there is a high probability that the honest party's chain gains a certificate.
 
-![Example evolution of the margin metric in a Markov-chain simulation](../diagrams/markov.gif)
+![Example evolution of the margin metric in a Markov-chain simulation](/img/markov.gif)
 
 ## Application of Praos margin and reach simulation to Peras
 
 The article [Practical Settlement Bounds for Longest-Chain Consensus by Gaži, Ren, and Russell, (2023)](https://doi.org/10.1007/978-3-031-38557-5_4) provides recurrence relations for *margin* and *reach* that can be solved numerically to determine the probability of settlement failure. The computations are relevant for Peras (i) after one block has been certified and before a subsequent block is certified and (ii) during the cool-down period. We used their software (see https://github.com/renling/LCanalysis) to repeat their computation and extend it to more blocks. This approach accounts for the diffusion time Δ, computes in terms of blocks instead of slots, does not make the two-chain (one honest and one adversarial) assumption, and is supported by mathematical rigor.
 
-![Failure probabilities computed from margin and reach recurrence relations for Praos.](../diagrams/LCanalysis.png)
+![Failure probabilities computed from margin and reach recurrence relations for Praos.](/img/LCanalysis.png)
 
 # Analyses of adversarial scenarios
 
@@ -659,7 +656,7 @@ function(f, n)
 
 ***Example:*** Plot the probability of not having an honest quorum as a function of the adversarial fraction of stake, for various mean sizes of the voting committee.
 
-![Per-round probability of no honest quorum, when quorum is three-quarters of mean committee size](../diagrams/no-honest-quorum.plot.png)
+![Per-round probability of no honest quorum, when quorum is three-quarters of mean committee size](/img/no-honest-quorum.plot.png)
 
 ## Adversarial quorum
 
@@ -692,7 +689,7 @@ function(f, n)
 
 ***Example:*** Plot the probability of having an adversarial quorum as a function of the adversarial fraction of stake, for various mean sizes of the voting committee.
 
-![Per-round probability of adversarial quorum, when quorum is three-quarters of mean committee size](../diagrams/adversarial-quorum.plot.png)
+![Per-round probability of adversarial quorum, when quorum is three-quarters of mean committee size](/img/adversarial-quorum.plot.png)
 
 ## No certificate in honest block
 
@@ -719,7 +716,7 @@ function(A, f, alpha)
 
 ***Example:*** Assuming an active-slot coefficient of 5%, plot the probability of a certificate not being recorded in an honest block before the certificate expires.
 
-![Probability of now certificate in an honest block before it expires](../diagrams/no-certificate-in-honest-block.plot.png)
+![Probability of now certificate in an honest block before it expires](/img/no-certificate-in-honest-block.plot.png)
 
 ## Adversarial chain receives boost
 
@@ -735,7 +732,7 @@ Here we examine two approaches to computing the probability that an adversarial 
 
 ***Scenario.*** It currently is round $r$ and a certificate was created in round $r - 1$ for a block at least $U + L$ slots in the past that is also in the common prefix of the honest and adversarial chains. The honest parties lengthen one fork by $m \ge 0$ blocks to the next candidate for voting (i.e., the newest block on that fork that is at least $L$ slots old) and the adversarial parties similarly lengthen a separate fork by $n \ge 0$ blocks. If the adversarial chain is revealed to the honest parties before the start of the new round $r$ and if the adversarial chain is longer (i.e., $n \gt m$), then the voting committee will vote to boost the adversarial chain. The per-slot probability of adding a block to the honest or adversarial chain is $p$ or $q$, respectively.
 
-![Adversarial chain receives boost](../diagrams/adversarial-chain-receives-boost.diagram.png)
+![Adversarial chain receives boost](/img/adversarial-chain-receives-boost.diagram.png)
 
 ***Analysis.*** Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. (Note that this neglects the probability that the adversary will privately extend the last boosted block before slot $r \cdot U - U - L$.) Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). The probability of $m < n$ is
 
@@ -752,7 +749,7 @@ function(U, p, q)
 
 ***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
 
-![Per-round probability of dishonest boost when the active-slot coefficient is 5%.](../diagrams/adversarial-chain-receives-boost.plot.png)
+![Per-round probability of dishonest boost when the active-slot coefficient is 5%.](/img/adversarial-chain-receives-boost.plot.png)
 
 ### Variant 2
 
@@ -764,7 +761,7 @@ function(U, p, q)
 
 ***Scenario.*** It currently is round $r$ and a certificate was created in round $r - 1$ for a block at least $U + L$ slots in the past that is also the common prefix of the honest and adversarial chains. The honest parties lengthen one fork by $m \ge 0$ blocks to the next candidate for voting (i.e., the newest block on that fork that is at least $L$ slots old) and the adversarial parties similarly lengthen a separate fork by $k \ge 0$ blocks before slot $r \cdot U - U - L$ and by $n \ge 0$ blocks subsequently. If the adversarial chain is revealed to the honest parties at slot $r \cdot U = L$ and if the adversarial chain is longer (i.e., $k + n \gt m$), then all parties will extend the adversarial chain and then next voting committee will boost the adversarial chain, causing the $m$ honest blocks to be rolled back.
 
-![Adversarial chain receives boost](../diagrams/adversarial-chain-receives-boost-variant.diagram.png)
+![Adversarial chain receives boost](/img/adversarial-chain-receives-boost-variant.diagram.png)
 
 ***Analysis.*** Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last public block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). Additionally, the adversary may privately produce $k$ blocks after the last boosted block and before slot $r \cdot U - U - L$: this random variable for producing such blocks is negative-binomially distributed. The probability of $m < k + n$ is
 
@@ -790,7 +787,7 @@ function (U, p, q) {
 
 ***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
 
-![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](../diagrams/adversarial-chain-receives-boost-variant.plot.png)
+![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](/img/adversarial-chain-receives-boost-variant.plot.png)
 
 ## Healing from adversarial boost
 
@@ -817,11 +814,11 @@ function(s, B, p, q)
 
 ***Example:*** Plot the probability of the honest chain not healing from an adversarial boost, as a function of the healing time $s$ and the boost $B$, under the assumption that the active-slot coefficient is $\alpha = 0.05 \, \text{slot}^{-1}$.
 
-![Probability of not healing from an adversarial boost, given 5% active slots.](../diagrams/healing-from-adversarial-boost.plot.png)
+![Probability of not healing from an adversarial boost, given 5% active slots.](/img/healing-from-adversarial-boost.plot.png)
 
 This healing time scales approximately linearly with the boost parameter. The diagram below shows the relationship between these two parameters along with a linear fit at different probabilities of not healing and different adversarial stakes.
 
-![Scaling of healing time as a function of boost](../diagrams/boost-scaling.png)
+![Scaling of healing time as a function of boost](/img/boost-scaling.png)
 
 If we fit this dataset to a linear model, we find the following relationships and quality of fit. Note that this model is no suitable for use outside of the ranges of the training data: in particular, there is a much stronger dependence on boost for small probabilities and large adversarial stakes.
 
@@ -830,11 +827,11 @@ Call:
 lm(formula = `Healing Time` ~ (`Boost` + `Adversarial Stake`)^2 + log(`Probability of Not Healing`))
 
 Residuals:
-    Min      1Q  Median      3Q     Max 
--539.43 -141.38  -39.61  168.45  437.53 
+    Min      1Q  Median      3Q     Max
+-539.43 -141.38  -39.61  168.45  437.53
 
 Coefficients:
-                                    Estimate Std. Error t value Pr(>|t|)    
+                                    Estimate Std. Error t value Pr(>|t|)
 (Intercept)                       -1142.2130    79.5507  -14.36   <2e-16 ***
 `Boost`                              21.8229     0.3509   62.19   <2e-16 ***
 `Adversarial Stake`                6200.4250   380.9661   16.28   <2e-16 ***
@@ -844,11 +841,11 @@ log(`Probability of Not Healing`)  -102.2989     4.0128  -25.49   <2e-16 ***
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 206.6 on 395 degrees of freedom
-Multiple R-squared:  0.9945,	Adjusted R-squared:  0.9945 
+Multiple R-squared:  0.9945,	Adjusted R-squared:  0.9945
 F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
 ```
 
-![Linear model fit for healing time's scaling as a function of boost](../diagrams/boost-scaling-model.png)
+![Linear model fit for healing time's scaling as a function of boost](/img/boost-scaling-model.png)
 
 ## No honest block
 
@@ -860,7 +857,7 @@ F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
 
 ***Scenario, Analysis, Example:*** The scenario, analysis, and example are identical to the case "No certificate in honest block".
 
-![Probability of not producing an honest block within the chain-quality time, given 5% active slots](../diagrams/no-honest-block.plot.png)
+![Probability of not producing an honest block within the chain-quality time, given 5% active slots](/img/no-honest-block.plot.png)
 
 ## No common prefix
 
@@ -887,7 +884,7 @@ function(s, p, q)
 
 ***Example:*** Plot the probability of the adversarial chain being at least as long as the honest chain, as a function of the common-prefix time $s$, under the assumption that the active-slot coefficient is $\alpha = 0.05 \, \text{slot}^{-1}$.
 
-![Probability of not achieving the common-prefix time, given 5% active slots.](../diagrams/no-common-prefix.plot.png)
+![Probability of not achieving the common-prefix time, given 5% active slots.](/img/no-common-prefix.plot.png)
 
 # Settlement probabilities
 
@@ -1025,7 +1022,7 @@ Based on the analysis of adversarial scenarios, a reasonable set of default prot
 A *block-selection offset* of $L = 30 \text{\,slots}$ allows plenty of time for blocks to diffuse to voters before a vote occurs. Combining this with a *round length* of $U = 90 \text{\, slots}$ ensures that there is certainty in $U + L = 120 \text{\,slots}$ as to whether a block has been cemented onto the preferred chain by the presence of a certificate for a subsequent block. That certainty of not rolling back certified blocks is provided by a *certification boost* of $B = 15 \text{\,blocks}$ because of the infinitesimal probability of forging that many blocks on a non-preferred fork within the time $U$. Thus, anyone seeing a transaction appearing in a block need wait no more than two minutes to be certain whether the transaction is on the preferred chain (effectively permanently, less than a one in a trillion probability even at 45% adversarial stake) versus having been discarded because of a roll back. Unless the transaction has a stringent time-to-live (TTL) constraint, it can be resubmitted in the first $U - L = 60 \text{\,slots}$ of the current round, or in a subsequent round.
 
 > [!WARNING]
-> The security-related computations in the next paragraph are not rigorous with respect to the healing, chain-quality, and common-prefix times, so they need correction after the research team reviews them and proposes a better approach. 
+> The security-related computations in the next paragraph are not rigorous with respect to the healing, chain-quality, and common-prefix times, so they need correction after the research team reviews them and proposes a better approach.
 
 The Praos security parameter $k_\text{praos} = 2160 \text{\,blocks} \approx 43200 \text{\,slots} = 12 \text{\,hours}$ implies a ~17% probability of a longer private adversarial chain at 49% adversarial stake. At that same probability, having to overcome a $B = 15 \text{\,blocks}$ adversarial boost would require $k_\text{peras} \approx 70200 \text{\,slots} = 3510 \text{\,blocks} = 19.5 \text{\,hours}$. This determines the *certificate-expiration time* as $A = k_\text{peras} - k_\text{praos} = 27000 \text{\,slots}$, the *chain-ignorance period* as $R = \left\lceil A / U \right\rceil = 300 \text{\,rounds}$, and the *cool-down period* as $K = \left\lceil k_\text{peras} / U \right\rceil = 780 \text{\,rounds}$.
 
@@ -1159,7 +1156,7 @@ The following picture attempts to clarify the relationship between Agda and Hask
 * `Types` are also taken into account when compiling using GHC but they are only "virtual", namely the compiler makes the GHC-generated code depend on the `agda2hs` generated types.
 * Hand-written Haskell code can call unmangled types and functions.
 
-![Agda-Haskell Interactions](../diagrams/agda-haskell-interactions.jpg)
+![Agda-Haskell Interactions](/img/agda-haskell-interactions.jpg)
 
 We used `agda` to generate `MAlonzo`-style Haskell code for the experimental Peras executable specification, [`Peras.QCD.Node.Specification`](https://github.com/input-output-hk/peras-design/blob/3d36761e5c72c55826d9dce1adf0dacdde4d7e3d/src/Peras/QCD/Node/Specification.agda#L1). A `quickcheck-dynamic` test compares the `MAlonzo` version against the `agda2hs` version: these tests all pass, but the `MAlonzo` version runs significantly slower, likely because it involves more than two hundred Haskell modules.
 
@@ -1246,8 +1243,7 @@ A non fully synced nodes will have to catch-up with the _tip_ of the chain and t
 ### Network costs
 
 We did some research on network pricing for a few major Cloud and well-known VPS providers, based on the [share](https://pooltool.io/networkhealth) of stakes each provider is reported to support, and some typical traffic pattern as exemplified by the following picture (courtesy of Markus Gufler).
-
-![Typical node inbound & outbound traffic](../static/img/node-average-traffic.jpg)
+![Typical node inbound & outbound traffic](/img/node-average-traffic.jpg)
 
 The next table compares the cost (in US$/month) for different outgoing data transfer volumes expressed as bytes/seconds, on similar VMs tailored to cardano-node's [hardware requirements](https://developers.cardano.org/docs/operate-a-stake-pool/hardware-requirements/) (32GB RAM, 4+ Cores, 500GB+ SSD disk). The base cost of the VM is added to the network cost to yield total costs depending on transfer rate.
 
@@ -1292,8 +1288,7 @@ Peras should not have any significant impact on the memory requirements of a nod
 In the [previous](tech-report-1.md) report, we already studied how Peras could be concretely implemented in a Cardano node. Most of the comments there are still valid, and we only provide here corrections and additions when needed. We have addressed resources-related issue in a previous section.
 
 The following picture summarizes a possible architecture for Peras highlighting its interactions with other components of the system.
-
-![Peras High-level Architecture](../static/img/peras-architecture.jpg)
+![Peras High-level Architecture](/img/peras-architecture.jpg)
 
 The main impacts identified so far are:
 

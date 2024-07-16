@@ -31,7 +31,7 @@ We clarified the expected benefits of Peras over Praos expressed in terms of [_s
 
 The following picture sketches the architecture of the project and the interaction between the various "domains" relevant to Innovation team. Black lines represent _implemented_ direct relations, grey lines and boxes represent _planned_ relations and tools, green lines represent _expected_ feedback relations.
 
-![Peras Project Architecture](../diagrams/peras-high-level-architecture.jpg)
+![Peras Project Architecture](/img/peras-high-level-architecture.jpg)
 
 We confirmed the relevance of [ΔQ modeling](#network-performance-analysis) technique to provide insights on a protocol's performance profile, and how particular design decisions (even apparently minor ones) can impact this performance profile. We also gave feedback to the maintainers on the current state of the tool and libraries, and how to improve it in order to increase the reach of this technique.
 
@@ -197,7 +197,7 @@ _Settlement time_ can be defined as the time needed for a given transaction to b
 
 The following picture from the aforementioned paper shows block settlement failure probability given some block depth for Cardano PoS chain. Under the assumptions given there, the probability for a transaction to be rolled back after 20 blocks is 0.001% , and is exponentially decreasing with the block depth.
 
-![Settlement failure probability / depth for 10% adversary](../diagrams/settlement-failure-probability.png)
+![Settlement failure probability / depth for 10% adversary](/img/settlement-failure-probability.png)
 
 We also have anecdotal evidence from observations of the Cardano mainchain over the past few years that the settlement time is much shorter than the theoretical bound, as basically forks over 2 blocks length are exceedingly rare, and no fork over 3 blocks length has been observed on core nodes since the launch of Shelley.
 
@@ -425,7 +425,7 @@ This section provides high-level analysis of the impact of Peras protocol on the
 
 Here is a graphical representation of the _outcome diagram_ for the ΔQ model of Cardano network under Praos protocol:
 
-![Outcome diagram for Praos](../diagrams/praos-delta-q.svg)
+![Outcome diagram for Praos](/img/praos-delta-q.svg)
 
 This model is based on the following assumptions:
 
@@ -506,7 +506,7 @@ deltaq15 = combine hopsProba15
 
 Then computing the empirical CDF over 5000 different random samples yield the following graph:
 
-![Praos ΔQ Model CDF](../diagrams/plot-hops-distribution.svg)
+![Praos ΔQ Model CDF](/img/plot-hops-distribution.svg)
 
 To calibrate our model, we have computed an empirical distribution of block adoption time[^2] observed on the `mainnet` over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/. The raw data is provided as a file with 12 millions entries similar to:
 
@@ -538,7 +538,7 @@ Therefore the total time for block diffusion is the sum of the last 4 columns.
 
 This data is gathered through a network of over 100 collaborating nodes that agreed to report various statistics to a central aggregator, so it is not exhaustive and could be biased. The following graph compares this observed CDF to various CDFs for different distances (in the graph sense, e.g. number of hops one need to go through from an emitting node to a recipient node) between nodes.
 
-![Multiple hops & empirical CDF](../diagrams/plot-praos-multi-hops.svg)
+![Multiple hops & empirical CDF](/img/plot-praos-multi-hops.svg)
 
 While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
@@ -560,12 +560,12 @@ The following diagram compares the ΔQ distribution of block diffusion (for 4 ho
 
 Certificate validation is assumed to be a constant 50ms.
 
-![Impact of certificate](../diagrams/block-with-cert.svg)
+![Impact of certificate](/img/block-with-cert.svg)
 
 Obviously, adding a round-trip network exchange to retrieve the certificate for a given header degrades the "timeliness" of block diffusion.
 For the case of 2500 nodes with average degree 15, we get the following distributions, comparing blocks with and without certificates:
 
-![Diffusion with and without certificate](../diagrams/network-with-cert.svg)
+![Diffusion with and without certificate](/img/network-with-cert.svg)
 
 > [!NOTE]
 > Depending on the value of $U$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, e.g. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that is misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
@@ -736,7 +736,7 @@ The team has been working with [_Quviq_](https://drive.google.com/file/d/1vDfwiR
 
 The following picture summarizes how the various parts of the testing framework for Peras are related:
 
-![Agda-QuickCheck Integration](../diagrams/agda-quickcheck.png)
+![Agda-QuickCheck Integration](/img/agda-quickcheck.png)
 
 The key points of this line of work are:
 
@@ -762,7 +762,7 @@ The initial phase of the first Peras PI's work on simulation revolves around dis
 
 The Peras simulation employs language-agnostic components that collaborate seamlessly (see figure below). This includes node implementations in Haskell, with Rust implementations forthcoming. Additionally, the native-Haskell simulation utilizes the [IOSim](https://hackage.haskell.org/package/io-classes) packages in a manner consistent with QuickCheck tests in `peras-quickcheck`, which also supports a _Foreign Function Interface_ (FFI) connection to [Netsim](https://github.com/input-output-hk/ce-netsim) and `peras-rust`. The simulation setup also encompasses statistically designed experiments, the ability to inject rare events or adversarial behaviors, tools for generating networks and scenarios, as well as analysis and visualization tools to interpret the simulation results. A significant aspect of the workflow is geared towards analysis. This involves an observability approach to gathering metrics, utilization of language-independent file formats, visualization of network structures, and statistical analyses primarily conducted using [R](https://www.r-project.org/).
 
-![Workflow for simulation experiments](../diagrams/sim-expts/sim-workflow.png)
+![Workflow for simulation experiments](/img/sim-expts/sim-workflow.png)
 
 The IOSim-based Haskell simulator for Peras currently provides a provisional implementation of the Peras protocol's intricacies, including committee selection, voting rounds, and cool-down periods. Presently, the fidelity of the simulation to the Peras protocol is moderate, while the fidelity at the network layer remains low. Substantial refactoring and refinement efforts are deemed necessary moving forward to enhance the simulation's accuracy and effectiveness.
 
@@ -771,9 +771,9 @@ The simulation implements the February version of the Peras protocol, illustrate
 > [!WARNING]
 > The detailed behavior of the February protocol differs somewhat from later versions such as the March protocol.
 
-![UML sequence diagram for the February version of the Peras protocol](../diagrams/sim-expts/peras-sequence.png)
+![UML sequence diagram for the February version of the Peras protocol](/img/sim-expts/peras-sequence.png)
 
-![UML activity diagram for the February version of the Peras protocol](../diagrams/sim-expts/peras-activity.png)
+![UML activity diagram for the February version of the Peras protocol](/img/sim-expts/peras-activity.png)
 
 ### Design
 
@@ -942,7 +942,7 @@ Five designs for node sync protocol were considered.
 
 | Design 1                                                 | Design 2                                              | Design 3                                                | Design 5                                                      |
 | -------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| ![Simple handoffs](../diagrams/sim-expts/protocol-1.png) | ![Multiplexing](../diagrams/sim-expts/protocol-2.png) | ![Mini-protocols](../diagrams/sim-expts/protocol-3.png) | ![Constrained fetching](../diagrams/sim-expts/protocol-5.png) |
+| ![Simple handoffs](/img/sim-expts/protocol-1.png) | ![Multiplexing](/img/sim-expts/protocol-2.png) | ![Mini-protocols](/img/sim-expts/protocol-3.png) | ![Constrained fetching](/img/sim-expts/protocol-5.png) |
 
 These highlight some key design issues:
 
@@ -963,11 +963,11 @@ The "block production" experiment laid the groundwork for testing simulated bloc
 
 The experiment involved running 1000 simulations of two hours of block production for a node with $\alpha = 0.05$. The stake held by the node was randomly chosen in each of the simulations. The plot below shows the number of blocks produced as a function of the node's stake. The probability contours in the plot indicate the theoretical relationship. For example, the 99.9% quantile (indicated by 0.999 in the legend) is expected to have only 1/1000 of the observations below it; similarly, 90% of the observations should lie between the 5% and 95% contours. The distribution of the number of blocks produced in the experiment appears to obey the theoretical expectations.
 
-![Relationship between a node's stake and the number of blocks it produces](../diagrams/sim-expts/blockproduction-scatter.png)
+![Relationship between a node's stake and the number of blocks it produces](/img/sim-expts/blockproduction-scatter.png)
 
 Although the above plot indicates qualitative agreement, it is somewhat difficult to quantify the level of agreement because stake was varied in the different simulations. The following histogram shows another view of the same data, where the effect of different stake is removed by applying the binomial cumulative probability distribution function (CDF) for $\alpha = 0.05$ to the data. Theoretically, this transformed distribution should be uniform between zero and one. Once again, the data appears to match expectations.
 
-![Empirically observed quantiles of binomial distribution in block-production experiment](../diagrams/sim-expts/blockproduction-quantiles.png)
+![Empirically observed quantiles of binomial distribution in block-production experiment](/img/sim-expts/blockproduction-quantiles.png)
 
 A Kolmogorov-Smirnov (KS) test quantifies the conformance of the results to such a uniform distribution:
 ```R
@@ -1006,7 +1006,7 @@ The simulation experiments generate a reasonable but random topology of peers, w
 
 | Example chain                                             | Example topology                                               |
 | --------------------------------------------------------- | -------------------------------------------------------------- |
-| ![Example chain](../diagrams/sim-expts/example-chain.png) | ![Example topology](../diagrams/sim-expts/example-network.png) |
+| ![Example chain](/img/sim-expts/example-chain.png) | ![Example topology](/img/sim-expts/example-network.png) |
 
 #### February version of Peras
 
@@ -1027,15 +1027,15 @@ where $s$ is the node's stake, $t$ is the total stake in the system, and $c$ is 
 
 The following figure compares similar Praos and Peras chains, highlighting how the latter's voting boost affects the choice of preferred chain. The simulation involved 100 nodes and a mean committee size of 10 nodes; the active slot coefficient was set to 0.25 in order to provoke more frequent forking than would normally be observed. The voting boost is a modest 10% per vote.
 
-![Comparison between Praos and Peras chains](../diagrams/sim-expts/peras-praos-comparison.png)
+![Comparison between Praos and Peras chains](/img/sim-expts/peras-praos-comparison.png)
 
 The difference is fork adoption results from more Peras votes being received by the lower chain than by the upper one, as illustrated below.
 
-![Detail of Peras and Praos chain comparison](../diagrams/sim-expts/peras-voting.png)
+![Detail of Peras and Praos chain comparison](/img/sim-expts/peras-voting.png)
 
 Statistics for rollbacks, such as the ones shown below, are measured in these simulations to quantify the number of slots or blocks that are reverted: such can be used to compute the likelihood of a transaction appearing in a block that is later rolled back. The diagram below shows a proof-of-principle measurement of rollback lengths in an ensemble of simulations. The horizontal axis shows the number of slots rolled back during the course of the whole simulation, and the vertical axis shows the corresponding number of blocks rolled back: the marginal histograms show the empirically observed frequency of each. (Note that the point indicating the number of slots vs blocks rolled back do not represent single rollbacks of that many slots or blocks: instead a simulation might have had many rollbacks and the slots and blocks listed are the total among the rollbacks. Also note that the active slot coefficient was set to a high value in order to provoke more forking.) Although the voting boost weight is varied among these simulations, it has almost no effect on the rollback statistics.
 
-![Example of rollback statistics](../diagrams/sim-expts/rollbacks.png)
+![Example of rollback statistics](/img/sim-expts/rollbacks.png)
 
 Findings from the simulation runs highlight the impracticality of blindly running simulations with realistic parameters and then mining the data:
 
@@ -1096,7 +1096,7 @@ experiment:
 
 In the Peras simulation, the chain that eventually became dominant forged fewer blocks during the partition period, but it was lucky to include sufficient votes for a quorum at slot 503 and that kept the chain out of the cool-down period long enough to put more votes on the chain, which increased the chain weight. It appears that that was sufficient for the chain to eventually dominate. Note that multiple small forks occurred between the time that network connectivity was restored and consensus was reestablished.
 
-![Forking and reestablishment of quorum in Peras split-brain experiment](../diagrams/sim-expts/split-brain.png)
+![Forking and reestablishment of quorum in Peras split-brain experiment](/img/sim-expts/split-brain.png)
 
 The primary measurements related to the loss and reestablishment of consensus relate to the length of the forks, measured in blocks or slots. The table shows the statistics of these forks, of which the Peras case had several.
 
@@ -1139,7 +1139,7 @@ The main caveat is that the memory pool and other non-block/non-vote messages we
 
 The following diagram shows the cumulative bytes received by nodes as a function of network latency and bandwidth, illustrating the threshold below which bandwidth is saturated by the protocol and block/vote diffusion.
 
-![Cumulative bytes received by nodes as a function of network latency and bandwidth](../diagrams/sim-expts/congestion.png)
+![Cumulative bytes received by nodes as a function of network latency and bandwidth](/img/sim-expts/congestion.png)
 
 ## Rust-based simulation
 
