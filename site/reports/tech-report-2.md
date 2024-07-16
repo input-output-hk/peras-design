@@ -1047,7 +1047,9 @@ We considered the following approaches to link the formal specification with an 
 
 * *Decidable, relational specification in Agda*: This would yield an executable specification, that can also be used in Haskell via the MAlonzo backend. Unfortunately agda2hs can not be used for code extraction, as the formal specification relies on the Agda standard library which is not supported by agda2hs
 
-* *Relational specification together with an executable test specification*: The test specification can be lifted from Haskell into Agda and proven sound with respect to the formal specification in Agda. This approach does not provide us with a full executable specification, but this is also not required and just focusing on the properties to be executed in the test-cases is sufficient. This approach has been chosen and implemented, see *Conformance testing* below
+* *Relational specification together with an executable test specification*: The test specification can be lifted from Haskell into Agda and proven sound with respect to the formal specification in Agda. This approach does not provide us with a full executable specification, but this is also not required and just focusing on the properties to be executed in the test-cases is sufficient. In order to extract Haskell code only the lifted test specification is exported to Haskell using agda2hs and not the full small step semantics. For this step, we make use of Decidables from the agda2hs Prelude, as those, when extracted, drop the proof terms and evaluate to booleans.
+
+The second approach has been chosen and implemented, see *Conformance testing* below.
 
 In order for the formal specification to also establish a link with research, we started prototyping properties and proofs needed to show safety and liveness for Ouroboros Peras protocol. Those first attempts look promising and could potentially replace pen and paper proofs.
 
