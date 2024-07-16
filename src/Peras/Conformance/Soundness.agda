@@ -47,6 +47,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
   open SmallStep.TreeType NodeModelTree renaming (allChains to chains; preferredChain to prefChain)
 
+  open SmallStep.Message
+
   module Assumptions
            (let open Postulates postulates)
 
@@ -175,13 +177,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     @0 newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
-                          → transition (modelState s (creatorId vote)) (NewVote vote) ≡ Just (vs , ms₁)
+                          → transition (modelState s sutId) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
-         | isYes (checkVotingRules (modelState s (creatorId vote))) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True | True =
+         -- | isYes (checkVotingRules (modelState s (creatorId vote))) in checkedVRs
+    newVote-preconditions s vote inv refl | True | True =
       record
       { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
       ; block           = {!!}
@@ -191,7 +193,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
       ; validSignature  = axiom-checkVoteSignature checkedSig
       ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       =
+      ; validVote       = {!!}
+      {-
         let
           witness = toWitness (isYes≡True⇒TTrue checkedVRs )
           f₁ = vr-1a⇒VotingRule-1A  s (creatorId vote) (hasTree inv (creatorId vote))
@@ -200,6 +203,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           f₄ = vr-2b⇒VotingRule-2B  s (creatorId vote) (hasTree inv (creatorId vote))
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness -- need to check the VR logic also for environment votes
+       -}
       }
 
     -- Soundness --
@@ -211,20 +215,34 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         invariant₁  : Invariant s₁
         trace       : s₀ ↝⋆ s₁
         s₁-agrees   : modelState s₁ sutId ≡ ms₁
-        votes-agree : sutVotesInTrace trace ≡ vs -- prefix
+        votes-agree : sutVotesInTrace trace ≡ vs
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
               → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    soundness s₀ Tick inv prf = {!!}
-    soundness s₀ (NewChain x) inv prf = {!!}
-    soundness s₀ (NewVote vote) inv prf
-      with sutId ≟ creatorId vote
-    ... | yes x rewrite x =
-      let pre = newVote-preconditions s₀ vote inv prf
-          open NewVotePreconditions pre
-          open SmallStep.Message
+    soundness s₀ Tick inv prf =
+      record
+        { s₁ = {!!}
+        ; invariant₀ = {!!}
+        ; invariant₁ = {!!}
+        ; trace = {!!}
+        ; s₁-agrees = {!!}
+        ; votes-agree = {!!}
+        }
+    soundness s₀ (NewChain x) inv prf =
+      record
+        { s₁ = ChainMsg x , fzero , {!!} , newChain {!!} x ⇑ s₀
+        ; invariant₀ = {!!}
+        ; invariant₁ = {!!}
+        ; trace = {!!}
+        ; s₁-agrees = {!!}
+        ; votes-agree = {!!}
+        }
+    soundness s₀ (NewVote vote) inv prf =
+      let
+        pre = newVote-preconditions s₀ vote inv prf
+        open NewVotePreconditions pre
       in
         record
           { s₁          = let v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -245,4 +263,3 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; s₁-agrees   = {!!}
           ; votes-agree = {!!}
           }
-    ... | no x = {!!}

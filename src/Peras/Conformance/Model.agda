@@ -495,7 +495,7 @@ transition s (NewChain chain) =
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  guard (isYes $ checkVotingRules s)
+  -- guard (isYes $ checkVotingRules s)
   Just ([] , record s { allVotes = v ∷ allVotes s })
 
 {-# COMPILE AGDA2HS transition #-}
