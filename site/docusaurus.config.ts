@@ -90,7 +90,7 @@ const config: Config = {
                     to: '/docs/intro',
                 },
                 {
-                    to: '/docs/spec',
+                    to: 'pathname:///agda_html/Peras.SmallStep.html',
                     label: 'Formal Specification',
                     position: 'left'
                 },

@@ -136,6 +136,8 @@ jobs:
 
   build-docusaurus:
     runs-on: ubuntu-22.04
+    needs:
+      - build-specification
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -150,6 +152,12 @@ jobs:
       - name: 📦 Install dependencies
         working-directory: site
         run: npm ci
+
+      - name: 📥 Download Agda specification
+        uses: actions/download-artifact@v4
+        with:
+          name: agda-specification
+          path: ./site/static/agda_html/
 
       - name: 🏗️ Build Docusaurus site
         working-directory: site
