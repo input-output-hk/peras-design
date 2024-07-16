@@ -78,7 +78,6 @@ data Scenario
 run :: Scenario -> IO ()
 run LongerChain{..} =
   do
-    print stake
     peras <- decodeFileThrow paramFile
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)", "Error bound"]
