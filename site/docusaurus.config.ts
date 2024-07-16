@@ -135,7 +135,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Updates',
-                            to: '/docs/update',
+                            to: '/weekly',
                         },
                         {
                             label: 'GitHub',

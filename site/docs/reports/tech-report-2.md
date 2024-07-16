@@ -285,7 +285,7 @@ This method has also been [prototyped in Haskell](https://github.com/input-outpu
 
 ### Benchmarks
 
-The [peras-vote](../../peras-vote/) package provides some benchmarks comparing the 2 approaches, which gives us:
+The `peras-vote` package provides some benchmarks comparing the 2 approaches, which gives us:
 
 * Single Voting (Binomial): 139.5 μs
 * Single Verification (binomial): 160.9 μs
