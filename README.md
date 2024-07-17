@@ -6,6 +6,49 @@
 
 This repository is intended to host more or less formal specifications, experiments, models for the Ouroboros Peras protocol.
 
+## Roadmap
+
+- Complete proofs.
+    - Voting strings.
+    - Liveness of the protocol.
+    - Soundness of the executable specification.
+    - Synchronize with Praos formalization.
+    - Prepare a publication or online supplement.
+- Complete conformance suite.
+    - Tests for non-voting parts of the protocol.
+    - Serialization format and inter-process communication for testing third-party implementations.
+    - Package for easy installation and use.
+- Recommend parameter values.
+    - Seek and analyze stakeholder requirements, especially from partner chains.
+    - Develop a parameter-evaluation tool (based on the Markov-chain simulator) that provides a full set of impact metrics for a given set of parameters.
+- Reach out to stakeholders.
+    - Populate website with latest results.
+    - Online versions of all analysis, simulation, and visualization tools.
+    - Organize a stakeholder workshop and/or a Intersect Consensus Technical WG.
+        - Feedback on specification format.
+        - Feedback on conformance suite.
+        - Feedback on and refinement of the draft CIP.
+- Tooling fixes and enhancements
+    - Improve the usability, efficiency, and testing of the ΔQ software.
+        - Provide out-of-the-box and possibly interactive visualization.
+        - Provide faster numeric computations (e.g. using discretized CDFs and fast vector operations, possibly offloaded to GPU).
+        - Provide additional combinators (e.g., quantile-arrival time) for the DSL.
+    - Improve the protocol visualizer.
+        - Allow users to inject adversarial behavior or network disruptions (e.g., "split brain" scenarios).
+        - Make visualization scalable in the browser to long chains (i.e., hours of simulated block production) and large networks.
+    - Improve the prototype simulator.
+        - Add an efficient implementation suitable for large networks and long simulations.
+        - Create a simple DSL for inputting simulation scenarios for both honest and adversarial behavior.
+    - Improve the Markov-chain analyzer.
+        - Add a DSL for defining scenarios.
+        - Add visualization and analysis tools.
+    - Collaborate with higher-resolution network simulation efforts, potentially implementing Peras on them.
+        - PeerNet
+        - ce-netsim
+- Move from the "pre-alpha" to the "alpha" version of the protocol.
+    - Requires completion of the Peras paper.
+    - Formalize and implement the preagreement YOSO abstraction.
+
 ## Documentation
 
 * [Weekly updates](docs/weekly) provide regular "heartbeat" about the
