@@ -146,6 +146,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     -- Preconditions ---
 
+    record NewChainPreconditions (s : State) (block : Block) (rest : Chain) : Set where
+      slot = State.clock s
+      r    = v-round slot
+      field
+        {tree}         : NodeModel
+        creatorExists  : State.blockTrees s ⁉ (creatorId block) ≡ just tree
+        blockExists    : BlockSelection (State.clock s) tree ≡ just block
+        validHead      : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+        validRest      : rest ≡ prefChain tree
+        validChain     : ValidChain (block ∷ rest)
+
     record NewVotePreconditions (s : State) (vote : Vote) : Set where
       slot = State.clock s
       r    = v-round slot
@@ -174,6 +185,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         hasTree : ∀ (p : ℕ) → ∃[ t ] (State.blockTrees s ⁉ p ≡ just t)
 
     open Invariant
+
+    @0 newChain-preconditions : ∀ {vs ms₁} s tip rest
+                          → Invariant s
+                          → transition (modelState s sutId) (NewChain (tip ∷ rest)) ≡ Just (vs , ms₁)
+                          → NewChainPreconditions s tip rest
+    newChain-preconditions s chain inv prf = {!!}
 
     @0 newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
@@ -208,6 +225,20 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     -- Soundness --
 
+    -- Soundness states that transitions in the test specification relate to traces
+    -- in the the small step semantics as follows:
+    --
+    --
+    -- test specification:    (ms₀ : NodeModel)    transition    (ms₁ : NodeModel)
+    --
+    --                          ↑                                  ↑
+    --
+    -- small step semantics:  (s₀ : State)             ↝⋆        (s₁ : State)
+    --
+    --
+    -- The small step semantics are instantiated with a block-tree provided by the
+    -- test specification
+
     record Soundness (s₀ : State) (ms₁ : NodeModel) (vs : List (SlotNumber × Vote)) : Set where
       field
         s₁          : State
@@ -224,28 +255,41 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ Tick inv prf =
       record
         { s₁ = {!!}
-        ; invariant₀ = {!!}
+        ; invariant₀ = inv
         ; invariant₁ = {!!}
         ; trace = {!!}
         ; s₁-agrees = {!!}
         ; votes-agree = {!!}
         }
-    soundness s₀ (NewChain x) inv prf =
+    soundness s₀ (NewChain []) inv prf =
       record
-        { s₁ = ChainMsg x , fzero , {!!} , newChain {!!} x ⇑ s₀
-        ; invariant₀ = {!!}
+        { s₁ = {!!}
+        ; invariant₀ = inv
         ; invariant₁ = {!!}
         ; trace = {!!}
         ; s₁-agrees = {!!}
         ; votes-agree = {!!}
         }
+    soundness s₀ (NewChain chain@(b ∷ bs)) inv prf =
+      let
+        pre = newChain-preconditions s₀ b bs inv prf
+        open NewChainPreconditions pre
+      in
+        record
+          { s₁ = {!!} -- ChainMsg chain , fzero , {!!} , newChain tree chain ⇑ s₀
+          ; invariant₀ = inv
+          ; invariant₁ = {!!}
+          ; trace = {!!} -- CreateBlock (invFetched inv) (honest creatorExists {!validChain!}) ↣ ∎
+          ; s₁-agrees = {!!}
+          ; votes-agree = {!!} -- refl
+          }
     soundness s₀ (NewVote vote) inv prf =
       let
         pre = newVote-preconditions s₀ vote inv prf
         open NewVotePreconditions pre
       in
         record
-          { s₁          = let v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
+          { s₁          = let v = record vote { votingRound = v-round slot } -- TODO: is this necessary? See correctVote
                           in VoteMsg v , fzero , creatorId v , addVote tree v ⇑ s₀
           ; invariant₀  = inv
           ; invariant₁  = {!!}
