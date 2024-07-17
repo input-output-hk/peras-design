@@ -156,7 +156,7 @@ const config: Config = {
                         },
                         {
                             label: "Contributors",
-                            to: "https://github.com/input-output-hk/hydra/graphs/contributors",
+                            to: "https://github.com/input-output-hk/peras-design/graphs/contributors",
                         },
                     ],
                 },
