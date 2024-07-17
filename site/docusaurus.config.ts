@@ -23,6 +23,14 @@ const config: Config = {
         locales: ['en'],
     },
 
+    scripts: [
+        {
+            src: "https://plausible.io/js/script.js",
+            defer: true,
+            "data-domain": "peras.cardano-scaling.org",
+        },
+    ],
+
     presets: [
         [
             'classic',
