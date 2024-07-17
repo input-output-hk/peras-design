@@ -79,7 +79,7 @@ const config: Config = {
         navbar: {
             title: 'Peras R&D',
             logo: {
-                alt: 'My Site Logo',
+                alt: 'Peras Logo',
                 src: 'img/logo.png',
                 srcDark: 'img/logo-for-dark.png'
             },
@@ -98,6 +98,11 @@ const config: Config = {
                     to: '/weekly',
                     label: 'Updates',
                     position: 'left'
+                },
+                {
+                    href: 'https://peras-simulation.cardano-scaling.org/',
+                    label: 'Simulator',
+                    position: 'right',
                 },
                 {
                     href: 'https://github.com/input-output-hk/peras-design',
