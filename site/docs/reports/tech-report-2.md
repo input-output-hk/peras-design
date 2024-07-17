@@ -100,7 +100,7 @@ At the date of publication for this report, we have reached SRL 4:
 
 ## Protocol definition
 
-The following is an informal specification of the protocol using some mathematical notations that we will refer to across this document. The detailed formal specification can be found [here](/agda_html/Peras.SmallStep.html), and the reference implementation in Haskell is available in [GitHub](https://github.com/input-output-hk/peras-design/blob/8a818d24ddbcc6b60a02f092bdce3ed92b2388f5/peras-simulation/src/Peras/Prototype/Node.hs#L54).
+The following is an informal specification of the protocol using some mathematical notations that we will refer to across this document. The detailed formal specification can be found [here](pathname:///agda_html/Peras.SmallStep.html), and the reference implementation in Haskell is available in [GitHub](https://github.com/input-output-hk/peras-design/blob/8a818d24ddbcc6b60a02f092bdce3ed92b2388f5/peras-simulation/src/Peras/Prototype/Node.hs#L54).
 
 ### Variables
 
