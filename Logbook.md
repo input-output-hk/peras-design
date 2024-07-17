@@ -1,8 +1,332 @@
+## 2024-07-10
+
+### Healing time
+
+Here are empirical results for the scaling behavior for the healing time, which determines the chain-ignorance parameter $R$. We had vaguely conjectured that it scales as the square of the boost, but were unsure. Here are some analytic results that indicate that it scales super-exponentially. Perhaps that makes sense because the number of slots needed to overcome the boost is related to the asymptotic behavior of the gamma function.
+
+Consider a 5% active slot coefficient and 20% adversarial stake. The probability of not overcoming a boost $B = 1$ by slot 1000 happens to be `4.73e-6`. The table below shows how many slots one has to wait until achieving a similar probability at higher boosts $B$.
+
+| Boost B | Slots for Healing |
+|--------:|------------------:|
+|       1 |              1000 |
+|      10 |              1551 |
+|     100 |              5731 |
+|    1000 |             39762 |
+
+Change the adversarial stake to 49% and consider not overcoming a boost B = 1 by slot 43200: the probability here is `0.178`. The table below shows how many slots one has to wait until achieving a similar probability.
+
+| Boost B | Slots for Healing |
+|--------:|------------------:|
+|       1 |             43200 |
+|      10 |             59900 |
+|     100 |            189000 |
+|    1000 |           1227000 |
+
+Is there theoretical guidance for setting the boost $B$? Or is there an intuitive estimate for an appropriate boost strength? It looks like $B = 10$ only modestly increases the healing time, but as the boost gets larger, the healing time increases disproportionately.
+
+Is this analysis even relevant to setting $B$? It was inspired by the following comment in the paper. The worry is that the parties (honest and adversarial) would boost an adversarial block and that a competing fork of honest blocks would have to overcome that.
+
+> During the initial “healing” phase of the cooldown period, parties continue with standard Nakamoto block creation until the potential advantage of $B$ that the adversary could gain with a certificate is neutralized.
+
+## 2024-07-08
+
+### Adversarial testing for Peras
+
+- Four posssible areas
+    1. Equivocations
+        - blocks
+        - votes
+        - certificates
+    2. Delayed receipt
+        - chains
+        - votes
+    3. Non-receipt
+        - chains
+        - votes
+    4. Invalid cryptographic proofs, garbled data, etc.
+- We can test for the first three in the protocol conformance test, but should wait on the node conformance test for the fourth.
+- Approach
+    - Equivocation
+        - Update Agda executable spec to handle equivocation.
+        - Add action(s) for receipt of equivocated information (block/vote/certificate).
+        - Add generators that use the model state to create equivocated information.
+    - Delayed receipt or non-receipt (= non-prompt delivery)
+        - Add action for non-prompt delivery .
+        - Add generators for creating non-prompty chains and votes.
+- Other discussion
+    - Negative tests are not generally useful for protocol state-machine testing because protocols do not through error messages.
+    - No blacklisting of nodes in current specification, so this does not need testing.
+    - Consider having separate soundness proofs for an honest vs a dishonest environment.
+
+### Determinism in Peras
+
+- The protocol in the Peras paper is not deterministic in at least these areas:
+    - Selection of preferred chain when there is a tie.
+    - Sequencing of operations.
+- The executable specification necessarily become deterministic.
+- QuickCheck Dynamic could handle non-determinism (somewhat awkwardly) through these mechanisims:
+    - Have the state model be aware on non-determinism and track it.
+    - Use symbolic variables to track and account for the presence of non-determism.
+- However, for Peras conformance tests we want determinism:
+    - This has to be specified in a way that different implementation languages can handle easily.
+    - This needs to be documented in the version of the specification realized for conformance tests.
+    - The latest version of the the specification in the tech report adds rules to force determinism:
+        - Choose the preferred chain whose tip's block hash is smallest.
+            - QUESTION: Does this open up an oportunity for grinding attacks?
+        - Fetch, then create blocks, then vote.
+- The non-determinisim in the fundamental protocol can be identified via completess proofs.
+    - The proof would be conditioned upon the existence of functions that make the executable specification deterministic: "completeness up to *x*".
+    - For example, "for all possible functions that select the preferred chain among chains of equal length, the test specification is complete".
+    - An instantiation of the executable specification would use a particular tie-breaking function: i.e., implementations would not be free to break ties differently.
+    - The proof would explicitly identify all areas of non-determinism.
+
+## 2024-07-04
+
+### Fixing conformance tests
+
+Started tracking the reason why our first conformance test is failing. The test reports that the node has voted where it should not have.
+
+* I have added traces on both sides to check the round number and they are identical
+* The `Test` module does not call the `tickNode` function, only the `voting` function which _always_ vote.
+  Moved the guard from `tickNode` to `voting` function which now takes a slot and not a round.
+  This makes the logic in `tickNode` more uniform and simple, but the test still fails
+* Seems like we don't update the clock in the `Model` ?? => :no:
+  In the `perform` of the test, we _first_ increase the clock before choosing to vote or not.
+  This is consistent with the `postcondition` where we check whether or not we should vote according to the _destination_ state, not the initial state.
+* Tried to remove shrinking which might have some "side-effects" but adding `noShrinking` to the property does not work, I still see `Assertion failed (after 6 tests and 2 shrinks):`
+
+So it appears the issue stems from the voting logic in the model not taking into account the blocks. Pursued some lead but it was a red herring: The block selection in `Model` takes into account `perasT` but not the implementation (it only checks `perasL`), however `perasT = 0` so this is not the source of the problem.
+
+Tracing the vote creation process in the model shows the `preferredChain` to be always empty, even though some block has been diffused.
+
+This is obviously wrong:
+
+```
+Checking blocks in [[MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 2}, creatorId = -4, parentBlock = "0300040200020201", certificate = Nothing, leadershipProof = "0402040302000303", signature = "0101010200010404", bodyHash = "0303020400020002"},MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 1}, creatorId = -4, parentBlock = "0000000000000000", certificate = Nothing, leadershipProof = "0101000003010400", signature = "0300040200020201", bodyHash = "0201000302040101"}],[MkBlock {slotNumber = MkSlotNumber {getSlotNumber = 1}, creatorId = -4, parentBlock = "0000000000000000", certificate = Nothing, leadershipProof = "0101000003010400",signature = "0300040200020201", bodyHash = "0201000302040101"}],[]], preferred = []
+```
+
+The preferred chain should not be empty in this case!
+
+Got to the bottom of _one_ issue: the `maximumBy` function had its branches inverted which lead to it being actually `minimumBy`!
+Fixing that leads me into a different issue, with an interesting failure:
+
+```
+           -- round: 1
+           --      got: [Vote {round     = 1
+                               creator   = 1
+                               blockHash = "0602080800000107"
+                               proofM    = "8cacfd4bd1f4a6b1"
+                               signature = "bad333f8e2548088"}]
+           -- expected: [Vote {round     = 1
+                               creator   = 1
+                               blockHash = "0605000300020205"
+                               proofM    = "8cacfd4bd1f4a6b1"
+                               signature = "cd9830e7358506cd"}]
+```
+
+so it's probably now just a problem in choosing which of 2 chains are longest in case of ties on the weight.
+
+Haskell's `maximumBy` function favors the last element in a list:
+
+```
+> maximumBy (compare `on` snd) [(1,1), (2,1), (3,1)]
+(3,1)
+```
+
+which is consistent with `Peras.Util`'s :
+
+```
+> U.maximumBy (0,0) (compare `on` snd) [(1,1), (2,1), (3,1)]
+(3,1)
+```
+
+Finally got to the bottom of it: known chains are defined in the implementation as
+
+```
+    let chains' = chains `Set.union` newChains
+```
+
+whereas in Model we just use a `[Chain]` so this is an ordering issue.
+
+We can't require the implementation to behave like a list, but we can
+refine the comparison function used to find the best chain, so I
+resorted to implementing a specific comparison function to ensure
+chains comparison matches, enforcing an ordering when chaing weights
+are equal: In case of match for weight, compare slots, then creatorId,
+then block hash
+
+To enable coverage, I added the following to `cabal.project.local` (coverage is not supported for internal libraries):
+
+```
+
+package *
+  coverage: True
+  library-coverage: True
+
+package dns
+  coverage: False
+  library-coverage: False
+```
+
+Then running the test generates coverage report which shows that `Voting` implementation module is fully covered by our conformance test :tada: as well as the `Model` code.
+
+![](site/static/img/voting-coverage.png)
+
+> [!IMPORTANT]
+> Some takeaways from this experiment:
+>
+> * Reimplementing even basic functions on the model side should be done with great care!
+> * We need the _soundness proof_ to guarantee the behaviour of the model is consistent with the formal specification
+> * Writing a test model _and running_ it is very useful to identify blindspots, implicit assumptions, and ensure proper coverage of implementation
+
+## 2024-07-03
+
+### Playing with faster convolutions
+
+We've been discussing ways to improve both the accuracy and the speed of ΔQ models computation and I have played a bit with the idead of using existign fast linear algebra operations to do so. I did a little spike specifically targeted on computing convolution of 2 Double-valued vectors, comparing 3 different approaches:
+
+1. Direct convolution computation using 0-padded vectors and standard [vector](https://hackage.haskell.org/package/vector-0.13.1.0/docs/Data-Vector.html) operations
+2. FFT-based convolution using a [fork](https://github.com/abailly-iohk/haskell-fft) of a straightforward Haskell implementation of FFT and DFT
+3. [hmatrix](https://hackage.haskell.org/package/hmatrix-0.20.2/docs/Numeric-LinearAlgebra.html#v:conv)-based convolution
+
+Quick benchmarks results are clear: hmatrix is 100x faster than naive convolution and 2000x faster than FFT one.
+
+```
+benchmarking Direct convolution (100 elements)
+time                 2.029 ms   (2.023 ms .. 2.039 ms)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 2.038 ms   (2.032 ms .. 2.052 ms)
+std dev              30.91 μs   (12.10 μs .. 48.87 μs)
+
+benchmarking hmatrix convolution (100 elements)
+time                 19.09 μs   (19.06 μs .. 19.11 μs)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 19.10 μs   (19.07 μs .. 19.11 μs)
+std dev              58.11 ns   (40.92 ns .. 81.04 ns)
+
+benchmarking FFT convolution (100 elements)
+time                 47.46 ms   (47.38 ms .. 47.55 ms)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 47.49 ms   (47.40 ms .. 47.83 ms)
+std dev              314.3 μs   (59.48 μs .. 579.6 μs)
+
+```
+
+Even for relatively large number of points, matrix convolution is fast enough for our purpose:
+
+```
+benchmarking Matrix convolution/hmatrix convolution (100 elements)
+time                 18.00 μs   (17.96 μs .. 18.08 μs)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 18.43 μs   (18.28 μs .. 18.57 μs)
+std dev              522.4 ns   (475.5 ns .. 568.1 ns)
+variance introduced by outliers: 31% (moderately inflated)
+
+benchmarking Matrix convolution/hmatrix convolution (1000 elements)
+time                 897.3 μs   (893.0 μs .. 903.9 μs)
+                     1.000 R²   (0.999 R² .. 1.000 R²)
+mean                 893.4 μs   (891.2 μs .. 897.1 μs)
+std dev              9.988 μs   (7.214 μs .. 15.93 μs)
+
+benchmarking Matrix convolution/hmatrix convolution (10000 elements)
+time                 93.03 ms   (81.34 ms .. 109.7 ms)
+                     0.959 R²   (0.908 R² .. 0.989 R²)
+mean                 102.4 ms   (93.90 ms .. 112.9 ms)
+std dev              15.28 ms   (11.56 ms .. 20.99 ms)
+variance introduced by outliers: 43% (moderately inflated)
+```
+
+It seems straightforward to implement a hmatrix-based backend for ΔQ that should provide fast modelling capabilities, possibly resorting to even more efficient low-level implementations of convolution if needed to handle very large models. Another interesting option would be to use something like [Futhark](https://futhark-lang.org) which can blend seamlessly with Haskell code and provide GPU-based optimised vector computations.
+
+This experimental code is available in PR [#165](https://github.com/input-output-hk/peras-design/pull/165).
+
+## 2024-06-21
+
+### Fixing docker build
+
+* The docker build stopped working after adding dependencies to `cardano-crypto-class` because it has native dependencies to `libsodium`, `libblst` and `libsecp256k1`.
+* Added the dependencies to the build image following instructions from [cardano-node](https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/getting-started/install.md) wiki documentation
+
+## 2024-07-02
+
+### Edinburgh Workshop report & short-term planning
+
+* We have completed and published the [workshop report](site/reports/2024-06-26-edinburgh-workshop.md)
+* In the wake of those discussions, we have created a few GitHub issues to short-term actions pursuant to this quarter's goals:
+  * [164](https://github.com/input-output-hk/peras-design/issues/164) Define a communication plan for Peras
+  * [163](https://github.com/input-output-hk/peras-design/issues/163) Conformance model-based tests for voting
+  * [162](https://github.com/input-output-hk/peras-design/issues/162) Review adversarial scenario analysis
+  * [161](https://github.com/input-output-hk/peras-design/issues/161) Complete technical report #2
+  * [160](https://github.com/input-output-hk/peras-design/issues/160) Make code repository public
+  * [159](https://github.com/input-output-hk/peras-design/issues/159) Publish full web site
+  * [128](https://github.com/input-output-hk/peras-design/issues/128) UI improvements for simulator/visualizer
+  * [98](https://github.com/input-output-hk/peras-design/issues/98) Post-retrospective actions
+  * [97](https://github.com/input-output-hk/peras-design/issues/97) Write a draft CIP
+
 ## 2024-06-20
 
 ### New adversarial scenarios
 
 - Attack on common-prefix
+
+### Voting process as defined in Leios (and Mithril)
+
+In the Leios paper, stake-based voting is defined similarly to how it's done in Mithril:
+
+```
+VoteCount(𝑥, 𝑠):
+  (1) 𝑦 := 𝐻 (𝑥)
+  (2) 𝑐𝑛𝑡 := Sum 𝑖 ∈ [𝑚](𝐻 (𝑦, 𝑖) > 𝑇 (𝑠))
+  (3) return 𝑐𝑛𝑡;
+```
+
+where $T$ maps a probability function $1 - (1 - f)^{s}$ for some stake ratio $\sigma$ to an integer.
+
+In other words, just like we do [in
+Mithril](https://github.com/input-output-hk/mithril/blob/f390dfb28122baa6ba1356a452718946089fb8f6/mithril-stm/src/eligibility_check.rs#L34),
+a voter runs a lottery by hashing some base value (VRF output) with an
+index $m$ times and counting the number of "winning" indices. The
+underlying check is exactly the same as the [leader
+election](https://github.com/input-output-hk/cardano-ledger/blob/e2aaf98b5ff2f0983059dc6ea9b1378c2112101a/libs/cardano-protocol-tpraos/src/Cardano/Protocol/TPraos/BHeader.hs#L427),
+comparing a _ratio_ (the random value derived from the hash) to the
+function $1 - (1 - f)^{\sigma}$.
+
+I had a hard time understanding the comment in the previous functions (note the comment from the ledger code has been copied verbatim to the Mithril STM library1) as it details how the above function is transformed to provide a more efficient computation.
+
+Given $q = 1 / (1 - p)$ and $c = \log(1 - f)$, then
+
+$$
+\begin{array}[rl]
+& p < 1 - (1 - f)^{\sigma} \\
+\Leftrightarrow & 1 - p \geq (1 - f)^{\sigma} \\
+\Leftrightarrow & \frac{1}{1-p} < (1 - f)^{-\sigma} \\
+\Leftrightarrow & q < e^{\log(1 - f)\times (-\sigma)} \\
+\Leftrightarrow & q < e^{-\sigma \times c} \\
+\end{array}
+$$
+
+The $q$ can be efficiently computed as the fraction $vmax / (vmax -v )$ and the exponentiation approximated through a Taylor series.
+
+### Better vote diffusion ΔQ model
+
+* Building on previous work, we want to model the expected delay to reach a quorum. We know the newest version of the ΔQ library based on polynomials is computationally intensive and cannot handle this kind of modelling
+* Using the old version of ΔQ based on numerical sampling, we introduce a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
+* The model works as follows:
+  * We start from a base uniform distribution of single MTU latency between 2 nodes, assuming a vote fits in a single TCP frame
+  * We then use the expected distribution of paths length for a random graph with 15 average connections, to model the latency distribution across the network
+  * We then apply the `NToFinish 75` combinator to this distribution to compute the expected distribution to reach 75% of the votes (quorum)
+  * An important assumption is that each vote diffusion across the network is expected to be independent from all other votes
+* We also want to take into account the verification time of a single vote, which we do in 2 different ways:
+  * One distribution assumes a node does all verifications sequentially, one vote at a time
+  * Another assumes all verifications can be done in parallel
+  * Of course, the actual verification time should be expected to be in between those 2 extremes
+* Verification time assumption is based on some experiments documented in [Vote benchmarks](https://github.com/input-output-hk/peras-design/blob/249d40ebb5400f9edf2ec3c9ffbf014e2ff7b91f/peras-simulation/bench-vote.html) where a single vote's verification time is expected to be about 160μs.
+
+This yields the following graph:
+
+![Vote diffusion](peras-delta-q/vote-diffusion.svg)
+
+This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1s most of the time.
 
 ## 2024-06-19
 
@@ -20,6 +344,28 @@
 - No certificate in honest block
 - Adversarial chain receives boost
     - Variant 2
+
+### Votes details
+
+* Started working on detailing the voting algorithm, data structures, and certificates process.
+* Interestingly, things are more complicated when one looks at them closely enough.
+* I want to provide some detailed code and benchmarks, so I had to look at how VRF voting is done within the node, and import actual VRF and KES functions from `cardano-base`
+* Currently a bit confused by the committee election (sortition) algorithm, but I found a good and simple explanation in the [Algorand](https://web.archive.org/web/20170728124435id_/https://people.csail.mit.edu/nickolai/papers/gilad-algorand-eprint.pdf) paper so will just use that for the time being
+* Also need to detail the stake-based certificate construction algorithm in ALBA
+
+### Modeling vote diffusion
+
+* Worked w/ Brian on modeling vote diffusion with old version of ΔQ library.
+* We reused the data from previous model about the 1-hop delay and distance distribution in small graph assuming degree distribution of 15
+* Assume a vote fits in a single MTU so there's a single transmission for each vote
+* Also assumes that verifying a single vote (VRF + KES) takes 1.3ms (from [cardano-base](https://github.com/input-output-hk/cardano-base/blob/a9bfdf50b7794c962f73f06763546dc65257720e/cardano-crypto-tests/README.md#L1) benchmarks), so verifying 1000 votes takes 1.3s and on average a vote is verified after 0.65s
+* We consider the delay probability distribution function to represent the fraction of votes that are available after some delay, taking into account the topology of the network and validation time.
+* We assume that network contention does not impact votes diffusion
+* This model (see picture) below seems to demonstrate vote diffusion and validation can happen quite quickly. The 75% line represents the expected time to reach a quorum which is around 1.5s.
+* We note that given round length will be in the order of 120-150 seconds, which provides ample time for voting to happend and quorum to be reached
+  * Note that it could quite interesting to validate this empirically using _netsim_ or _PeerNet_
+
+![Vote diffusion & validation](peras-delta-q/path.svg)
 
 ## 2024-06-17
 

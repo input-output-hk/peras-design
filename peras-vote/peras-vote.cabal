@@ -1,0 +1,61 @@
+cabal-version:      3.4
+name:               peras-vote
+version:            0.1.0.0
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Arnaud Bailly
+maintainer:         arnaud.bailly@iohk.io
+build-type:         Simple
+
+common warnings
+    ghc-options: -Wall -Wunused-packages
+
+library
+    import:           warnings
+    exposed-modules: Peras.Voting.Vote
+                     Peras.Voting.Arbitraries
+    build-depends:    QuickCheck,
+                      base ,
+                      bytestring,
+                      cardano-binary,
+                      cardano-crypto-class ^>= 2.1,
+                      cardano-crypto-praos,
+                      cereal,
+                      containers,
+                      deepseq,
+                      math-functions
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+test-suite test
+    import:           warnings
+    default-language: Haskell2010
+    other-modules: Peras.Voting.VoteSpec
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:  QuickCheck
+                  , base
+                  , bytestring
+                  , cardano-binary
+                  , cardano-crypto-class ^>= 2.1
+                  , hspec
+                  , peras-vote
+    build-tool-depends:
+       hspec-discover:hspec-discover
+    ghc-options: -rtsopts -threaded
+
+benchmark bench
+  hs-source-dirs: bench/
+  main-is:        Bench.hs
+  type:           exitcode-stdio-1.0
+  build-depends:
+                  QuickCheck
+                , aeson
+                , base
+                , bytestring
+                , criterion
+                , deepseq
+                , peras-vote
+
+  ghc-options:    -threaded -rtsopts

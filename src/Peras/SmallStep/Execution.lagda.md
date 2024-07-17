@@ -15,7 +15,7 @@ open import Data.Nat.Properties using (+-identityˡ; +-identityʳ)
 open import Function using (_∘_; id; _$_; flip)
 
 open import Peras.Chain
-open import Peras.Crypto hiding (_≟_; isCommitteeMember)
+open import Peras.Crypto hiding (isCommitteeMember)
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
@@ -88,13 +88,13 @@ This is a very simple example of the execution of the protocol in the small-step
         in createBlock s p π σ t
 ```
 ```agda
-      createVote' : SlotNumber → PartyId → T → Vote
-      createVote' s p t =
+      createVote' : SlotNumber → PartyId → Block → Vote
+      createVote' s p b =
         let
           r = v-round s
           π = createMembershipProof r p
           σ = createVoteSignature p
-        in createVote s p π σ t
+        in createVote s p π σ (hash b)
 ```
 Blocks and Votes
 ```agda
@@ -105,7 +105,7 @@ Blocks and Votes
       chain₁ = block₁ ∷ preferredChain tree₀
 
       vote₁ : Vote
-      vote₁ = createVote' (MkSlotNumber 2) party₁ (newChain tree₀ chain₁)
+      vote₁ = createVote' (MkSlotNumber 2) party₁ block₁
 
       block₃ : Block
       block₃ = createBlock' (MkSlotNumber 3) party₂ (addVote (newChain tree₀ chain₁) vote₁)
@@ -130,9 +130,11 @@ Final state after the execution of all the steps
 ```
 Properties of cert₀
 ```agda
+{-
       cert₀PointsIntoValidChain : ∀ {c} → ValidChain c → cert₀ PointsInto c
-      cert₀PointsIntoValidChain {.(block₀ ∷ [])} Genesis = here refl
+      cert₀PointsIntoValidChain {.[]} Genesis = here refl
       cert₀PointsIntoValidChain {.(_ ∷ _)} (Cons _ _ _ _ v) = there (cert₀PointsIntoValidChain v)
+-}
 ```
 Based on properties of the blocktree we can show the following
 ```agda
@@ -147,9 +149,7 @@ Based on properties of the blocktree we can show the following
       latestCertSeen-tree₀≡cert₀ rewrite is-TreeType .instantiated-certs = refl
 
       latestCertOnChain-tree₀≡cert₀ : latestCertOnChain tree₀ ≡ cert₀
-      latestCertOnChain-tree₀≡cert₀
-        rewrite is-TreeType .instantiated
-        rewrite is-TreeType .genesis-block-no-certificate = refl
+      latestCertOnChain-tree₀≡cert₀ rewrite is-TreeType .instantiated = refl
 
       roundNumber-latestCertSeen-tree₀≡0 : roundNumber (latestCertSeen tree₀) ≡ 0
       roundNumber-latestCertSeen-tree₀≡0 rewrite latestCertSeen-tree₀≡cert₀ = refl
@@ -165,9 +165,7 @@ Based on properties of the blocktree we can show the following
         = refl
 
       catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
-      catMaybes≡[]
-        rewrite is-TreeType .instantiated
-        rewrite is-TreeType .genesis-block-no-certificate = refl
+      catMaybes≡[] rewrite is-TreeType .instantiated = refl
 
       noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
       noNewCert =
@@ -201,13 +199,13 @@ Execution trace of the protocol
         (isVoteSignature : ∀ {v} → IsVoteSignature v (createVoteSignature (creatorId v)))
 
         where
+{-
         validChain₁ : ValidChain chain₁
         validChain₁ =
           let v = is-TreeType .valid tree₀
               ((_ , d), pr) = uncons v
           in Cons {c₁ = d} isBlockSignature isSlotLeader refl pr v
 
-{-
         _ : initialState ↝⋆ finalState
         _ = NextSlot empty refl                           -- slot 1
           ↣ CreateBlock empty (honest refl validChain₁)

@@ -6,7 +6,7 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS8
 import Data.Version (showVersion)
 import Paths_peras_simulation (version)
-import Peras.Abstract.Protocol.Visualizer (visualize, writeGraph)
+import Peras.Prototype.Visualizer (visualize, writeGraph)
 import System.Exit (die)
 
 import qualified Options.Applicative as O

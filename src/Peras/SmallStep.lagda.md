@@ -18,7 +18,7 @@ open L.Any using (Any; _─_; any?) renaming (_∷=_ to _∷ˡ=_)
 
 open import Peras.Block
 open import Peras.Chain
-open import Peras.Crypto hiding (_≟_)
+open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
 
@@ -169,19 +169,13 @@ as proposed in the paper.
 
 ```agda
       instantiated :
-        preferredChain tree₀ ≡ block₀ ∷ []
+        preferredChain tree₀ ≡ []
 
       instantiated-certs :
         certs tree₀ ≡ cert₀ ∷ []
 
       instantiated-votes :
         votes tree₀ ≡ []
-
-      genesis-block-slotnumber :
-        getSlotNumber (slotNumber block₀) ≡ 0
-
-      genesis-block-no-certificate :
-        certificate block₀ ≡ nothing
 
       extendable-chain : ∀ (t : T) (c : Chain)
         → certs (newChain t c) ≡ certsFromChain c ++ certs t
@@ -242,7 +236,7 @@ The block-tree type is defined as follows:
       certs : T → List Certificate
 
     cert₀ : Certificate
-    cert₀ = MkCertificate (MkRoundNumber 0) (hash block₀)
+    cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
 
     field
       is-TreeType : IsTreeType
@@ -323,47 +317,43 @@ When does a party vote in a round? The protocol expects regular voting, i.e. if
 in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
+#### BlockSelection
+```agda
+    BlockSelection : SlotNumber → T → Maybe Block
+    BlockSelection (MkSlotNumber s) =
+      head ∘ filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) ∘ preferredChain
+```
+```agda
+    ChainExtends : Maybe Block → Certificate → Chain → Type
+    ChainExtends nothing _ _ = ⊥
+    ChainExtends (just b) c =
+      Any (λ block → (hash block ≡ blockRef c))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+```
 #### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
-    VotingRule-1A : RoundNumber → T → Set
-    VotingRule-1A (MkRoundNumber r) t = r ≡ suc (roundNumber (latestCertSeen t))
-```
-```agda
-    VotingRule-1A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1A r t)
-    VotingRule-1A? (MkRoundNumber r) t = r ≟ suc (roundNumber (latestCertSeen t))
+    VotingRule-1A : RoundNumber → T → Type
+    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
-    VotingRule-1B : T → Set
-    VotingRule-1B t = (latestCertSeen t) PointsInto (preferredChain t)
-```
-```agda
-    VotingRule-1B? : (t : T) → Dec (VotingRule-1B t)
-    VotingRule-1B? t = (latestCertSeen t) PointsInto? (preferredChain t)
+    VotingRule-1B : SlotNumber → T → Type
+    VotingRule-1B s t =
+      Any (ChainExtends (BlockSelection s t) (latestCertSeen t)) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
-    VotingRule-1 : RoundNumber → T → Set
-    VotingRule-1 r t =
-        VotingRule-1A r t
-      × VotingRule-1B t
-```
-```agda
-    VotingRule-1? : (r : RoundNumber) → (t : T) → Dec (VotingRule-1 r t)
-    VotingRule-1? r t =
-            VotingRule-1A? r t
-      ×-dec VotingRule-1B? t
+    VotingRule-1 : SlotNumber → T → Type
+    VotingRule-1 s t =
+        VotingRule-1A (v-round s) t
+      × VotingRule-1B s t
 ```
 VR-2A: The last certificate a party has seen is from a round at least R rounds back
 ```agda
-    VotingRule-2A : RoundNumber → T → Set
+    VotingRule-2A : RoundNumber → T → Type
     VotingRule-2A (MkRoundNumber r) t = r ≥ roundNumber (latestCertSeen t) + R
-```
-```agda
-    VotingRule-2A? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2A r t)
-    VotingRule-2A? (MkRoundNumber r) t = r ≥? roundNumber (latestCertSeen t) + R
 ```
 VR-2B: The last certificate included in a party's current chain is from a round exactly
 c⋆K rounds ago for some c : ℕ, c ≥ 0
@@ -374,42 +364,24 @@ c⋆K rounds ago for some c : ℕ, c ≥ 0
 ```
 -->
 ```agda
-    VotingRule-2B : RoundNumber → T → Set
+    VotingRule-2B : RoundNumber → T → Type
     VotingRule-2B (MkRoundNumber r) t =
         r > roundNumber (latestCertOnChain t)
       × r mod K ≡ (roundNumber (latestCertOnChain t)) mod K
 ```
-```agda
-    VotingRule-2B? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2B r t)
-    VotingRule-2B? (MkRoundNumber r) t =
-            r >? roundNumber (latestCertOnChain t)
-      ×-dec r mod K ≟ (roundNumber (latestCertOnChain t)) mod K
-```
 VR-2: Both VR-2A and VR-2B hold
 ```agda
-    VotingRule-2 : RoundNumber → T → Set
+    VotingRule-2 : RoundNumber → T → Type
     VotingRule-2 r t =
         VotingRule-2A r t
       × VotingRule-2B r t
 ```
-```agda
-    VotingRule-2? : (r : RoundNumber) → (t : T) → Dec (VotingRule-2 r t)
-    VotingRule-2? r t =
-            VotingRule-2A? r t
-      ×-dec VotingRule-2B? r t
-```
 If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
 ```agda
-    VotingRule : RoundNumber → T → Set
-    VotingRule r t =
-        VotingRule-1 r t
-      ⊎ VotingRule-2 r t
-```
-```agda
-    VotingRule? : (r : RoundNumber) → (t : T) → Dec (VotingRule r t)
-    VotingRule? r t =
-            VotingRule-1? r t
-      ⊎-dec VotingRule-2? r t
+    VotingRule : SlotNumber → T → Type
+    VotingRule s t =
+        VotingRule-1 s t
+      ⊎ VotingRule-2 (v-round s) t
 ```
 ### State
 
@@ -474,9 +446,8 @@ transitioning from one voting round to another.
 ```agda
     RequiredVotes : State → Type
     RequiredVotes M =
-      let r = v-round clock
-       in Any (VotingRule r ∘ proj₂) blockTrees
-        → Any (hasVote r ∘ proj₂) blockTrees
+         Any (VotingRule clock ∘ proj₂) blockTrees
+       → Any (hasVote (v-round clock) ∘ proj₂) blockTrees
       where open State M
 ```
 Ticking the global clock increments the slot number and decrements the delay of
@@ -548,27 +519,16 @@ An adversarial party might delay a message
             }
 ```
 ## Voting
-#### Preagreement
-**TODO**: Needs to be finalized in the Peras paper
-```agda
-    Preagreement : SlotNumber → T → Block
-    Preagreement (MkSlotNumber s) t =
-      let
-        Cpref = preferredChain t
-        bs = filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) Cpref
-      in fromMaybe block₀ (head bs)
-```
+
 Helper function for creating a vote
 ```agda
-    createVote : SlotNumber → PartyId → MembershipProof → Signature → T → Vote
-    createVote s p prf sig t =
+    createVote : SlotNumber → PartyId → MembershipProof → Signature → Hash Block → Vote
+    createVote s p prf sig hb =
       record
         { votingRound = v-round s
         ; creatorId = p
         ; proofM = prf
-        ; blockHash =
-            let b = Preagreement s t
-            in hash b
+        ; blockHash = hb
         ; signature = sig
         }
 ```
@@ -584,18 +544,19 @@ is added to be consumed immediately.
 
     data _⊢_⇉_ : {p : PartyId} → Honesty p → State → State → Type where
 
-      honest : ∀ {p} {t} {M} {π} {σ}
+      honest : ∀ {p} {t} {M} {π} {σ} {b}
         → let
             open State
             s = clock M
             r = v-round s
-            v = createVote s p π σ t
+            v = createVote s p π σ (hash b)
           in
+        ∙ BlockSelection s t ≡ just b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
         ∙ IsCommitteeMember p r π
-        ∙ VotingRule r t
+        ∙ VotingRule s t
           ───────────────────────────────────
           Honest {p} ⊢
             M ⇉ add (VoteMsg v , 𝟘 , p) to t
@@ -640,8 +601,7 @@ Helper function for creating a block
         ; creatorId = p
         ; parentBlock =
             let open IsTreeType
-                (h , _) , _ = uncons (is-TreeType .valid t)
-            in hash h
+            in tipHash (is-TreeType .valid t)
         ; certificate =
             let r = v-round s
             in needCert r t
@@ -950,5 +910,8 @@ already in the block history.
             → m ∈ history M }) (history N)
         → ForgingFree N
 -}
+```
+```agda
+  open Semantics public
 ```
 -->

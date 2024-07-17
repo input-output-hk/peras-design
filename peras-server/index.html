@@ -11,6 +11,7 @@
   </head>
   <body>
 	    <div id="controlPanel">
+          <h2>Peras Simulator (pre-alpha) <a href="https://peras.cardano-scaling.org/" target="peras" style="color:#85D5AB;text-decoration:none">&#x2197;</a></h2>
         <div id="parameterHeader">
           <h3>Parameters</h3>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" class="chevron" id="toggleParams">
@@ -20,25 +21,67 @@
 
           </div>
           <div id="parameterFields">
-            <div class="control"><label for="uiDuration">Duration (slots):</label> <input id="uiDuration" type="number" min="10" max="7200" value="900"/></div>
-            <div class="control"><label for="uiParties">Nodes:</label> <input id="uiParties" type="number" min="1" max="15" value="7"/></div>
-            <div class="control"><label for="uiU">Round length (U, in slots):</label> <input id="uiU" type="number" min="5" max="90" value="20"/></div>
-            <div class="control"><label for="uiA">Cert. expiration (A, in slots):</label> <input id="uiA" type="number" min="30" max="900" value="200"/></div>
-            <div class="control"><label for="uiR">Chain ignorance (R, in rounds):</label> <input id="uiR" type="number" min="0" max="10" value="10"/></div>
-            <div class="control"><label for="uiK">Cooldown period (K, in rounds):</label> <input id="uiK" type="number" min="0" max="50" value="17"/></div>
-            <div class="control"><label for="uiL">Block selection offset (L, in slots):</label> <input id="uiL" type="number" min="1" max="120" value="10"/></div>
-            <div class="control"><label for="uiTau">Quorum size (τ, in nodes):</label> <input id="uiTau" type="number" min="0" max="15" value="3"/></div>
-            <div class="control"><label for="uiB">Boost (B, in blocks):</label> <input id="uiB" type="number" min="0" max="100" value="10"/></div>
-            <div class="control"><label for="uiT">Preagreement termination (T, in slots):</label> <input id="uiT" type="number" min="0" max="60" value="15"/></div>
-            <div class="control"><label for="uiCommittee">Mean committee size (n, in nodes):</label> <input id="uiCommittee" type="number" min="0" max="15" value="5"/></div>
-            <div class="control"><label for="uiDelta">Network diffusion delay (Δ, in slots):</label> <input id="uiDelta" type="number" min="0" max="20" value="0"/></div>
-            <div class="control"><label for="uiAlpha">Active slot coefficient (α, in 1/nodes):</label> <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/></div>
-	    <div class="control"><label for="uiDelay">Simulation rate (in seconds per slot):</label> <input id="uiDelay" type="number" min="0" max="5" value="0.1" step="0.1"/></div>
-	    <div class="control"><label for="uiSeed">Simulation random seed (integer):</label> <input id="uiSeed" type="number" min="0" max="1000000000" value="42" step="1"/></div>
+            <div class="control">
+              <label for="uiDuration">Duration (slots): <span style="cursor:help" title="The number of slots to simulate.">&#9432;</span></label>
+              <input id="uiDuration" type="number" min="10" max="7200" value="900"/>
+              </div>
+            <div class="control">
+              <label for="uiParties">Nodes: <span style="cursor:help" title="The number of parties (nodes) to simulate.">&#9432;</span></label>
+              <input id="uiParties" type="number" min="1" max="15" value="7"/>
+            </div>
+            <div class="control">
+              <label for="uiU">Round length (U, in slots): <span style="cursor:help" title="The duration of each voting round.">&#9432;</span></label>
+              <input id="uiU" type="number" min="5" max="90" value="20"/>
+            </div>
+            <div class="control">
+              <label for="uiA">Cert. expiration (A, in slots): <span style="cursor:help" title="The maximum age for a certificate to be included in a block.">&#9432;</span></label>
+              <input id="uiA" type="number" min="30" max="900" value="200"/>
+            </div>
+            <div class="control">
+              <label for="uiR">Chain ignorance (R, in rounds): <span style="cursor:help" title="The number of rounds for which to ignore certificates after entering a cool-down period.">&#9432;</span></label>
+              <input id="uiR" type="number" min="0" max="10" value="10"/>
+            </div>
+            <div class="control">
+              <label for="uiK">Cooldown period (K, in rounds): <span style="cursor:help" title="The minimum number of rounds to wait before voting again after a cool-down period starts.">&#9432;</span></label>
+              <input id="uiK" type="number" min="0" max="50" value="17"/>
+            </div>
+            <div class="control">
+              <label for="uiL">Block selection offset (L, in slots): <span style="cursor:help" title="The minimum age of a candidate block for being voted upon.">&#9432;</span></label>
+              <input id="uiL" type="number" min="1" max="120" value="10"/>
+            </div>
+            <div class="control">
+              <label for="uiTau">Quorum size (τ, in nodes): <span style="cursor:help" title="The number of votes required to create a certificate.">&#9432;</span></label>
+              <input id="uiTau" type="number" min="0" max="15" value="3"/>
+            </div>
+            <div class="control">
+              <label for="uiB">Boost (B, in blocks): <span style="cursor:help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label>
+              <input id="uiB" type="number" min="0" max="100" value="10"/>
+            </div>
+            <div class="control">
+              <label for="uiCommittee">Mean committee size (n, in nodes): <span style="cursor:help" title="The number of members on the voting committee.">&#9432;</span></label>
+              <input id="uiCommittee" type="number" min="0" max="15" value="5"/>
+            </div>
+            <div class="control">
+              <label for="uiDelta">Network diffusion delay (Δ, in slots): <span style="cursor:help" title="Upper limit on the time needed to diffuse a message to all nodes.">&#9432;</span></label>
+              <input id="uiDelta" type="number" min="0" max="20" value="0"/>
+            </div>
+            <div class="control">
+              <label for="uiAlpha">Active slot coefficient (α, in 1/nodes): <span style="cursor:help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label>
+              <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/>
+            </div>
+	    <div class="control">
+              <label for="uiDelay">Simulation rate (in seconds per slot): <span style="cursor:help" title="The rate at which to display slots.">&#9432;</span></label>
+              <input id="uiDelay" type="number" min="0.1" max="5" value="0.2" step="0.1"/>
+            </div>
+	    <div class="control">
+              <label for="uiSeed">Simulation random seed (integer): <span style="cursor:help" title="The random-number sequence for the simulation.">&#9432;</span></label>
+              <input id="uiSeed" type="number" min="0" max="1000000000" value="42" step="1"/>
+            </div>
           </div>
 	      <div id="buttons">
           <h3>Run</h3>
           <button id="uiSimulate" type="button">Simulate</button>
+	        <button id="uiStep" type="button">Step</button>
 	        <button id="uiStop" type="button">Stop</button>
 	        <button id="uiPause" type="button">Pause</button>
 	        <button id="uiResume" type="button">Resume</button>

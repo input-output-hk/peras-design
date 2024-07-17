@@ -27,7 +27,8 @@ open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
 
-open import Haskell.Prelude hiding (length; trans; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; _,_; _×_)
+open import Haskell.Prelude hiding (length; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; Any; _,_; _×_)
+open import Haskell.Law.Equality using (cong)
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -45,6 +46,9 @@ import qualified Peras.Chain as G
 ### Vote
 
 ```agda
+
+VotingWeight = ℕ
+
 record Vote : Set where
   constructor MkVote
   field votingRound : RoundNumber
@@ -69,6 +73,7 @@ instance
 
 <!--
 ```agda
+{-# COMPILE AGDA2HS VotingWeight #-}
 {-# COMPILE AGDA2HS Vote deriving (Generic) #-}
 {-# COMPILE GHC Vote = data G.Vote (G.MkVote) #-}
 {-# COMPILE AGDA2HS iVoteEq #-}
@@ -110,7 +115,6 @@ record Postulates : Set₁ where
 
 record Network : Set₁ where
   field
-    block₀ : Block
     Δ : ℕ
 ```
 ```agda
@@ -248,8 +252,7 @@ module _ ⦃ _ : Hashable Block ⦄
 ```agda
   data ValidChain : Chain → Set where
 
-    Genesis :
-      ValidChain (block₀ ∷ [])
+    Genesis : ValidChain []
 
     Cons : ∀ {c₁ c₂ : Chain} {b₁ b₂ : Block}
       → IsBlockSignature b₁ (signature b₁)
@@ -260,14 +263,9 @@ module _ ⦃ _ : Hashable Block ⦄
       → ValidChain (b₁ ∷ c₂)
 ```
 ```agda
-  tip : ∀ {c : Chain} → ValidChain c → Block
-  tip Genesis = block₀
-  tip (Cons {b₁ = b} _ _ refl refl _) = b
-```
-```agda
-  uncons : ∀ {c : Chain} → (v : ValidChain c) → Σ[ (b , d) ∈ Block × Chain ] (c ≡ b ∷ d)
-  uncons {block₀ ∷ .[]} Genesis = (block₀ , []) , refl
-  uncons {b₁ ∷ b₂ ∷ c₁} (Cons _ _ refl refl _) = (b₁ , (b₂ ∷ c₁)) , cong (_∷ (b₂ ∷ c₁)) refl
+  tipHash : ∀ {c : Chain} → ValidChain c → Hash Block
+  tipHash Genesis = record { hashBytes = emptyBS }
+  tipHash (Cons {b₁ = b} _ _ _ _ _) = hash b
 ```
 ```agda
   certsFromChain : Chain → List Certificate

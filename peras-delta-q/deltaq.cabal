@@ -49,6 +49,17 @@ executable plot-dqsd
   ghc-options:        -Wall -Wunused-packages
   default-extensions: UnicodeSyntax
                       TypeApplications
+executable dqsd-vote
+  build-depends:      delta-q
+                    , Chart >= 1.9
+                    , Chart-cairo >= 1.9
+                    , base
+                    , mwc-random
+                    , process
+  main-is:            dqsd-vote.hs
+  ghc-options:        -Wall -Wunused-packages
+  default-extensions: UnicodeSyntax
+                      TypeApplications
 
 test-suite tests
   type:             exitcode-stdio-1.0

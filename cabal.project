@@ -15,11 +15,11 @@ index-state:
   , cardano-haskell-packages 2024-05-29T10:15:00Z
 
 packages:
-  peras-hs
   peras-simulation
   peras-markov
   peras-server
   peras-delta-q
+  peras-vote
   test-demo
 
 tests: True
@@ -36,7 +36,6 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
-benchmarks: False
 optimization: False
 
 flags: +defer-plugin-errors

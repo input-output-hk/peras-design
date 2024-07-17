@@ -1,3 +1,6 @@
 [submodule "PoS-NSB"]
 	path = PoS-NSB
 	url = git@github.com:AU-COBRA/PoS-NSB.git
+[submodule "analytics/LCanalysis"]
+	path = analytics/LCanalysis
+	url = git@github.com:bwbush/LCanalysis

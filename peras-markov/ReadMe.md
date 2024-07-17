@@ -1,9 +1,96 @@
 # Markov-chain computations of adversarial scenarios
 
-A work in progress.
+Run Markov-chains simulations of the Peras pre-alpha protocol for adversarial scenarios.
+
+
+## Help
 
 ```console
-$ cabal run
+$ cabal run exe:peras-markov -- --help
+
+peras-markov: simulate Peras protocol using Markov chains
+
+Usage: peras-markov [--version] COMMAND
+
+  This command-line tool runs Markov-chain simulations of the Peras protocol.
+
+Available options:
+  -h,--help                Show this help text
+  --version                Show version.
+
+Available commands:
+  longer-chain             Compute the probability of a private adversarial
+                           chain being longer than the honest one.
+  length-difference        Compute the probability distribution of the length of
+                           the honest chain minus the length of the adversarial
+                           chain.
+  lengths                  Compute the mean lengths of the honest and
+                           adversarial chains.
+  command-candidate-demo   Demonstrate a common-candidate simulation.
+  separate-chains-demo     Demonstrate a separate-chain simulation.
+```
+
+
+## Probability of adversarial chain being longer than the honest one
+
+```console
+$ cat example-input.yaml 
+
+α: 0.05
+u: 150
+a: 1500
+r: 10
+k: 25
+b: 10
+τ: 450
+c: 600
+
+$ cabal run exe:peras-markov -- longer-chain --slots 20 --param-file example-input.yaml --out-file example-output.tsv
+
+$ cat example-output.tsv 
+
+Slot    P(honest > adversary)   P(adversary >= honest)
+1       4.7438621223469715e-2   0.9525613787765302
+2       9.239536108283945e-2    0.9076046389171604
+3       0.1350107637450336      0.8649892362549663
+4       0.17541693986243181     0.8245830601375678
+5       0.21373809335612082     0.7862619066438787
+6       0.2500910143820277      0.7499089856179721
+7       0.2845855406922287      0.7154144593077708
+8       0.3173249894570455      0.6826750105429539
+9       0.3484065614766823      0.6515934385233171
+10      0.3779217195834542      0.6220782804165452
+11      0.4059565429165054      0.5940434570834943
+12      0.4325920586397119      0.567407941360287
+13      0.4579045525697128      0.5420954474302867
+14      0.4819658600841639      0.5180341399158352
+15      0.5048436385899521      0.495156361410047
+16      0.526601622746745       0.47339837725325395
+17      0.5472998635625402      0.4527001364374588
+18      0.5669949524043975      0.43300504759560177
+19      0.5857402308989419      0.41425976910105744
+20      0.6035859876332109      0.39641401236678836
+```
+
+
+## Common-candidate demo
+
+```console
+$ cabal run exe:peras-markov -- common-candidate-demo
+
+Honest vs adversary length     Probability
+--------------------------     -----------
+LT & adversary candidate       3.0654488746085475e-2
+EQ & adversary candidate       3.135862303919123e-2
+GT & adversary candidate       0.7864335018756112
+No adversary candidate         0.1515533863391272
+```
+
+
+## Separate-chains demo
+
+```console
+$ cabal run exe:peras-markov -- separate-chains-demo
 
 # Symbolic and numeric computation of adversarial scenarios.
 
