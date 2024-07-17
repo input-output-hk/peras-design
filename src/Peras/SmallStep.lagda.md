@@ -45,7 +45,6 @@ adversarial parties share generic, adversarial state.
 
 References:
 
-* Adaptively Secure Fast Settlement Supporting Dynamic Participation and Self-Healing
 * Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and Bas Spitters
 
 ### Parameters
@@ -163,10 +162,6 @@ has to fulfil all the properties mentioned below:
     field
 ```
 Properties that must hold with respect to chains, certificates and votes.
-
-**TODO**: Use the properties (A1) - (A9) of the block-tree with certificates instead
-as proposed in the paper.
-
 ```agda
       instantiated :
         preferredChain tree₀ ≡ []
@@ -465,7 +460,7 @@ all the messages in the message buffer.
 ```
 Updating the global state inserting the updated block-tree for a given party,
 adding messages to the message buffer for the other parties and appending the
-history. "add and diffuse" from the paper
+history
 ```agda
     _,_,_,_⇑_ : Message → Delay → PartyId → T → State → State
     m , d , p , l ⇑ M =
@@ -567,12 +562,9 @@ delay the message.
 
 ## Block creation
 
-Certificates are conditionally added to a block. The following function deterimes
+Certificates are conditionally added to a block. The following function determines
 if there needs to be a certificate provided for a given voting round and a local
-block-tree.
-
-The conditions (a) - (c) are reflected in Figure 2 in the *Peras*
-paper
+block-tree. The conditions are as follows
 
 a) There is no certificate from 2 rounds ago in certs
 b) The last seen certificate is not expired
