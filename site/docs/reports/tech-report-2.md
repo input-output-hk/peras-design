@@ -52,7 +52,9 @@ The following pictures shows how our R&D process evolved over the course of the 
 
 ### Software readiness level
 
-#### Last stage (SRL 3)
+We use Software [Technology Readiness Level](https://esto.nasa.gov/trl/) as a crude assessment of how far we are in the journey leading from an idea to actual code running in production.
+
+In our [previous technical report](tech-report-1#srl) we estimated having reached SRL 3:
 
 | Questions to resolve                                                                                          | Status  |
 |---------------------------------------------------------------------------------------------------------------|---------|
@@ -68,7 +70,7 @@ The following pictures shows how our R&D process evolved over the course of the 
 | Analytical verification of critical functions from proof-of-concept made?                                     | Done    |
 | Analytical and experimental proof-of-concept documented?                                                      | Done    |
 
-#### Current stage (SRL 4)
+At the date of publication for this report, we have reached SRL 4:
 
 | Questions to resolve                                                                                                                     | Status  |
 |------------------------------------------------------------------------------------------------------------------------------------------|---------|
@@ -98,24 +100,7 @@ The following pictures shows how our R&D process evolved over the course of the 
 
 ## Protocol definition
 
-> [!WARNING]
-> The following is a near-verbatim copy of Figure 2 of the draft Peras paper. The only signficant alterations are the following:
->
-> - Omit preagreement
->     - Set the termination bound to zero: T ≡ 0
->     - The proposed block for voting is simply the youngest block at least L slots old on the locally preferred chain.
-> - Do not track certificate arrival time: Δ ≡ 0
-> - The initial set of certificates is the genesis certificate, not the empty set.
-> - Clarified ambiguities.
-> - Omit irrelevant details.
-> - Made chain-preference deterministic.
-> - Sequenced operations.
-
-> [!IMPORTANT]
-> Do we want to provide a detailed description of the protocol here?
-> - It seems that we should reference the Agda specification and only provide a high-level overview of what has changed since last tech report.
-> - If we delete this section, then we need to document how the executable specification varies from the paper and/or the relational specification.
-> - Alternatively, we could move this section to an appendix or to the web site and indicate that it is non-normative.
+The following is an informal specification of the protocol using some mathematical notations that we will refer to across this document. The detailed formal specification can be found [here](/agda_html/Peras.SmallStep.html), and the reference implementation in Haskell is available in [GitHub](https://github.com/input-output-hk/peras-design/blob/8a818d24ddbcc6b60a02f092bdce3ed92b2388f5/peras-simulation/src/Peras/Prototype/Node.hs#L54).
 
 ### Variables
 
@@ -294,7 +279,11 @@ The `peras-vote` package provides some benchmarks comparing the 2 approaches, wh
 * Single Verification (binomial): 160.9 μs
 * Single Voting (Taylor): 47.02 ms
 
-**Note**: The implementation takes some liberty with the necessary rigor suitable for cryptographic code, but the timings provided should be consistent with real-world production grade code. In particular, when using _nonce_ as a random value, we only use the low order 64 bits of the nonce, not the full 256 bits.
+:::note
+
+The implementation takes some liberty with the necessary rigor suitable for cryptographic code, but the timings provided should be consistent with real-world production grade code. In particular, when using _nonce_ as a random value, we only use the low order 64 bits of the nonce, not the full 256 bits.
+
+:::
 
 ### Certificates
 
@@ -324,9 +313,9 @@ In practice, as the number of votes is expected to be in the 1000-2000 range, an
 
 ##### Certificate size
 
-For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{rel}$, and $n_p/n_f$ the proof size is perfectly linear and only depends on the size of each vote:
+![Proof size / vote size](/img/alba-proof-size-fixed-params.svg#scale50)
+For a given set of parameters, eg. fixed values for $\lambda_{sec}$, $\lambda_{rel}$, and $n_p/n_f$ the proof size is perfectly linear and only depends on the size of each vote
 
-![Proof size / vote size](/img/alba-proof-size-fixed-params.svg)
 
 Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
@@ -374,40 +363,20 @@ Using the "old" version of ΔQ library based on numerical (e.g., Monte-Carlo) sa
 
 This graph tends to demonstrate vote diffusion should be non-problematic, with a quorum expected to be reached in under 1 second most of the time to compare with a round length of about 2 minutes.
 
-> [!NOTE]
->
-> ### About ΔQ libraries
->
-> At the time of this writing, a newer version of the ΔQ library based on _piecewise polynomials_ is [available](https://github.com/DeltaQ-SD/dqsd-piecewise-poly). Our [attempts](https://github.com/input-output-hk/peras-design/blob/01206e5d4d3d5132c59bff18564ad63adc924488/Logbook.md#L302) to use it to model votes diffusion were blocked by the high computational cost of this approach and the time it takes to compute a model, eg. about 10 minutes in our case. The code for this experiment is available as a [draft PR #166](https://github.com/input-output-hk/peras-design/pull/166).
->
-    > In the old version of ΔQ based on numerical sampling, which have [vendored in our codebase](https://github.com/input-output-hk/peras-design/blob/a755cd033e4898c23ee4bacc9b677145497ac454/peras-delta-q/README.md#L1), we introduced a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
->
-> Given convolutions are the most computationally intensive part of a ΔQ model, it seems to us a modeling approach based on discrete sampling and vector/matrices operations would be quite efficient. We did some experiment in that direction, assessing various approaches in Haskell: A naive direct computation using [Vector](https://hackage.haskell.org/package/vector)s, FFT-based convolution using vectors, and [hmatrix](https://hackage.haskell.org/package/hmatrix)' convolution function.
+<details>
+  <summary>About ΔQ libraries</summary>
 
-> ![Computing Convolutions](/img/convolutions.png)
->
-> This quick-and-dirty spike lead us to believe we could provide a fast and accurate ΔQ modelling library using native vector operations provided by all modern architectures, and even scale to very large model using GPU libraries.
+At the time of this writing, a newer version of the ΔQ library based on _piecewise polynomials_ is [available](https://github.com/DeltaQ-SD/dqsd-piecewise-poly). Our [attempts](https://github.com/input-output-hk/peras-design/blob/01206e5d4d3d5132c59bff18564ad63adc924488/Logbook.md#L302) to use it to model votes diffusion were blocked by the high computational cost of this approach and the time it takes to compute a model, eg. about 10 minutes in our case. The code for this experiment is available as a [draft PR #166](https://github.com/input-output-hk/peras-design/pull/166).
 
-## Constraints on Peras Parameters
+In the old version of ΔQ based on numerical sampling, which have [vendored in our codebase](https://github.com/input-output-hk/peras-design/blob/a755cd033e4898c23ee4bacc9b677145497ac454/peras-delta-q/README.md#L1), we introduced a `NToFinish` combinator to model the fact we only take into account some fraction of the underlying model. In our case, we model the case where we only care about the first 75% of votes that reach a node.
 
-The following constraints on Peras parameters arise for both theoretical and practical considerations.
+Given convolutions are the most computationally intensive part of a ΔQ model, it seems to us a modeling approach based on discrete sampling and vector/matrices operations would be quite efficient. We did some experiment in that direction, assessing various approaches in Haskell: A naive direct computation using [Vector](https://hackage.haskell.org/package/vector)s, FFT-based convolution using vectors, and [hmatrix](https://hackage.haskell.org/package/hmatrix)' convolution function.
 
-| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                    |
-| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                         |
-| Block selection offset  | $L$             | slots   | The minimum age of a candidate block for being voted upon.                                | $\Delta \lt L \leq U$                                    | Rule VR-1B will fail if the candidate block is older than the most recently certified block. |
-| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                             |
-| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.       |
-| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix.    |
-| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                                  |
-| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (< 50%) of adversarial voters.                                       |
-| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                           |
-| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                                |
-| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                     |
-| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} = \mathcal{O}\left( B / f \right)$        | Sufficient blocks must be produced to overcome an adversarially boosted block.               |
-| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                   |
-| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CP} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.          |
-| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                               |
+![Computing Convolutions](/img/convolutions.png)
+
+This quick-and-dirty spike lead us to believe we could provide a fast and accurate ΔQ modelling library using native vector operations provided by all modern architectures, and even scale to very large model using GPU libraries.
+
+</details>
 
 ## Simulating Peras
 
@@ -606,9 +575,6 @@ The article [Practical Settlement Bounds for Longest-Chain Consensus by Gaži, 
 
 ## Analyses of adversarial scenarios
 
-> [!CAUTION]
-> Several well-formatted equations are not rendered correctly by GitHub's MathJAX. Make sure that these render correctly via `pandoc`.
-
 The probability of adversarial success can be computed analytically, either exactly or approximately, for some scenarios. Such analytic computations are typically faster and more comprehensive than running ensembles of simulations and analyzing those results. The scenarios analyzed in this section are intended to provide guidance on how the probability of adversarial success depends upon Peras parameters, so that the parameters can be set appropriately for stakeholder user cases. In this section we use the following notation:
 
 - Active-slot coefficient: $\alpha$
@@ -638,6 +604,9 @@ The probability of adversarial success can be computed analytically, either exac
 
 ***Scenario:*** Consider the situation where the adversary decides not to vote in a round, in order to prevent a quorum from occurring and to force the chain into a cool-down period. This occurs when the number of honest voters is less than the quorum size.
 
+<details>
+    <summary>Analysis</summary>
+
 ***Analysis:*** Let $\beta$ be the probability that a unit of stake is selected for voting-committee membership. Let $S$ be the total stake and $H = (1 - f) \cdot S$ be the honest stake. Assuming the total stake is large, we can approximate the binomial distribution by a normal one and express the probability of not having an an honest quorum as follows:
 
 $$
@@ -661,6 +630,8 @@ function(f, n)
 
 ![Per-round probability of no honest quorum, when quorum is three-quarters of mean committee size](/img/no-honest-quorum.plot.png)
 
+</details>
+
 ### Adversarial quorum
 
 ***Question:*** What is the probability that adversaries can form a voting quorum in a round?
@@ -671,7 +642,10 @@ function(f, n)
 
 ***Scenario:*** Consider the situation where adversaries are lucky enough in the voting-committee sortition to hold a quorum of votes.
 
-***Analysis:*** The analysis proceeds similarly to the "no honest quorum" scenario, but for adversaries having at least a quorum of votes.
+<details>
+    <summary>Analysis</summary>
+
+The analysis proceeds similarly to the "no honest quorum" scenario, but for adversaries having at least a quorum of votes.
 
 $$
 P = 1 - \mathbf{P}_\text{binom} (\lceil\tau\rceil, S - H, \beta) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, (S - H) \cdot \beta, \sqrt{(S - H) \cdot \beta \cdot (1 - \beta)} \right) \approx 1 - \mathbf{P}_\text{normal} \left( \tau, f \cdot n, \sqrt{f \cdot n} \right)
@@ -694,6 +668,8 @@ function(f, n)
 
 ![Per-round probability of adversarial quorum, when quorum is three-quarters of mean committee size](/img/adversarial-quorum.plot.png)
 
+</details>
+
 ### No certificate in honest block
 
 ***Question:*** What is the probability that adversaries can prevent a certificate from being included in a block before the certificate expires?
@@ -704,7 +680,10 @@ function(f, n)
 
 ***Scenario:***  Consider the situation where the voting certificate must be included on the chain (via rule Block Creation 1b), but no honest blocks are forged before the last $\mathsf{cert}^\prime$ expires and adversaries abstain from updating $\mathsf{cert}^\prime$ when they forge blocks.
 
-***Analysis:***. The probability that adversaries forge every block during the period when the certificate has not expired is
+<details>
+    <summary>Analysis</summary>
+
+The probability that adversaries forge every block during the period when the certificate has not expired is
 
 $$
 P = (1 - p)^A = (1 - \alpha)^{(1 - f) \cdot A}
@@ -720,6 +699,8 @@ function(A, f, alpha)
 ***Example:*** Assuming an active-slot coefficient of 5%, plot the probability of a certificate not being recorded in an honest block before the certificate expires.
 
 ![Probability of now certificate in an honest block before it expires](/img/no-certificate-in-honest-block.plot.png)
+
+</details>
 
 ### Adversarial chain receives boost
 
@@ -737,7 +718,10 @@ Here we examine two approaches to computing the probability that an adversarial 
 
 ![Adversarial chain receives boost](/img/adversarial-chain-receives-boost.diagram.png)
 
-***Analysis.*** Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. (Note that this neglects the probability that the adversary will privately extend the last boosted block before slot $r \cdot U - U - L$.) Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). The probability of $m < n$ is
+<details>
+    <summary>Analysis</summary>
+
+Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. (Note that this neglects the probability that the adversary will privately extend the last boosted block before slot $r \cdot U - U - L$.) Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). The probability of $m < n$ is
 
 $$
 P = \sum_{0 \le m \lt n \le U} \mathbf{p}_\text{binom}(m,U,p) \cdot \mathbf{p}_\text{binom}(n,U,q) = \sum_{n=1}^U \mathbf{P}_\text{binom}(n-1,U,p) \cdot \mathbf{p}_\text{binom}(n,U,q)
@@ -754,6 +738,8 @@ function(U, p, q)
 
 ![Per-round probability of dishonest boost when the active-slot coefficient is 5%.](/img/adversarial-chain-receives-boost.plot.png)
 
+</details>
+
 #### Variant 2
 
 ***Question.*** What is the probability that an adversarial chain receives the next boost?
@@ -766,7 +752,10 @@ function(U, p, q)
 
 ![Adversarial chain receives boost](/img/adversarial-chain-receives-boost-variant.diagram.png)
 
-***Analysis.*** Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last public block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). Additionally, the adversary may privately produce $k$ blocks after the last boosted block and before slot $r \cdot U - U - L$: this random variable for producing such blocks is negative-binomially distributed. The probability of $m < k + n$ is
+<details>
+    <summary>Analysis</summary>
+
+Assume that the block- and vote-diffusion times are negligible, so that the last boosted block is indeed the last public block before slot $r \cdot U - U - L$ and that the honest and adversarial candidates are indeed the last blocks on their forks before slot $r \cdot U - l$. Thus the lengthening of the two forks during the $U$ slots are the last boosted block are binomially distributed with parameters $m$ and $p$ (honest) and $n$ and $p$ (adversarial). Additionally, the adversary may privately produce $k$ blocks after the last boosted block and before slot $r \cdot U - U - L$: this random variable for producing such blocks is negative-binomially distributed. The probability of $m < k + n$ is
 
 $$
 P = \sum_{\substack{0 \le m \le U \\ 0 \le n \le U \\ 0 \le k \le \infty \\ m \lt n + k}} (1 - f) f^k \cdot {U\choose{m}} p^m (1-p)^{U-m} \cdot {U\choose{n}} q^n (1-q)^{U-n}
@@ -791,6 +780,7 @@ function (U, p, q) {
 ***Example.*** Let the active-slot coefficient $\alpha = 0.05 \, \text{slot}^{-1}$ and let $f$ be the fraction of adversarial stake, so $p = \alpha \cdot (1 - f)$ and $q = \alpha \cdot f$. Plot the probability of the dishonest boost as a function of the adversarial fraction of stake and the round length.
 
 ![Per-round probability of dishonest boost (variant) when the active-slot coefficient is 5%.](/img/adversarial-chain-receives-boost-variant.plot.png)
+</details>
 
 ### Healing from adversarial boost
 
@@ -802,7 +792,10 @@ function (U, p, q) {
 
 ***Scenario:*** The honest chain must grow at least $B$ blocks longer than the adversarial chain if it is to resist the adversarial chain's receiving a boost from a certificate.
 
-***Analysis:*** During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \lt n + B$ at slot $s$ is
+<details>
+    <summary>Analysis</summary>
+
+During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \lt n + B$ at slot $s$ is
 
 $$
 P = \sum_{0 \le m \lt n + B \le s} \mathbf{p}_\text{binom}(m, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q) = \sum_{n=0}^s \mathbf{P}_\text{binom}(n+B-1, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q)
@@ -850,7 +843,11 @@ F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
 
 ![Linear model fit for healing time's scaling as a function of boost](/img/boost-scaling-model.png)
 
+</details>
+
 ### No honest block
+
+![Probability of not producing an honest block within the chain-quality time, given 5% active slots](/img/no-honest-block.plot.png#scale50)
 
 ***Question:*** What is the probability of not having an honest block during a given period of time?
 
@@ -860,7 +857,6 @@ F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
 
 ***Scenario, Analysis, Example:*** The scenario, analysis, and example are identical to the case "No certificate in honest block".
 
-![Probability of not producing an honest block within the chain-quality time, given 5% active slots](/img/no-honest-block.plot.png)
 
 ### No common prefix
 
@@ -872,7 +868,10 @@ F-statistic: 1.796e+04 on 4 and 395 DF,  p-value: < 2.2e-16
 
 ***Scenario:*** The honest chain must grow longer than the adversarial chain.
 
-***Analysis:*** During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \le n$ at slot $s$ is
+<details>
+    <summary>Analysis</summary>
+
+During cooldown, the growth of the honest chain (length $m$) and adversarial chain (length $n$) can be modeled by the difference between binomially distributed random variables. The probability of $m \le n$ at slot $s$ is
 
 $$
 P = \sum_{0 \le m \le n \le s} \mathbf{p}_\text{binom}(m, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q) = \sum_{n=0}^s \mathbf{P}_\text{binom}(n, s, p) \cdot \mathbf{p}_\text{binom}(n, s, q)
@@ -889,7 +888,34 @@ function(s, p, q)
 
 ![Probability of not achieving the common-prefix time, given 5% active slots.](/img/no-common-prefix.plot.png)
 
-## Settlement probabilities
+</details>
+
+## Defining Protocol Parameters values
+
+In order to provide useful recommendations for the protocol parameters, we first need to understand what is their admissible range of values, e.g. the constraints stemming from practical and theoretical needs, and to analyse their impact on the settlement probabilities.
+
+### Constraints on Peras Parameters
+
+The following constraints on Peras parameters arise for both theoretical and practical considerations.
+
+| Parameter               | Symbol          | Units   | Description                                                                               | Constraints                                              | Rationale                                                                                    |
+| ----------------------- | --------------- | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Round length            | $U$             | slots   | The duration of each voting round.                                                        | $U \geq \Delta$                                          | All of a round's votes must be received before the end of the round.                         |
+| Block selection offset  | $L$             | slots   | The minimum age of a candidate block for being voted upon.                                | $\Delta \lt L \leq U$                                    | Rule VR-1B will fail if the candidate block is older than the most recently certified block. |
+| Certificate expiration  | $A$             | slots   | The maximum age for a certificate to be included in a block.                              | $A = T_\text{heal}+T_\text{CQ}$                          | After a quorum failure, the chain must heal and achieve quality.                             |
+| Chain ignorance period  | $R$             | rounds  | The number of rounds for which to ignore certificates after entering a cool-down period.  | $R = \left\lceil A / U \right\rceil$                     | Ensure chain-ignorance period lasts long enough to include a certificate on the chain.       |
+| Cool-down period        | $K$             | rounds  | The minimum number of rounds to wait before voting again after a cool-down period starts. | $K = \left\lceil \frac{A + T_\text{CP}}{U} \right\rceil$ | After a quorum failure, the chain must heal, achieve quality, and attain a common prefix.    |
+| Certification boost     | $B$             | blocks  | The extra chain weight that a certificate gives to a block.                               | $B \gt 0$                                                | Peras requires that some blocks be boosted.                                                  |
+| Quorum size             | $\tau$          | parties | The number of votes required to create a certificate.                                     | $\tau \gt 3 n / 4$                                       | Guard against a minority (< 50%) of adversarial voters.                                       |
+| Committee size          | $n$             | parties | The number of members on the voting committee.                                            | $n \gt 0$                                                | Peras requires a voting committee.                                                           |
+| Network diffusion time  | $\Delta$        | slots   | Upper limit on the time needed to diffuse a message to all nodes.                         | $\Delta \gt 0$                                           | Messages have a finite delay.                                                                |
+| Active slot coefficient | $f$             | 1/slots | The probability that a party will be the slot leader for a particular slot.               | $0 \lt f \leq 1$                                         | Blocks must be produced.                                                                     |
+| Healing time            | $T_\text{heal}$ | slots   | Healing period to mitigate a strong (25-50%) adversary.                                   | $T_\text{heal} = \mathcal{O}\left( B / f \right)$        | Sufficient blocks must be produced to overcome an adversarially boosted block.               |
+| Chain-quality time      | $T_\text{CQ}$   | slots   | Ensure the presence of at least one honest block on the chain.                            | $T_\text{CQ} = \mathcal{O} (k/f)$                        | A least one honest block must be produced.                                                   |
+| Common-prefix time      | $T_\text{CP}$   | slots   | Achieve settlement.                                                                       | $T_\text{CP} = \mathcal{O} (k/f)$                        | The Ouroboros Praos security parameter defines the time for having a common prefix.          |
+| Security parameter      | $k$             | blocks  | The Ouroboros Praos security parameter.                                                   | n/a                                                      | Value for the Cardano mainnet.                                                               |
+
+### Settlement probabilities
 
 In the estimates below, we define the *non-settlement probability* as the probability that a transaction (or block) is rolled back. Note that this does not preclude the possibility that the transaction could be included in a later block because it remained in the memory pool of a node that produced a subsequent block. Because there are approximately 1.5 million blocks produced per year, even small probabilities of non-settlement can amount to an appreciable number of discarded blocks.
 
@@ -1006,7 +1032,8 @@ A boost of 15 blocks/certificate makes the successful adversarial behavior even 
 |          540 |     3.33e-16 |      2.22e-16 |      2.88e-13 |      7.53e-11 |      4.35e-04 |
 |          600 |     2.22e-16 |      3.33e-16 |      2.00e-13 |      6.51e-11 |      6.47e-04 |
 
-## Recommendations for Peras parameters
+
+### Recommendations for Peras parameters
 
 Based on the analysis of adversarial scenarios, a reasonable set of default protocol parameters for further study and simulation is show in the table below. The optimal values for a real-life blockchain would depend strongly upon external requirements such as balancing settlement time against resisting adversarial behavior at high values of adversarial stake. This set of parameters is focused on the use case of knowing soon whether a block is settled or rolled back; other sets of parameters would be optimal for use cases that reduce the probability of roll-back at the expense of waiting longer for settlement.
 
@@ -1031,11 +1058,9 @@ The Praos security parameter $k_\text{praos} = 2160 \text{\,blocks} \approx 4320
 
 The *committee size* of $n = 900 \text{\,parties}$ corresponds to a one in a million chance of not reaching a quorum if 10% of the parties do not vote for the majority block (either because they are adversarial, offline, didn't receive the block, or chose to vote for a block on a non-preferred fork). This "no quorum" probability is equivalent to one missed quorum in every 1.2 years. The *quorum size* of $\tau = \left\lceil 3 n / 4 \right\rceil = 675 \text{\,parties}$ is computed from this.
 
-## Formal specification in Agda
+## Protocol Formalisation
 
-In the following subsections we explain how the formal specification of Ouroboros Peras relates the research paper with the reference implementation of the protocol.
-
-### Formal specification
+### Formal specification in Agda
 
 The formal specification of Ouroboros Peras is implemented in Agda as a relational specification. It provides a small-step semantics of the protocol that describes how the system can evolve over time.
 
@@ -1053,16 +1078,14 @@ The second approach has been chosen and implemented, see *Conformance testing* b
 
 In order for the formal specification to also establish a link with research, we started prototyping properties and proofs needed to show safety and liveness for Ouroboros Peras protocol. Those first attempts look promising and could potentially replace pen and paper proofs.
 
-Restrictions of the formal specifications:
+Note that as a minor restriction of the formal specification, we only model a fixed set of participants.
 
-* fixed set of participants
+### Conformance testing
 
-## Conformance testing
+Conformance testing is linked to the Peras specification via the following chain of evidence:
 
-Conformance testing is linked to the Peras paper via the following chain of evidence:
-
-- The protocol defined in the Peras paper is encoded in Agda as a relational specification.
-- The proofs in the Peras paper will be encoded as Agda proofs.
+- The protocol is encoded in Agda as a relational specification.
+- The proofs of Peras properties are written in Agda too.
 - The protocol is also implemented as an executable specification in Agda.
 - Soundness proofs demonstrate that the executable specification correctly implements the relational specification.
 - The `agda2hs` tool generates Haskell code implementing the Agda executable specification.
@@ -1124,7 +1147,8 @@ Finished in 4.7193 seconds
 1 example, 0 failures
 ```
 
-### Lessons learned from experiments with Agda-to-Haskell workflows
+<details>
+<summary> Lessons learned from experiments with Agda-to-Haskell workflows</summary>
 
 Aside from the workflow that we finally settled upon and that is described above, we explored several workflows for connecting the relational specification in Agda to `quickcheck-dynamic` tests in Haskell. This involves accommodating or working around several tensions:
 
@@ -1214,7 +1238,13 @@ There are still opportunities for syntactic sugar that would make the code more 
 - Quite a bit of boilerplate (instances, helper functions, lenses, State monad, etc.) are required to make the specification executable.
 - Creating a full eDSL might be a better approach, but that would involved significantly more effort.
 
-## Community feedback
+</details>
+
+## Implementing Peras
+
+### Community feedback
+
+As we want to turn Peras from a research idea into a concrete protocol extension, we want to provide to implementors the best possible tools to help them. We have therefore reached out to various people from the Cardano community asking them what would a good CIP for Peras look like.
 
 - **Varied Needs**: Stakeholders have varying levels of technical expertise. Some require rigorous specifications (Agda, research papers), while others prefer high-level explanations and practical resources like pseudocode, diagrams, and data structure descriptions.
 - **Accessibility**: There is a strong preference for CIPs (Cardano Improvement Proposals) to be understandable to a wider and diverse audience. dApp builders want to know if and what changes are required from them - i.e., how many confirmations they have to wait for before they can display to the user that the action is confirmed, SPOs want to know how much extra resources are neede and what effort is required for installation, etc.
@@ -1222,13 +1252,13 @@ There are still opportunities for syntactic sugar that would make the code more 
 - **Speed and Efficiency**: Some stakeholders emphasize the need for a faster development process, suggesting that the formal specification could be developed in parallel with the technical implementation.
 - **Timeline**: Stakeholders are curious about the timeline for Peras development and implementation.
 
-## Resources impact of Peras
+### Resources impact of Peras
 
 In this section, we evaluate the impact on the day-to-day operations of the Cardano network and cardano nodes of the deployment of Peras protocol, based on the data gathered over the course of project.
 
-### Network
+#### Network
 
-#### Network traffic
+##### Network traffic
 
 For a fully synced nodes, the impact of Peras on network traffic is modest:
 
@@ -1243,7 +1273,7 @@ A non fully synced nodes will have to catch-up with the _tip_ of the chain and t
 | 3 months     | 16.68       | 3.69              |
 | 6 months     | 33.36       | 7.38              |
 
-#### Network costs
+##### Network costs
 
 We did some research on network pricing for a few major Cloud and well-known VPS providers, based on the [share](https://pooltool.io/networkhealth) of stakes each provider is reported to support, and some typical traffic pattern as exemplified by the following picture (courtesy of Markus Gufler).
 ![Typical node inbound & outbound traffic](/img/node-average-traffic.jpg)
@@ -1259,25 +1289,28 @@ The next table compares the cost (in US$/month) for different outgoing data tran
 | OVH          | $70    | $70     | $70      | $70      |
 | Hetzner      | $32    | $32     | $32      | $32      |
 
-**Notes**:
+
+:::note
 
 * The AWS cost is quite hard to estimate up-front, obviously on purpose. The $150 base price is a rough average of various instances options in the target range.
 * Google, AWS and Azure prices are based on 100% uptime and at least 1-year reservation for discounts.
 * Cloud providers only charge _outgoing_ network traffic. The actual cost per GB depends on the destination, this table assumes all outbound traffic will be targeted outside of the provider which obviously won't be true, so it should be treated as an upper bound.
 
+:::
+
 For an AWS hosted SPO, which represent about 20% of the SPOs, a 14 kB/s increase in traffic would lead to a cost increase of **$3.8/mo** (34 GB times $0.11/GB). This represents an average across the whole network: depending on the source of the vote and its diffusion pattern, some nodes might need to send a vote to more than one downstream peer which will increase their traffic, while other nodes might end up not needing to send a single vote to their own peers. Any single node in the network is expected to download each vote _at most_ once.
 
-### Persistent storage
+#### Persistent storage
 
 Under similar assumptions, we can estimate the storage requirements entailed by Peras: Ignoring the impact of cooldown periods, which last for a period at least as long as $k$ blocks, the requirement to store certificates for every round increases node's storage by about **20%**.
 
 Votes are expected to be kept in memory so their impact on storage will be null.
 
-### CPU
+#### CPU
 
 In the [Votes & Certificates](#votes--certificates) section we've provided some models and benchmarks for votes generation, votes verification, certificates proving and certificates verification, and votes diffusion. Those benchmarks are based on efficient sortition-based voting and ALBAs certificate, and demonstrate the impact of Peras on computational resources for a node will be minimal. Moreover, the most recent version of the algorithm detailed in this report is designed in such a way the voting process runs in parallel with block production and diffusion and therefore is not on this critical path.
 
-### Memory
+#### Memory
 
 A node is expected to need to keep in memory:
 
@@ -1286,7 +1319,7 @@ A node is expected to need to keep in memory:
 
 Peras should not have any significant impact on the memory requirements of a node.
 
-## Integration into Cardano Node
+### Integration into Cardano Node
 
 In the [previous](tech-report-1.md) report, we already studied how Peras could be concretely implemented in a Cardano node. Most of the comments there are still valid, and we only provide here corrections and additions when needed. We have addressed resources-related issue in a previous section.
 
@@ -1321,48 +1354,3 @@ On the networking side, our [ΔQ studies](#vote-diffusion) demonstrate that diff
 In terms of development impacts and resources, Peras requires only a minimal modification to the ledger CDDL and block header. Around cool-down periods, a certificate hash will need to be included in the block header and the certificate itself in the block. Implementing Peras does not require any new cryptographic keys, as the existing VRF/KES will be leveraged. It will require an implementation of the ALBA algorithm for creating certificates. It does require a new mini-protocol for diffusion of votes and certificates. The node's logic for computing the chain weight needs to be modified to account for the boosts provided by certificates. Nodes will have to persist all certificates and will have to cache unexpired votes. They will need a thread (or equivalent) for verifying votes and certificates. Peras only interacts with Genesis and Leios in the chain-selection function and it is compatible with the historical evolution of the blockchain. A node-level specification and conformance test will also need to be written.
 
 In no way does Peras weaken any of the security guarantees provided by Praos or Genesis. Under strongly adversarial conditions, where an adversary can trigger a Peras voting cool-down period, the protocol in essence reverts to the Praos protocol, but for a duration somewhat longer than the Praos security parameter. Otherwise, settlement occurs after each Peras round. This document has approximately mapped the trade-off between having a short duration for each round (and hence faster settlement) versus having a high resistance to an adversary forcing the protocol into a cool-down period. It also estimates the tradeoff between giving chains a larger boost for each certificate (and hence stronger anchoring of that chain) versus keeping the cool-down period shorter.
-
-### Recommended next steps
-
-The Peras workshop recently held in Edinburgh identified the following possible next steps for prototyping and analysis of the protocol:
-
-- Complete proofs.
-    - Voting strings.
-    - Liveness of the protocol.
-    - Soundness of the executable specification.
-    - Synchronize with Praos formalization.
-    - Prepare a publication or online supplement.
-- Complete conformance suite.
-    - Tests for non-voting parts of the protocol.
-    - Serialization format and inter-process communication for testing third-party implementations.
-    - Package for easy installation and use.
-- Recommend parameter values.
-    - Seek and analyze stakeholder requirements, especially from partner chains.
-    - Develop a parameter-evaluation tool (based on the Markov-chain simulator) that provides a full set of impact metrics for a given set of parameters.
-- Reach out to stakeholders.
-    - Populate website with latest results.
-    - Online versions of all analysis, simulation, and visualization tools.
-    - Organize a stakeholder workshop and/or a Intersect Consensus Technical WG.
-        - Feedback on specification format.
-        - Feedback on conformance suite.
-        - Feedback on and refinement of the draft CIP.
-- Tooling fixes and enhancements
-    - Improve the usability, efficiency, and testing of the ΔQ software.
-        - Provide out-of-the-box and possibly interactive visualization.
-        - Provide faster numeric computations (e.g. using discretized CDFs and fast vector operations, possibly offloaded to GPU).
-        - Provide additional combinators (e.g., quantile-arrival time) for the DSL.
-    - Improve the protocol visualizer.
-        - Allow users to inject adversarial behavior or network disruptions (e.g., "split brain" scenarios).
-        - Make visualization scalable in the browser to long chains (i.e., hours of simulated block production) and large networks.
-    - Improve the prototype simulator.
-        - Add an efficient implementation suitable for large networks and long simulations.
-        - Create a simple DSL for inputting simulation scenarios for both honest and adversarial behavior.
-    - Improve the Markov-chain analyzer.
-        - Add a DSL for defining scenarios.
-        - Add visualization and analysis tools.
-    - Collaborate with higher-resolution network simulation efforts, potentially implementing Peras on them.
-        - PeerNet
-        - ce-netsim
-- Move from the "pre-alpha" to the "alpha" version of the protocol.
-    - Requires completion of the Peras paper.
-    - Formalize and implement the preagreement YOSO abstraction.
