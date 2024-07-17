@@ -5,7 +5,14 @@ sidebar_position: 1
 
 # What is Peras?
 
-Peras, or more precisely Ouroboros Peras, is an extension of [Ouroboros Praos](https://iohk.io/en/research/library/papers/ouroboros-praos-an-adaptively-secure-semi-synchronous-proof-of-stake-protocol/) that addresses one of the known issues of blockchains based on Nakamoto-style consensus, namely _settlement time_.
+Peras, or more precisely Ouroboros Peras, is an extension of [Ouroboros Praos](https://iohk.io/en/research/library/papers/ouroboros-praos-an-adaptively-secure-semi-synchronous-proof-of-stake-protocol/) that addresses one of the known issues of blockchains based on Nakamoto-style consensus, namely _settlement time_. Peras achieves that goal while being _self-healing_, preserving the security of Praos, and being light on resources.
+
+:::important
+
+This site documents the **pre-alpha** version of the protocol, which already provides strong guarantees of settlement bounds, adapts to fluctuating participation, and can recover from failures.
+There's still research work ongoing to refine the protocol and provide even better guarantees in the face of high adversarial stake.
+
+:::
 
 ## What is settlement?
 
@@ -82,7 +89,7 @@ The exact effect of Peras depends on the values of various protocol parameters w
 > trillion probability even at 45% adversarial stake) versus having
 > been discarded because of a roll back
 
-Importantly, Peras does not change the underlying security guarantees of Ouroboros Praos, and reverts to it in the event of a cooldown.
+Importantly, Peras does not change the underlying security guarantees of Ouroboros Praos, and reverts to it in the event of a cooldown. Moreover, it adapts to fluctuating participation of SPOs and can recover from temporary "failures", e.g. if an adversary manages to temporarily reach a _quorum_, they only will be able to takeover the chain if they manage to maintain that superiority over time, otherwise the honest parties will take over.
 
 ## Where to go from here?
 
