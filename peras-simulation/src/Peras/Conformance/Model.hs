@@ -323,24 +323,25 @@ transition s Tick =
       (allSeenCerts s)
       (allVotes s)
 transition s (NewChain chain) =
-  Just
-    ( []
-    , NodeModel
-        (clock s)
-        (protocol s)
-        (chain : allChains s)
-        (allVotes s)
-        ( foldr
-            insertCert
-            (allSeenCerts s)
-            (catMaybes $ map certificate chain)
-        )
-    )
+  do
+    guard (length chain > 0)
+    Just
+      ( []
+      , NodeModel
+          (clock s)
+          (protocol s)
+          (chain : allChains s)
+          (allVotes s)
+          ( foldr
+              insertCert
+              (allSeenCerts s)
+              (catMaybes $ map certificate chain)
+          )
+      )
 transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
-    guard (isYes $ checkVotingRules s)
     Just
       ( []
       , NodeModel
