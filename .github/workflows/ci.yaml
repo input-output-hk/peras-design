@@ -172,6 +172,32 @@ jobs:
           path: |
             site/build/*
 
+  # FIXME: remove once merged
+  publish-staging-docs:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    environment: 'staging'
+    runs-on: ubuntu-22.04
+    needs:
+      - build-docusaurus
+    steps:
+      - name: 📥 Download Docusaurus build
+        uses: actions/download-artifact@v4
+        with:
+          name: docusaurus-build
+          path: ./site
+
+      - name: 🔑 Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
+
+      - name: 🔍 Adding Known Hosts
+        run: ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚅 Deploy with rsync
+        run: rsync -avz ./site ${{ secrets.SSH_USER }}@${{ secrets.STAGING_HOST }}:/var/www/peras-staging.cardano-scaling.org/public_html
+
   publish-docs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
