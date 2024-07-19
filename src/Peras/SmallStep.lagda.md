@@ -425,12 +425,24 @@ a voting round.
       suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
       where open State M
 ```
+```agda
+    LastSlotInRound? : (s : State) → Dec (LastSlotInRound s)
+    LastSlotInRound? M =
+      suc (rnd (getSlotNumber clock)) ≟ rnd (suc (getSlotNumber clock))
+      where open State M
+```
 Predicate for a global state stating that the next slot will be in a new voting
 round.
 ```agda
     NextSlotInSameRound : State → Type
     NextSlotInSameRound M =
       rnd (getSlotNumber clock) ≡ rnd (suc (getSlotNumber clock))
+      where open State M
+```
+```agda
+    NextSlotInSameRound? : (s : State) → Dec (NextSlotInSameRound s)
+    NextSlotInSameRound? M =
+      rnd (getSlotNumber clock) ≟ rnd (suc (getSlotNumber clock))
       where open State M
 ```
 Predicate for a global state asserting that parties of the voting committee for

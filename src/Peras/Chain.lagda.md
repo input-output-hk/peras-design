@@ -210,6 +210,10 @@ module _ ⦃ _ : Hashable Block ⦄
   StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * U
 ```
 ```agda
+  StartOfRound? : (sl : SlotNumber) → (r : RoundNumber) → Dec (StartOfRound sl r)
+  StartOfRound? (MkSlotNumber sl) (MkRoundNumber r) = sl ≟ r * U
+```
+```agda
   rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
   rnd s = s / U
 ```

@@ -12,6 +12,8 @@ open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
 open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
 open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
+
+open import Relation.Binary.PropositionalEquality using (_≢_)
 open import Relation.Nullary.Decidable using (Dec; yes; no)
 
 open import Peras.Util
