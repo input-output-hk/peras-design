@@ -51,7 +51,7 @@ FROM ubuntu:22.04
 WORKDIR /app
 EXPOSE 8091
 
-COPY --from=build /app/peras-server/* /app/
+COPY --from=build --parents /app/peras-server/* /app/
 COPY --from=build /usr/local/lib/libsodium* /usr/local/lib/
 COPY --from=build /usr/local/lib/libsecp256k* /usr/local/lib/
 COPY --from=build /app/dist-newstyle/build/x86_64-linux/ghc-9.6.3/peras-server-0.1.0.0/x/peras-server/noopt/build/peras-server/peras-server /app
