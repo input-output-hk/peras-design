@@ -174,7 +174,6 @@ jobs:
 
   # FIXME: remove once merged
   publish-staging-docs:
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     environment: 'staging'
     runs-on: ubuntu-22.04
     needs:
