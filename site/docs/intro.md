@@ -10,7 +10,8 @@ Peras, or more precisely Ouroboros Peras, is an extension of [Ouroboros Praos](h
 :::important
 
 This site documents the **pre-alpha** version of the protocol, which already provides strong guarantees of settlement bounds, adapts to fluctuating participation, and can recover from failures.
-There's still research work ongoing to refine the protocol and provide even better guarantees in the face of high adversarial stake.
+
+Research work is still ongoing to refine the protocol and provide even better guarantees in the face of high adversarial stake.
 
 :::
 
