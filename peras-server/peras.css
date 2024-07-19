@@ -11,19 +11,19 @@ body {
 }
 
 h3 {
-    margin: 0; 
+    margin: 0;
 }
 
 input:focus {
     outline: 0 none;
-    border: 1px solid #1F5B3B !important; 
+    border: 1px solid #1F5B3B !important;
 }
 
 button {
     background-color: #85D5AB;
     border: none;
     color: white;
-    padding: 0.5em 1em; 
+    padding: 0.5em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
@@ -58,6 +58,8 @@ form input {
     display: flex;
     flex-direction: row;
     align-items: center;
+    width: 90vw;
+    margin: auto;
 }
 
 /* ------------------------------------------------------------ */
@@ -69,14 +71,14 @@ form input {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    margin-left: 1em; 
+    margin-left: 1em;
     stroke: #85D5AB;
 }
 
 #toggleParams:hover {
     background-color: #1F5B3B;
     stroke: white;
-    transition:  stroke 0.2s ease; 
+    transition:  stroke 0.2s ease;
 }
 
 .chevron {
@@ -85,13 +87,13 @@ form input {
     height: 20px;
     width: 30px;
     margin-left: 0.5em;
-    transform: rotate(180deg); 
+    transform: rotate(180deg);
     stroke: #85D5AB;
     transition: transform 0.3s ease;
 }
 
 .chevron.down {
-    transform: rotate(0deg); 
+    transform: rotate(0deg);
 }
 
 
@@ -99,26 +101,27 @@ form input {
 /* Parameter Fields                                            */
 /* ------------------------------------------------------------ */
 
-#parameterFields { 
+#parameterFields {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5em;
-    margin: 1em 0 2em 1em;
+    margin: 1em auto;
+    width: 90vw;
 }
 
 #parameterFields .control {
     margin: 0;
     padding: 0.8em;
-    border: 1px solid #00000022; 
-    border-radius: 8px; 
-    background-color: #F8FCFA; 
+    border: 1px solid #00000022;
+    border-radius: 8px;
+    background-color: #F8FCFA;
     position: relative; /* Positioning context for arrows */
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-#parameterFields .control:focus-within { 
+#parameterFields .control:focus-within {
     background-color: #c5e8d6;
-    border: 1px solid #1F5B3B; 
+    border: 1px solid #1F5B3B;
 }
 
 #parameterFields label {
@@ -136,36 +139,40 @@ form input {
 }
 
 #parameterFields input[type="number"]:focus {
-    color: #1F5B3B; 
+    color: #1F5B3B;
 }
 
 #parameterFields input[type="number"]::-webkit-inner-spin-button,
 #parameterFields input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none; 
+    -webkit-appearance: none;
     margin: 0;
 }
 
 #parameterFields input[type="number"] {
-    -moz-appearance: textfield; 
+    -moz-appearance: textfield;
 }
 
 
 #parameterFields input[type="number"]::after {
     display: block;
-    width: 24px; 
-    height: 24px; 
+    width: 24px;
+    height: 24px;
     position: absolute;
-    right: 10px; 
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
 }
 
 
+#parameterFields span.help:hover {
+    cursor: help;
+}
+
 @media (max-width: 768px) {
     #parameterFields {
         display: grid;
-        grid-template-columns: repeat(2, 1fr); 
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -187,7 +194,7 @@ form input {
 }
 
 /* Media Query for Responsive Layout */
-@media (max-width: 600px) { 
+@media (max-width: 600px) {
     #controlPanel {
         flex-direction: column; /* Stack vertically on small screens */
     }
@@ -219,6 +226,8 @@ form input {
     flex-wrap: wrap;
     flex-basis: 50%;
     align-items: center;
+    width: 90vw;
+    margin: auto;
 }
 
 
@@ -231,6 +240,8 @@ form input {
     flex-wrap: wrap;
     flex-basis: 50%;
     align-items: center;
+    width: 90vw;
+    margin: auto;
 }
 
 #state span {
@@ -243,6 +254,30 @@ form input {
 
 #chain {
     border: thin solid black;
+    border-radius: 5px;
     width: 90vw;
     height: 79vh;
+    margin: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Help                                                         */
+/* ------------------------------------------------------------ */
+
+#help {
+    border: thin solid black;
+    border-radius: 5px;
+    flex-direction: column;
+    margin: 1em auto;
+    padding: 1em;
+    width: calc(90vw - 2em);
+}
+
+#graph-help td {
+    padding: 0.5em;
+}
+
+#graph-help img {
+    width: 70px;
+    height: auto;
 }

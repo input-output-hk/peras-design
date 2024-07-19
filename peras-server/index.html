@@ -10,90 +10,109 @@
     <script defer data-domain="peras-simulation.cardano-scaling.org" src="https://plausible.io/js/script.js"></script>
   </head>
   <body>
-	    <div id="controlPanel">
-          <h2>Peras Simulator (pre-alpha) <a href="https://peras.cardano-scaling.org/" target="peras" style="color:#85D5AB;text-decoration:none">&#x2197;</a></h2>
-        <div id="parameterHeader">
-          <h3>Parameters</h3>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" class="chevron" id="toggleParams">
-            <path d="M8 4l-3 -3 -3 3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 5 3)"/>
-          </svg>
-          <button id="shareButton" type="button">Share</button> <div id="shareLink"></div>
+	  <div id="controlPanel">
+      <h2>Peras Simulator (pre-alpha) <a href="https://peras.cardano-scaling.org/" target="peras" style="color:#85D5AB;text-decoration:none">&#x2197;</a><a href="#help" style="background-color:#85D5AB;color:white; border-radius:.8em; padding:0 .3em;text-decoration:none; margin: 0 .5em">?</a></h2>
+      <div id="parameterHeader">
+        <h3>Parameters</h3>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6" class="chevron" id="toggleParams">
+          <path d="M8 4l-3 -3 -3 3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 5 3)"/>
+        </svg>
+        <button id="shareButton" type="button">Share</button> <div id="shareLink"></div>
 
-          </div>
-          <div id="parameterFields">
-            <div class="control">
-              <label for="uiDuration">Duration (slots): <span style="cursor:help" title="The number of slots to simulate.">&#9432;</span></label>
-              <input id="uiDuration" type="number" min="10" max="7200" value="900"/>
-              </div>
-            <div class="control">
-              <label for="uiParties">Nodes: <span style="cursor:help" title="The number of parties (nodes) to simulate.">&#9432;</span></label>
-              <input id="uiParties" type="number" min="1" max="15" value="7"/>
-            </div>
-            <div class="control">
-              <label for="uiU">Round length (U, in slots): <span style="cursor:help" title="The duration of each voting round.">&#9432;</span></label>
-              <input id="uiU" type="number" min="5" max="90" value="20"/>
-            </div>
-            <div class="control">
-              <label for="uiA">Cert. expiration (A, in slots): <span style="cursor:help" title="The maximum age for a certificate to be included in a block.">&#9432;</span></label>
-              <input id="uiA" type="number" min="30" max="900" value="200"/>
-            </div>
-            <div class="control">
-              <label for="uiR">Chain ignorance (R, in rounds): <span style="cursor:help" title="The number of rounds for which to ignore certificates after entering a cool-down period.">&#9432;</span></label>
-              <input id="uiR" type="number" min="0" max="10" value="10"/>
-            </div>
-            <div class="control">
-              <label for="uiK">Cooldown period (K, in rounds): <span style="cursor:help" title="The minimum number of rounds to wait before voting again after a cool-down period starts.">&#9432;</span></label>
-              <input id="uiK" type="number" min="0" max="50" value="17"/>
-            </div>
-            <div class="control">
-              <label for="uiL">Block selection offset (L, in slots): <span style="cursor:help" title="The minimum age of a candidate block for being voted upon.">&#9432;</span></label>
-              <input id="uiL" type="number" min="1" max="120" value="10"/>
-            </div>
-            <div class="control">
-              <label for="uiTau">Quorum size (τ, in nodes): <span style="cursor:help" title="The number of votes required to create a certificate.">&#9432;</span></label>
-              <input id="uiTau" type="number" min="0" max="15" value="3"/>
-            </div>
-            <div class="control">
-              <label for="uiB">Boost (B, in blocks): <span style="cursor:help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label>
-              <input id="uiB" type="number" min="0" max="100" value="10"/>
-            </div>
-            <div class="control">
-              <label for="uiCommittee">Mean committee size (n, in nodes): <span style="cursor:help" title="The number of members on the voting committee.">&#9432;</span></label>
-              <input id="uiCommittee" type="number" min="0" max="15" value="5"/>
-            </div>
-            <div class="control">
-              <label for="uiDelta">Network diffusion delay (Δ, in slots): <span style="cursor:help" title="Upper limit on the time needed to diffuse a message to all nodes.">&#9432;</span></label>
-              <input id="uiDelta" type="number" min="0" max="20" value="0"/>
-            </div>
-            <div class="control">
-              <label for="uiAlpha">Active slot coefficient (α, in 1/nodes): <span style="cursor:help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label>
-              <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/>
-            </div>
-	    <div class="control">
-              <label for="uiDelay">Simulation rate (in seconds per slot): <span style="cursor:help" title="The rate at which to display slots.">&#9432;</span></label>
-              <input id="uiDelay" type="number" min="0.1" max="5" value="0.2" step="0.1"/>
-            </div>
-	    <div class="control">
-              <label for="uiSeed">Simulation random seed (integer): <span style="cursor:help" title="The random-number sequence for the simulation.">&#9432;</span></label>
-              <input id="uiSeed" type="number" min="0" max="1000000000" value="42" step="1"/>
-            </div>
-          </div>
-	      <div id="buttons">
-          <h3>Run</h3>
-          <button id="uiSimulate" type="button">Simulate</button>
-	        <button id="uiStep" type="button">Step</button>
-	        <button id="uiStop" type="button">Stop</button>
-	        <button id="uiPause" type="button">Pause</button>
-	        <button id="uiResume" type="button">Resume</button>
-          <button id="uiRandomize" type="button">Randomize</button>
+      </div>
+      <div id="parameterFields">
+        <div class="control">
+          <label for="uiDuration">Duration (slots): <span class="help" title="The number of slots to simulate.">&#9432;</span></label>
+          <input id="uiDuration" type="number" min="10" max="7200" value="900"/>
         </div>
-        <div id="state">
-          <h3>Time</h3>
-          <span>Slot:</span><span id="slot">0</span>
-          <span>Round:</span><span id="roundNumber">0</span>
-          <span>Last message:</span><em><span id="uiMessage">(none)</span></em>
+        <div class="control">
+          <label for="uiParties">Nodes: <span class="help" title="The number of parties (nodes) to simulate.">&#9432;</span></label>
+          <input id="uiParties" type="number" min="1" max="15" value="7"/>
+        </div>
+        <div class="control">
+          <label for="uiU">Round length (U, in slots): <span class="help" title="The duration of each voting round.">&#9432;</span></label>
+          <input id="uiU" type="number" min="5" max="90" value="20"/>
+        </div>
+        <div class="control">
+          <label for="uiA">Cert. expiration (A, in slots): <span class="help" title="The maximum age for a certificate to be included in a block.">&#9432;</span></label>
+          <input id="uiA" type="number" min="30" max="900" value="200"/>
+        </div>
+        <div class="control">
+          <label for="uiR">Chain ignorance (R, in rounds): <span class="help" title="The number of rounds for which to ignore certificates after entering a cool-down period.">&#9432;</span></label>
+          <input id="uiR" type="number" min="0" max="10" value="10"/>
+        </div>
+        <div class="control">
+          <label for="uiK">Cooldown period (K, in rounds): <span class="help" title="The minimum number of rounds to wait before voting again after a cool-down period starts.">&#9432;</span></label>
+          <input id="uiK" type="number" min="0" max="50" value="17"/>
+        </div>
+        <div class="control">
+          <label for="uiL">Block selection offset (L, in slots): <span class="help" title="The minimum age of a candidate block for being voted upon.">&#9432;</span></label>
+          <input id="uiL" type="number" min="1" max="120" value="10"/>
+        </div>
+        <div class="control">
+          <label for="uiTau">Quorum size (τ, in nodes): <span class="help" title="The number of votes required to create a certificate.">&#9432;</span></label>
+          <input id="uiTau" type="number" min="0" max="15" value="3"/>
+        </div>
+        <div class="control">
+          <label for="uiB">Boost (B, in blocks): <span class="help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label>
+          <input id="uiB" type="number" min="0" max="100" value="10"/>
+        </div>
+        <div class="control">
+          <label for="uiCommittee">Mean committee size (n, in nodes): <span class="help" title="The number of members on the voting committee.">&#9432;</span></label>
+          <input id="uiCommittee" type="number" min="0" max="15" value="5"/>
+        </div>
+        <div class="control">
+          <label for="uiDelta">Network diffusion delay (Δ, in slots): <span class="help" title="Upper limit on the time needed to diffuse a message to all nodes.">&#9432;</span></label>
+          <input id="uiDelta" type="number" min="0" max="20" value="0"/>
+        </div>
+        <div class="control">
+          <label for="uiAlpha">Active slot coefficient (α, in 1/nodes): <span class="help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label>
+          <input id="uiAlpha" type="number" min="0" max="1" value="0.1" step="0.01"/>
+        </div>
+	      <div class="control">
+          <label for="uiDelay">Simulation rate (in seconds per slot): <span class="help" title="The rate at which to display slots.">&#9432;</span></label>
+          <input id="uiDelay" type="number" min="0.1" max="5" value="0.2" step="0.1"/>
+        </div>
+	      <div class="control">
+          <label for="uiSeed">Simulation random seed (integer): <span class="help" title="The random-number sequence for the simulation.">&#9432;</span></label>
+          <input id="uiSeed" type="number" min="0" max="1000000000" value="42" step="1"/>
         </div>
       </div>
+	    <div id="buttons">
+        <h3>Run</h3>
+        <button id="uiSimulate" type="button">Simulate</button>
+	      <button id="uiStep" type="button">Step</button>
+	      <button id="uiStop" type="button">Stop</button>
+	      <button id="uiPause" type="button">Pause</button>
+	      <button id="uiResume" type="button">Resume</button>
+        <button id="uiRandomize" type="button">Randomize</button>
+      </div>
+      <div id="state">
+        <h3>Time</h3>
+        <span>Slot:</span><span id="slot">0</span>
+        <span>Round:</span><span id="roundNumber">0</span>
+        <span>Last message:</span><em><span id="uiMessage">(none)</span></em>
+      </div>
+    </div>
     <div id="chain"></div>
+    <div id="help">
+      <h3>Help</h3>
+      <p>This is a simulator for the <em>pre-alpha</em> version of the Peras consensus algorithm, which is an extension of the Ouroboros Praos algorithm used in the Cardano blockchain to provide faster settlement bounds. Its main purpose is educational, but it's also aimed at exploring the <em>parameter space</em> and identify the best combinations depending on the objectives. The algorithm is still a work-in-progress. </p>
+      <p>Individual help texts are provided for each parameter. Hover over the <span class="help" title="This is a helpful text">&#9432;</span> icon to see them.</p>
+      <p>Click the <em>Simulate</em> button to start the simulation. The <em>Step</em> button advances the simulation by one slot. The <em>Stop</em> button halts (and resets) the simulation. The <em>Pause</em> button pauses the simulation, and the <em>Resume</em> button resumes a paused simulation. Finally, the <em>Randomize</em> button sets the parameters to random values, which might or might not make sense.</p>
+      <p>The simulation provides a visual representation of the evolution of the chain for a given number of nodes. The backend runs the Peras algorithm with the given parameters for each nodes, simulating the passing of time (slots), creation of blocks, voting process, creation of certificates, and the diffusion of all messages taking into account the network delay Δ.</p>
+      <p>When the simulation runs, the <a href="#state"><em>Time</em></a> section shows the current slot and round number, as well as the <a target="code" href="https://github.com/input-output-hk/peras-design/blob/f92ebee5ec9a0511a41ad6456cf1b752d9b1a17a/peras-simulation/src/Peras/Prototype/Trace.hs#L21">last state transition</a> received from the backend. The <a href="#chain"><em>Chain</em></a> section shows the current state of the chain, with the blocks and certificates created by each node.</p>
+      <table id="graph-help">
+        <tr><th>Icon</th><th>Meaning</th></tr>
+        <tr><td><img src="images/block.png" alt="Block" /></td><td>A block created by a node, linked to its predecessor. Contains the block hash (truncated to 8 characters), the creator's id, the creation time, and three icons representing truth value of the three conditions presiding to <a target="peras" href="https://peras.cardano-scaling.org/docs/reports/tech-report-2#block-creation">inclusion of a certificate</a> within a block logic.</td></tr>
+        <tr><td><img src="images/block-with-certificate.png" alt="Block-certificate" /></td><td>A block containing a certificate on-chain. Its content is identical to a normal block but color differs to ease spotting when a certificate is included on-chain.</td></tr>
+        <tr><td><img src="images/certificate.png" alt="Certificate" /></td><td>A certificate created by a node, linked to the block it certifies. A certificate is only identified by its round number, as by construction there cannot be more than one certificate each round.</td></tr>
+        <tr><td><img src="images/vote.png" alt="Vote" /></td><td>A vote cast by a node, linked to the block it votes for. Contains the round number in which the vote is cast, the voter's id, and the truth values of the <a target="peras" href="https://peras.cardano-scaling.org/docs/reports/tech-report-2#voting">four different rules</a> for casting a vote.</td></tr>
+        <tr><td><img src="images/cooldown.png" alt="Cooldown" /></td><td>Record a node's decision to enter cooldown period, linked to the block that triggered it. Contains the round number in which the cooldown is started, the node's id, and the truth values of the conditions that lead to the node not casting a vote and entering cooldown.</td></tr>
+        <tr><td><img src="images/node.png" alt="Node" /></td><td>A node in the network, identified simply by a number. This is a marker representing the state of a node: What's the tip of its best chain, the latest "live" certificate it knows (aka. <em>cert'</em>), and the latest on-chain certificate it knows (aka. <em>cert*</em>).</td></tr>
+        </table>
+      <p>For a much more detailed explanation of the algorithm and a thorough analysis of its behaviour, we refer the interested reader to the <a href="https://peras.cardano-scaling.org/" target="peras">Peras website</a>.</p>
+    </div>
   </body>
 </html>
+.
