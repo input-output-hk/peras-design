@@ -175,7 +175,7 @@ jobs:
   # FIXME: remove once merged
   publish-staging-docs:
     environment: 'staging'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
       - build-docusaurus
     steps:
