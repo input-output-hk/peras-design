@@ -190,12 +190,18 @@ jobs:
         with:
           key: ${{ secrets.SSH_KEY }}
           known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
-
       - name: 🔍 Adding Known Hosts
         run: ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
 
       - name: 🚅 Deploy with rsync
-        run: rsync -avz ./site ${{ secrets.SSH_USER }}@${{ secrets.STAGING_HOST }}:/var/www/peras-staging.cardano-scaling.org/public_html
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr
+          path: site/
+          remote_path: /var/www/${{ secrets.STAGING_HOST }}/public_html
+          remote_host: ${{ secrets.STAGING_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key: ${{ secrets.SSH_KEY }}
 
   publish-docs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
