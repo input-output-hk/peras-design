@@ -1,3 +1,19 @@
+## 2024-07-19
+
+### Publishing web site
+
+Worked on publishing a private (password-protected) version of Peras' website for ease of review and feedback from various teams, as we are planning to make it public in the forthcoming weeks, as part of a communication campaign around Peras. It turned out to be surprisingly annoying as by default, GH does not allow such private sites with GH pages. I ended up doing the following:
+
+* Create a small VM on GCP (see the [terraform descriptor](https://github.com/input-output-hk/peras-design/blob/4aff5845d277296a3b8b1aa0de4bb8bfc5f77704/infra/staging.tf#L1) with a fixed IP address
+* Assign the `peras-staging.cardano-scaling.org` domain name to this IP manually
+* Configure this machine to run nginx with the website using [Let's Encrypt](https://letsencrypt.org) using [propellor](https://github.com/abailly-iohk/propellor/blob/main/config.hs#L239)
+* Create a job on the [publish-site](https://github.com/input-output-hk/peras-design/blob/4aff5845d277296a3b8b1aa0de4bb8bfc5f77704/.github/workflows/ci.yaml#L176) branch using rsync to push the built docusaurus website to this machine
+* Configure a `staging` environment with the secrets needed to do so
+
+This feels quite clunky but hopefully is a temporary solution. Another, possibly simpler, approach would have been to pack the website in a docker image along with an nginx server then deploy this container to cloud run using a similar technique than we use for the https://peras-simulation.cardano-scaling.org service.
+
+Also added some documentation to the simulator's UI.
+
 ## 2024-07-10
 
 ### Healing time
