@@ -12,6 +12,7 @@ import Data.Function (on)
 import Data.List (sort)
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
+import Peras.Foreign (IsCommitteeMember, IsSlotLeader)
 import Prettyprinter (Pretty (pretty), fill, vsep, (<+>))
 import Statistics.Distribution (complCumulative, cumulative)
 import Statistics.Distribution.Binomial (binomial)
@@ -94,6 +95,19 @@ mkProbabilities MkPeras{α, τ, c} honestStake adversaryStake =
     mixedQuorum = 1 - noQuorum - honestQuorum - adversaryQuorum
    in
     MkProbabilities{..}
+
+pureProbabilities :: IsSlotLeader -> IsCommitteeMember -> Probabilities
+pureProbabilities isLeader isMember =
+  MkProbabilities
+    { noBlock = if isLeader then 0 else 1
+    , honestBlock = if isLeader then 1 else 0
+    , adversaryBlock = 0
+    , mixedBlocks = 0
+    , noQuorum = if isMember then 0 else 1
+    , honestQuorum = if isMember then 1 else 0
+    , adversaryQuorum = 0
+    , mixedQuorum = 0
+    }
 
 newtype Evolution = MkEvolution {getEvolution :: Map Chains Probability}
   deriving stock (Eq, Show)

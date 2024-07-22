@@ -41,7 +41,7 @@ import qualified Options.Applicative as O
 import qualified Peras.Markov.Adversary.CommonCandidate as CommonCandidate
 import qualified Peras.Markov.Adversary.TwoChain as TwoChain (lookupDelta, separatedChains, splitChains)
 import qualified Peras.Markov.Polynomial as Var (p, q)
-import qualified Peras.MarkovSim.Decoupled as MarkovSim
+import qualified Peras.MarkovSim.Transition as MarkovSim
 import qualified Peras.MarkovSim.Types as MarkovSim
 
 main :: IO ()

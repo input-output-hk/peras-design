@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Peras.MarkovSim.Decoupled where
+module Peras.MarkovSim.Transition where
 
 import Control.Parallel.Strategies (parMap, rpar)
 import Data.Bifunctor (second)
@@ -124,11 +124,12 @@ blockCreation peras@MkPeras{a} MkProbabilities{noBlock, honestBlock, adversaryBl
     honest' = forge honest
     adversary' = forge adversary
    in
-    [ (chains, noBlock)
-    , (chains{honest = honest'}, honestBlock)
-    , (chains{adversary = adversary'}, adversaryBlock)
-    , (chains{honest = honest', adversary = adversary'}, mixedBlocks)
-    ]
+    clean
+      [ (chains, noBlock)
+      , (chains{honest = honest'}, honestBlock)
+      , (chains{adversary = adversary'}, adversaryBlock)
+      , (chains{honest = honest', adversary = adversary'}, mixedBlocks)
+      ]
 
 voting :: Peras -> Probabilities -> Chains -> [(Chains, Probability)]
 voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQuorum, mixedQuorum} chains@MkChains{..} =
@@ -151,8 +152,12 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
    in
     if newRound peras slot
       then
-        [ (chains, noQuorum + mixedQuorum)
-        , (chains{honest = vote honest}, honestQuorum)
-        , (chains{adversary = vote adversary}, adversaryQuorum)
-        ]
+        clean
+          [ (chains, noQuorum + mixedQuorum)
+          , (chains{honest = vote honest}, honestQuorum)
+          , (chains{adversary = vote adversary}, adversaryQuorum)
+          ]
       else [(chains, 1)]
+
+clean :: [(a, Probability)] -> [(a, Probability)]
+clean = filter $ (> 0) . snd
