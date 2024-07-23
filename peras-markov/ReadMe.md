@@ -21,6 +21,8 @@ Available options:
 Available commands:
   longer-chain             Compute the probability of a private adversarial
                            chain being longer than the honest one.
+  margin-reach             Compute the probability distribution of the margin
+                           and reach for a one-slot diffusion time.
   length-difference        Compute the probability distribution of the length of
                            the honest chain minus the length of the adversarial
                            chain.

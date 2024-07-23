@@ -41,7 +41,7 @@ import qualified Options.Applicative as O
 import qualified Peras.Markov.Adversary.CommonCandidate as CommonCandidate
 import qualified Peras.Markov.Adversary.TwoChain as TwoChain (lookupDelta, separatedChains, splitChains)
 import qualified Peras.Markov.Polynomial as Var (p, q)
-import qualified Peras.MarkovSim.Decoupled as MarkovSim
+import qualified Peras.MarkovSim.Transition as MarkovSim
 import qualified Peras.MarkovSim.Types as MarkovSim
 
 main :: IO ()
@@ -55,6 +55,14 @@ data Scenario
       , paramFile :: FilePath
       , outFile :: FilePath
       , stop :: Double
+      , progress :: Bool
+      }
+  | MarginReach
+      { ε :: Double
+      , slots :: Int
+      , stake :: (Int, Int)
+      , paramFile :: FilePath
+      , outFile :: FilePath
       , progress :: Bool
       }
   | LengthDifference
@@ -100,6 +108,30 @@ run LongerChain{..} =
     go (1 :: Int) initial
     hClose hout
     hPutStrLn stderr $ replicate 80 ' '
+run MarginReach{..} =
+  do
+    peras <- decodeFileThrow paramFile
+    hout <- openFile outFile WriteMode
+    hPutStrLn hout $ intercalate "\t" ["Slot", "Margin", "Reach", "Probability"]
+    let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
+        initial = def
+        go i prior
+          | i > slots = return ()
+          | otherwise =
+              do
+                let posterior = MarkovSim.pstep ε peras probabilities prior
+                    summary =
+                      Map.toList
+                        . Map.mapKeysWith (+) MarkovSim.computeMarginReach
+                        $ MarkovSim.getEvolution posterior
+                hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show $ fst k, show $ snd k, show v]) <$> summary
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
+                hFlush hout
+                go (i + 1) posterior
+    hPutStrLn stderr ""
+    go (1 :: Int) initial
+    hClose hout
+    hPutStrLn stderr "                       "
 run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -116,7 +148,7 @@ run LengthDifference{..} =
                       Map.toList
                         . Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
                         $ MarkovSim.getEvolution posterior
-                hPutStr hout $ unlines $ (\(k, v) -> show i <> "\t" <> show k <> "\t" <> show v) <$> summary
+                hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show k, show v]) <$> summary
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
@@ -227,6 +259,10 @@ scenarioParser =
       O.command "longer-chain" $
         O.info (LongerChain <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> stopOption <*> progressOption) $
           O.progDesc "Compute the probability of a private adversarial chain being longer than the honest one."
+    marginReachCommand =
+      O.command "margin-reach" $
+        O.info (MarginReach <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> progressOption) $
+          O.progDesc "Compute the probability distribution of the margin and reach for a one-slot diffusion time."
     lengthDifferenceCommand =
       O.command "length-difference" $
         O.info (LengthDifference <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> progressOption) $
@@ -247,7 +283,7 @@ scenarioParser =
     O.info
       ( O.helper
           <*> O.infoOption ("peras-markov " <> showVersion version) (O.long "version" <> O.help "Show version.")
-          <*> O.hsubparser (longerChainCommand <> lengthDifferenceCommand <> lengthsCommand <> commonCandidateDemoCommand <> separateChainsDemoCommand)
+          <*> O.hsubparser (longerChainCommand <> marginReachCommand <> lengthDifferenceCommand <> lengthsCommand <> commonCandidateDemoCommand <> separateChainsDemoCommand)
       )
       ( O.fullDesc
           <> O.progDesc "This command-line tool runs Markov-chain simulations of the Peras protocol."

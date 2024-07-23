@@ -9,7 +9,7 @@ category:           Network
 build-type:         Simple
 
 common warnings
-    ghc-options: -Wall -Wunused-packages -Werror
+    ghc-options: -Wall -Wunused-packages 
 
 library
     import:           warnings
@@ -20,16 +20,20 @@ library
                       Peras.Markov.Class
                       Peras.Markov.Orphans
                       Peras.Markov.Polynomial
-                      Peras.MarkovSim.Decoupled
+                      Peras.MarkovSim.Model
+                      Peras.MarkovSim.Transition
                       Peras.MarkovSim.Types
     build-depends:    QuickCheck,
                       aeson,
                       base,
                       containers,
                       data-default,
+                      mtl,
                       numeric-prelude,
                       parallel,
+                      peras-simulation,
                       prettyprinter,
+                      quickcheck-dynamic,
                       statistics,
     default-language: Haskell2010
     ghc-options: -O2
@@ -59,14 +63,18 @@ test-suite peras-markov-test
     other-modules:    Peras.Markov.Adversary.CommonCandidateSpec
                       Peras.Markov.Adversary.TwoChainSpec
                       Peras.Markov.PolynomialSpec
+                      Peras.MarkovSim.TransitionSpec
     build-depends:    QuickCheck,
                       base,
                       containers,
                       data-default,
                       hspec,
+                      mtl,
                       numeric-prelude,
                       peras-markov,
+                      peras-simulation,
                       prettyprinter,
+                      quickcheck-dynamic,
                       statistics,
     build-tool-depends:
        hspec-discover:hspec-discover

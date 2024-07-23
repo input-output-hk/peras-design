@@ -1,3 +1,45 @@
+## 2024-07-23
+
+### Computation of margina and reach
+
+*Margin* is the advantage of the penultimate tine of the blocktree and *reach* is the maximum advantage in the blocktree, where *advantage* is the excess weight of a tine relative to the public blocktree. The Markov-chain simulation can now compute this for the adversarial scenarios it models.
+
+```console
+$ peras-markov margin-reach --help
+
+Usage: peras-markov margin-reach [--epsilon DOUBLE] [--slots NATURAL] 
+                                 [--adversarial-stake FRACTION]
+                                 --param-file FILE [--out-file FILE] 
+                                 [--progress]
+
+  Compute the probability distribution of the margin and reach for a one-slot
+  diffusion time.
+
+Available options:
+  --epsilon DOUBLE         Threshhold for discarding small probabilities.
+                           (default: 1.0e-30)
+  --slots NATURAL          Number of slots to simulate. (default: 1000)
+  --adversarial-stake FRACTION
+                           Fraction [%/100] of adversarial stake.
+                           (default: 5.0e-2)
+  --param-file FILE        Path to input YAML file containing the Peras protocol
+                           parameters.
+  --out-file FILE          Path to output TSV file containing the simulation
+                           results. (default: "/dev/stdout")
+  --progress               Show the progress of the simulation.
+  -h,--help                Show this help text
+```
+
+The two plots below display margin and reach for [example Peras protocol parameters](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/peras-markov/example-input.yaml) at 20.0% and 22.5% adversarial stake.
+
+- The gaps (every 600 slots) in margin plot result from the boosts that typically occur ever 150 slots.
+- Note how the 22.5% adversary case suffers from significantly lower reach compared to the 20.0% adversary case.
+- Similarly, reach trends larger (and with smaller boost probability at 10, which is the boost intensity) in the 22.5% adversary case.
+
+| Margin | Reach |
+|--------|-------|
+| ![Example margins at 20.0% and 22.25% adversarial stake](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/margins.png) | ![Example reaches at 20.0% and 22.25% adversarial stake](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/reaches.png) |
+
 ## 2024-07-19
 
 ### Publishing web site
