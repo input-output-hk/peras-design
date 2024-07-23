@@ -153,11 +153,12 @@ data Chains = MkChains
   , prefix :: Slot
   , honest :: Chain
   , adversary :: Chain
+  , publicWeight :: Int
   }
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Default Chains where
-  def = MkChains 0 0 def def
+  def = MkChains 0 0 def def minBound
 
 data Chain = MkChain
   { weight :: Int

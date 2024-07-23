@@ -3,8 +3,10 @@
 
 module Peras.MarkovSim.Transition where
 
+import Control.Arrow ((&&&))
 import Control.Parallel.Strategies (parMap, rpar)
 import Data.Bifunctor (second)
+import Data.Function (on)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Peras.MarkovSim.Types (
@@ -85,7 +87,7 @@ fetching peras chains@MkChains{..} =
             certAntepenultimate = certPenultimate
           }
       chains' =
-        chains
+        (updatePublicWeight chains)
           { -- Update cert* for the honest chain.
             honest = receive honest
           , -- Update cert* for the adversary chain.
@@ -159,5 +161,27 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
           ]
       else [(chains, 1)]
 
+updatePublicWeight :: Chains -> Chains
+updatePublicWeight chains@MkChains{honest, adversary, publicWeight} =
+  let
+    -- The honest weight is always a contender for the public weight of the tree.
+    honestWeight = weight honest
+    -- If the adversary chain just received a certificate, then their weight is a contender,
+    -- but otherwise the previous public weight may represent their prior contension.
+    adversaryWeight = maybe publicWeight (const $ weight adversary) $ certPrimeNext adversary
+   in
+    chains{publicWeight = max honestWeight adversaryWeight}
+
 clean :: [(a, Probability)] -> [(a, Probability)]
 clean = filter $ (> 0) . snd
+
+computeMargin :: Chains -> Int
+computeMargin MkChains{publicWeight, honest, adversary} =
+  on min weight honest adversary - publicWeight
+
+computeReach :: Chains -> Int
+computeReach MkChains{publicWeight, honest, adversary} =
+  on max weight honest adversary - publicWeight
+
+computeMarginReach :: Chains -> (Int, Int)
+computeMarginReach = computeMargin &&& computeReach

@@ -21,12 +21,14 @@ import Data.Default (def)
 import Data.Functor.Identity
 import Peras.MarkovSim.Transition
 import Peras.MarkovSim.Types
+import Peras.Numbering
 import Test.QuickCheck.StateModel (Any (Some), HasVariables (..), Realized, RunModel (perform, postcondition), StateModel (..))
 
 import qualified Peras.Block as Prototype
 import qualified Peras.Chain as Prototype
 import qualified Peras.Conformance.Params as Prototype
 import qualified Peras.Prototype.Node.Model as Prototype
+import qualified Peras.Prototype.Types as Prototype
 
 newtype RunMonad m a = RunMonad {runMonad :: StateT (Peras, Chains) m a}
   deriving newtype (Functor, Applicative, Monad, MonadState (Peras, Chains))
@@ -71,27 +73,34 @@ instance Monad m => RunModel Prototype.NodeModel (RunMonad m) where
 
 type MarkovModel = (Peras, Chains)
 
+{-
 project :: Prototype.NodeModel -> MarkovModel
 project Prototype.MkNodeModel{..} =
   let
-   in ( toPeras protocol def
-      , MkChains
-          { slot = fromIntegral clock
-          , prefix = 0 -- FIXME: Address this later. It should be the last common block of the chains tied for highest weight.
-          , honest =
-              MkChain
-                { weight = undefined -- Prototype.chainWeight
-                , certPrime = undefined
-                , certPrimeNext = undefined
-                , certUltimate = undefined
-                , certPenultimate = undefined
-                , certAntepenultimate = undefined
-                , certStar = undefined
-                , certStarNext = undefined
-                }
-          , adversary = def
+    Prototype.MkPerasState{..} = state
+  in
+    (
+      toPeras protocol def
+    , MkChains
+      {
+        slot = fromIntegral clock
+      , prefix = 0 -- FIXME: Address this later. It should be the last common block of the chains tied for highest weight.
+      , honest =
+          MkChain
+          {
+            weight = undefined -- Prototype.chainWeight
+          , certPrime = fromIntegral $ Prototype.round certPrime
+          , certPrimeNext = undefined
+          , certUltimate = undefined
+          , certPenultimate = undefined
+          , certAntepenultimate = undefined
+          , certStar = fromIntegral $ Prototype.round certStar
+          , certStarNext = undefined
           }
-      )
+      , adversary = def
+      }
+    )
+-}
 
 toPeras :: Prototype.PerasParams -> Peras -> Peras
 toPeras Prototype.MkPerasParams{..} peras =
