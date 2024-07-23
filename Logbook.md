@@ -30,7 +30,7 @@ Available options:
   -h,--help                Show this help text
 ```
 
-The two plots below display margin and reach for [example Peras protocol parameters](../blob/9a220fbf3682e48aa757ce632b76dd67e41a2aa0/peras-markov/example-input.yaml) at 20.0% and 22.5% adversarial stake.
+The two plots below display margin and reach for [example Peras protocol parameters](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/peras-markov/example-input.yaml) at 20.0% and 22.5% adversarial stake.
 
 - The gaps (every 600 slots) in margin plot result from the boosts that typically occur ever 150 slots.
 - Note how the 22.5% adversary case suffers from significantly lower reach compared to the 20.0% adversary case.
@@ -38,7 +38,7 @@ The two plots below display margin and reach for [example Peras protocol paramet
 
 | Margin | Reach |
 |--------|-------|
-| ![Example margins at 20.0% and 22.25% adversarial stake](../blob/9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/margins.png) | ![Example reaches at 20.0% and 22.25% adversarial stake](../blob/9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/reaches.png) |
+| ![Example margins at 20.0% and 22.25% adversarial stake](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/margins.png) | ![Example reaches at 20.0% and 22.25% adversarial stake](../9a220fbf3682e48aa757ce632b76dd67e41a2aa0/site/diagrams/reaches.png) |
 
 ## 2024-07-19
 
