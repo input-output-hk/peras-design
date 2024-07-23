@@ -1,4 +1,6 @@
-module Peras.MarkovSim.TransitionSpec where
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
+
+module Peras.MarkovSim.ModelSpec where
 
 import Control.Monad.State (evalStateT)
 import Data.Default (def)
