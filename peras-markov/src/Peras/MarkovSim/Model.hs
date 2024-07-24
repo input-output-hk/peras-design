@@ -13,10 +13,10 @@ module Peras.MarkovSim.Model {-# DEPRECATED "Work in progress." #-} where
 import Control.Arrow ((***))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (MonadState, MonadTrans, StateT (StateT), get, gets, lift, modify', put)
-import Data.Bifunctor
+import Data.Bifunctor (Bifunctor (second))
 import Data.Default (def)
-import Peras.MarkovSim.Transition
-import Peras.MarkovSim.Types
+import Peras.MarkovSim.Transition (tick, voting)
+import Peras.MarkovSim.Types (Chain (..), Chains (..), Peras (..), pureProbabilities)
 import Test.QuickCheck.StateModel (Realized, RunModel (perform, postcondition))
 
 import qualified Data.Map.Strict as Map
@@ -55,14 +55,23 @@ instance Monad m => RunModel Prototype.NodeModel (RunMonad m) where
       Prototype.BlockCreation _isLeader _payload ->
         pure $ pure Nothing
       Prototype.Voting isMember ->
-        runExceptT $ do
-          let prob = pureProbabilities False isMember
-          (peras, chains) <- get
-          case voting peras prob chains of
-            [(chains', _)] -> do
-              modify' . second $ const chains'
-              pure . certPrimeNext $ honest chains'
-            _ -> error "Markov projection failed."
+        let
+          Prototype.MkNodeModel{..} = model
+          r = Prototype.slotToRound protocol clock
+          next = snd $ Prototype.fetchingModeled mempty mempty model
+         in
+          if Prototype.round (Prototype.certPrime $ Prototype.state next) == r
+            then -- There was a quorum.
+            runExceptT $ do
+              let prob = pureProbabilities False isMember
+              (peras, chains) <- get
+              case voting peras prob chains of
+                [(chains', _)] -> do
+                  modify' . second $ const chains'
+                  pure . certPrimeNext $ honest chains'
+                _ -> error "Markov projection failed."
+            else -- There wasn't a quorum.
+              pure $ pure Nothing
   postcondition (_prior, posterior) action _env _actual =
     case action of
       Prototype.Initialize _party _start _params ->

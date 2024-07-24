@@ -63,7 +63,7 @@ test-suite peras-markov-test
     other-modules:    Peras.Markov.Adversary.CommonCandidateSpec
                       Peras.Markov.Adversary.TwoChainSpec
                       Peras.Markov.PolynomialSpec
---                    Peras.MarkovSim.ModelSpec
+                      Peras.MarkovSim.ModelSpec
     build-depends:    QuickCheck,
                       base,
                       containers,
