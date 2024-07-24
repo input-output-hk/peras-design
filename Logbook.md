@@ -1,6 +1,40 @@
+## 2024-07-24
+
+### Monthly demo and review
+
+Here are [the slides](https://docs.google.com/presentation/d/1G_BZTIegMyMndK6BMTjnTJqFvSCl3yQT6AQNGAI_B8o/edit?usp=drive_link) and [the recording](https://drive.google.com/file/d/1rR4YVrnFLczTao-rWbQdVmcIjv6VPMCI/view?usp=drive_link) of Peras's monthly demonstration review, which was well attended (particularly by the the networking and consensus teams). The key questions and points of discussion follow:
+
+- There was a lot of interest in understanding the nature of the Byzantine pre-agrement part of the "alpha" version of peras.
+    - What does it add to the "pre-alpha" version?
+    - How long does the pre-agreement phase last.
+    - What happens when there is no agreement?
+    - The caveat is that what is outlined in the research paper is subject to adjustment/revision.
+- Cooldown
+    - What is are the triggering conditions or threshold for entering cooldown?
+    - There was concern about the reputational risk of mistakenly entering cooldown.
+    - What happens to the protocol in cases of "force majeure"?
+- Discussion and explanation of how Peras interacts with forking (honest or adversarial).
+- How are terms like "guarantee", "settlement", "finality", "fast", etc. defined?
+    - What does one mean by "fast"?
+    - What does one measure Peras against?
+- Are the metrics real world and computed probabilities applicable to the "real world"?
+    - LD50 approach: Given specific adverse conditions, how long would one have to run Peras for there to be a 50-50 chance of a failure?
+- There was concern about the security parameter increasing.
+    - The origins of the 2160-block Praos security parameter were discussed.
+    - Changing that could be a mess for `cardano-node` implementation and testing.
+    - Although the Peras security parameter should in principle be larger because of the boost, in practice the Praos parameter was set so generously large that Peras may not require it being increased.
+- We discussed at length the communication challenges around Peras.
+    - Terms and metrics need to be defined precisely in discussions.
+    - Adversarial scenarios can be complex and must also be discussed precisely.
+    - Appropriate setting of parameters somewhat depends upon stakeholder use cases.
+    - There may be two camps regarding Peras: faster finalization vs lower resource consumption.
+- We discussed the approach used in the Markov-chain simulation.
+    - Neil has done related work and may undertake more.
+- Finally, we discussed the recent CrowdStrike debacle.
+
 ## 2024-07-23
 
-### Computation of margina and reach
+### Computation of margin and reach
 
 *Margin* is the advantage of the penultimate tine of the blocktree and *reach* is the maximum advantage in the blocktree, where *advantage* is the excess weight of a tine relative to the public blocktree. The Markov-chain simulation can now compute this for the adversarial scenarios it models.
 
