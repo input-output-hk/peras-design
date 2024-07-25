@@ -5,7 +5,10 @@ author:
   - Brian W. Bush
   - Yves Hauser
 date: 2024-04-17
-monofont: Monaco
+geometry:
+- left=2.5cm
+- right=2.5cm
+pagestyle: headings
 ---
 
 :::danger
