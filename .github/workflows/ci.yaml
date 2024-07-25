@@ -166,6 +166,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - build-specification
+      - build-pdf-report
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
