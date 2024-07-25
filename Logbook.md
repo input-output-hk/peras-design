@@ -1,3 +1,13 @@
+## 2027-07-25
+
+### Dynamic testing of `peras-markov`
+
+Using `quickcheck-dynamic` for the Markov-chain simulator `peras-markov` posed a challenge because, for efficiency, `Peras.MarkovSim.Types` implements a minimalistic verson of the Peras protocol: it omits hashes, represents certificates solely by their round number, represents that chain by its length and prefix, and handles votes implicitly. Nevertheless, it was possible to test this in the `quickcheck-dynamic` framework by using `Peras.Prototype` as the `StateModel` and then projecting that state model into the expected `RunModel` for `peras-markov` for the `postcondition` tests. In order to control the transition of the Markov model, the `perform` function passes certainties instead of probabilities to the block-creation and fetching functions. 
+
+Several compromises were made in this testing because the Markov model does not explicitly represent votes and it only treats honest vs adversarial chains. Nevertheless, the dynamic tests verify the Markov chain's soundness. Additional static, unit tests are needed to fully cover the Markov chain's modeling of adversarial scenarios. (Note that the Markov-chain results have already been successfully compared to analytic computations when such computations are possible.)
+
+In retrospect, this whole dynamic-testing process would have easier if we had first created a formal model of the Markov-chain transitions and defined a projection operator from the Peras protocol to the Markov chain. It might have even been possible to prove the soundness of the Markov model.
+
 ## 2024-07-24
 
 ### Monthly demo and review
