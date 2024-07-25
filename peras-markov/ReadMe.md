@@ -2,6 +2,14 @@
 
 Run Markov-chains simulations of the Peras pre-alpha protocol for adversarial scenarios.
 
+#### To-do list
+
+- [ ] Unit tests for adversarial behavior
+- [ ] Statistical tests for adversarial strategies
+- [ ] Include block-diffusion Δ
+- [ ] Renormalize honest probabilities to account for short honest forks
+- [ ] More than two chains
+- [ ] Optimized computation on GPUs
 
 ## Help
 
