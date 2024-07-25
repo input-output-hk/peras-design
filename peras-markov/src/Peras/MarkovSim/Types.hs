@@ -189,6 +189,9 @@ data Behavior = MkBehavior
   }
   deriving (Eq, Generic, Ord, Show)
 
+instance FromJSON Behavior
+instance ToJSON Behavior
+
 -- The default adversarial behavior is full honesty.
 instance Default Behavior where
   def = honestChainBehavior
@@ -208,19 +211,34 @@ splitChainBehavior (splitStart, splitFinish) = MkBehavior AlwaysVote AlwaysRevea
 data AdverseVoting = NeverVote | AlwaysVote | VoteForAdversary
   deriving (Eq, Generic, Ord, Show)
 
+instance FromJSON AdverseVoting
+instance ToJSON AdverseVoting
+
 data AdverseRevelation = NeverReveal | AlwaysReveal | RevealIfLonger
   deriving (Eq, Generic, Ord, Show)
 
+instance FromJSON AdverseRevelation
+instance ToJSON AdverseRevelation
+
 data AdverseAdoption = NeverAdopt | AdoptIfLonger
   deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseAdoption
+instance ToJSON AdverseAdoption
 
 data AdverseBlocks = PromptBlocks
   -- TODO: Add `| DelayBlocks Int` to indicate that blocks are diffused late by a specified number of slots.
   deriving (Eq, Generic, Ord, Show)
 
+instance FromJSON AdverseBlocks
+instance ToJSON AdverseBlocks
+
 data AdverseCertification = PromptVotes
   -- TODO: Add `| DelayVotes` to indicate that votes are diffused as late as possible.
   deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseCertification
+instance ToJSON AdverseCertification
 
 data AdverseSplitting
   = NoSplitting
@@ -229,3 +247,6 @@ data AdverseSplitting
       , splitFinish :: Slot
       }
   deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseSplitting
+instance ToJSON AdverseSplitting
