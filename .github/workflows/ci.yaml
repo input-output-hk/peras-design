@@ -126,6 +126,7 @@ jobs:
     - name: 🏗️ Agda-to-HTML
       run: |
         nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
+
     - name: Publish Docusaurus build
       uses: actions/upload-artifact@v4
       with:
@@ -143,7 +144,8 @@ jobs:
       - name: 🔧 Massage markdown
         run: |
           cat site/docs/reports/tech-report-2.md|  sed -e 's/\/img/site\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-2.md
-      - uses: docker://pandoc/latex:3.2.0
+      - name: 📓 Build PDF
+        uses: docker://pandoc/latex:3.2.0
         with:
           args: >-  # allows you to break string into multiple lines
             --pdf-engine=xelatex
@@ -151,6 +153,14 @@ jobs:
             --standalone
             --output=tech-report-2.pdf
             tech-report-2.md
+
+      - name: 📤 Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: tech-report-2
+          if-no-files-found: error
+          path: |
+            tech-report-2.pdf
 
   build-docusaurus:
     runs-on: ubuntu-22.04
@@ -176,6 +186,12 @@ jobs:
         with:
           name: agda-specification
           path: ./site/static/agda_html/
+
+      - name: 📥 Download PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: tech-report-2
+          path: ./site/static/
 
       - name: 🏗️ Build Docusaurus site
         working-directory: site

@@ -6,7 +6,6 @@ author:
   - Yves Hauser
   - Hans Lahe
 date: 2024-07-19
-monofont: Menlo
 geometry:
 - left=2.5cm
 - right=2.5cm
