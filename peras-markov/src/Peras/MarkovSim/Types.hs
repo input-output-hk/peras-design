@@ -154,11 +154,12 @@ data Chains = MkChains
   , honest :: Chain
   , adversary :: Chain
   , publicWeight :: Int
+  , behavior :: Behavior
   }
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Default Chains where
-  def = MkChains 0 0 def def minBound
+  def = MkChains 0 0 def def minBound def
 
 data Chain = MkChain
   { weight :: Int
@@ -174,3 +175,31 @@ data Chain = MkChain
 
 instance Default Chain where
   def = MkChain 1 0 Nothing True False False 0 Nothing
+
+data Behavior = MkBehavior
+  { adverseVoting :: AdverseVoting
+  , adverseRevelation :: AdverseRevelation
+  , adverseAdoption :: AdverseAdoption
+  , adverseBlocks :: AdverseBlocks
+  , adverseCertification :: AdverseCertification
+  }
+  deriving (Eq, Generic, Ord, Show)
+
+-- The default adversarial behavior is full honesty.
+instance Default Behavior where
+  def = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes
+
+data AdverseVoting = NeverVote | AlwaysVote | VoteForSelf
+  deriving (Eq, Generic, Ord, Show)
+
+data AdverseRevelation = NeverReveal | AlwaysReveal | RevealIfLonger | HidingInterval Slot Slot
+  deriving (Eq, Generic, Ord, Show)
+
+data AdverseAdoption = NeverAdopt | AdoptIfLonger
+  deriving (Eq, Generic, Ord, Show)
+
+data AdverseBlocks = PromptBlocks | DelayBlocks
+  deriving (Eq, Generic, Ord, Show)
+
+data AdverseCertification = PromptVotes | DelayVotes
+  deriving (Eq, Generic, Ord, Show)
