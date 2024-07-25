@@ -9,16 +9,7 @@ import Data.Bifunctor (second)
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
-import Peras.MarkovSim.Types (
-  Chain (..),
-  Chains (..),
-  Evolution (..),
-  Peras (..),
-  Probabilities (..),
-  Probability,
-  inRound,
-  newRound,
- )
+import Peras.MarkovSim.Types
 import Prelude hiding (round)
 
 import qualified Data.Map.Strict as Map
@@ -154,12 +145,24 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
             else chain
    in
     if newRound peras slot
-      then
-        clean
-          [ (chains, noQuorum + mixedQuorum)
-          , (chains{honest = vote honest}, honestQuorum)
-          , (chains{adversary = vote adversary}, adversaryQuorum)
-          ]
+      then case adverseVoting behavior of
+        NeverVote ->
+          clean
+            [ (chains, noQuorum + mixedQuorum + adversaryQuorum)
+            , (chains{honest = vote honest}, honestQuorum)
+            ]
+        AlwaysVote ->
+          clean
+            [ (chains, noQuorum)
+            , (chains{honest = vote honest}, honestQuorum + mixedQuorum)
+            , (chains{adversary = vote adversary}, adversaryQuorum)
+            ]
+        VoteForAdversary ->
+          clean
+            [ (chains, noQuorum + mixedQuorum)
+            , (chains{honest = vote honest}, honestQuorum)
+            , (chains{adversary = vote adversary}, adversaryQuorum)
+            ]
       else [(chains, 1)]
 
 updatePublicWeight :: Chains -> Chains

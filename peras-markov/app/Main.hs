@@ -90,7 +90,7 @@ run LongerChain{..} =
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)", "Error bound"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution MarkovSim.privateChainBehavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -114,7 +114,7 @@ run MarginReach{..} =
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "Margin", "Reach", "Probability"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution MarkovSim.privateChainBehavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -138,7 +138,7 @@ run LengthDifference{..} =
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "Honest - Adversary", "Probability"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution MarkovSim.privateChainBehavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -160,7 +160,7 @@ run Lengths{..} =
   do
     peras <- decodeFileThrow paramFile
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution MarkovSim.privateChainBehavior
         metrics f =
           do
             t0 <- getCurrentTime

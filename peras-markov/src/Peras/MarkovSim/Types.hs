@@ -113,7 +113,10 @@ newtype Evolution = MkEvolution {getEvolution :: Map Chains Probability}
   deriving stock (Eq, Show)
 
 instance Default Evolution where
-  def = MkEvolution $ Map.singleton def 1
+  def = behavioralEvolution def
+
+behavioralEvolution :: Behavior -> Evolution
+behavioralEvolution b = MkEvolution $ Map.singleton def{behavior = b} 1
 
 instance Pretty Evolution where
   pretty MkEvolution{getEvolution} =
@@ -182,24 +185,47 @@ data Behavior = MkBehavior
   , adverseAdoption :: AdverseAdoption
   , adverseBlocks :: AdverseBlocks
   , adverseCertification :: AdverseCertification
+  , addverseSplitting :: AdverseSplitting
   }
   deriving (Eq, Generic, Ord, Show)
 
 -- The default adversarial behavior is full honesty.
 instance Default Behavior where
-  def = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes
+  def = honestChainBehavior
 
-data AdverseVoting = NeverVote | AlwaysVote | VoteForSelf
+-- | An honest adversary.
+honestChainBehavior :: Behavior
+honestChainBehavior = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes NoSplitting
+
+-- | Build and vote for a private chain.
+privateChainBehavior :: Behavior
+privateChainBehavior = MkBehavior VoteForAdversary NeverReveal NeverAdopt PromptBlocks PromptVotes NoSplitting
+
+-- | A temporarily split network.
+splitChainBehavior :: (Slot, Slot) -> Behavior
+splitChainBehavior (splitStart, splitFinish) = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes MkAdverseSplit{..}
+
+data AdverseVoting = NeverVote | AlwaysVote | VoteForAdversary
   deriving (Eq, Generic, Ord, Show)
 
-data AdverseRevelation = NeverReveal | AlwaysReveal | RevealIfLonger | HidingInterval Slot Slot
+data AdverseRevelation = NeverReveal | AlwaysReveal | RevealIfLonger
   deriving (Eq, Generic, Ord, Show)
 
 data AdverseAdoption = NeverAdopt | AdoptIfLonger
   deriving (Eq, Generic, Ord, Show)
 
-data AdverseBlocks = PromptBlocks | DelayBlocks
+data AdverseBlocks = PromptBlocks
+  -- TODO: Add `| DelayBlocks Int` to indicate that blocks are diffused late by a specified number of slots.
   deriving (Eq, Generic, Ord, Show)
 
-data AdverseCertification = PromptVotes | DelayVotes
+data AdverseCertification = PromptVotes
+  -- TODO: Add `| DelayVotes` to indicate that votes are diffused as late as possible.
+  deriving (Eq, Generic, Ord, Show)
+
+data AdverseSplitting
+  = NoSplitting
+  | MkAdverseSplit
+      { splitStart :: Slot
+      , splitFinish :: Slot
+      }
   deriving (Eq, Generic, Ord, Show)
