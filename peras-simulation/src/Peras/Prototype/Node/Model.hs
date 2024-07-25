@@ -51,6 +51,7 @@ import Peras.Crypto (
  )
 import Peras.Numbering (SlotNumber)
 import Peras.Prototype.BlockCreation (blockCreation)
+import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
   IsCommitteeMember,
   IsSlotLeader,
@@ -65,7 +66,6 @@ import Peras.Prototype.Diffusion (
   popChainsAndVotes,
  )
 import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Types (
   Payload,
   PerasError (MultipleItemsDiffused),
@@ -226,7 +226,7 @@ instance StateModel NodeModel where
       Initialize{} -> not (initialized node)
       Tick{} -> initialized node
       Fetching{} -> initialized node && not (fetched node)
-      BlockCreation{} -> initialized node && not (forged node)
+      BlockCreation{} -> initialized node && not (forged node) && clock > 0
       Voting{} -> initialized node && newRound clock protocol && not (voted node)
 
   arbitraryAction _context node@MkNodeModel{self, clock, protocol, state = MkPerasState{..}} =
@@ -237,7 +237,7 @@ instance StateModel NodeModel where
         frequency
           [ (1, pure $ Some Tick)
           , (if fetched node then 0 else 1, fmap Some . Fetching <$> genChains <*> genVotes)
-          , (if forged node then 0 else 10, fmap Some . BlockCreation <$> arbitrary <*> arbitrary)
+          , (if forged node || clock == 0 then 0 else 10, fmap Some . BlockCreation <$> arbitrary <*> arbitrary)
           , (if voted node then 0 else 50, Some . Voting <$> arbitrary)
           ]
       else pure . Some $ Initialize (mkParty 1 mempty mempty) (systemStart + 1) def -- FIXME: Use arbitraries.
