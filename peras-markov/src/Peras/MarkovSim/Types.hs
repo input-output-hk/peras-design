@@ -226,15 +226,17 @@ data AdverseAdoption = NeverAdopt | AdoptIfLonger
 instance FromJSON AdverseAdoption
 instance ToJSON AdverseAdoption
 
-data AdverseBlocks = PromptBlocks
-  -- TODO: Add `| DelayBlocks Int` to indicate that blocks are diffused late by a specified number of slots.
+data AdverseBlocks
+  = PromptBlocks
+  | DelayBlocks Int
   deriving (Eq, Generic, Ord, Show)
 
 instance FromJSON AdverseBlocks
 instance ToJSON AdverseBlocks
 
-data AdverseCertification = PromptVotes
-  -- TODO: Add `| DelayVotes` to indicate that votes are diffused as late as possible.
+data AdverseCertification
+  = PromptVotes
+  | DelayVotes
   deriving (Eq, Generic, Ord, Show)
 
 instance FromJSON AdverseCertification

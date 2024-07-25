@@ -1,0 +1,7 @@
+adverseVoting: AlwaysVote
+adverseRevelation: AlwaysReveal
+adverseAdoption: AdoptIfLonger
+adverseBlocks: PromptBlocks
+adverseCertification: PromptVotes
+addverseSplitting:
+  tag: NoSplitting
