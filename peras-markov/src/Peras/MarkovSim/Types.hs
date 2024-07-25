@@ -226,17 +226,13 @@ data AdverseAdoption = NeverAdopt | AdoptIfLonger
 instance FromJSON AdverseAdoption
 instance ToJSON AdverseAdoption
 
-data AdverseBlocks
-  = PromptBlocks
-  | DelayBlocks Int
+data AdverseBlocks = PromptBlocks | DelayBlocks Int
   deriving (Eq, Generic, Ord, Show)
 
 instance FromJSON AdverseBlocks
 instance ToJSON AdverseBlocks
 
-data AdverseCertification
-  = PromptVotes
-  | DelayVotes
+data AdverseCertification = PromptVotes | DelayVotes
   deriving (Eq, Generic, Ord, Show)
 
 instance FromJSON AdverseCertification

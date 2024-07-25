@@ -11,6 +11,65 @@ Run Markov-chains simulations of the Peras pre-alpha protocol for adversarial sc
 - [ ] More than two chains
 - [ ] Optimized computation on GPUs
 
+
+## Adversarial behaviors
+
+Adversarial behaviors can be customized by supplying a YAML file to the `--behavior-file` CLI option.
+
+The file [honest-behavior.yaml](./honest-behavior.yaml) represents an adversary who always behaves honestly:
+
+```console
+$ cat honest-behavior.yaml
+
+adverseVoting: AlwaysVote
+adverseRevelation: AlwaysReveal
+adverseAdoption: AdoptIfLonger
+adverseBlocks:
+  tag: PromptBlocks
+adverseCertification: PromptVotes
+addverseSplitting:
+  tag: NoSplitting
+```
+
+In contrast, the file [private-chain-behavior.yaml](./private-chain-behavior.yaml) represents an adversary who builds their chain in private and who never votes for the honest chain.
+
+```console
+$ cat private-chain-behavior.yaml
+
+adverseVoting: VoteForAdversary
+adverseRevelation: NeverReveal
+adverseAdoption: NeverAdopt
+adverseBlocks:
+  tag: PromptBlocks
+adverseCertification: PromptVotes
+addverseSplitting:
+  tag: NoSplitting
+```
+
+The following behaviors are available:
+
+- `adverseVoting`
+    - `NeverVote`: the adversary never votes for a block.
+    - `AlwaysVote`: the adversary always votes honestly.
+    - `VoteForAdversary`: the adversary only votes for blocks on their preferred chain.
+- `adverseRevelation`
+    - `NeverReveal`: the adversary keeps their chain private.
+    - `AlwaysReveal`: the adversary honestly reveals their chain.
+    - `RevealIfLonger`: the adversary only reveals their chain to honest parties if it is weightiest chain.
+- `adverseAdoption`
+    - `NeverAdopt`: the adversary never adopts the honest chain.
+    - `AdoptIfLonger`: the adversary adopts the honest chain if it is weightiest.
+- `adverseBlocks`
+    - `PromptBlocks`: the adversary honestly diffuses the blocks they forge.
+    - `DelayBlocks Int`: the adversary waits the specified number of blocks before diffusing a block they forge.
+- `adverseCertification`
+    - `PromptVotes`: the adversary honestly diffuses the votes they cast.
+    - `DelayVotes`: the adversary waits until just before the expiration time before diffusing a vote they cast.
+- `adverseSplitting`
+    - `NoSplitting`: the honest and adversarial nodes can communicate with one another throughout the simulation.
+    - `MkAdverseSplit Slot Slot`: the honest and adversarial nodes do not communication with one another during the specified (inclusive) slot interval.
+
+
 ## Help
 
 ```console
@@ -55,7 +114,7 @@ b: 10
 τ: 450
 c: 600
 
-$ cabal run exe:peras-markov -- longer-chain --slots 20 --param-file example-input.yaml --out-file example-output.tsv
+$ cabal run exe:peras-markov -- longer-chain --slots 20 --param-file example-input.yaml --behavior-file private-chain-behavior.yaml --out-file example-output.tsv
 
 $ cat example-output.tsv 
 

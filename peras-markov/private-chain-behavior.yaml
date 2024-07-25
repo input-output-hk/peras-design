@@ -1,7 +1,8 @@
 adverseVoting: VoteForAdversary
 adverseRevelation: NeverReveal
 adverseAdoption: NeverAdopt
-adverseBlocks: PromptBlocks
+adverseBlocks:
+  tag: PromptBlocks
 adverseCertification: PromptVotes
 addverseSplitting:
   tag: NoSplitting
