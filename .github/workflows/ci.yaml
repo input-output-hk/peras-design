@@ -142,8 +142,7 @@ jobs:
 
       - name: 🔧 Massage markdown
         run: |
-          cd site
-          cat docs/reports/tech-report-2.md|  sed -e 's/\/img/.\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-2.md
+          cat site/docs/reports/tech-report-2.md|  sed -e 's/\/img/site\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-2.md
       - uses: docker://pandoc/latex:3.2.0
         with:
           args: >-  # allows you to break string into multiple lines
