@@ -8,14 +8,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.MarkovSim.Model {-# DEPRECATED "Work in progress." #-} where
+module Peras.MarkovSim.Model {-# DEPRECATED "Only partially tests markov-chain simulator." #-} where
 
 import Control.Arrow ((***))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (MonadState, MonadTrans, StateT (StateT), get, gets, lift, modify', put)
 import Data.Bifunctor (Bifunctor (second))
 import Data.Default (def)
-import Peras.MarkovSim.Transition (tick, voting)
+import Data.Function (on)
+import Peras.MarkovSim.Transition (blockCreation, fetching, tick, voting)
 import Peras.MarkovSim.Types (Chain (..), Chains (..), Peras (..), pureProbabilities)
 import Test.QuickCheck.StateModel (Realized, RunModel (perform, postcondition))
 
@@ -47,19 +48,29 @@ instance Monad m => RunModel Prototype.NodeModel (RunMonad m) where
           toPeras params *** (\chains -> chains{slot = fromIntegral start})
       Prototype.Tick ->
         -- Handle a new slot.
-        runExceptT . modify' $
-          second tick
+        runExceptT . modify' $ \(peras, chains) ->
+          -- We need to call fetch here in order to update the cert bookkeeping.
+          (peras, fetching peras $ tick chains)
       Prototype.Fetching newChains newVotes ->
         -- FIXME: For now, we set the run state based on the model state.
         runExceptT . put . project . snd $ Prototype.fetchingModeled newChains newVotes model
-      Prototype.BlockCreation _isLeader _payload ->
-        pure $ pure Nothing
+      Prototype.BlockCreation isLeader _payload ->
+        runExceptT $ do
+          let prob = pureProbabilities isLeader False
+          (peras, chains) <- get
+          case blockCreation peras prob chains of
+            [(chains', _)] -> do
+              modify' . second $ const chains'
+              pure Nothing
+            _ -> error "Markov projection failed."
       Prototype.Voting isMember ->
         let
           Prototype.MkNodeModel{..} = model
           r = Prototype.slotToRound protocol clock
           next = snd $ Prototype.fetchingModeled mempty mempty model
          in
+          -- Sadly, we can only test certificates, not votes, and we have to
+          -- deal with this mismatch between the state model and the run model.
           if Prototype.round (Prototype.certPrime $ Prototype.state next) == r
             then -- There was a quorum.
             runExceptT $ do
@@ -81,12 +92,11 @@ instance Monad m => RunModel Prototype.NodeModel (RunMonad m) where
         -- Check that the clocks match.
         lift . gets $ (fromIntegral (Prototype.clock posterior) ==) . slot . snd
       Prototype.Fetching _newChains _newVotes ->
-        (project posterior ==) <$> lift get
+        lift . gets $ on (==) (honest . snd) (project posterior)
       Prototype.BlockCreation _isLeader _payload ->
-        -- FIXME: Not implemented
-        pure True
+        lift . gets $ on (==) (honest . snd) (project posterior)
       Prototype.Voting _isMember ->
-        (project posterior ==) <$> lift get
+        lift . gets $ on (==) (honest . snd) (project posterior)
 
 type MarkovModel = (Peras, Chains)
 
@@ -113,12 +123,12 @@ project model@Prototype.MkNodeModel{..} =
         , prefix = 0 -- FIXME: Address this later. It should be the last common block of the chains tied for highest weight.
         , honest =
             MkChain
-              { weight = fromInteger $ Prototype.chainWeight (Prototype.perasB protocol) certsSet chainPref
+              { weight = 1 + fromInteger (Prototype.chainWeight (Prototype.perasB protocol) certsSet chainPref)
               , certPrime = fromIntegral $ Prototype.round certPrime
               , certPrimeNext = certNext Prototype.certPrime
-              , certUltimate = any ((== r) . Prototype.round) certsSet
-              , certPenultimate = any ((== (r - 1)) . Prototype.round) certsSet
-              , certAntepenultimate = any ((== (r - 2)) . Prototype.round) certsSet
+              , certUltimate = any ((== r) . Prototype.round) certsSet || r == 0
+              , certPenultimate = any ((== (r - 1)) . Prototype.round) certsSet || r == 1
+              , certAntepenultimate = any ((== (r - 2)) . Prototype.round) certsSet || r == 2
               , certStar = fromIntegral $ Prototype.round certStar
               , certStarNext = certNext Prototype.certStar
               }

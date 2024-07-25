@@ -68,7 +68,8 @@ tick chains@MkChains{..} =
 
 fetching :: Peras -> Chains -> Chains
 fetching peras chains@MkChains{..} =
-  let receive chain@MkChain{..} =
+  let round = inRound peras slot
+      receive chain@MkChain{..} =
         chain
           { -- Update cert*.
             certStar = fromMaybe certStar certStarNext
@@ -80,11 +81,11 @@ fetching peras chains@MkChains{..} =
       update chain@MkChain{..} =
         chain
           { -- No round-0 cert yet.
-            certUltimate = False
+            certUltimate = round == 0
           , -- The old round-0 cert becomes the round-1 cert.
-            certPenultimate = certUltimate
+            certPenultimate = certUltimate || round == 1
           , -- The old round-1 cert becomes the round-2 cert.
-            certAntepenultimate = certPenultimate
+            certAntepenultimate = certPenultimate || round == 2
           }
       chains' =
         (updatePublicWeight chains)

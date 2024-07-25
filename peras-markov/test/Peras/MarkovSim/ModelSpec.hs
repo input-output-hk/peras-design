@@ -17,9 +17,8 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 
 spec :: Spec
 spec =
-  modifyMaxSuccess (const 100)
-    $ describe "Markov-chain honest node"
-      . prop "Simulation respects model"
+  describe "Markov-chain honest node"
+    . prop "Simulation respects model"
     $ propSimulate propPrototypeNode
 
 -- | Test whether the simulation conforms to the model.
