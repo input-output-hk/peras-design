@@ -2,11 +2,25 @@
 
 ### Dynamic testing of `peras-markov`
 
-Using `quickcheck-dynamic` for the Markov-chain simulator `peras-markov` posed a challenge because, for efficiency, `Peras.MarkovSim.Types` implements a minimalistic verson of the Peras protocol: it omits hashes, represents certificates solely by their round number, represents that chain by its length and prefix, and handles votes implicitly. Nevertheless, it was possible to test this in the `quickcheck-dynamic` framework by using `Peras.Prototype` as the `StateModel` and then projecting that state model into the expected `RunModel` for `peras-markov` for the `postcondition` tests. In order to control the transition of the Markov model, the `perform` function passes certainties instead of probabilities to the block-creation and fetching functions. 
+Using `quickcheck-dynamic` for the Markov-chain simulator `peras-markov` posed a challenge because, for efficiency, `Peras.MarkovSim.Types` implements a minimalistic verson of the Peras protocol: it omits hashes, represents certificates solely by their round number, represents that chain by its length and prefix, and handles votes implicitly. Nevertheless, it was possible to test this in the `quickcheck-dynamic` framework by using `Peras.Prototype` as the `StateModel` and then projecting that state model into the expected `RunModel` for `peras-markov` for the `postcondition` tests. In order to control the transition of the Markov model, the `perform` function passes certainties instead of probabilities to the block-creation and fetching functions.
 
 Several compromises were made in this testing because the Markov model does not explicitly represent votes and it only treats honest vs adversarial chains. Nevertheless, the dynamic tests verify the Markov chain's soundness. Additional static, unit tests are needed to fully cover the Markov chain's modeling of adversarial scenarios. (Note that the Markov-chain results have already been successfully compared to analytic computations when such computations are possible.)
 
 In retrospect, this whole dynamic-testing process would have easier if we had first created a formal model of the Markov-chain transitions and defined a projection operator from the Peras protocol to the Markov chain. It might have even been possible to prove the soundness of the Markov model.
+
+## 2024-07-25
+
+### Providing reports in PDF format
+
+Looking at ways to generate PDF from docusaurus website, https://github.com/jean-humann/docs-to-pdf looks promising, but it looks like it works by browsing HTML which is annoying given that the website is currently private. Then looking at https://github.com/signcl/docusaurus-prince-pdf?tab=readme-ov-file which seems to work offline, but requires some pricey software. Ultimately, tried docs-to-pdf but it does not work with `file://` based URLs and the result it produces is not great.
+
+So best option seems to be good old pandoc, possibly using some filtering on input to make it better. After a while, I managed to get Tech report in PDF published to staging web site: https://peras-staging.cardano-scaling.org/tech-report-2.pdf and added some links to the reports cover page.
+
+### Discussing CIPs w/ Consensus TWG
+
+* Details of the process w/in Intersect are still being worked out
+* CIP editors suggested we propose a CIP for "onboarding" consensus project w/in CIPs, which is not the case already. [Ledger](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0084) and [plutus](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0035) already enrolled in the process and could be role models
+* we decided the Consensus TWG would start drafting such a CIP and push it for adoption w/o waiting for other committees decision
 
 ## 2024-07-24
 
@@ -51,9 +65,9 @@ Here are [the slides](https://docs.google.com/presentation/d/1G_BZTIegMyMndK6BMT
 ```console
 $ peras-markov margin-reach --help
 
-Usage: peras-markov margin-reach [--epsilon DOUBLE] [--slots NATURAL] 
+Usage: peras-markov margin-reach [--epsilon DOUBLE] [--slots NATURAL]
                                  [--adversarial-stake FRACTION]
-                                 --param-file FILE [--out-file FILE] 
+                                 --param-file FILE [--out-file FILE]
                                  [--progress]
 
   Compute the probability distribution of the margin and reach for a one-slot
