@@ -134,6 +134,25 @@ jobs:
         path: |
           html/*
 
+  build-pdf-report:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Massage markdown
+        run: |
+          cd site
+          cat docs/reports/tech-report-2.md|  sed -e 's/\/img/.\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-2.md
+      - uses: docker://pandoc/latex:3.2.0
+        with:
+          args: >-  # allows you to break string into multiple lines
+            --pdf-engine=xelatex
+            -N
+            --standalone
+            --output=tech-report-2.pdf
+            tech-report-2.md
+
   build-docusaurus:
     runs-on: ubuntu-22.04
     needs:
