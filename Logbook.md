@@ -1,3 +1,30 @@
+## 2027-07-26
+
+### Adversarial behaviors for `peras-markov`
+
+The Markov-chain simulation now supports "mix and match" configuration of adversarial behavior via a YAML input file.
+
+- Adversary's voting
+    - `NeverVote`: the adversary never votes for a block.
+    - `AlwaysVote`: the adversary always votes honestly.
+    - `VoteForAdversary`: the adversary only votes for blocks on their preferred chain.
+- Whether the adversary keeps their chain private
+    - `NeverReveal`: the adversary keeps their chain private.
+    - `AlwaysReveal`: the adversary honestly reveals their chain.
+    - `RevealIfLonger`: the adversary only reveals their chain to honest parties if it is weightiest chain.
+- Whether the adversary adopts the honest chain
+    - `NeverAdopt`: the adversary never adopts the honest chain.
+    - `AdoptIfLonger`: the adversary adopts the honest chain if it is weightiest.
+- "Split brain"
+    - `NoSplitting`: the honest and adversarial nodes can communicate with one another throughout the simulation.
+    - `MkAdverseSplit Slot Slot`: the honest and adversarial nodes do not communication with one another during the specified (inclusive) slot interval.
+
+Next steps:
+
+- unit tests
+- example scenarios
+- split-brain analysis
+
 ## 2027-07-25
 
 ### Dynamic testing of `peras-markov`
