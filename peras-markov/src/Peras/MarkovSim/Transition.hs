@@ -51,14 +51,11 @@ pstep ε peras probabilities =
       $ blockCreation' chains
 
 tick :: Chains -> Chains
-tick chains@MkChains{..} =
-  case adverseSplitting behavior of
-    NoSplitting ->
-      chains
-        { -- Increment the slot number
-          slot = slot + 1
-        }
-    MkAdverseSplit _ _ -> error "Not yet implemented: `MkAdverseSplit`."
+tick chains@MkChains{slot} =
+  (crosschainBehavior chains)
+    { -- Increment the slot number
+      slot = slot + 1
+    }
 
 fetching :: Peras -> Chains -> Chains
 fetching peras chains@MkChains{..} =
@@ -172,6 +169,68 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
             , (chains{adversary = vote adversary}, adversaryQuorum)
             ]
       else [(chains, 1)]
+
+isSplit :: Behavior -> Slot -> Bool
+isSplit MkBehavior{adverseSplitting} slot =
+  case adverseSplitting of
+    NoSplitting -> False
+    MkAdverseSplit{splitStart, splitFinish} -> splitStart <= slot && slot <= splitFinish
+
+crosschainBehavior :: Chains -> Chains
+crosschainBehavior chains@MkChains{..}
+  | isSplit behavior slot = chains
+  | otherwise =
+      let
+        communicateFromHonest =
+          case adverseAdoption behavior of
+            NeverAdopt -> False
+            AdoptIfLonger -> weight honest > weight adversary
+        communicateFromAdversary =
+          case adverseRevelation behavior of
+            NeverReveal -> False
+            RevealIfLonger -> weight adversary > weight honest
+            AlwaysReveal -> True
+        mergeCerts :: Chain -> Chain -> Chain
+        mergeCerts mine other =
+          mine
+            { certPrime = on max certPrime mine other
+            , certPrimeNext = on max certPrimeNext mine other
+            , certUltimate = on (||) certUltimate mine other
+            , certPenultimate = on (||) certPenultimate mine other
+            , certAntepenultimate = on (||) certAntepenultimate mine other
+            }
+        transferCertStar :: Chain -> Chain -> (Chain, Slot)
+        transferCertStar mine other =
+          if on (<) weight mine other
+            then
+              ( mine
+                  { weight = weight other
+                  , certStar = certStar other
+                  , certStarNext = certStarNext other
+                  }
+              , weight other
+              )
+            else
+              ( mine
+              , prefix
+              )
+        communicate :: Chain -> Chain -> (Chain, Slot)
+        communicate mine other =
+          transferCertStar (mergeCerts mine other) other
+        (honest', hprefix) =
+          if communicateFromAdversary
+            then communicate honest adversary
+            else (honest, prefix)
+        (adversary', aprefix) =
+          if communicateFromHonest
+            then communicate adversary honest
+            else (adversary, prefix)
+       in
+        chains
+          { prefix = max hprefix aprefix
+          , honest = honest'
+          , adversary = adversary'
+          }
 
 updatePublicWeight :: Chains -> Chains
 updatePublicWeight chains@MkChains{honest, adversary, publicWeight} =
