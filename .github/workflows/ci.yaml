@@ -30,10 +30,10 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🏗️ Typecheck Agda
       run: |
-        nix build --show-trace .#peras
+        nix build --show-trace --accept-flake-config .#peras
     - name: 🏗️ Build `peras-simulation`.
       run: |
-        nix build --show-trace .#peras-simulation-test
+        nix build --show-trace --accept-flake-config .#peras-simulation-test
 
   simulate-hs:
     name: Run simulations
@@ -53,11 +53,11 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🗳️ Simulate Peras
       run: |
-        nix run .#peras-simulate -- \
+        nix run --accept-flake-config .#peras-simulate -- \
           --in-file peras-simulation/example-input.yaml \
           --out-file peras-simulation/tmp-output.yaml \
           --trace-file peras-simulation/tmp-trace.jsonarray
-        nix run .#peras-visualize -- \
+        nix run --accept-flake-config .#peras-visualize -- \
           --trace-file peras-simulation/tmp-trace.jsonarray \
           --dot-file peras-simulation/tmp.dot
   tests:
@@ -79,7 +79,7 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🔬 Test with `peras-simulation-test`
       run: |
-        nix run .#peras-simulation-test
+        nix run --accept-flake-config .#peras-simulation-test
 
   test-demo:
     name: Test Demo
@@ -99,13 +99,13 @@ jobs:
           experimental-features = nix-command flakes
     - name: 🏗️ Compile Agda
       run: |
-        nix build .#test-demo-agda
+        nix build --accept-flake-config .#test-demo-agda
     - name: 🏗️ Compile Haskell Library
       run: |
-        nix build .#test-demo
+        nix build --accept-flake-config .#test-demo
     - name: 🏗️ Compile Haskell Executable
       run: |
-        nix build .#test-demo-test
+        nix build --accept-flake-config .#test-demo-test
 
   build-specification:
     name: Build HTML Specification
