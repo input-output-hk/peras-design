@@ -52,10 +52,13 @@ pstep ε peras probabilities =
 
 tick :: Chains -> Chains
 tick chains@MkChains{..} =
-  chains
-    { -- Increment the slot number
-      slot = slot + 1
-    }
+  case adverseSplitting behavior of
+    NoSplitting ->
+      chains
+        { -- Increment the slot number
+          slot = slot + 1
+        }
+    MkAdverseSplit _ _ -> error "Not yet implemented: `MkAdverseSplit`."
 
 fetching :: Peras -> Chains -> Chains
 fetching peras chains@MkChains{..} =

@@ -185,7 +185,7 @@ data Behavior = MkBehavior
   , adverseAdoption :: AdverseAdoption
   , adverseBlocks :: AdverseBlocks
   , adverseCertification :: AdverseCertification
-  , addverseSplitting :: AdverseSplitting
+  , adverseSplitting :: AdverseSplitting
   }
   deriving (Eq, Generic, Ord, Show)
 
