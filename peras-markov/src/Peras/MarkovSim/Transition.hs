@@ -9,16 +9,7 @@ import Data.Bifunctor (second)
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
-import Peras.MarkovSim.Types (
-  Chain (..),
-  Chains (..),
-  Evolution (..),
-  Peras (..),
-  Probabilities (..),
-  Probability,
-  inRound,
-  newRound,
- )
+import Peras.MarkovSim.Types
 import Prelude hiding (round)
 
 import qualified Data.Map.Strict as Map
@@ -60,8 +51,8 @@ pstep ε peras probabilities =
       $ blockCreation' chains
 
 tick :: Chains -> Chains
-tick chains@MkChains{..} =
-  chains
+tick chains@MkChains{slot} =
+  (crosschainBehavior chains)
     { -- Increment the slot number
       slot = slot + 1
     }
@@ -111,19 +102,22 @@ blockCreation peras@MkPeras{a} MkProbabilities{noBlock, honestBlock, adversaryBl
       let bc1a = not certAntepenultimate
           bc1c = certPrime > certStar
           bc1b = round - certPrime <= a
-       in if bc1a && bc1b && bc1c
-            then
-              chain
-                { -- Add a block.
-                  weight = weight + 1
-                , -- Include cert'.
-                  certStarNext = Just certPrime
-                }
-            else
-              chain
-                { -- Add a block.
-                  weight = weight + 1
-                }
+       in case adverseBlocks behavior of
+            PromptBlocks ->
+              if bc1a && bc1b && bc1c
+                then
+                  chain
+                    { -- Add a block.
+                      weight = weight + 1
+                    , -- Include cert'.
+                      certStarNext = Just certPrime
+                    }
+                else
+                  chain
+                    { -- Add a block.
+                      weight = weight + 1
+                    }
+            DelayBlocks _ -> error "Not yet implemented: `DelayBlocks`."
     honest' = forge honest
     adversary' = forge adversary
    in
@@ -144,23 +138,99 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
           vr2a = round > certPrime + r
           vr2b = (round - certStar) `mod` k == 0
        in if vr1a && vr1b || vr2a && vr2b
-            then
-              chain
-                { -- Boost the chain.
-                  weight = weight + b
-                , -- Record the certificate.
-                  certPrimeNext = Just round
-                }
+            then case adverseCertification behavior of
+              PromptVotes ->
+                chain
+                  { -- Boost the chain.
+                    weight = weight + b
+                  , -- Record the certificate.
+                    certPrimeNext = Just round
+                  }
+              DelayVotes -> error "Not yet implemented: `DelayVotes`."
             else chain
    in
     if newRound peras slot
-      then
-        clean
-          [ (chains, noQuorum + mixedQuorum)
-          , (chains{honest = vote honest}, honestQuorum)
-          , (chains{adversary = vote adversary}, adversaryQuorum)
-          ]
+      then case adverseVoting behavior of
+        NeverVote ->
+          clean
+            [ (chains, noQuorum + mixedQuorum + adversaryQuorum)
+            , (chains{honest = vote honest}, honestQuorum)
+            ]
+        AlwaysVote ->
+          clean
+            [ (chains, noQuorum)
+            , (chains{honest = vote honest}, honestQuorum + mixedQuorum)
+            , (chains{adversary = vote adversary}, adversaryQuorum)
+            ]
+        VoteForAdversary ->
+          clean
+            [ (chains, noQuorum + mixedQuorum)
+            , (chains{honest = vote honest}, honestQuorum)
+            , (chains{adversary = vote adversary}, adversaryQuorum)
+            ]
       else [(chains, 1)]
+
+isSplit :: Behavior -> Slot -> Bool
+isSplit MkBehavior{adverseSplitting} slot =
+  case adverseSplitting of
+    NoSplitting -> False
+    MkAdverseSplit{splitStart, splitFinish} -> splitStart <= slot && slot <= splitFinish
+
+crosschainBehavior :: Chains -> Chains
+crosschainBehavior chains@MkChains{..}
+  | isSplit behavior slot = chains
+  | otherwise =
+      let
+        communicateFromHonest =
+          case adverseAdoption behavior of
+            NeverAdopt -> False
+            AdoptIfLonger -> weight honest > weight adversary
+        communicateFromAdversary =
+          case adverseRevelation behavior of
+            NeverReveal -> False
+            RevealIfLonger -> weight adversary > weight honest
+            AlwaysReveal -> True
+        mergeCerts :: Chain -> Chain -> Chain
+        mergeCerts mine other =
+          mine
+            { certPrime = on max certPrime mine other
+            , certPrimeNext = on max certPrimeNext mine other
+            , certUltimate = on (||) certUltimate mine other
+            , certPenultimate = on (||) certPenultimate mine other
+            , certAntepenultimate = on (||) certAntepenultimate mine other
+            }
+        transferCertStar :: Chain -> Chain -> (Chain, Slot)
+        transferCertStar mine other =
+          if on (<) weight mine other
+            then
+              ( mine
+                  { weight = weight other
+                  , certStar = certStar other
+                  , certStarNext = certStarNext other
+                  }
+              , weight other
+              )
+            else
+              ( mine
+              , prefix
+              )
+        communicate :: Chain -> Chain -> (Chain, Slot)
+        communicate mine other =
+          transferCertStar (mergeCerts mine other) other
+        (honest', hprefix) =
+          if communicateFromAdversary
+            then communicate honest adversary
+            else (honest, prefix)
+        (adversary', aprefix) =
+          if communicateFromHonest
+            then communicate adversary honest
+            else (adversary, prefix)
+       in
+        chains
+          { prefix = max hprefix aprefix
+          , honest = honest'
+          , adversary = adversary'
+          }
 
 updatePublicWeight :: Chains -> Chains
 updatePublicWeight chains@MkChains{honest, adversary, publicWeight} =

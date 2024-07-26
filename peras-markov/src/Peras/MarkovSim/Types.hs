@@ -113,7 +113,10 @@ newtype Evolution = MkEvolution {getEvolution :: Map Chains Probability}
   deriving stock (Eq, Show)
 
 instance Default Evolution where
-  def = MkEvolution $ Map.singleton def 1
+  def = behavioralEvolution def
+
+behavioralEvolution :: Behavior -> Evolution
+behavioralEvolution b = MkEvolution $ Map.singleton def{behavior = b} 1
 
 instance Pretty Evolution where
   pretty MkEvolution{getEvolution} =
@@ -154,11 +157,12 @@ data Chains = MkChains
   , honest :: Chain
   , adversary :: Chain
   , publicWeight :: Int
+  , behavior :: Behavior
   }
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Default Chains where
-  def = MkChains 0 0 def def minBound
+  def = MkChains 0 0 def def minBound def
 
 data Chain = MkChain
   { weight :: Int
@@ -174,3 +178,73 @@ data Chain = MkChain
 
 instance Default Chain where
   def = MkChain 1 0 Nothing True False False 0 Nothing
+
+data Behavior = MkBehavior
+  { adverseVoting :: AdverseVoting
+  , adverseRevelation :: AdverseRevelation
+  , adverseAdoption :: AdverseAdoption
+  , adverseBlocks :: AdverseBlocks
+  , adverseCertification :: AdverseCertification
+  , adverseSplitting :: AdverseSplitting
+  }
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON Behavior
+instance ToJSON Behavior
+
+-- The default adversarial behavior is full honesty.
+instance Default Behavior where
+  def = honestChainBehavior
+
+-- | An honest adversary.
+honestChainBehavior :: Behavior
+honestChainBehavior = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes NoSplitting
+
+-- | Build and vote for a private chain.
+privateChainBehavior :: Behavior
+privateChainBehavior = MkBehavior VoteForAdversary NeverReveal NeverAdopt PromptBlocks PromptVotes NoSplitting
+
+-- | A temporarily split network.
+splitChainBehavior :: (Slot, Slot) -> Behavior
+splitChainBehavior (splitStart, splitFinish) = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes MkAdverseSplit{..}
+
+data AdverseVoting = NeverVote | AlwaysVote | VoteForAdversary
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseVoting
+instance ToJSON AdverseVoting
+
+data AdverseRevelation = NeverReveal | AlwaysReveal | RevealIfLonger
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseRevelation
+instance ToJSON AdverseRevelation
+
+data AdverseAdoption = NeverAdopt | AdoptIfLonger
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseAdoption
+instance ToJSON AdverseAdoption
+
+data AdverseBlocks = PromptBlocks | DelayBlocks Int
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseBlocks
+instance ToJSON AdverseBlocks
+
+data AdverseCertification = PromptVotes | DelayVotes
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseCertification
+instance ToJSON AdverseCertification
+
+data AdverseSplitting
+  = NoSplitting
+  | MkAdverseSplit
+      { splitStart :: Slot
+      , splitFinish :: Slot
+      }
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON AdverseSplitting
+instance ToJSON AdverseSplitting

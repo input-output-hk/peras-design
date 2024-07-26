@@ -53,6 +53,7 @@ data Scenario
       , slots :: Int
       , stake :: (Int, Int)
       , paramFile :: FilePath
+      , behaviorFile :: FilePath
       , outFile :: FilePath
       , stop :: Double
       , progress :: Bool
@@ -62,6 +63,7 @@ data Scenario
       , slots :: Int
       , stake :: (Int, Int)
       , paramFile :: FilePath
+      , behaviorFile :: FilePath
       , outFile :: FilePath
       , progress :: Bool
       }
@@ -70,6 +72,7 @@ data Scenario
       , slots :: Int
       , stake :: (Int, Int)
       , paramFile :: FilePath
+      , behaviorFile :: FilePath
       , outFile :: FilePath
       , progress :: Bool
       }
@@ -78,6 +81,7 @@ data Scenario
       , slots :: Int
       , stake :: (Int, Int)
       , paramFile :: FilePath
+      , behaviorFile :: FilePath
       }
   | CommonCandidateDemo
   | SeparateChainsDemo
@@ -87,10 +91,11 @@ run :: Scenario -> IO ()
 run LongerChain{..} =
   do
     peras <- decodeFileThrow paramFile
+    behavior <- decodeFileThrow behaviorFile
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "P(honest > adversary)", "P(adversary >= honest)", "Error bound"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution behavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -111,10 +116,11 @@ run LongerChain{..} =
 run MarginReach{..} =
   do
     peras <- decodeFileThrow paramFile
+    behavior <- decodeFileThrow behaviorFile
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "Margin", "Reach", "Probability"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution behavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -135,10 +141,11 @@ run MarginReach{..} =
 run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
+    behavior <- decodeFileThrow behaviorFile
     hout <- openFile outFile WriteMode
     hPutStrLn hout $ intercalate "\t" ["Slot", "Honest - Adversary", "Probability"]
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution behavior
         go i prior
           | i > slots = return ()
           | otherwise =
@@ -159,8 +166,9 @@ run LengthDifference{..} =
 run Lengths{..} =
   do
     peras <- decodeFileThrow paramFile
+    behavior <- decodeFileThrow behaviorFile
     let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
-        initial = def
+        initial = MarkovSim.behavioralEvolution behavior
         metrics f =
           do
             t0 <- getCurrentTime
@@ -254,22 +262,23 @@ scenarioParser =
     paramOption = O.strOption $ O.long "param-file" <> O.metavar "FILE" <> O.help "Path to input YAML file containing the Peras protocol parameters."
     outOption = O.strOption $ O.long "out-file" <> O.value "/dev/stdout" <> O.showDefault <> O.metavar "FILE" <> O.help "Path to output TSV file containing the simulation results."
     stopOption = O.option O.auto $ O.long "stop" <> O.value 0 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Stop simulation when probabilities are smaller than this value."
+    behaviorOption = O.strOption $ O.long "behavior-file" <> O.metavar "FILE" <> O.help "Path to input YAML file containing the adversarial behaviors."
     progressOption = O.switch $ O.long "progress" <> O.help "Show the progress of the simulation."
     longerChainCommand =
       O.command "longer-chain" $
-        O.info (LongerChain <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> stopOption <*> progressOption) $
+        O.info (LongerChain <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> stopOption <*> progressOption) $
           O.progDesc "Compute the probability of a private adversarial chain being longer than the honest one."
     marginReachCommand =
       O.command "margin-reach" $
-        O.info (MarginReach <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> progressOption) $
+        O.info (MarginReach <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> progressOption) $
           O.progDesc "Compute the probability distribution of the margin and reach for a one-slot diffusion time."
     lengthDifferenceCommand =
       O.command "length-difference" $
-        O.info (LengthDifference <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> outOption <*> progressOption) $
+        O.info (LengthDifference <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> progressOption) $
           O.progDesc "Compute the probability distribution of the length of the honest chain minus the length of the adversarial chain."
     lengthsCommand =
       O.command "lengths" $
-        O.info (Lengths <$> εOption <*> slotOption <*> stakeOption <*> paramOption) $
+        O.info (Lengths <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption) $
           O.progDesc "Compute the mean lengths of the honest and adversarial chains."
     commonCandidateDemoCommand =
       O.command "common-candidate-demo" $

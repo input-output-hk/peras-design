@@ -134,6 +134,7 @@ project model@Prototype.MkNodeModel{..} =
               }
         , adversary = def
         , publicWeight = minBound -- FIXME: Address this later.
+        , behavior = def
         }
     )
 
