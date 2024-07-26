@@ -102,19 +102,22 @@ blockCreation peras@MkPeras{a} MkProbabilities{noBlock, honestBlock, adversaryBl
       let bc1a = not certAntepenultimate
           bc1c = certPrime > certStar
           bc1b = round - certPrime <= a
-       in if bc1a && bc1b && bc1c
-            then
-              chain
-                { -- Add a block.
-                  weight = weight + 1
-                , -- Include cert'.
-                  certStarNext = Just certPrime
-                }
-            else
-              chain
-                { -- Add a block.
-                  weight = weight + 1
-                }
+       in case adverseBlocks behavior of
+            PromptBlocks ->
+              if bc1a && bc1b && bc1c
+                then
+                  chain
+                    { -- Add a block.
+                      weight = weight + 1
+                    , -- Include cert'.
+                      certStarNext = Just certPrime
+                    }
+                else
+                  chain
+                    { -- Add a block.
+                      weight = weight + 1
+                    }
+            DelayBlocks _ -> error "Not yet implemented: `DelayBlocks`."
     honest' = forge honest
     adversary' = forge adversary
    in
@@ -135,13 +138,15 @@ voting peras@MkPeras{r, k, b} MkProbabilities{noQuorum, honestQuorum, adversaryQ
           vr2a = round > certPrime + r
           vr2b = (round - certStar) `mod` k == 0
        in if vr1a && vr1b || vr2a && vr2b
-            then
-              chain
-                { -- Boost the chain.
-                  weight = weight + b
-                , -- Record the certificate.
-                  certPrimeNext = Just round
-                }
+            then case adverseCertification behavior of
+              PromptVotes ->
+                chain
+                  { -- Boost the chain.
+                    weight = weight + b
+                  , -- Record the certificate.
+                    certPrimeNext = Just round
+                  }
+              DelayVotes -> error "Not yet implemented: `DelayVotes`."
             else chain
    in
     if newRound peras slot
