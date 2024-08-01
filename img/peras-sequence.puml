@@ -1,0 +1,41 @@
+@startuml
+
+title Peras Sequence for Nodes
+
+control "Clock" as clock
+entity "Upstream Node" as node
+entity "Downstream Node" as peer
+collections "Other Downstream Peers" as downstream
+
+== New Slot ==
+
+clock -> node : New slot
+node -> node : Is slot leader?
+opt slot leader
+  node -> node : Select votes for new block
+  node -> node : New block
+  node -> peer : Send new preferred chain
+  peer -> peer : Check chain's validity
+  peer -> peer : Compare weight to preferred chain
+  opt valid new chain has higher weight
+    peer -> peer : Prefer new chain
+    peer -> peer : Update dangling votes
+    peer -> downstream : Send new preferred chain
+  end
+end
+
+== New Round ==
+clock -> node : New round
+node -> node : Is committee member?
+node -> node : In cooldown period?
+opt allowed to vote
+  node -> node : Vote for block in round
+  node -> peer : Send vote
+  peer -> peer : Check vote's validity
+  opt valid vote
+    peer -> peer : Update dangling votes
+    peer -> downstream : Forward vote
+  end
+end
+
+@enduml

@@ -1,0 +1,607 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://peras.cardano-scaling.org/weekly</id>
+    <title>Peras R&amp;D Feed</title>
+    <updated>2024-07-26T00:00:00.000Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://peras.cardano-scaling.org/weekly"/>
+    <subtitle>Regular updates from Peras R&amp;D Teams</subtitle>
+    <icon>https://peras.cardano-scaling.org/img/pilcrow.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[2024-07-26]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/07/26/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/07/26/"/>
+        <updated>2024-07-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/07/26/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Met with Intersect Consensus WG to discuss CIP process as it relates to Peras</li>
+<li>Simulation of <em>margin</em> and <em>reach</em></li>
+<li>Began internal reviews of Peras technical report</li>
+<li>Dynamic QuickCheck tests for <code>peras-markov</code></li>
+<li>Added configurable adversarial behaviors to Markov-chain simulation</li>
+<li>Website improvements (rendering as PDF)</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/07/26/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Rough draft of CIP</li>
+<li>Continue internal reviews of Peras website, technical report, Agda specification, and online simulator</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/07/26/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>A CIP to establish a "consensus category" is required prior to submitting specific CIPs like Peras</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-07-19]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/07/19/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/07/19/"/>
+        <updated>2024-07-19T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/07/19/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Completed reviewable version of second technical report</li>
+<li>Deployed Peras website for internal review</li>
+<li>Additional work on soundness proofs</li>
+<li>Dynamic quickcheck tests for Markov-chain simulator</li>
+<li>Analyzed papers on adversarial scenarios, in preparation for improved Markov-chain simulation</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/07/19/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete soundness proofs</li>
+<li>Internal reviews of Peras website, technical report, Agda specification, and online simulator</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-07-12]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/07/12/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/07/12/"/>
+        <updated>2024-07-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/07/12/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Analytics for adversarial scenarios</li>
+<li>Reach/margin computations for settlement</li>
+<li>Healing-time computations</li>
+<li>Settled on strategy for handling non-determinism in executable specification</li>
+<li>Additional work on soundness proof</li>
+<li>Second technical report ready for final edits</li>
+<li>Planned Peras tasks for PI7</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/07/12/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete soundness proofs</li>
+<li>Review, edit, and proofread second technical report</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-07-05]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/07/05/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/07/05/"/>
+        <updated>2024-07-05T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/07/05/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Conformance test based on Peras executable specification in Agda<!-- -->
+<ul>
+<li>Automated using <code>agda2hs</code></li>
+<li>State-machine property-based test using <code>quickcheck-dynamic</code></li>
+<li>Full coverage of voting logic</li>
+<li>Successful testing of the Haskell prototype/reference implementation</li>
+</ul>
+</li>
+<li>Partial completion of soundness proof<!-- -->
+<ul>
+<li>Agda proofs connect relational specification to executable specification</li>
+<li>Linked directly to conformance tests</li>
+</ul>
+</li>
+<li>Implemented cryptography for voting sortition</li>
+<li>Successful experiments with fast convolution for use in ΔQ modeling</li>
+<li>UX enhancements for simulation and visualization tools</li>
+<li>Updates to second technical report</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/07/05/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete soundness proofs</li>
+<li>Complete second technical report</li>
+<li>Draft CIP</li>
+<li>Plan PI7</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/07/05/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>Various <code>agda2hs</code> awkwardness and bugs</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-06-28]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/06/28/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/06/28/"/>
+        <updated>2024-06-28T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/06/28/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Peras workshop at the University of Edinburgh<!-- -->
+<ul>
+<li>Agda proofs</li>
+<li>Conformance testing</li>
+<li>Peras cryptography</li>
+<li>Delta-Q simulations</li>
+<li>Protocol simulation and visualization</li>
+<li>Markov-chain simulations</li>
+<li>Tasks for remainder of PI6</li>
+</ul>
+</li>
+<li>Settled Peras versioning<!-- -->
+<ul>
+<li><em>pre-alpha:</em> basic algorithm without pre-agreement</li>
+<li><em>alpha:</em> full algorithm, including pre-agreement</li>
+<li><em>beta:</em> final, polished version</li>
+</ul>
+</li>
+<li>Finalized details of certificate and vote diffusion and persistence</li>
+<li>Refactoring decidable portions of Agda code to be compatible with <code>agda2hs</code></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/06/28/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete Agda-to-Haskell conformance test framework</li>
+<li>Protocol simulation</li>
+<li>Markov-chain simulations of Peras margin and reach</li>
+<li>Plan for post-PI6 efforts</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/06/28/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>(none)</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-06-21]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/06/21/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/06/21/"/>
+        <updated>2024-06-21T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/06/21/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Implemented cryptographic details of votes.</li>
+<li>Modeling of vote diffusion via ΔQ.</li>
+<li>Diagnosing problems with ΔQ libraries.</li>
+<li>Voting rules and voting strings in Agda.</li>
+<li>Reviewed Quviq's Agda-to-Haskell efforts for Peras.</li>
+<li>Analytic studies and documentation of additional adversarial scenarios.</li>
+<li>Preparations for June 25-28 working meeting in Edinburgh.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/06/21/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Additions to second technical report.</li>
+<li>Complete Agda-to-Haskell efforts.</li>
+<li>Meet with partner-chain stakeholders.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/06/21/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>None.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-06-14]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/06/14/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/06/14/"/>
+        <updated>2024-06-14T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/06/14/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Switched to using IOG Agda prelude for more readable proofs.</li>
+<li>Further progress on formal specification in Agda.</li>
+<li>Settled cryptographic details (keys, algorithms, nonces) for votes, certificates, and membership proofs.</li>
+<li>Private deployment of Peras visualizer and web site.</li>
+<li>Markov-chain simulations of adversarial scenarios.</li>
+<li>Met with Quviq to coordinate Agda-to-Haskell efforts.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/06/14/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Delta-Q simulations of certificates and votes.</li>
+<li>Documentation of cryptographic details (keys, algorithms, nonces) for votes, certificates, and membership proofs.</li>
+<li>Complete the documentation of the analytic computations of Peras behaviors.</li>
+<li>Connect Agda-generated code to dynamic quickcheck properties.</li>
+<li>June 25-28 working meeting in Edinburgh.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/06/14/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>No public availability yet for the Peras website, repository, and visualizations.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-06-07]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/06/07/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/06/07/"/>
+        <updated>2024-06-07T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/06/07/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Briefed Peras to Consensus Technical Working Group.</li>
+<li>Completed one more round of stakeholder interviews, focusing on SPOs.</li>
+<li>Readied Peras website for deployment.</li>
+<li>Major improvements to web-based interactive visualizer of Peras protocol operation, so it is ready to deploy internally at IOG.</li>
+<li>Progress on formal specification in Agda.</li>
+<li>Refined Haskell prototype of Peras, so it is fully in sync with the draft paper, aside from the some details of preagreement.</li>
+<li>Cataloged constraints on and interactions among Peras parameters and determined reasonable defaults for simulations.</li>
+<li>Collaboration with Quviq on Agda-to-Haskell efforts.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/06/07/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Connect Agda-generated code to dynamic quickcheck properties.</li>
+<li>Delta-Q analyses of vote propagation.</li>
+<li>Extend and document analytic computations of Peras behaviors.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/06/07/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>The in-person Peras workshop is approved for June 25-28.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-05-31]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/05/31/</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/05/31/"/>
+        <updated>2024-05-31T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/05/31/#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Progress on formal specification in Agda.</li>
+<li>Findings from stakeholder interviews.</li>
+<li>Haskell prototype of latest version of Peras.</li>
+<li>Rudimentary conformance test using Dynamic QuickCheck.</li>
+<li>Collaboration with Quviq on Agda-to-Haskell efforts.</li>
+<li>Visualization of prototype results.</li>
+<li>Monthly status meeting.</li>
+<li>Repository cleanup in preparation for it being opened to the public.</li>
+<li>Skeletal web server for stakeholder-facing demonstrations.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/05/31/#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Connect Agda-generated code to dynamic quickcheck properties.</li>
+<li>One more round of stakeholder interviews, focusing on SPOs.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/05/31/#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>The Peras protocol paper is near completion.</li>
+<li>The target date for the in-person Peras meetings is the week of June 24.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-05-17]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/05/17/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/05/17/update"/>
+        <updated>2024-05-17T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Summarized the status of Peras prototyping and defined next steps.</li>
+<li>Outlined the business value of formal methods.</li>
+<li>Investigated different approaches for representing a voting string in Agda: the first attempt implemented a formal language using equational reasoning and a coalgebraic style.</li>
+<li>Changed the reflexive transitive closure of the small-step semantics to a List-like syntax similar to what has been proposed in <code>test-demo</code>. This allows to express execution steps in a concise way and could be used as DSL for specifying test-cases and attack-scenarios.</li>
+<li>Computed the size in bytes of the various keys and certificates involved in Peras, under the assumption that it uses existing keys and crypto available to a Cardano node.</li>
+<li>Sketched a detailed design of what the independent voting layer would look like.</li>
+<li>Designed an Agda+Haskell workflow where Agda formal specifications for Peras can be made decidable and then exported as an executable specification for Haskell <code>quickcheck-dynamic</code> tests.</li>
+<li>Met with Max (Quviq) to settle next steps in their support of Peras.<!-- -->
+<ul>
+<li>Suggest improvements in exising Agda+Haskell workflow and code, including identifying changes to <code>agda</code> and/or <code>agda2hs</code> that would streamline the workflow.</li>
+<li>Demonstrate how to convert proofs present in the workflow into property-based tests in <code>quickcheck-dynamic</code>.</li>
+</ul>
+</li>
+<li>Started mapping the spectrum of conformance testing relevant for a Peras CIP and RFP. The overall goal is "conformance without over-specification".</li>
+<li>Discussed strategies for making the Peras specification readable by the broad Cardano commmunity.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete Praos proofs à la Baspitter.</li>
+<li>Model voting and vote diffusion in detail using Dynamic QuickCheck and ΔQ.</li>
+<li>Construct Dynamic QuickCheck tests for adversarial scenarios.</li>
+<li>Continue refining requirements for conformance testing.</li>
+<li>Conduct additional stakeholder interviews, with an aim to define the ideal form of a Peras CIP.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>The Peras protocol paper is expected to be submitted May 22.</li>
+<li>The target date for the in-person Peras meeting is June 24.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-05-10]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/05/10/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/05/10/update"/>
+        <updated>2024-05-10T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/05/10/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Implemented <a href="https://github.com/cardano-scaling/alba" target="_blank" rel="noopener noreferrer">prototype ALBA-based certificate construction</a> and measured the <a href="https://github.com/input-output-hk/peras-design/blob/297938bc5d03a2ec8b4ee5c2001af55c5f091c6f/Logbook.md#L985" target="_blank" rel="noopener noreferrer">CPU and message resources</a> needed to use it for Peras voting certificates.<!-- -->
+<ul>
+<li>CPU resources required would not burden the node.</li>
+<li>Certificate size is moderate and likely not a major concern.</li>
+</ul>
+</li>
+<li>Began aligning the Peras formalization in Agda to the latest draft of the research paper.</li>
+<li>Translated the Peras protocol definition in the latest draft of the research paper into <a href="https://github.com/input-output-hk/peras-design/blob/297938bc5d03a2ec8b4ee5c2001af55c5f091c6f/Logbook.md#L725" target="_blank" rel="noopener noreferrer">an executable Agda specification</a>, used <code>agda2hs</code> to convert it to Haskell code, and implemented basic dynamic tests using <code>quickcheck-dynamic</code></li>
+<li>Computed probabilities of various <a href="https://github.com/input-output-hk/peras-design/blob/297938bc5d03a2ec8b4ee5c2001af55c5f091c6f/Logbook.md#L965" target="_blank" rel="noopener noreferrer">adversarial Peras scenarios</a>.</li>
+<li>Drafted the outline for the <a href="https://hackmd.io/hv_2Rr2dTleBFfI4kV2oqQ" target="_blank" rel="noopener noreferrer">Peras CIP</a>.</li>
+<li><a href="https://input-output-rnd.slack.com/files/U01PBE14X0A/F07309JQW1W/peras_-_stakeholders_map.pdf" target="_blank" rel="noopener noreferrer">Mapped</a> stakeholder relationships, concerns, and artifacts.</li>
+<li>Conducted a <a href="https://github.com/input-output-hk/peras-design/blob/297938bc5d03a2ec8b4ee5c2001af55c5f091c6f/Logbook.md#L951" target="_blank" rel="noopener noreferrer">retrospective of Peras PI5</a>.</li>
+<li>Hans Lahe joined the Peras team (1/3 time) as a product representative. ❤️</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/05/10/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Continue alignment of Peras formalization with the latest draft of the research paper.<!-- -->
+<ul>
+<li>voting strings</li>
+<li>big-step semantics</li>
+</ul>
+</li>
+<li>Simulate certificate and vote diffusion with ΔQ.<!-- -->
+<ul>
+<li>Review results with PNSol (Neil and Peter).</li>
+</ul>
+</li>
+<li>Construct Dynamic QuickCheck tests for adversarial scenarios.</li>
+<li>Define requirements for conformance testing.</li>
+<li>Conduct stakeholder interviews.<!-- -->
+<ul>
+<li>Meet with Consensus team and Tweag to learn their preferences for Peras documentation, tests, and other artifacts.</li>
+<li>Consider ideal form of CIP from the perspective of SPOs, CF, Intersect, etc.</li>
+</ul>
+</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/05/10/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>Details of the Peras protocol may continue to be refined until the research paper is submitted before the end of May.</li>
+<li>An in-person meeting in late June would solidify Peras progress and resolve outstanding issues that might block PI6 objectives.</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-04-12]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/04/12/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/04/12/update"/>
+        <updated>2024-04-12T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/04/12/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>The whole team met in person for a 2-days workshop in Paris</li>
+<li>Complete <a href="https://peras.cardano-scaling.org/docs/reports/tech-report-1">Technical report</a> with simulation work results</li>
+<li>Quviq demonstrated Agda ↔ QC integration process on a toy protocol example</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/04/12/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>"Publish" Peras protocol in Agda to serve as reference point for researchers and engineers</li>
+<li>Prepare and deliver PI Planning value demo &amp; next PI planning objectives</li>
+<li>Discuss implementation phase and involvement of consensus engineer(s) in R&amp;D stream</li>
+<li>Work on ΔQ vote diffusion model with PNSol team</li>
+<li>Model Peras property check in Agda-QCD</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/04/12/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-03-29]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/03/29/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/03/29/update"/>
+        <updated>2024-03-29T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/03/29/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Monthly Review &amp; Demo with <a href="https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509" target="_blank" rel="noopener noreferrer">slides</a> and <a href="https://drive.google.com/file/d/190FL1U7kn7DxgLCXiURTxxeyeO55b385/view?usp=drive_link" target="_blank" rel="noopener noreferrer">video</a></li>
+<li>Discussing Paris workshop agenda</li>
+<li>Review newest version of the protocol and integrate in Agda model</li>
+<li>New quickcheck-dynamic model representing more faithful interactions between environment and node</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/03/29/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<p>::: [!NOTE]</p>
+<p>Part of the team will be on holidays next week so we won't post an update</p>
+<p>:::</p>
+<ul>
+<li>Continue work on formal model in Agda, to prove knowledge propagation theorem</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/03/29/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-03-22]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/03/22/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/03/22/update"/>
+        <updated>2024-03-22T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/03/22/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Built a first ΔQ model reconstructing the Cardano network high-level modelling originally published in the ΔQSD paper<!-- -->
+<ul>
+<li>Discussed with other innovation streams how ΔQ competes or complements network simulation</li>
+</ul>
+</li>
+<li>Started work on a <a href="https://peras.cardano-scaling.org/docs/reports/tech-report-1">Technical Report</a>, currently including only part of ΔQ analysis. The goal is to be able to publish this report as an outcome of Paris Workshop</li>
+<li>Continued refactoring of IOSim node, including <a href="https://hackage.haskell.org/package/contra-tracer" target="_blank" rel="noopener noreferrer">contra-tracer</a> based logging to improve observability of the prototype behaviour and standardize analysis<!-- -->
+<ul>
+<li>IOSim node now implements a faithful block diffusion mimicking real-life process</li>
+</ul>
+</li>
+<li>Started concrete work with Quviq on Agda ⇔ Quickcheck integration and on a first <a href="https://github.com/input-output-hk/peras-design/blob/297938bc5d03a2ec8b4ee5c2001af55c5f091c6f/test-demo/src/TestModel.agda#L1" target="_blank" rel="noopener noreferrer">simple example</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/03/22/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Prepare and deliver Monthly Demo, should include network congestion simulation, initial ΔQ analysis of Praos and Peras, new formal model of algorithm in Agda</li>
+<li>Realign various parts of the code (Agda, Haskell node, quickcheck tests, Rust node) over shared interfaces and common types</li>
+<li>Complete prototype implementing new version of the protocol (with certificates)</li>
+<li>Express more interesting properties in QuickCheck</li>
+<li>Work with Quviq on Agda/QuickCheck integration</li>
+<li>Polishing Agda model and more work on proofs</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/03/22/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>How do we make our formal modelling in Agda effort more efficient for both Research and Engineering?</li>
+<li>Brian will be on PTO the first week of April</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-03-15]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/03/15/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/03/15/update"/>
+        <updated>2024-03-15T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/03/15/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Got results from "split-brain" experiment with 100 nodes that basically confirm the faithfulness of the IOSim implementation and highlights some "interesting" consequences of Peras, namely that when the split-brain heals, it's not the longest chain that wins but the one with the most votes</li>
+<li>Started work on implementing IOSim node that represents network interactions more faithfully, eg. using a <em>pull</em> model that mirrors the actual <code>ChainSync</code> protocol implemented in the cardano-node</li>
+<li>Rust node passes the <code>NetworkModel</code> tests, with multiple nodes connected through a <code>netsim</code>-based layer. Aligning the implementations posed some interesting challenges, especially in the domain of time management (real vs. simulated time) and the scheduling of the various "actors" in the system</li>
+<li>Research shared with engineering a new version of the protocol which introduces <em>Certificates</em> to aggregate votes in the block headers and mostly get rid of the problematic <em>dangling votes</em> concept</li>
+<li>First meeting with PNSol on ΔQSD modelling of the protocol</li>
+<li>Meeting with Spyros Voulgaris on <a href="https://github.com/PeerNet/PeerNet" target="_blank" rel="noopener noreferrer">Peernet</a> on the topic of network simulator. This is the tool that's used by researchers when they need some numbers.</li>
+<li>Starting significant redesign of IOSim node to cope with changes in the protocol</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/03/15/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>We need to improve communication between research and engineering, and how changes are shared and notified</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-03-08]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/03/08/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/03/08/update"/>
+        <updated>2024-03-08T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/03/08/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Continued work on Rust Peras node to be able to pass the <code>NetworkModel</code> tests. This implies integration with <a href="https://github.com/input-output-hk/ce-netsim" target="_blank" rel="noopener noreferrer">netsim</a> library which is under active development</li>
+<li>IOSim-based prototype now implements complete validation including tallying votes</li>
+<li>Started experimentations on modelling Peras using ΔQ methodology, exploring various available libraries</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/03/08/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<p>None</p>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-03-01]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/03/01/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/03/01/update"/>
+        <updated>2024-03-01T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/03/01/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Quviq SoW has been signed and we had a first meeting with the team, presenting them the current state of the prototype and what our expectations were</li>
+<li>Refactored Agda specification to support easier proofs of some properties. This rippled over the code base as Agda types representation is our reference</li>
+<li>First (simple) implementation of a Rust Peras node which passes the <code>peras-quickcheck</code> <code>NodeModel</code> tests, albeit quite slowly</li>
+<li>More faithful implementation of Peras protocol in <code>peras-iosim</code> including cooldown period</li>
+<li>Started experimenting with ΔQ modeling and tinkering with existing core repositories</li>
+<li>First Monthly review <a href="https://docs.google.com/presentation/d/1GBalxAoFxwQyRdw-DX5zSOm2Vdgf58C6NEQx7PvOWl0/edit#slide=id.g2bc0b536d7f_0_26" target="_blank" rel="noopener noreferrer">presented</a> and <a href="https://drive.google.com/file/d/18Q0YoT_hVbMjL19YW76epcx1wbeH_O_N/view?usp=sharing" target="_blank" rel="noopener noreferrer">recorded</a></li>
+<li>Workshop in Paris confirmed, will take place on April 9-10 at the <a href="https://mobiskill.fr/" target="_blank" rel="noopener noreferrer">Mobiskill</a> office in the 9th district</li>
+<li>Started discussion with Consensus team over downstream implementation challenges for Peras</li>
+<li>Clarified the situation of <a href="https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit#heading=h.8lhps0p37gcs" target="_blank" rel="noopener noreferrer">alternative remediations</a> to finality: They should be addressed directly by the Consensus team as there's no need for Innovation stream to be involved</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/03/01/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Work on providing some answer to a key question raised by Core tech team: How does Peras will fare when the network load increase from the current 40% to expected 80%?</li>
+<li>Some secondary questions to answer when it comes to engineer Peras in Cardano:<!-- -->
+<ol>
+<li>Can we get rid of counting dangling votes when selecting best chain?</li>
+<li>How to deal with the size of votes to diffuse if they are needed for chain selection, given the necessity of header/body split in Cardano?</li>
+</ol>
+</li>
+<li>Improve fidelity of the simulation w.r.t. actual network protocol used in Cardano, eg. push vs. pull model</li>
+<li>Complete Rust node and use <a href="https://github.com/input-output-hk/ce-netsim" target="_blank" rel="noopener noreferrer">netsim</a> library to manage routing between nodes</li>
+<li>Start more concrete work with PNSol and Quviq on their respective area of expertise</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/03/01/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<p>None</p>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-02-16]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/02/16/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/02/16/update"/>
+        <updated>2024-02-16T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/02/16/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>We managed to scaffold a "chain of evidence" from Agda model to prototype implementation, gathering knowledge and good intuition in the process on how the various pieces fit together</li>
+<li>Creative engineering continued work on a <a href="https://github.com/input-output-hk/ce-netsim" target="_blank" rel="noopener noreferrer">Network simulator</a> in Rust, completing FFI so that it can be used in to build a prototype that we can test against</li>
+<li>Investigation on what's the current state of ΔQ resources and how it could be applied to our problem</li>
+<li>Quviq SoW still in the hands of Procurement, waiting finalization</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/02/16/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Quviq SoW signature and execution</li>
+<li>Implement an IOSim version of Praos/Peras (honest) node, porting existing code from previous experiment</li>
+<li>Implement a Rust version of Praos/Peras node</li>
+<li>Demonstrate "evidence trail" on a Peras-related property (selection of heaviest chain by honest nodes?)</li>
+<li>Engage with PnSol on ΔQ</li>
+<li>Prepare in 1st monthly demo meeting</li>
+<li>Organise in-person workshop in Paris, April 9-10</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/02/16/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>Still unclear what's the situation of <a href="https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit#heading=h.8lhps0p37gcs" target="_blank" rel="noopener noreferrer">alternative remediations</a> for faster settlement proposed during the Edinburgh Peras workshop?</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-02-09]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/02/09/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/02/09/update"/>
+        <updated>2024-02-09T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/02/09/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li>Started "serious" work with the team on modeling and simulating Peras protocol.</li>
+<li>Main focus is currently on ensuring all the pieces of the puzzle fit together:<!-- -->
+<ul>
+<li>Yves is working on the modelisation in Agda of the protocol, leveraging previous work done in Coq on Ouroboros Praos</li>
+<li>Brian is experimenting with simulation of Praos/Peras in Haskell, with the goal of being able to visualise the evolution of the system over large periods of time and simulating the impact of the protocol parameters</li>
+<li>Arnaud is exploring model-based testing, towards applying quickcheck-dynamic generated tests on a simulated network of nodes</li>
+</ul>
+</li>
+<li>Creative engineering started work on a <a href="https://github.com/input-output-hk/ce-netsim" target="_blank" rel="noopener noreferrer">Network simulator</a> in Rust and we have made some preliminary experiments to connect such a simulator to tests generation process</li>
+<li>Quviq SoW has been completed and is now in the hands of Procurement to be hopefully finalised in the forthcoming days</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/02/09/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Quviq SoW signature and execution</li>
+<li>Continue work on the whole "Simulation process", fitting the various parts together:<!-- -->
+<ul>
+<li>Express (and prove?) some properties in Agda...</li>
+<li>... then generate code from Agda to use in Model-based tests generation and simulations ...</li>
+<li>... to run properties against code and produce simulation results.</li>
+</ul>
+</li>
+<li>We plan to start recording hosting monthly demos</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/02/09/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
+<ul>
+<li>What's the situation of the <a href="https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit#heading=h.8lhps0p37gcs" target="_blank" rel="noopener noreferrer">alternative remediations</a> for faster settlement proposed during the Edinburgh Peras workshop?</li>
+<li>Open-sourcing the repository is not desirable while research is still working on the paper</li>
+</ul>]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2024-01-26]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/01/26/update</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/01/26/update"/>
+        <updated>2024-01-26T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[Present]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/01/26/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
+<ul>
+<li><em>Brian Bush</em> is definitely joining the team, as is <em>Yves Hauser</em> in the capacity of Formal Method engineer<!-- -->
+<ul>
+<li>Yves has already done some work in modeling network performance
+and already started learning Agda within the Marlowe team</li>
+</ul>
+</li>
+<li><em>Artjoms Sinkarovs</em> passed on our hiring proposal and accepted another offer</li>
+<li><em>David Rosales</em> has been appointed as Head of Delivery for
+Innovation projects and he’s been updated on the current status of
+Peras</li>
+<li>Writing a SoW with Quviq to involve them as consultants for our
+Model-Based Testing approach to specifying protocol and verifying
+implementation</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/01/26/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
+<ul>
+<li>Complete Quviq’s SoW and file a ticket with Flow Office and
+Procurement to be able to start working with them officially</li>
+<li>Organise an in-person workshop<!-- -->
+<ul>
+<li>Targeting the week of April 8th, somewhere in Europe (Edinburgh? Zurich? Paris?)</li>
+</ul>
+</li>
+<li>Complete PI5 Planning process</li>
+<li>Start regular working sessions with the team</li>
+</ul>]]></content>
+    </entry>
+</feed>

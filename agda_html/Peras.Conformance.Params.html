@@ -1,0 +1,108 @@
+<!DOCTYPE HTML>
+<html><head><meta charset="utf-8"><title>Peras.Conformance.Params</title><link rel="stylesheet" href="Agda.css"></head><body><pre class="Agda">
+<a id="2" class="Keyword">module</a> <a id="9" href="Peras.Conformance.Params.html" class="Module">Peras.Conformance.Params</a> <a id="34" class="Keyword">where</a>
+
+<a id="41" class="Keyword">open</a> <a id="46" class="Keyword">import</a> <a id="53" href="Data.Nat.html" class="Module">Data.Nat</a>
+
+<a id="63" class="Symbol">{-#</a> <a id="67" class="Keyword">FOREIGN</a> <a id="75" class="Pragma">AGDA2HS</a>
+<a id="83" class="Symbol">{-#</a> <a id="87" class="Pragma">LANGUAGE</a> <a id="96" class="Pragma">DeriveGeneric</a> <a id="110" class="Symbol">#-}</a>
+<a id="114" class="Symbol">{-#</a> <a id="118" class="Pragma">LANGUAGE</a> <a id="127" class="Pragma">OverloadedStrings</a> <a id="145" class="Symbol">#-}</a>
+<a id="149" class="Symbol">{-#</a> <a id="153" class="Pragma">LANGUAGE</a> <a id="162" class="Pragma">RecordWildCards</a> <a id="178" class="Symbol">#-}</a>
+<a id="182" class="Symbol">#-}</a>
+
+<a id="187" class="Symbol">{-#</a> <a id="191" class="Keyword">FOREIGN</a> <a id="199" class="Pragma">AGDA2HS</a>
+<a id="207" class="Pragma">import</a> <a id="214" class="Pragma">Data.Aeson</a> <a id="225" class="Pragma">(FromJSON,</a> <a id="236" class="Pragma">ToJSON)</a>
+<a id="244" class="Pragma">import</a> <a id="251" class="Pragma">qualified</a> <a id="261" class="Pragma">Data.Aeson</a> <a id="272" class="Pragma">as</a> <a id="275" class="Pragma">A</a>
+<a id="277" class="Pragma">import</a> <a id="284" class="Pragma">Data.Default</a> <a id="297" class="Pragma">(Default</a> <a id="306" class="Pragma">(..))</a>
+<a id="312" class="Pragma">import</a> <a id="319" class="Pragma">GHC.Generics</a> <a id="332" class="Pragma">(Generic)</a>
+<a id="342" class="Symbol">#-}</a>
+
+<a id="347" class="Keyword">open</a> <a id="352" class="Keyword">import</a> <a id="359" href="Haskell.Prelude.html" class="Module">Haskell.Prelude</a>
+
+<a id="376" class="Keyword">record</a> <a id="PerasParams"></a><a id="383" href="Peras.Conformance.Params.html#383" class="Record">PerasParams</a> <a id="395" class="Symbol">:</a> <a id="397" href="Agda.Primitive.html#388" class="Primitive">Set</a> <a id="401" class="Keyword">where</a>
+  <a id="409" class="Keyword">constructor</a> <a id="MkPerasParams"></a><a id="421" href="Peras.Conformance.Params.html#421" class="InductiveConstructor">MkPerasParams</a>
+  <a id="437" class="Keyword">field</a>
+    <a id="PerasParams.perasU"></a><a id="447" href="Peras.Conformance.Params.html#447" class="Field">perasU</a> <a id="454" class="Symbol">:</a> <a id="456" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="462" class="Comment">-- ^ Round length, in slots</a>
+    <a id="PerasParams.perasA"></a><a id="494" href="Peras.Conformance.Params.html#494" class="Field">perasA</a> <a id="501" class="Symbol">:</a> <a id="503" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="509" class="Comment">-- ^ Certificate expiration age, in slots</a>
+    <a id="PerasParams.perasR"></a><a id="555" href="Peras.Conformance.Params.html#555" class="Field">perasR</a> <a id="562" class="Symbol">:</a> <a id="564" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="570" class="Comment">-- ^ Length of chain-ignorance period, in rounds</a>
+    <a id="PerasParams.perasK"></a><a id="623" href="Peras.Conformance.Params.html#623" class="Field">perasK</a> <a id="630" class="Symbol">:</a> <a id="632" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="638" class="Comment">-- ^ Length of cool-down period, in rounds</a>
+    <a id="PerasParams.perasL"></a><a id="685" href="Peras.Conformance.Params.html#685" class="Field">perasL</a> <a id="692" class="Symbol">:</a> <a id="694" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="700" class="Comment">-- ^ Minimum age for voted block, in slots</a>
+    <a id="PerasParams.perasτ"></a><a id="747" href="Peras.Conformance.Params.html#747" class="Field">perasτ</a> <a id="754" class="Symbol">:</a> <a id="756" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="762" class="Comment">-- ^ Quorum size, as a percentage of total expected votes</a>
+    <a id="PerasParams.perasB"></a><a id="824" href="Peras.Conformance.Params.html#824" class="Field">perasB</a> <a id="831" class="Symbol">:</a> <a id="833" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="839" class="Comment">-- ^ Certificate boost, in blocks</a>
+    <a id="PerasParams.perasT"></a><a id="877" href="Peras.Conformance.Params.html#877" class="Field">perasT</a> <a id="884" class="Symbol">:</a> <a id="886" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="892" class="Comment">-- ^ Termination bound for block selection, in slots</a>
+    <a id="PerasParams.perasΔ"></a><a id="949" href="Peras.Conformance.Params.html#949" class="Field">perasΔ</a> <a id="956" class="Symbol">:</a> <a id="958" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="964" class="Comment">-- ^ Delivery guarantee for diffusion, in slots</a>
+    <a id="1016" class="Symbol">@</a><a id="1017" class="Symbol">0</a> <a id="1019" class="Symbol">⦃</a> <a id="PerasParams.perasNonZeroU"></a><a id="1021" href="Peras.Conformance.Params.html#1021" class="Field">perasNonZeroU</a> <a id="1035" class="Symbol">⦄</a> <a id="1037" class="Symbol">:</a> <a id="1039" href="Data.Nat.Base.html#3260" class="Record">NonZero</a> <a id="1047" href="Peras.Conformance.Params.html#447" class="Field">perasU</a>
+    <a id="1058" class="Symbol">@</a><a id="1059" class="Symbol">0</a> <a id="1061" class="Symbol">⦃</a> <a id="PerasParams.perasNonZeroK"></a><a id="1063" href="Peras.Conformance.Params.html#1063" class="Field">perasNonZeroK</a> <a id="1077" class="Symbol">⦄</a> <a id="1079" class="Symbol">:</a> <a id="1081" href="Data.Nat.Base.html#3260" class="Record">NonZero</a> <a id="1089" href="Peras.Conformance.Params.html#623" class="Field">perasK</a>
+
+<a id="1097" class="Symbol">{-#</a> <a id="1101" class="Keyword">FOREIGN</a> <a id="1109" class="Pragma">AGDA2HS</a>
+<a id="1117" class="Pragma">data</a> <a id="1122" class="Pragma">PerasParams</a> <a id="1134" class="Pragma">=</a> <a id="1136" class="Pragma">MkPerasParams{perasU</a> <a id="1157" class="Pragma">::</a> <a id="1160" class="Pragma">Integer,</a>
+                                 <a id="1202" class="Pragma">perasA</a> <a id="1209" class="Pragma">::</a> <a id="1212" class="Pragma">Integer,</a> <a id="1221" class="Pragma">perasR</a> <a id="1228" class="Pragma">::</a> <a id="1231" class="Pragma">Integer,</a> <a id="1240" class="Pragma">perasK</a> <a id="1247" class="Pragma">::</a> <a id="1250" class="Pragma">Integer,</a>
+                                 <a id="1292" class="Pragma">perasL</a> <a id="1299" class="Pragma">::</a> <a id="1302" class="Pragma">Integer,</a> <a id="1311" class="Pragma">perasτ</a> <a id="1318" class="Pragma">::</a> <a id="1321" class="Pragma">Integer,</a> <a id="1330" class="Pragma">perasB</a> <a id="1337" class="Pragma">::</a> <a id="1340" class="Pragma">Integer,</a>
+                                 <a id="1382" class="Pragma">perasT</a> <a id="1389" class="Pragma">::</a> <a id="1392" class="Pragma">Integer,</a> <a id="1401" class="Pragma">perasΔ</a> <a id="1408" class="Pragma">::</a> <a id="1411" class="Pragma">Integer}</a>
+  <a id="1422" class="Pragma">deriving</a> <a id="1431" class="Pragma">(Eq,</a> <a id="1436" class="Pragma">Generic,</a> <a id="1445" class="Pragma">Show)</a>
+<a id="1451" class="Symbol">#-}</a>
+
+<a id="1456" class="Keyword">open</a> <a id="1461" href="Peras.Conformance.Params.html#383" class="Module">PerasParams</a> <a id="1473" class="Keyword">public</a>
+
+<a id="defaultPerasParams"></a><a id="1481" href="Peras.Conformance.Params.html#1481" class="Function">defaultPerasParams</a> <a id="1500" class="Symbol">:</a> <a id="1502" href="Peras.Conformance.Params.html#383" class="Record">PerasParams</a>
+<a id="1514" href="Peras.Conformance.Params.html#1481" class="Function">defaultPerasParams</a> <a id="1533" class="Symbol">=</a>
+  <a id="1537" class="Keyword">record</a>
+    <a id="1548" class="Symbol">{</a> <a id="1550" href="Peras.Conformance.Params.html#447" class="Field">perasU</a> <a id="1557" class="Symbol">=</a> <a id="1559" class="Number">20</a>
+    <a id="1566" class="Symbol">;</a> <a id="1568" href="Peras.Conformance.Params.html#494" class="Field">perasA</a> <a id="1575" class="Symbol">=</a> <a id="1577" class="Number">200</a>
+    <a id="1585" class="Symbol">;</a> <a id="1587" href="Peras.Conformance.Params.html#555" class="Field">perasR</a> <a id="1594" class="Symbol">=</a> <a id="1596" class="Number">10</a>
+    <a id="1603" class="Symbol">;</a> <a id="1605" href="Peras.Conformance.Params.html#623" class="Field">perasK</a> <a id="1612" class="Symbol">=</a> <a id="1614" class="Number">17</a>
+    <a id="1621" class="Symbol">;</a> <a id="1623" href="Peras.Conformance.Params.html#685" class="Field">perasL</a> <a id="1630" class="Symbol">=</a> <a id="1632" class="Number">10</a>
+    <a id="1639" class="Symbol">;</a> <a id="1641" href="Peras.Conformance.Params.html#747" class="Field">perasτ</a> <a id="1648" class="Symbol">=</a> <a id="1650" class="Number">3</a>
+    <a id="1656" class="Symbol">;</a> <a id="1658" href="Peras.Conformance.Params.html#824" class="Field">perasB</a> <a id="1665" class="Symbol">=</a> <a id="1667" class="Number">10</a>
+    <a id="1674" class="Symbol">;</a> <a id="1676" href="Peras.Conformance.Params.html#877" class="Field">perasT</a> <a id="1683" class="Symbol">=</a> <a id="1685" class="Number">15</a>
+    <a id="1692" class="Symbol">;</a> <a id="1694" href="Peras.Conformance.Params.html#949" class="Field">perasΔ</a> <a id="1701" class="Symbol">=</a> <a id="1703" class="Number">5</a>
+    <a id="1709" class="Symbol">}</a>
+
+
+<a id="1713" class="Symbol">{-#</a> <a id="1717" class="Keyword">COMPILE</a> <a id="1725" class="Keyword">AGDA2HS</a> <a id="1733" href="Peras.Conformance.Params.html#1481" class="Function">defaultPerasParams</a> <a id="1752" class="Symbol">#-}</a>
+
+<a id="1757" class="Symbol">{-#</a> <a id="1761" class="Keyword">FOREIGN</a> <a id="1769" class="Pragma">AGDA2HS</a>
+
+<a id="1778" class="Pragma">instance</a> <a id="1787" class="Pragma">FromJSON</a> <a id="1796" class="Pragma">PerasParams</a> <a id="1808" class="Pragma">where</a>
+  <a id="1816" class="Pragma">parseJSON</a> <a id="1826" class="Pragma">=</a>
+    <a id="1832" class="Pragma">A.withObject</a> <a id="1845" class="Pragma">&quot;PerasParams&quot;</a> <a id="1859" class="Pragma">$</a> <a id="1861" class="Pragma">\o</a> <a id="1864" class="Pragma">-&gt;</a> <a id="1867" class="Pragma">do</a>
+      <a id="1876" class="Pragma">perasU</a> <a id="1883" class="Pragma">&lt;-</a> <a id="1886" class="Pragma">o</a> <a id="1888" class="Pragma">A..:</a> <a id="1893" class="Pragma">&quot;U&quot;</a>
+      <a id="1903" class="Pragma">perasA</a> <a id="1910" class="Pragma">&lt;-</a> <a id="1913" class="Pragma">o</a> <a id="1915" class="Pragma">A..:</a> <a id="1920" class="Pragma">&quot;A&quot;</a>
+      <a id="1930" class="Pragma">perasR</a> <a id="1937" class="Pragma">&lt;-</a> <a id="1940" class="Pragma">o</a> <a id="1942" class="Pragma">A..:</a> <a id="1947" class="Pragma">&quot;R&quot;</a>
+      <a id="1957" class="Pragma">perasK</a> <a id="1964" class="Pragma">&lt;-</a> <a id="1967" class="Pragma">o</a> <a id="1969" class="Pragma">A..:</a> <a id="1974" class="Pragma">&quot;K&quot;</a>
+      <a id="1984" class="Pragma">perasL</a> <a id="1991" class="Pragma">&lt;-</a> <a id="1994" class="Pragma">o</a> <a id="1996" class="Pragma">A..:</a> <a id="2001" class="Pragma">&quot;L&quot;</a>
+      <a id="2011" class="Pragma">perasτ</a> <a id="2018" class="Pragma">&lt;-</a> <a id="2021" class="Pragma">o</a> <a id="2023" class="Pragma">A..:</a> <a id="2028" class="Pragma">&quot;τ&quot;</a>
+      <a id="2038" class="Pragma">perasB</a> <a id="2045" class="Pragma">&lt;-</a> <a id="2048" class="Pragma">o</a> <a id="2050" class="Pragma">A..:</a> <a id="2055" class="Pragma">&quot;B&quot;</a>
+      <a id="2065" class="Pragma">perasT</a> <a id="2072" class="Pragma">&lt;-</a> <a id="2075" class="Pragma">o</a> <a id="2077" class="Pragma">A..:</a> <a id="2082" class="Pragma">&quot;T&quot;</a>
+      <a id="2092" class="Pragma">perasΔ</a> <a id="2099" class="Pragma">&lt;-</a> <a id="2102" class="Pragma">o</a> <a id="2104" class="Pragma">A..:</a> <a id="2109" class="Pragma">&quot;Δ&quot;</a>
+      <a id="2119" class="Pragma">pure</a> <a id="2124" class="Pragma">MkPerasParams{..}</a>
+
+<a id="2143" class="Pragma">instance</a> <a id="2152" class="Pragma">ToJSON</a> <a id="2159" class="Pragma">PerasParams</a> <a id="2171" class="Pragma">where</a>
+  <a id="2179" class="Pragma">toJSON</a> <a id="2186" class="Pragma">MkPerasParams{..}</a> <a id="2204" class="Pragma">=</a>
+    <a id="2210" class="Pragma">A.object</a>
+      <a id="2225" class="Pragma">[</a> <a id="2227" class="Pragma">&quot;U&quot;</a> <a id="2231" class="Pragma">A..=</a> <a id="2236" class="Pragma">perasU</a>
+      <a id="2249" class="Pragma">,</a> <a id="2251" class="Pragma">&quot;A&quot;</a> <a id="2255" class="Pragma">A..=</a> <a id="2260" class="Pragma">perasA</a>
+      <a id="2273" class="Pragma">,</a> <a id="2275" class="Pragma">&quot;R&quot;</a> <a id="2279" class="Pragma">A..=</a> <a id="2284" class="Pragma">perasR</a>
+      <a id="2297" class="Pragma">,</a> <a id="2299" class="Pragma">&quot;K&quot;</a> <a id="2303" class="Pragma">A..=</a> <a id="2308" class="Pragma">perasK</a>
+      <a id="2321" class="Pragma">,</a> <a id="2323" class="Pragma">&quot;L&quot;</a> <a id="2327" class="Pragma">A..=</a> <a id="2332" class="Pragma">perasL</a>
+      <a id="2345" class="Pragma">,</a> <a id="2347" class="Pragma">&quot;τ&quot;</a> <a id="2351" class="Pragma">A..=</a> <a id="2356" class="Pragma">perasτ</a>
+      <a id="2369" class="Pragma">,</a> <a id="2371" class="Pragma">&quot;B&quot;</a> <a id="2375" class="Pragma">A..=</a> <a id="2380" class="Pragma">perasB</a>
+      <a id="2393" class="Pragma">,</a> <a id="2395" class="Pragma">&quot;T&quot;</a> <a id="2399" class="Pragma">A..=</a> <a id="2404" class="Pragma">perasT</a>
+      <a id="2417" class="Pragma">,</a> <a id="2419" class="Pragma">&quot;Δ&quot;</a> <a id="2423" class="Pragma">A..=</a> <a id="2428" class="Pragma">perasΔ</a>
+      <a id="2441" class="Pragma">]</a>
+
+<a id="2444" class="Pragma">--</a> <a id="2447" class="Pragma">FIXME:</a> <a id="2454" class="Pragma">What</a> <a id="2459" class="Pragma">are</a> <a id="2463" class="Pragma">the</a> <a id="2467" class="Pragma">actual</a> <a id="2474" class="Pragma">values</a> <a id="2481" class="Pragma">of</a> <a id="2484" class="Pragma">T_heal,</a> <a id="2492" class="Pragma">T_CQ,</a> <a id="2498" class="Pragma">and</a> <a id="2502" class="Pragma">T_CP?</a>
+<a id="2508" class="Pragma">--</a> <a id="2511" class="Pragma">For</a> <a id="2515" class="Pragma">now</a> <a id="2519" class="Pragma">I</a> <a id="2521" class="Pragma">am</a> <a id="2524" class="Pragma">assuming</a> <a id="2533" class="Pragma">they</a> <a id="2538" class="Pragma">all</a> <a id="2542" class="Pragma">are</a> <a id="2546" class="Pragma">in</a> <a id="2549" class="Pragma">the</a> <a id="2553" class="Pragma">order</a> <a id="2559" class="Pragma">of</a> <a id="2562" class="Pragma">security</a> <a id="2571" class="Pragma">parameter,</a> <a id="2582" class="Pragma">eg.</a> <a id="2586" class="Pragma">2160</a> <a id="2591" class="Pragma">on</a> <a id="2594" class="Pragma">mainnet.</a>
+<a id="2603" class="Pragma">instance</a> <a id="2612" class="Pragma">Default</a> <a id="2620" class="Pragma">PerasParams</a> <a id="2632" class="Pragma">where</a>
+  <a id="2640" class="Pragma">def</a> <a id="2644" class="Pragma">=</a> <a id="2646" class="Pragma">defaultPerasParams</a>
+<a id="2665" class="Symbol">#-}</a>
+</pre></body></html>

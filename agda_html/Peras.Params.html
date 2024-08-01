@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Peras.Params</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="Agda.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<pre class="Agda"><a id="9" class="Keyword">module</a> <a id="16" href="Peras.Params.html" class="Module">Peras.Params</a> <a id="29" class="Keyword">where</a>
+</pre>
+<!--
+<pre class="Agda"><a id="52" class="Keyword">open</a> <a id="57" class="Keyword">import</a> <a id="64" href="Agda.Builtin.Float.html" class="Module">Agda.Builtin.Float</a>
+<a id="83" class="Keyword">open</a> <a id="88" class="Keyword">import</a> <a id="95" href="Data.Nat.html" class="Module">Data.Nat</a> <a id="104" class="Keyword">using</a> <a id="110" class="Symbol">(</a><a id="111" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a><a id="112" class="Symbol">;</a> <a id="114" href="Data.Nat.Base.html#3260" class="Record">NonZero</a><a id="121" class="Symbol">)</a>
+</pre>-->
+<h2 id="peras-parameters">Peras parameters</h2>
+<pre class="Agda"><a id="159" class="Keyword">record</a> <a id="Params"></a><a id="166" href="Peras.Params.html#166" class="Record">Params</a> <a id="173" class="Symbol">:</a> <a id="175" href="Agda.Primitive.html#388" class="Primitive">Set</a> <a id="179" class="Keyword">where</a>
+  <a id="187" class="Keyword">field</a> <a id="Params.U"></a><a id="193" href="Peras.Params.html#193" class="Field">U</a> <a id="195" class="Symbol">:</a> <a id="197" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.K"></a><a id="207" href="Peras.Params.html#207" class="Field">K</a> <a id="209" class="Symbol">:</a> <a id="211" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.R"></a><a id="221" href="Peras.Params.html#221" class="Field">R</a> <a id="223" class="Symbol">:</a> <a id="225" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.L"></a><a id="235" href="Peras.Params.html#235" class="Field">L</a> <a id="237" class="Symbol">:</a> <a id="239" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.A"></a><a id="249" href="Peras.Params.html#249" class="Field">A</a> <a id="251" class="Symbol">:</a> <a id="253" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.τ"></a><a id="263" href="Peras.Params.html#263" class="Field">τ</a> <a id="265" class="Symbol">:</a> <a id="267" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+        <a id="Params.B"></a><a id="277" href="Peras.Params.html#277" class="Field">B</a> <a id="279" class="Symbol">:</a> <a id="281" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a> <a id="283" class="Comment">-- FIXME: Float</a>
+        <a id="Params.W"></a><a id="307" href="Peras.Params.html#307" class="Field">W</a> <a id="309" class="Symbol">:</a> <a id="311" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+
+        <a id="322" class="Symbol">⦃</a> <a id="Params.U-nonZero"></a><a id="324" href="Peras.Params.html#324" class="Field">U-nonZero</a> <a id="334" class="Symbol">⦄</a> <a id="336" class="Symbol">:</a> <a id="338" href="Data.Nat.Base.html#3260" class="Record">NonZero</a> <a id="346" href="Peras.Params.html#193" class="Field">U</a>
+        <a id="356" class="Symbol">⦃</a> <a id="Params.K-nonZero"></a><a id="358" href="Peras.Params.html#358" class="Field">K-nonZero</a> <a id="368" class="Symbol">⦄</a> <a id="370" class="Symbol">:</a> <a id="372" href="Data.Nat.Base.html#3260" class="Record">NonZero</a> <a id="380" href="Peras.Params.html#207" class="Field">K</a>
+
+</pre>
+<h4 id="u">U</h4>
+<p>The length (in slots) of a voting round</p>
+<h4 id="k">K</h4>
+<p>The length of a cooldown period (in voting rounds). This needs to be
+large enough so that order of b*n + k blocks are produced in time T*K,
+where k is the current common-prefix parameter</p>
+<h4 id="r">R</h4>
+<p>Chain-ignorance period</p>
+<h4 id="l">L</h4>
+<p>Cutoff window (in slots) which is ignored to select block to vote for
+in a round</p>
+<h4 id="a">A</h4>
+<p>Max age for including a certificate</p>
+<h4 id="τ">τ</h4>
+<p>The Number of votes required for quorum (3/4*n + 2*δ for some δ &gt;
+0)</p>
+<h4 id="b">B</h4>
+<p>The weight boost per vote</p>
+<h4 id="w">W</h4>
+<p>The weight to cut off for common prefix</p>
+</body>
+</html>

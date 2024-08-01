@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Peras.SmallStep</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="Agda.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<pre class="Agda"><a id="9" class="Keyword">module</a> <a id="16" href="Peras.SmallStep.html" class="Module">Peras.SmallStep</a> <a id="32" class="Keyword">where</a>
+</pre>
+<!--
+<pre class="Agda"><a id="55" class="Keyword">open</a> <a id="60" class="Keyword">import</a> <a id="67" href="Prelude.AssocList.html" class="Module">Prelude.AssocList</a>
+<a id="85" class="Keyword">open</a> <a id="90" class="Keyword">import</a> <a id="97" href="Prelude.DecEq.html" class="Module">Prelude.DecEq</a> <a id="111" class="Keyword">using</a> <a id="117" class="Symbol">(</a><a id="118" href="Prelude.DecEq.html#62" class="Record">DecEq</a><a id="123" class="Symbol">)</a>
+<a id="125" class="Keyword">open</a> <a id="130" class="Keyword">import</a> <a id="137" href="Prelude.Default.html" class="Module">Prelude.Default</a> <a id="153" class="Keyword">using</a> <a id="159" class="Symbol">(</a><a id="160" href="Prelude.Default.html#100" class="Record">Default</a><a id="167" class="Symbol">)</a>
+<a id="169" class="Keyword">open</a> <a id="174" href="Prelude.Default.html#100" class="Module">Default</a> <a id="182" class="Symbol">⦃...⦄</a>
+
+<a id="189" class="Keyword">open</a> <a id="194" class="Keyword">import</a> <a id="201" href="Prelude.InferenceRules.html" class="Module">Prelude.InferenceRules</a>
+<a id="224" class="Keyword">open</a> <a id="229" class="Keyword">import</a> <a id="236" href="Prelude.Init.html" class="Module">Prelude.Init</a> <a id="249" class="Keyword">hiding</a> <a id="256" class="Symbol">(</a><a id="257" href="Data.List.Relation.Binary.Sublist.Setoid.html#1567" class="Function Operator">_⊆_</a><a id="260" class="Symbol">)</a>
+
+<a id="263" class="Keyword">open</a> <a id="268" href="Prelude.Init.html#940" class="Module">Nat</a> <a id="272" class="Keyword">using</a> <a id="278" class="Symbol">(</a><a id="279" href="Data.Nat.Properties.html#3311" class="Function Operator">_≟_</a><a id="282" class="Symbol">;</a> <a id="284" href="Data.Nat.Properties.html#6146" class="Function Operator">_≤?_</a><a id="288" class="Symbol">;</a> <a id="290" href="Data.Nat.Base.html#1477" class="Function Operator">_≤ᵇ_</a><a id="294" class="Symbol">;</a> <a id="296" href="Data.Nat.Properties.html#6212" class="Function Operator">_≥?_</a><a id="300" class="Symbol">;</a> <a id="302" href="Data.Nat.Base.html#7279" class="Function Operator">_%_</a><a id="305" class="Symbol">;</a> <a id="307" href="Data.Nat.Properties.html#10900" class="Function Operator">_&gt;?_</a><a id="311" class="Symbol">;</a> <a id="313" href="Data.Nat.Base.html#3260" class="Record">NonZero</a><a id="320" class="Symbol">)</a>
+<a id="322" class="Keyword">open</a> <a id="327" href="Prelude.Init.html#2456" class="Module">L</a> <a id="329" class="Keyword">using</a> <a id="335" class="Symbol">(</a><a id="336" href="Data.List.Base.html#4538" class="Function">concat</a><a id="342" class="Symbol">)</a>
+<a id="344" class="Keyword">open</a> <a id="349" href="Prelude.Init.html#2546" class="Module">L.All</a> <a id="355" class="Keyword">using</a> <a id="361" class="Symbol">(</a><a id="362" href="Data.List.Relation.Unary.All.html#1627" class="Datatype">All</a><a id="365" class="Symbol">)</a>
+<a id="367" class="Keyword">open</a> <a id="372" href="Prelude.Init.html#2680" class="Module">L.Any</a> <a id="378" class="Keyword">using</a> <a id="384" class="Symbol">(</a><a id="385" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a><a id="388" class="Symbol">;</a> <a id="390" href="Data.List.Relation.Unary.Any.html#2138" class="Function Operator">_─_</a><a id="393" class="Symbol">;</a> <a id="395" href="Data.List.Relation.Unary.Any.html#2694" class="Function">any?</a><a id="399" class="Symbol">)</a> <a id="401" class="Keyword">renaming</a> <a id="410" class="Symbol">(</a><a id="411" href="Data.List.Relation.Unary.Any.html#2027" class="Function Operator">_∷=_</a> <a id="416" class="Symbol">to</a> <a id="419" class="Function Operator">_∷ˡ=_</a><a id="424" class="Symbol">)</a>
+
+<a id="427" class="Keyword">open</a> <a id="432" class="Keyword">import</a> <a id="439" href="Peras.Block.html" class="Module">Peras.Block</a>
+<a id="451" class="Keyword">open</a> <a id="456" class="Keyword">import</a> <a id="463" href="Peras.Chain.html" class="Module">Peras.Chain</a>
+<a id="475" class="Keyword">open</a> <a id="480" class="Keyword">import</a> <a id="487" href="Peras.Crypto.html" class="Module">Peras.Crypto</a>
+<a id="500" class="Keyword">open</a> <a id="505" class="Keyword">import</a> <a id="512" href="Peras.Numbering.html" class="Module">Peras.Numbering</a>
+<a id="528" class="Keyword">open</a> <a id="533" class="Keyword">import</a> <a id="540" href="Peras.Params.html" class="Module">Peras.Params</a>
+
+<a id="554" class="Keyword">open</a> <a id="559" class="Keyword">import</a> <a id="566" href="Data.List.Relation.Binary.Subset.Propositional.html" class="Module">Data.List.Relation.Binary.Subset.Propositional</a> <a id="613" class="Symbol">{</a><a id="614" class="Argument">A</a> <a id="616" class="Symbol">=</a> <a id="618" href="Peras.Block.html#2950" class="Record">Block</a><a id="623" class="Symbol">}</a> <a id="625" class="Keyword">using</a> <a id="631" class="Symbol">(</a><a id="632" href="Data.List.Relation.Binary.Subset.Setoid.html#825" class="Function Operator">_⊆_</a><a id="635" class="Symbol">)</a>
+<a id="637" class="Keyword">open</a> <a id="642" class="Keyword">import</a> <a id="649" href="Data.List.Relation.Binary.Subset.Propositional.html" class="Module">Data.List.Relation.Binary.Subset.Propositional</a> <a id="696" class="Symbol">{</a><a id="697" class="Argument">A</a> <a id="699" class="Symbol">=</a> <a id="701" href="Peras.Block.html#2992" class="Record">Certificate</a><a id="712" class="Symbol">}</a> <a id="714" class="Keyword">renaming</a> <a id="723" class="Symbol">(</a><a id="724" href="Data.List.Relation.Binary.Subset.Setoid.html#825" class="Function Operator">_⊆_</a> <a id="728" class="Symbol">to</a> <a id="731" class="Function Operator">_⊆ᶜ_</a><a id="735" class="Symbol">)</a>
+
+<a id="738" class="Keyword">open</a> <a id="743" href="Peras.Block.html#2015" class="Module">Honesty</a> <a id="751" class="Keyword">public</a>
+<a id="758" class="Keyword">open</a> <a id="763" href="Peras.Crypto.html#1944" class="Module">MembershipProof</a> <a id="779" class="Keyword">public</a>
+<a id="786" class="Keyword">open</a> <a id="791" href="Peras.Crypto.html#2898" class="Module">Signature</a> <a id="801" class="Keyword">public</a>
+<a id="808" class="Keyword">open</a> <a id="813" href="Peras.Numbering.html#1669" class="Module">RoundNumber</a> <a id="825" class="Keyword">public</a>
+<a id="832" class="Keyword">open</a> <a id="837" href="Peras.Block.html#1591" class="Module">Party</a>
+</pre>-->
+<h1 id="small-step-semantics">Small-step semantics</h1>
+<p>The small-step semantics of the <strong>Ouroboros Peras</strong>
+protocol define the evolution of the global state of the system
+modelling <em>honest</em> and <em>adversarial</em> parties. The number
+of parties is fixed during the execution of the protocol and the list of
+parties has to be provided as a module parameter. In addition the model
+is parameterized by the lotteries (for slot leadership and voting
+committee membership) as well as the type of the block tree. Furthermore
+adversarial parties share generic, adversarial state.</p>
+<p>References:</p>
+<ul>
+<li>Formalizing Nakamoto-Style Proof of Stake, Søren Eller Thomsen and
+Bas Spitters</li>
+</ul>
+<h3 id="parameters">Parameters</h3>
+<p>The parameters for the <em>Peras</em> protocol and hash functions are
+defined as instance arguments of the module.</p>
+<pre class="Agda"><a id="1617" class="Keyword">module</a> <a id="1624" href="Peras.SmallStep.html#1624" class="Module">_</a> <a id="1626" class="Symbol">⦃</a> <a id="1628" href="Peras.SmallStep.html#1628" class="Bound">_</a> <a id="1630" class="Symbol">:</a> <a id="1632" href="Peras.Crypto.html#1777" class="Record">Hashable</a> <a id="1641" href="Peras.Block.html#2950" class="Record">Block</a> <a id="1647" class="Symbol">⦄</a>
+         <a id="1658" class="Symbol">⦃</a> <a id="1660" href="Peras.SmallStep.html#1660" class="Bound">_</a> <a id="1662" class="Symbol">:</a> <a id="1664" href="Peras.Crypto.html#1777" class="Record">Hashable</a> <a id="1673" class="Symbol">(</a><a id="1674" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="1679" href="Peras.Block.html#2472" class="Function">Tx</a><a id="1681" class="Symbol">)</a> <a id="1683" class="Symbol">⦄</a>
+         <a id="1694" class="Symbol">⦃</a> <a id="1696" href="Peras.SmallStep.html#1696" class="Bound">_</a> <a id="1698" class="Symbol">:</a> <a id="1700" href="Peras.Params.html#166" class="Record">Params</a> <a id="1707" class="Symbol">⦄</a>
+         <a id="1718" class="Symbol">⦃</a> <a id="1720" href="Peras.SmallStep.html#1720" class="Bound">_</a> <a id="1722" class="Symbol">:</a> <a id="1724" href="Peras.Chain.html#3039" class="Record">Network</a> <a id="1732" class="Symbol">⦄</a>
+         <a id="1743" class="Symbol">⦃</a> <a id="1745" href="Peras.SmallStep.html#1745" class="Bound">_</a> <a id="1747" class="Symbol">:</a> <a id="1749" href="Peras.Chain.html#2773" class="Record">Postulates</a> <a id="1760" class="Symbol">⦄</a>
+
+         <a id="1772" class="Keyword">where</a>
+</pre>
+The block tree, resp. the validity of the chain is defined with respect
+of the parameters.
+<pre class="Agda">  <a id="1887" class="Keyword">open</a> <a id="1892" href="Peras.Crypto.html#1777" class="Module">Hashable</a> <a id="1901" class="Symbol">⦃...⦄</a>
+  <a id="1909" class="Keyword">open</a> <a id="1914" href="Peras.Params.html#166" class="Module">Params</a> <a id="1921" class="Symbol">⦃...⦄</a>
+  <a id="1929" class="Keyword">open</a> <a id="1934" href="Peras.Chain.html#3039" class="Module">Network</a> <a id="1942" class="Symbol">⦃...⦄</a>
+  <a id="1950" class="Keyword">open</a> <a id="1955" href="Peras.Chain.html#2773" class="Module">Postulates</a> <a id="1966" class="Symbol">⦃...⦄</a>
+</pre>
+<h4 id="messages">Messages</h4>
+Messages for sending and receiving chains and votes. Note, in the
+<em>Peras</em> protocol certificates are not diffused explicitly.
+<pre class="Agda">  <a id="2126" class="Keyword">data</a> <a id="2131" href="Peras.SmallStep.html#2131" class="Datatype">Message</a> <a id="2139" class="Symbol">:</a> <a id="2141" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="2146" class="Keyword">where</a>
+    <a id="2156" href="Peras.SmallStep.html#2156" class="InductiveConstructor">ChainMsg</a> <a id="2165" class="Symbol">:</a> <a id="2167" href="Peras.Chain.html#3842" class="Function">Chain</a> <a id="2173" class="Symbol">→</a> <a id="2175" href="Peras.SmallStep.html#2131" class="Datatype">Message</a>
+    <a id="2187" href="Peras.SmallStep.html#2187" class="InductiveConstructor">VoteMsg</a> <a id="2195" class="Symbol">:</a> <a id="2197" href="Peras.Chain.html#1480" class="Record">Vote</a> <a id="2202" class="Symbol">→</a> <a id="2204" href="Peras.SmallStep.html#2131" class="Datatype">Message</a>
+</pre>
+<!--
+<pre class="Agda"><a id="2229" class="Comment">{-
+  Message-injective : ∀ {b₁ b₂}
+    → ChainMsg b₁ ≡ ChainMsg b₂
+    → b₁ ≡ b₂
+  Message-injective refl = refl
+-}</a>
+</pre><pre class="Agda"><a id="2357" class="Comment">{-
+  Message-injective′ : ∀ {b₁ b₂}
+    → b₁ ≢ b₂
+    → ChainMsg b₁ ≢ ChainMsg b₂
+  Message-injective′ = contraposition Message-injective
+-}</a>
+</pre>Messages can be delayed by a number of slots
+<pre class="Agda">  <a id="2557" href="Peras.SmallStep.html#2557" class="Function">Delay</a> <a id="2563" class="Symbol">=</a> <a id="2565" href="Data.Fin.Base.html#1154" class="Datatype">Fin</a> <a id="2569" class="Symbol">(</a><a id="2570" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="2574" class="Symbol">(</a><a id="2575" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="2579" href="Peras.Chain.html#3072" class="Field">Δ</a><a id="2580" class="Symbol">))</a>
+
+  <a id="2586" class="Keyword">pattern</a> <a id="2594" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a> <a id="2596" class="Symbol">=</a> <a id="2598" href="Data.Fin.Base.html#1176" class="InductiveConstructor">fzero</a>
+  <a id="2606" class="Keyword">pattern</a> <a id="2614" href="Peras.SmallStep.html#2614" class="InductiveConstructor">𝟙</a> <a id="2616" class="Symbol">=</a> <a id="2618" href="Data.Fin.Base.html#1197" class="InductiveConstructor">fsuc</a> <a id="2623" href="Data.Fin.Base.html#1176" class="InductiveConstructor">fzero</a>
+  <a id="2631" class="Keyword">pattern</a> <a id="2639" href="Peras.SmallStep.html#2639" class="InductiveConstructor">𝟚</a> <a id="2641" class="Symbol">=</a> <a id="2643" href="Data.Fin.Base.html#1197" class="InductiveConstructor">fsuc</a> <a id="2648" class="Symbol">(</a><a id="2649" href="Data.Fin.Base.html#1197" class="InductiveConstructor">fsuc</a> <a id="2654" href="Data.Fin.Base.html#1176" class="InductiveConstructor">fzero</a><a id="2659" class="Symbol">)</a>
+</pre>Messages are put into an envelope and assigned to a party. The message can be
+delayed.
+<pre class="Agda">  <a id="2762" class="Keyword">record</a> <a id="2769" href="Peras.SmallStep.html#2769" class="Record">Envelope</a> <a id="2778" class="Symbol">:</a> <a id="2780" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="2785" class="Keyword">where</a>
+    <a id="2795" class="Keyword">constructor</a> <a id="2807" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦅_,_,_,_⦆</a>
+    <a id="2821" class="Keyword">field</a>
+      <a id="2833" href="Peras.SmallStep.html#2833" class="Field">partyId</a> <a id="2841" class="Symbol">:</a> <a id="2843" href="Peras.Block.html#1249" class="Function">PartyId</a>
+      <a id="2857" href="Peras.SmallStep.html#2857" class="Field">honesty</a> <a id="2865" class="Symbol">:</a> <a id="2867" href="Peras.Block.html#2015" class="Datatype">Honesty</a> <a id="2875" href="Peras.SmallStep.html#2833" class="Field">partyId</a>
+      <a id="2889" href="Peras.SmallStep.html#2889" class="Field">message</a> <a id="2897" class="Symbol">:</a> <a id="2899" href="Peras.SmallStep.html#2131" class="Datatype">Message</a>
+      <a id="2913" href="Peras.SmallStep.html#2913" class="Field">delay</a> <a id="2919" class="Symbol">:</a> <a id="2921" href="Peras.SmallStep.html#2557" class="Function">Delay</a>
+
+  <a id="2930" class="Keyword">open</a> <a id="2935" href="Peras.SmallStep.html#2769" class="Module">Envelope</a>
+</pre><!--
+<pre class="Agda">  <a id="2963" href="Peras.SmallStep.html#2963" class="Function">⦅⦆-injective</a> <a id="2976" class="Symbol">:</a> <a id="2978" class="Symbol">∀</a> <a id="2980" class="Symbol">{</a><a id="2981" href="Peras.SmallStep.html#2981" class="Bound">e₁</a> <a id="2984" href="Peras.SmallStep.html#2984" class="Bound">e₂</a><a id="2986" class="Symbol">}</a>
+    <a id="2992" class="Symbol">→</a> <a id="2994" href="Peras.SmallStep.html#2981" class="Bound">e₁</a> <a id="2997" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="2999" href="Peras.SmallStep.html#2984" class="Bound">e₂</a>
+    <a id="3006" class="Symbol">→</a> <a id="3008" href="Peras.SmallStep.html#2833" class="Field">partyId</a> <a id="3016" href="Peras.SmallStep.html#2981" class="Bound">e₁</a> <a id="3019" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="3021" href="Peras.SmallStep.html#2833" class="Field">partyId</a> <a id="3029" href="Peras.SmallStep.html#2984" class="Bound">e₂</a>
+  <a id="3034" href="Peras.SmallStep.html#2963" class="Function">⦅⦆-injective</a> <a id="3047" href="Agda.Builtin.Equality.html#207" class="InductiveConstructor">refl</a> <a id="3052" class="Symbol">=</a> <a id="3054" href="Agda.Builtin.Equality.html#207" class="InductiveConstructor">refl</a>
+</pre><pre class="Agda">  <a id="3073" href="Peras.SmallStep.html#3073" class="Function">⦅⦆-injective₃</a> <a id="3087" class="Symbol">:</a> <a id="3089" class="Symbol">∀</a> <a id="3091" class="Symbol">{</a><a id="3092" href="Peras.SmallStep.html#3092" class="Bound">e₁</a> <a id="3095" href="Peras.SmallStep.html#3095" class="Bound">e₂</a><a id="3097" class="Symbol">}</a>
+    <a id="3103" class="Symbol">→</a> <a id="3105" href="Peras.SmallStep.html#3092" class="Bound">e₁</a> <a id="3108" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="3110" href="Peras.SmallStep.html#3095" class="Bound">e₂</a>
+    <a id="3117" class="Symbol">→</a> <a id="3119" href="Peras.SmallStep.html#2889" class="Field">message</a> <a id="3127" href="Peras.SmallStep.html#3092" class="Bound">e₁</a> <a id="3130" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="3132" href="Peras.SmallStep.html#2889" class="Field">message</a> <a id="3140" href="Peras.SmallStep.html#3095" class="Bound">e₂</a>
+  <a id="3145" href="Peras.SmallStep.html#3073" class="Function">⦅⦆-injective₃</a> <a id="3159" href="Agda.Builtin.Equality.html#207" class="InductiveConstructor">refl</a> <a id="3164" class="Symbol">=</a> <a id="3166" href="Agda.Builtin.Equality.html#207" class="InductiveConstructor">refl</a>
+</pre><pre class="Agda">  <a id="3185" href="Peras.SmallStep.html#3185" class="Function">⦅⦆-injective′</a> <a id="3199" class="Symbol">:</a> <a id="3201" class="Symbol">∀</a> <a id="3203" class="Symbol">{</a><a id="3204" href="Peras.SmallStep.html#3204" class="Bound">e₁</a> <a id="3207" href="Peras.SmallStep.html#3207" class="Bound">e₂</a><a id="3209" class="Symbol">}</a>
+    <a id="3215" class="Symbol">→</a> <a id="3217" href="Peras.SmallStep.html#2833" class="Field">partyId</a> <a id="3225" href="Peras.SmallStep.html#3204" class="Bound">e₁</a> <a id="3228" href="Relation.Binary.PropositionalEquality.Core.html#858" class="Function Operator">≢</a> <a id="3230" href="Peras.SmallStep.html#2833" class="Field">partyId</a> <a id="3238" href="Peras.SmallStep.html#3207" class="Bound">e₂</a>
+    <a id="3245" class="Symbol">→</a> <a id="3247" href="Peras.SmallStep.html#3204" class="Bound">e₁</a> <a id="3250" href="Relation.Binary.PropositionalEquality.Core.html#858" class="Function Operator">≢</a> <a id="3252" href="Peras.SmallStep.html#3207" class="Bound">e₂</a>
+  <a id="3257" href="Peras.SmallStep.html#3185" class="Function">⦅⦆-injective′</a> <a id="3271" class="Symbol">=</a> <a id="3273" href="Relation.Nullary.Negation.Core.html#1446" class="Function">contraposition</a> <a id="3288" href="Peras.SmallStep.html#2963" class="Function">⦅⦆-injective</a>
+</pre><pre class="Agda">  <a id="3315" href="Peras.SmallStep.html#3315" class="Function">⦅⦆-injective₃′</a> <a id="3330" class="Symbol">:</a> <a id="3332" class="Symbol">∀</a> <a id="3334" class="Symbol">{</a><a id="3335" href="Peras.SmallStep.html#3335" class="Bound">e₁</a> <a id="3338" href="Peras.SmallStep.html#3338" class="Bound">e₂</a><a id="3340" class="Symbol">}</a>
+    <a id="3346" class="Symbol">→</a> <a id="3348" href="Peras.SmallStep.html#2889" class="Field">message</a> <a id="3356" href="Peras.SmallStep.html#3335" class="Bound">e₁</a> <a id="3359" href="Relation.Binary.PropositionalEquality.Core.html#858" class="Function Operator">≢</a> <a id="3361" href="Peras.SmallStep.html#2889" class="Field">message</a> <a id="3369" href="Peras.SmallStep.html#3338" class="Bound">e₂</a>
+    <a id="3376" class="Symbol">→</a> <a id="3378" href="Peras.SmallStep.html#3335" class="Bound">e₁</a> <a id="3381" href="Relation.Binary.PropositionalEquality.Core.html#858" class="Function Operator">≢</a> <a id="3383" href="Peras.SmallStep.html#3338" class="Bound">e₂</a>
+  <a id="3388" href="Peras.SmallStep.html#3315" class="Function">⦅⦆-injective₃′</a> <a id="3403" class="Symbol">=</a> <a id="3405" href="Relation.Nullary.Negation.Core.html#1446" class="Function">contraposition</a> <a id="3420" href="Peras.SmallStep.html#3073" class="Function">⦅⦆-injective₃</a>
+</pre>-->
+<h4 id="block-tree">Block-tree</h4>
+<p>A block-tree is defined by properties - an implementation of the
+block-tree has to fulfil all the properties mentioned below:</p>
+<pre class="Agda">  <a id="3596" class="Keyword">record</a> <a id="3603" href="Peras.SmallStep.html#3603" class="Record">IsTreeType</a> <a id="3614" class="Symbol">{</a><a id="3615" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3617" class="Symbol">:</a> <a id="3619" href="Agda.Primitive.html#388" class="Primitive">Type</a><a id="3623" class="Symbol">}</a>
+                    <a id="3645" class="Symbol">(</a><a id="3646" href="Peras.SmallStep.html#3646" class="Bound">tree₀</a> <a id="3652" class="Symbol">:</a> <a id="3654" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="3655" class="Symbol">)</a>
+                    <a id="3677" class="Symbol">(</a><a id="3678" href="Peras.SmallStep.html#3678" class="Bound">newChain</a> <a id="3687" class="Symbol">:</a> <a id="3689" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3691" class="Symbol">→</a> <a id="3693" href="Peras.Chain.html#3842" class="Function">Chain</a> <a id="3699" class="Symbol">→</a> <a id="3701" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="3702" class="Symbol">)</a>
+                    <a id="3724" class="Symbol">(</a><a id="3725" href="Peras.SmallStep.html#3725" class="Bound">allChains</a> <a id="3735" class="Symbol">:</a> <a id="3737" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3739" class="Symbol">→</a> <a id="3741" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="3746" href="Peras.Chain.html#3842" class="Function">Chain</a><a id="3751" class="Symbol">)</a>
+                    <a id="3773" class="Symbol">(</a><a id="3774" href="Peras.SmallStep.html#3774" class="Bound">preferredChain</a> <a id="3789" class="Symbol">:</a> <a id="3791" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3793" class="Symbol">→</a> <a id="3795" href="Peras.Chain.html#3842" class="Function">Chain</a><a id="3800" class="Symbol">)</a>
+                    <a id="3822" class="Symbol">(</a><a id="3823" href="Peras.SmallStep.html#3823" class="Bound">addVote</a> <a id="3831" class="Symbol">:</a> <a id="3833" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3835" class="Symbol">→</a> <a id="3837" href="Peras.Chain.html#1480" class="Record">Vote</a> <a id="3842" class="Symbol">→</a> <a id="3844" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="3845" class="Symbol">)</a>
+                    <a id="3867" class="Symbol">(</a><a id="3868" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="3874" class="Symbol">:</a> <a id="3876" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3878" class="Symbol">→</a> <a id="3880" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="3885" href="Peras.Chain.html#1480" class="Record">Vote</a><a id="3889" class="Symbol">)</a>
+                    <a id="3911" class="Symbol">(</a><a id="3912" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="3918" class="Symbol">:</a> <a id="3920" href="Peras.SmallStep.html#3615" class="Bound">T</a> <a id="3922" class="Symbol">→</a> <a id="3924" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="3929" href="Peras.Block.html#2992" class="Record">Certificate</a><a id="3940" class="Symbol">)</a>
+                    <a id="3962" class="Symbol">(</a><a id="3963" href="Peras.SmallStep.html#3963" class="Bound">cert₀</a> <a id="3969" class="Symbol">:</a> <a id="3971" href="Peras.Block.html#2992" class="Record">Certificate</a><a id="3982" class="Symbol">)</a>
+         <a id="3993" class="Symbol">:</a> <a id="3995" href="Agda.Primitive.html#388" class="Primitive">Type₁</a> <a id="4001" class="Keyword">where</a>
+
+    <a id="4012" class="Keyword">field</a>
+</pre>
+Properties that must hold with respect to chains, certificates and
+votes.
+<pre class="Agda">      <a id="4110" href="Peras.SmallStep.html#4110" class="Field">instantiated</a> <a id="4123" class="Symbol">:</a>
+        <a id="4133" href="Peras.SmallStep.html#3774" class="Bound">preferredChain</a> <a id="4148" href="Peras.SmallStep.html#3646" class="Bound">tree₀</a> <a id="4154" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="4156" href="Agda.Builtin.List.html#184" class="InductiveConstructor">[]</a>
+
+      <a id="4166" href="Peras.SmallStep.html#4166" class="Field">instantiated-certs</a> <a id="4185" class="Symbol">:</a>
+        <a id="4195" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="4201" href="Peras.SmallStep.html#3646" class="Bound">tree₀</a> <a id="4207" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="4209" href="Peras.SmallStep.html#3963" class="Bound">cert₀</a> <a id="4215" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">∷</a> <a id="4217" href="Agda.Builtin.List.html#184" class="InductiveConstructor">[]</a>
+
+      <a id="4227" href="Peras.SmallStep.html#4227" class="Field">instantiated-votes</a> <a id="4246" class="Symbol">:</a>
+        <a id="4256" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="4262" href="Peras.SmallStep.html#3646" class="Bound">tree₀</a> <a id="4268" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="4270" href="Agda.Builtin.List.html#184" class="InductiveConstructor">[]</a>
+
+      <a id="4280" href="Peras.SmallStep.html#4280" class="Field">extendable-chain</a> <a id="4297" class="Symbol">:</a> <a id="4299" class="Symbol">∀</a> <a id="4301" class="Symbol">(</a><a id="4302" href="Peras.SmallStep.html#4302" class="Bound">t</a> <a id="4304" class="Symbol">:</a> <a id="4306" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4307" class="Symbol">)</a> <a id="4309" class="Symbol">(</a><a id="4310" href="Peras.SmallStep.html#4310" class="Bound">c</a> <a id="4312" class="Symbol">:</a> <a id="4314" href="Peras.Chain.html#3842" class="Function">Chain</a><a id="4319" class="Symbol">)</a>
+        <a id="4329" class="Symbol">→</a> <a id="4331" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="4337" class="Symbol">(</a><a id="4338" href="Peras.SmallStep.html#3678" class="Bound">newChain</a> <a id="4347" href="Peras.SmallStep.html#4302" class="Bound">t</a> <a id="4349" href="Peras.SmallStep.html#4310" class="Bound">c</a><a id="4350" class="Symbol">)</a> <a id="4352" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="4354" href="Peras.Chain.html#6246" class="Function">certsFromChain</a> <a id="4369" href="Peras.SmallStep.html#4310" class="Bound">c</a> <a id="4371" href="Data.List.Base.html#1954" class="Function Operator">++</a> <a id="4374" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="4380" href="Peras.SmallStep.html#4302" class="Bound">t</a>
+
+      <a id="4389" href="Peras.SmallStep.html#4389" class="Field">valid</a> <a id="4395" class="Symbol">:</a> <a id="4397" class="Symbol">∀</a> <a id="4399" class="Symbol">(</a><a id="4400" href="Peras.SmallStep.html#4400" class="Bound">t</a> <a id="4402" class="Symbol">:</a> <a id="4404" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4405" class="Symbol">)</a>
+        <a id="4415" class="Symbol">→</a> <a id="4417" href="Peras.Chain.html#5743" class="Datatype">ValidChain</a> <a id="4428" class="Symbol">(</a><a id="4429" href="Peras.SmallStep.html#3774" class="Bound">preferredChain</a> <a id="4444" href="Peras.SmallStep.html#4400" class="Bound">t</a><a id="4445" class="Symbol">)</a>
+
+      <a id="4454" href="Peras.SmallStep.html#4454" class="Field">optimal</a> <a id="4462" class="Symbol">:</a> <a id="4464" class="Symbol">∀</a> <a id="4466" class="Symbol">(</a><a id="4467" href="Peras.SmallStep.html#4467" class="Bound">c</a> <a id="4469" class="Symbol">:</a> <a id="4471" href="Peras.Chain.html#3842" class="Function">Chain</a><a id="4476" class="Symbol">)</a> <a id="4478" class="Symbol">(</a><a id="4479" href="Peras.SmallStep.html#4479" class="Bound">t</a> <a id="4481" class="Symbol">:</a> <a id="4483" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4484" class="Symbol">)</a>
+        <a id="4494" class="Symbol">→</a> <a id="4496" class="Keyword">let</a>
+            <a id="4512" href="Peras.SmallStep.html#4512" class="Bound">b</a> <a id="4514" class="Symbol">=</a> <a id="4516" href="Peras.SmallStep.html#3774" class="Bound">preferredChain</a> <a id="4531" href="Peras.SmallStep.html#4479" class="Bound">t</a>
+            <a id="4545" href="Peras.SmallStep.html#4545" class="Bound">cts</a> <a id="4549" class="Symbol">=</a> <a id="4551" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="4557" href="Peras.SmallStep.html#4479" class="Bound">t</a>
+          <a id="4569" class="Keyword">in</a>
+          <a id="4582" href="Peras.Chain.html#5743" class="Datatype">ValidChain</a> <a id="4593" href="Peras.SmallStep.html#4467" class="Bound">c</a>
+        <a id="4603" class="Symbol">→</a> <a id="4605" href="Peras.SmallStep.html#4467" class="Bound">c</a> <a id="4607" href="Data.List.Membership.Setoid.html#950" class="Function Operator">∈</a> <a id="4609" href="Peras.SmallStep.html#3725" class="Bound">allChains</a> <a id="4619" href="Peras.SmallStep.html#4479" class="Bound">t</a>
+        <a id="4629" class="Symbol">→</a> <a id="4631" href="Peras.Chain.html#5201" class="Function Operator">∥</a> <a id="4633" href="Peras.SmallStep.html#4467" class="Bound">c</a> <a id="4635" href="Peras.Chain.html#5201" class="Function Operator">∥</a> <a id="4637" href="Peras.SmallStep.html#4545" class="Bound">cts</a> <a id="4641" href="Data.Nat.Base.html#1691" class="Datatype Operator">≤</a> <a id="4643" href="Peras.Chain.html#5201" class="Function Operator">∥</a> <a id="4645" href="Peras.SmallStep.html#4512" class="Bound">b</a> <a id="4647" href="Peras.Chain.html#5201" class="Function Operator">∥</a> <a id="4649" href="Peras.SmallStep.html#4545" class="Bound">cts</a>
+
+      <a id="4660" href="Peras.SmallStep.html#4660" class="Field">self-contained</a> <a id="4675" class="Symbol">:</a> <a id="4677" class="Symbol">∀</a> <a id="4679" class="Symbol">(</a><a id="4680" href="Peras.SmallStep.html#4680" class="Bound">t</a> <a id="4682" class="Symbol">:</a> <a id="4684" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4685" class="Symbol">)</a>
+        <a id="4695" class="Symbol">→</a> <a id="4697" href="Peras.SmallStep.html#3774" class="Bound">preferredChain</a> <a id="4712" href="Peras.SmallStep.html#4680" class="Bound">t</a> <a id="4714" href="Data.List.Membership.Setoid.html#950" class="Function Operator">∈</a> <a id="4716" href="Peras.SmallStep.html#3725" class="Bound">allChains</a> <a id="4726" href="Peras.SmallStep.html#4680" class="Bound">t</a>
+
+      <a id="4735" href="Peras.SmallStep.html#4735" class="Field">valid-votes</a> <a id="4747" class="Symbol">:</a> <a id="4749" class="Symbol">∀</a> <a id="4751" class="Symbol">(</a><a id="4752" href="Peras.SmallStep.html#4752" class="Bound">t</a> <a id="4754" class="Symbol">:</a> <a id="4756" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4757" class="Symbol">)</a>
+        <a id="4767" class="Symbol">→</a> <a id="4769" href="Data.List.Relation.Unary.All.html#1627" class="Datatype">All</a> <a id="4773" href="Peras.Chain.html#3162" class="Function">ValidVote</a> <a id="4783" class="Symbol">(</a><a id="4784" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="4790" href="Peras.SmallStep.html#4752" class="Bound">t</a><a id="4791" class="Symbol">)</a>
+
+      <a id="4800" href="Peras.SmallStep.html#4800" class="Field">unique-votes</a> <a id="4813" class="Symbol">:</a> <a id="4815" class="Symbol">∀</a> <a id="4817" class="Symbol">(</a><a id="4818" href="Peras.SmallStep.html#4818" class="Bound">t</a> <a id="4820" class="Symbol">:</a> <a id="4822" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4823" class="Symbol">)</a> <a id="4825" class="Symbol">(</a><a id="4826" href="Peras.SmallStep.html#4826" class="Bound">v</a> <a id="4828" class="Symbol">:</a> <a id="4830" href="Peras.Chain.html#1480" class="Record">Vote</a><a id="4834" class="Symbol">)</a>
+        <a id="4844" class="Symbol">→</a> <a id="4846" class="Keyword">let</a> <a id="4850" href="Peras.SmallStep.html#4850" class="Bound">vs</a> <a id="4853" class="Symbol">=</a> <a id="4855" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="4861" href="Peras.SmallStep.html#4818" class="Bound">t</a>
+          <a id="4873" class="Keyword">in</a>
+          <a id="4886" href="Peras.SmallStep.html#4826" class="Bound">v</a> <a id="4888" href="Data.List.Membership.Setoid.html#950" class="Function Operator">∈</a> <a id="4890" href="Peras.SmallStep.html#4850" class="Bound">vs</a>
+        <a id="4901" class="Symbol">→</a> <a id="4903" href="Peras.SmallStep.html#4850" class="Bound">vs</a> <a id="4906" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="4908" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="4914" class="Symbol">(</a><a id="4915" href="Peras.SmallStep.html#3823" class="Bound">addVote</a> <a id="4923" href="Peras.SmallStep.html#4818" class="Bound">t</a> <a id="4925" href="Peras.SmallStep.html#4826" class="Bound">v</a><a id="4926" class="Symbol">)</a>
+
+      <a id="4935" href="Peras.SmallStep.html#4935" class="Field">no-equivocations</a> <a id="4952" class="Symbol">:</a> <a id="4954" class="Symbol">∀</a> <a id="4956" class="Symbol">(</a><a id="4957" href="Peras.SmallStep.html#4957" class="Bound">t</a> <a id="4959" class="Symbol">:</a> <a id="4961" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="4962" class="Symbol">)</a> <a id="4964" class="Symbol">(</a><a id="4965" href="Peras.SmallStep.html#4965" class="Bound">v</a> <a id="4967" class="Symbol">:</a> <a id="4969" href="Peras.Chain.html#1480" class="Record">Vote</a><a id="4973" class="Symbol">)</a>
+        <a id="4983" class="Symbol">→</a> <a id="4985" class="Keyword">let</a> <a id="4989" href="Peras.SmallStep.html#4989" class="Bound">vs</a> <a id="4992" class="Symbol">=</a> <a id="4994" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="5000" href="Peras.SmallStep.html#4957" class="Bound">t</a>
+          <a id="5012" class="Keyword">in</a>
+          <a id="5025" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="5029" class="Symbol">(</a><a id="5030" href="Peras.SmallStep.html#4965" class="Bound">v</a> <a id="5032" href="Peras.Chain.html#3445" class="Datatype Operator">∻_</a><a id="5034" class="Symbol">)</a> <a id="5036" href="Peras.SmallStep.html#4989" class="Bound">vs</a>
+        <a id="5047" class="Symbol">→</a> <a id="5049" href="Peras.SmallStep.html#4989" class="Bound">vs</a> <a id="5052" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="5054" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="5060" class="Symbol">(</a><a id="5061" href="Peras.SmallStep.html#3823" class="Bound">addVote</a> <a id="5069" href="Peras.SmallStep.html#4957" class="Bound">t</a> <a id="5071" href="Peras.SmallStep.html#4965" class="Bound">v</a><a id="5072" class="Symbol">)</a>
+
+      <a id="5081" href="Peras.SmallStep.html#5081" class="Field">quorum-cert</a> <a id="5093" class="Symbol">:</a> <a id="5095" class="Symbol">∀</a> <a id="5097" class="Symbol">(</a><a id="5098" href="Peras.SmallStep.html#5098" class="Bound">t</a> <a id="5100" class="Symbol">:</a> <a id="5102" href="Peras.SmallStep.html#3615" class="Bound">T</a><a id="5103" class="Symbol">)</a> <a id="5105" class="Symbol">(</a><a id="5106" href="Peras.SmallStep.html#5106" class="Bound">b</a> <a id="5108" class="Symbol">:</a> <a id="5110" href="Peras.Block.html#2950" class="Record">Block</a><a id="5115" class="Symbol">)</a> <a id="5117" class="Symbol">(</a><a id="5118" href="Peras.SmallStep.html#5118" class="Bound">r</a> <a id="5120" class="Symbol">:</a> <a id="5122" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a><a id="5123" class="Symbol">)</a>
+        <a id="5133" class="Symbol">→</a> <a id="5135" href="Data.List.Base.html#5083" class="Function">length</a> <a id="5142" class="Symbol">(</a><a id="5143" href="Data.List.Base.html#10878" class="Function">filter</a> <a id="5150" class="Symbol">(λ</a> <a id="5153" class="Symbol">{</a><a id="5154" href="Peras.SmallStep.html#5154" class="Bound">v</a> <a id="5156" class="Symbol">→</a>
+                    <a id="5178" class="Symbol">(</a><a id="5179" href="Peras.Numbering.html#1729" class="Field">getRoundNumber</a> <a id="5194" class="Symbol">(</a><a id="5195" href="Peras.Chain.html#1526" class="Field">votingRound</a> <a id="5207" href="Peras.SmallStep.html#5154" class="Bound">v</a><a id="5208" class="Symbol">)</a> <a id="5210" href="Data.Nat.Properties.html#3311" class="Function Operator">≟</a> <a id="5212" href="Peras.SmallStep.html#5118" class="Bound">r</a><a id="5213" class="Symbol">)</a>
+              <a id="5229" href="Relation.Nullary.Decidable.Core.html#2609" class="Function Operator">×-dec</a> <a id="5235" class="Symbol">(</a><a id="5236" href="Peras.Chain.html#1628" class="Field">blockHash</a> <a id="5246" href="Peras.SmallStep.html#5154" class="Bound">v</a> <a id="5248" href="Peras.Block.html#3689" class="Function Operator">≟-BlockHash</a> <a id="5260" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="5265" href="Peras.SmallStep.html#5106" class="Bound">b</a><a id="5266" class="Symbol">)}</a>
+            <a id="5281" class="Symbol">)</a> <a id="5283" class="Symbol">(</a><a id="5284" href="Peras.SmallStep.html#3868" class="Bound">votes</a> <a id="5290" href="Peras.SmallStep.html#5098" class="Bound">t</a><a id="5291" class="Symbol">))</a> <a id="5294" href="Data.Nat.Base.html#2259" class="Function Operator">≥</a> <a id="5296" href="Peras.Params.html#263" class="Field">τ</a>
+        <a id="5306" class="Symbol">→</a> <a id="5308" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="5312" class="Symbol">(λ</a> <a id="5315" class="Symbol">{</a><a id="5316" href="Peras.SmallStep.html#5316" class="Bound">c</a> <a id="5318" class="Symbol">→</a>
+            <a id="5332" class="Symbol">(</a><a id="5333" href="Peras.Numbering.html#1729" class="Field">getRoundNumber</a> <a id="5348" class="Symbol">(</a><a id="5349" href="Peras.Block.html#3091" class="Field">round</a> <a id="5355" href="Peras.SmallStep.html#5316" class="Bound">c</a><a id="5356" class="Symbol">)</a> <a id="5358" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="5360" href="Peras.SmallStep.html#5118" class="Bound">r</a><a id="5361" class="Symbol">)</a>
+          <a id="5373" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="5375" class="Symbol">(</a><a id="5376" href="Peras.Block.html#3119" class="Field">blockRef</a> <a id="5385" href="Peras.SmallStep.html#5316" class="Bound">c</a> <a id="5387" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="5389" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="5394" href="Peras.SmallStep.html#5106" class="Bound">b</a><a id="5395" class="Symbol">)</a> <a id="5397" class="Symbol">})</a> <a id="5400" class="Symbol">(</a><a id="5401" href="Peras.SmallStep.html#3912" class="Bound">certs</a> <a id="5407" href="Peras.SmallStep.html#5098" class="Bound">t</a><a id="5408" class="Symbol">)</a>
+</pre>
+In addition to chains the block-tree manages votes and certificates as
+well. The block-tree type is defined as follows:
+<pre class="Agda">  <a id="5544" class="Keyword">record</a> <a id="5551" href="Peras.SmallStep.html#5551" class="Record">TreeType</a> <a id="5560" class="Symbol">(</a><a id="5561" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5563" class="Symbol">:</a> <a id="5565" href="Agda.Primitive.html#388" class="Primitive">Type</a><a id="5569" class="Symbol">)</a> <a id="5571" class="Symbol">:</a> <a id="5573" href="Agda.Primitive.html#388" class="Primitive">Type₁</a> <a id="5579" class="Keyword">where</a>
+
+    <a id="5590" class="Keyword">field</a>
+      <a id="5602" href="Peras.SmallStep.html#5602" class="Field">tree₀</a> <a id="5608" class="Symbol">:</a> <a id="5610" href="Peras.SmallStep.html#5561" class="Bound">T</a>
+      <a id="5618" href="Peras.SmallStep.html#5618" class="Field">newChain</a> <a id="5627" class="Symbol">:</a> <a id="5629" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5631" class="Symbol">→</a> <a id="5633" href="Peras.Chain.html#3842" class="Function">Chain</a> <a id="5639" class="Symbol">→</a> <a id="5641" href="Peras.SmallStep.html#5561" class="Bound">T</a>
+      <a id="5649" href="Peras.SmallStep.html#5649" class="Field">allChains</a> <a id="5659" class="Symbol">:</a> <a id="5661" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5663" class="Symbol">→</a> <a id="5665" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="5670" href="Peras.Chain.html#3842" class="Function">Chain</a>
+      <a id="5682" href="Peras.SmallStep.html#5682" class="Field">preferredChain</a> <a id="5697" class="Symbol">:</a> <a id="5699" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5701" class="Symbol">→</a> <a id="5703" href="Peras.Chain.html#3842" class="Function">Chain</a>
+
+      <a id="5716" href="Peras.SmallStep.html#5716" class="Field">addVote</a> <a id="5724" class="Symbol">:</a> <a id="5726" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5728" class="Symbol">→</a> <a id="5730" href="Peras.Chain.html#1480" class="Record">Vote</a> <a id="5735" class="Symbol">→</a> <a id="5737" href="Peras.SmallStep.html#5561" class="Bound">T</a>
+
+      <a id="5746" href="Peras.SmallStep.html#5746" class="Field">votes</a> <a id="5752" class="Symbol">:</a> <a id="5754" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5756" class="Symbol">→</a> <a id="5758" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="5763" href="Peras.Chain.html#1480" class="Record">Vote</a>
+      <a id="5774" href="Peras.SmallStep.html#5774" class="Field">certs</a> <a id="5780" class="Symbol">:</a> <a id="5782" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="5784" class="Symbol">→</a> <a id="5786" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="5791" href="Peras.Block.html#2992" class="Record">Certificate</a>
+
+    <a id="5808" href="Peras.SmallStep.html#5808" class="Function">cert₀</a> <a id="5814" class="Symbol">:</a> <a id="5816" href="Peras.Block.html#2992" class="Record">Certificate</a>
+    <a id="5832" href="Peras.SmallStep.html#5808" class="Function">cert₀</a> <a id="5838" class="Symbol">=</a> <a id="5840" href="Peras.Block.html#3069" class="InductiveConstructor">MkCertificate</a> <a id="5854" class="Symbol">(</a><a id="5855" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="5869" class="Number">0</a><a id="5870" class="Symbol">)</a> <a id="5872" class="Symbol">(</a><a id="5873" href="Peras.Crypto.html#1472" class="InductiveConstructor">MkHash</a> <a id="5880" href="Peras.Crypto.html#618" class="Postulate">emptyBS</a><a id="5887" class="Symbol">)</a>
+
+    <a id="5894" class="Keyword">field</a>
+      <a id="5906" href="Peras.SmallStep.html#5906" class="Field">is-TreeType</a> <a id="5918" class="Symbol">:</a> <a id="5920" href="Peras.SmallStep.html#3603" class="Record">IsTreeType</a>
+                      <a id="5953" href="Peras.SmallStep.html#5602" class="Field">tree₀</a> <a id="5959" href="Peras.SmallStep.html#5618" class="Field">newChain</a> <a id="5968" href="Peras.SmallStep.html#5649" class="Field">allChains</a> <a id="5978" href="Peras.SmallStep.html#5682" class="Field">preferredChain</a>
+                      <a id="6015" href="Peras.SmallStep.html#5716" class="Field">addVote</a> <a id="6023" href="Peras.SmallStep.html#5746" class="Field">votes</a> <a id="6029" href="Peras.SmallStep.html#5774" class="Field">certs</a> <a id="6035" href="Peras.SmallStep.html#5808" class="Function">cert₀</a>
+
+    <a id="6046" href="Peras.SmallStep.html#6046" class="Function">latestCertOnChain</a> <a id="6064" class="Symbol">:</a> <a id="6066" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6068" class="Symbol">→</a> <a id="6070" href="Peras.Block.html#2992" class="Record">Certificate</a>
+    <a id="6086" href="Peras.SmallStep.html#6046" class="Function">latestCertOnChain</a> <a id="6104" class="Symbol">=</a>
+      <a id="6112" href="Peras.Block.html#3225" class="Function">latestCert</a> <a id="6123" href="Peras.SmallStep.html#5808" class="Function">cert₀</a> <a id="6129" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6131" href="Data.List.Base.html#1878" class="Function">catMaybes</a> <a id="6141" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6143" href="Data.List.Base.html#1631" class="Function">map</a> <a id="6147" href="Peras.Block.html#3471" class="Field">certificate</a> <a id="6159" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6161" href="Peras.SmallStep.html#5682" class="Field">preferredChain</a>
+
+    <a id="6181" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="6196" class="Symbol">:</a> <a id="6198" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6200" class="Symbol">→</a> <a id="6202" href="Peras.Block.html#2992" class="Record">Certificate</a>
+    <a id="6218" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="6233" class="Symbol">=</a> <a id="6235" href="Peras.Block.html#3225" class="Function">latestCert</a> <a id="6246" href="Peras.SmallStep.html#5808" class="Function">cert₀</a> <a id="6252" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6254" href="Peras.SmallStep.html#5774" class="Field">certs</a>
+
+    <a id="6265" href="Peras.SmallStep.html#6265" class="Function">hasCert</a> <a id="6273" class="Symbol">:</a> <a id="6275" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="6287" class="Symbol">→</a> <a id="6289" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6291" class="Symbol">→</a> <a id="6293" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="6302" href="Peras.SmallStep.html#6265" class="Function">hasCert</a> <a id="6310" class="Symbol">(</a><a id="6311" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="6325" href="Peras.SmallStep.html#6325" class="Bound">r</a><a id="6326" class="Symbol">)</a> <a id="6328" class="Symbol">=</a> <a id="6330" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="6334" class="Symbol">((</a><a id="6336" href="Peras.SmallStep.html#6325" class="Bound">r</a> <a id="6338" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡_</a><a id="6340" class="Symbol">)</a> <a id="6342" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6344" href="Peras.Block.html#3144" class="Function">roundNumber</a><a id="6355" class="Symbol">)</a> <a id="6357" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6359" href="Peras.SmallStep.html#5774" class="Field">certs</a>
+
+    <a id="6370" href="Peras.SmallStep.html#6370" class="Function">hasCert?</a> <a id="6379" class="Symbol">:</a> <a id="6381" class="Symbol">(</a><a id="6382" href="Peras.SmallStep.html#6382" class="Bound">r</a> <a id="6384" class="Symbol">:</a> <a id="6386" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a><a id="6397" class="Symbol">)</a> <a id="6399" class="Symbol">(</a><a id="6400" href="Peras.SmallStep.html#6400" class="Bound">t</a> <a id="6402" class="Symbol">:</a> <a id="6404" href="Peras.SmallStep.html#5561" class="Bound">T</a><a id="6405" class="Symbol">)</a> <a id="6407" class="Symbol">→</a> <a id="6409" href="Relation.Nullary.Decidable.Core.html#1485" class="Record">Dec</a> <a id="6413" class="Symbol">(</a><a id="6414" href="Peras.SmallStep.html#6265" class="Function">hasCert</a> <a id="6422" href="Peras.SmallStep.html#6382" class="Bound">r</a> <a id="6424" href="Peras.SmallStep.html#6400" class="Bound">t</a><a id="6425" class="Symbol">)</a>
+    <a id="6431" href="Peras.SmallStep.html#6370" class="Function">hasCert?</a> <a id="6440" class="Symbol">(</a><a id="6441" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="6455" href="Peras.SmallStep.html#6455" class="Bound">r</a><a id="6456" class="Symbol">)</a> <a id="6458" class="Symbol">=</a> <a id="6460" href="Data.List.Relation.Unary.Any.html#2694" class="Function">any?</a> <a id="6465" class="Symbol">((</a><a id="6467" href="Peras.SmallStep.html#6455" class="Bound">r</a> <a id="6469" href="Data.Nat.Properties.html#3311" class="Function Operator">≟_</a><a id="6471" class="Symbol">)</a> <a id="6473" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6475" href="Peras.Block.html#3144" class="Function">roundNumber</a><a id="6486" class="Symbol">)</a> <a id="6488" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6490" href="Peras.SmallStep.html#5774" class="Field">certs</a>
+
+    <a id="6501" href="Peras.SmallStep.html#6501" class="Function">hasVote</a> <a id="6509" class="Symbol">:</a> <a id="6511" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="6523" class="Symbol">→</a> <a id="6525" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6527" class="Symbol">→</a> <a id="6529" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="6538" href="Peras.SmallStep.html#6501" class="Function">hasVote</a> <a id="6546" class="Symbol">(</a><a id="6547" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="6561" href="Peras.SmallStep.html#6561" class="Bound">r</a><a id="6562" class="Symbol">)</a> <a id="6564" class="Symbol">=</a> <a id="6566" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="6570" class="Symbol">((</a><a id="6572" href="Peras.SmallStep.html#6561" class="Bound">r</a> <a id="6574" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡_</a><a id="6576" class="Symbol">)</a> <a id="6578" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6580" href="Peras.Chain.html#1688" class="Function">votingRound&#39;</a><a id="6592" class="Symbol">)</a> <a id="6594" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6596" href="Peras.SmallStep.html#5746" class="Field">votes</a>
+
+    <a id="6607" href="Peras.SmallStep.html#6607" class="Function">hasVote?</a> <a id="6616" class="Symbol">:</a> <a id="6618" class="Symbol">(</a><a id="6619" href="Peras.SmallStep.html#6619" class="Bound">r</a> <a id="6621" class="Symbol">:</a> <a id="6623" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a><a id="6634" class="Symbol">)</a> <a id="6636" class="Symbol">(</a><a id="6637" href="Peras.SmallStep.html#6637" class="Bound">t</a> <a id="6639" class="Symbol">:</a> <a id="6641" href="Peras.SmallStep.html#5561" class="Bound">T</a><a id="6642" class="Symbol">)</a> <a id="6644" class="Symbol">→</a> <a id="6646" href="Relation.Nullary.Decidable.Core.html#1485" class="Record">Dec</a> <a id="6650" class="Symbol">(</a><a id="6651" href="Peras.SmallStep.html#6501" class="Function">hasVote</a> <a id="6659" href="Peras.SmallStep.html#6619" class="Bound">r</a> <a id="6661" href="Peras.SmallStep.html#6637" class="Bound">t</a><a id="6662" class="Symbol">)</a>
+    <a id="6668" href="Peras.SmallStep.html#6607" class="Function">hasVote?</a> <a id="6677" class="Symbol">(</a><a id="6678" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="6692" href="Peras.SmallStep.html#6692" class="Bound">r</a><a id="6693" class="Symbol">)</a> <a id="6695" class="Symbol">=</a> <a id="6697" href="Data.List.Relation.Unary.Any.html#2694" class="Function">any?</a> <a id="6702" class="Symbol">((</a><a id="6704" href="Peras.SmallStep.html#6692" class="Bound">r</a> <a id="6706" href="Data.Nat.Properties.html#3311" class="Function Operator">≟_</a><a id="6708" class="Symbol">)</a> <a id="6710" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6712" href="Peras.Chain.html#1688" class="Function">votingRound&#39;</a><a id="6724" class="Symbol">)</a> <a id="6726" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6728" href="Peras.SmallStep.html#5746" class="Field">votes</a>
+
+    <a id="6739" href="Peras.SmallStep.html#6739" class="Function">preferredChain′</a> <a id="6755" class="Symbol">:</a> <a id="6757" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="6768" class="Symbol">→</a> <a id="6770" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6772" class="Symbol">→</a> <a id="6774" href="Peras.Chain.html#3842" class="Function">Chain</a>
+    <a id="6784" href="Peras.SmallStep.html#6739" class="Function">preferredChain′</a> <a id="6800" class="Symbol">(</a><a id="6801" href="Peras.Numbering.html#779" class="InductiveConstructor">MkSlotNumber</a> <a id="6814" href="Peras.SmallStep.html#6814" class="Bound">sl</a><a id="6816" class="Symbol">)</a> <a id="6818" class="Symbol">=</a>
+      <a id="6826" class="Keyword">let</a> <a id="6830" href="Peras.SmallStep.html#6830" class="Bound">cond</a> <a id="6835" class="Symbol">=</a> <a id="6837" class="Symbol">(</a><a id="6838" href="Data.Nat.Properties.html#6146" class="Function Operator">_≤?</a> <a id="6842" href="Peras.SmallStep.html#6814" class="Bound">sl</a><a id="6844" class="Symbol">)</a> <a id="6846" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6848" href="Peras.Block.html#3610" class="Function">slotNumber&#39;</a>
+      <a id="6866" class="Keyword">in</a> <a id="6869" href="Data.List.Base.html#10878" class="Function">filter</a> <a id="6876" href="Peras.SmallStep.html#6830" class="Bound">cond</a> <a id="6881" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6883" href="Peras.SmallStep.html#5682" class="Field">preferredChain</a>
+
+    <a id="6903" href="Peras.SmallStep.html#6903" class="Function">allBlocks</a> <a id="6913" class="Symbol">:</a> <a id="6915" href="Peras.SmallStep.html#5561" class="Bound">T</a> <a id="6917" class="Symbol">→</a> <a id="6919" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="6924" href="Peras.Block.html#2950" class="Record">Block</a>
+    <a id="6934" href="Peras.SmallStep.html#6903" class="Function">allBlocks</a> <a id="6944" class="Symbol">=</a> <a id="6946" href="Data.List.Base.html#4538" class="Function">concat</a> <a id="6953" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="6955" href="Peras.SmallStep.html#5649" class="Field">allChains</a>
+</pre>
+<h3 id="additional-parameters">Additional parameters</h3>
+<p>In order to define the semantics the following parameters are
+required additionally:</p>
+<ul>
+<li>The type of the block-tree</li>
+<li>adversarialState₀ is the initial adversarial state</li>
+<li>Tx selection function per party and slot number</li>
+<li>The list of parties</li>
+</ul>
+<pre class="Agda">  <a id="7255" class="Keyword">module</a> <a id="7262" href="Peras.SmallStep.html#7262" class="Module">Semantics</a>
+           <a id="7283" class="Symbol">{</a><a id="7284" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="7286" class="Symbol">:</a> <a id="7288" href="Agda.Primitive.html#388" class="Primitive">Type</a><a id="7292" class="Symbol">}</a> <a id="7294" class="Symbol">{</a><a id="7295" href="Peras.SmallStep.html#7295" class="Bound">blockTree</a> <a id="7305" class="Symbol">:</a> <a id="7307" href="Peras.SmallStep.html#5551" class="Record">TreeType</a> <a id="7316" href="Peras.SmallStep.html#7284" class="Bound">T</a><a id="7317" class="Symbol">}</a>
+           <a id="7330" class="Symbol">{</a><a id="7331" href="Peras.SmallStep.html#7331" class="Bound">S</a> <a id="7333" class="Symbol">:</a> <a id="7335" href="Agda.Primitive.html#388" class="Primitive">Type</a><a id="7339" class="Symbol">}</a> <a id="7341" class="Symbol">{</a><a id="7342" href="Peras.SmallStep.html#7342" class="Bound">adversarialState₀</a> <a id="7360" class="Symbol">:</a> <a id="7362" href="Peras.SmallStep.html#7331" class="Bound">S</a><a id="7363" class="Symbol">}</a>
+           <a id="7376" class="Symbol">{</a><a id="7377" href="Peras.SmallStep.html#7377" class="Bound">txSelection</a> <a id="7389" class="Symbol">:</a> <a id="7391" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="7402" class="Symbol">→</a> <a id="7404" href="Peras.Block.html#1249" class="Function">PartyId</a> <a id="7412" class="Symbol">→</a> <a id="7414" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="7419" href="Peras.Block.html#2472" class="Function">Tx</a><a id="7421" class="Symbol">}</a>
+           <a id="7434" class="Symbol">{</a><a id="7435" href="Peras.SmallStep.html#7435" class="Bound">parties</a> <a id="7443" class="Symbol">:</a> <a id="7445" href="Peras.Block.html#2176" class="Function">Parties</a><a id="7452" class="Symbol">}</a> <a id="7454" class="Comment">-- TODO: use parties from blockTrees</a>
+                               <a id="7522" class="Comment">-- i.e. allow dynamic participation</a>
+
+           <a id="7570" class="Keyword">where</a>
+
+    <a id="7581" class="Keyword">open</a> <a id="7586" href="Peras.SmallStep.html#5551" class="Module">TreeType</a> <a id="7595" href="Peras.SmallStep.html#7295" class="Bound">blockTree</a>
+
+    <a id="7610" class="Keyword">instance</a>
+      <a id="7625" href="Peras.SmallStep.html#7625" class="Function">Default-T</a> <a id="7635" class="Symbol">:</a> <a id="7637" href="Prelude.Default.html#100" class="Record">Default</a> <a id="7645" href="Peras.SmallStep.html#7284" class="Bound">T</a>
+      <a id="7653" href="Peras.SmallStep.html#7625" class="Function">Default-T</a> <a id="7663" class="Symbol">.</a><a id="7664" href="Prelude.Default.html#140" class="Field">def</a> <a id="7668" class="Symbol">=</a> <a id="7670" href="Peras.SmallStep.html#5602" class="Function">tree₀</a>
+</pre>
+<h4 id="block-tree-update">Block-tree update</h4>
+<p>Updating the block-tree upon receiving a message for vote and block
+messages.</p>
+<pre class="Agda">    <a id="7795" class="Keyword">data</a> <a id="7800" href="Peras.SmallStep.html#7800" class="Datatype Operator">_[_]→_</a> <a id="7807" class="Symbol">:</a> <a id="7809" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="7811" class="Symbol">→</a> <a id="7813" href="Peras.SmallStep.html#2131" class="Datatype">Message</a> <a id="7821" class="Symbol">→</a> <a id="7823" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="7825" class="Symbol">→</a> <a id="7827" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="7832" class="Keyword">where</a>
+
+      <a id="7845" href="Peras.SmallStep.html#7845" class="InductiveConstructor">VoteReceived</a> <a id="7858" class="Symbol">:</a> <a id="7860" class="Symbol">∀</a> <a id="7862" class="Symbol">{</a><a id="7863" href="Peras.SmallStep.html#7863" class="Bound">v</a> <a id="7865" href="Peras.SmallStep.html#7865" class="Bound">t</a><a id="7866" class="Symbol">}</a> <a id="7868" class="Symbol">→</a>
+          <a id="7880" href="Prelude.InferenceRules.html#45702" class="Function Operator">────────────────────────────</a>
+          <a id="7919" href="Peras.SmallStep.html#7865" class="Bound">t</a> <a id="7921" href="Peras.SmallStep.html#7800" class="Datatype Operator">[</a> <a id="7923" href="Peras.SmallStep.html#2187" class="InductiveConstructor">VoteMsg</a> <a id="7931" href="Peras.SmallStep.html#7863" class="Bound">v</a> <a id="7933" href="Peras.SmallStep.html#7800" class="Datatype Operator">]→</a> <a id="7936" href="Peras.SmallStep.html#5716" class="Function">addVote</a> <a id="7944" href="Peras.SmallStep.html#7865" class="Bound">t</a> <a id="7946" href="Peras.SmallStep.html#7863" class="Bound">v</a>
+
+      <a id="7955" href="Peras.SmallStep.html#7955" class="InductiveConstructor">ChainReceived</a> <a id="7969" class="Symbol">:</a> <a id="7971" class="Symbol">∀</a> <a id="7973" class="Symbol">{</a><a id="7974" href="Peras.SmallStep.html#7974" class="Bound">c</a> <a id="7976" href="Peras.SmallStep.html#7976" class="Bound">t</a><a id="7977" class="Symbol">}</a> <a id="7979" class="Symbol">→</a>
+          <a id="7991" href="Prelude.InferenceRules.html#45468" class="Function Operator">──────────────────────────────</a>
+          <a id="8032" href="Peras.SmallStep.html#7976" class="Bound">t</a> <a id="8034" href="Peras.SmallStep.html#7800" class="Datatype Operator">[</a> <a id="8036" href="Peras.SmallStep.html#2156" class="InductiveConstructor">ChainMsg</a> <a id="8045" href="Peras.SmallStep.html#7974" class="Bound">c</a> <a id="8047" href="Peras.SmallStep.html#7800" class="Datatype Operator">]→</a> <a id="8050" href="Peras.SmallStep.html#5618" class="Function">newChain</a> <a id="8059" href="Peras.SmallStep.html#7976" class="Bound">t</a> <a id="8061" href="Peras.SmallStep.html#7974" class="Bound">c</a>
+</pre>
+<h4 id="vote-in-round">Vote in round</h4>
+<p>When does a party vote in a round? The protocol expects regular
+voting, i.e. if in the previous round a quorum has been achieved or that
+voting resumes after a cool-down phase.</p>
+<h4 id="blockselection">BlockSelection</h4>
+<pre class="Agda">    <a id="8297" href="Peras.SmallStep.html#8297" class="Function">BlockSelection</a> <a id="8312" class="Symbol">:</a> <a id="8314" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="8325" class="Symbol">→</a> <a id="8327" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="8329" class="Symbol">→</a> <a id="8331" href="Agda.Builtin.Maybe.html#135" class="Datatype">Maybe</a> <a id="8337" href="Peras.Block.html#2950" class="Record">Block</a>
+    <a id="8347" href="Peras.SmallStep.html#8297" class="Function">BlockSelection</a> <a id="8362" class="Symbol">(</a><a id="8363" href="Peras.Numbering.html#779" class="InductiveConstructor">MkSlotNumber</a> <a id="8376" href="Peras.SmallStep.html#8376" class="Bound">s</a><a id="8377" class="Symbol">)</a> <a id="8379" class="Symbol">=</a>
+      <a id="8387" href="Data.List.Base.html#8635" class="Function">head</a> <a id="8392" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="8394" href="Data.List.Base.html#10878" class="Function">filter</a> <a id="8401" class="Symbol">(λ</a> <a id="8404" class="Symbol">{</a><a id="8405" href="Peras.SmallStep.html#8405" class="Bound">b</a> <a id="8407" class="Symbol">→</a> <a id="8409" class="Symbol">(</a><a id="8410" href="Peras.Block.html#3610" class="Function">slotNumber&#39;</a> <a id="8422" href="Peras.SmallStep.html#8405" class="Bound">b</a><a id="8423" class="Symbol">)</a> <a id="8425" href="Data.Nat.Properties.html#6146" class="Function Operator">≤?</a> <a id="8428" class="Symbol">(</a><a id="8429" href="Peras.SmallStep.html#8376" class="Bound">s</a> <a id="8431" href="Data.Nat.Base.html#4456" class="Primitive Operator">∸</a> <a id="8433" href="Peras.Params.html#235" class="Field">L</a><a id="8434" class="Symbol">)})</a> <a id="8438" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="8440" href="Peras.SmallStep.html#5682" class="Function">preferredChain</a>
+</pre>
+<pre class="Agda">    <a id="8471" href="Peras.SmallStep.html#8471" class="Function">ChainExtends</a> <a id="8484" class="Symbol">:</a> <a id="8486" href="Agda.Builtin.Maybe.html#135" class="Datatype">Maybe</a> <a id="8492" href="Peras.Block.html#2950" class="Record">Block</a> <a id="8498" class="Symbol">→</a> <a id="8500" href="Peras.Block.html#2992" class="Record">Certificate</a> <a id="8512" class="Symbol">→</a> <a id="8514" href="Peras.Chain.html#3842" class="Function">Chain</a> <a id="8520" class="Symbol">→</a> <a id="8522" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="8531" href="Peras.SmallStep.html#8471" class="Function">ChainExtends</a> <a id="8544" href="Agda.Builtin.Maybe.html#194" class="InductiveConstructor">nothing</a> <a id="8552" class="Symbol">_</a> <a id="8554" class="Symbol">_</a> <a id="8556" class="Symbol">=</a> <a id="8558" href="Data.Empty.html#895" class="Function">⊥</a>
+    <a id="8564" href="Peras.SmallStep.html#8471" class="Function">ChainExtends</a> <a id="8577" class="Symbol">(</a><a id="8578" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="8583" href="Peras.SmallStep.html#8583" class="Bound">b</a><a id="8584" class="Symbol">)</a> <a id="8586" href="Peras.SmallStep.html#8586" class="Bound">c</a> <a id="8588" class="Symbol">=</a>
+      <a id="8596" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="8600" class="Symbol">(λ</a> <a id="8603" href="Peras.SmallStep.html#8603" class="Bound">block</a> <a id="8609" class="Symbol">→</a> <a id="8611" class="Symbol">(</a><a id="8612" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="8617" href="Peras.SmallStep.html#8603" class="Bound">block</a> <a id="8623" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="8625" href="Peras.Block.html#3119" class="Field">blockRef</a> <a id="8634" href="Peras.SmallStep.html#8586" class="Bound">c</a><a id="8635" class="Symbol">))</a>
+        <a id="8646" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="8648" href="Data.List.Base.html#10622" class="Function">L.dropWhile</a> <a id="8660" class="Symbol">(λ</a> <a id="8663" href="Peras.SmallStep.html#8663" class="Bound">block&#39;</a> <a id="8670" class="Symbol">→</a> <a id="8672" href="Relation.Nullary.Decidable.Core.html#2517" class="Function">¬?</a> <a id="8675" class="Symbol">(</a><a id="8676" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="8681" href="Peras.SmallStep.html#8663" class="Bound">block&#39;</a> <a id="8688" href="Peras.Block.html#3689" class="Function Operator">≟-BlockHash</a> <a id="8700" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="8705" href="Peras.SmallStep.html#8583" class="Bound">b</a><a id="8706" class="Symbol">))</a>
+</pre>
+<h4 id="voting-rules">Voting rules</h4>
+VR-1A: A party has seen a certificate cert-r−1 for round r−1
+<pre class="Agda">    <a id="8805" href="Peras.SmallStep.html#8805" class="Function">VotingRule-1A</a> <a id="8819" class="Symbol">:</a> <a id="8821" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="8833" class="Symbol">→</a> <a id="8835" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="8837" class="Symbol">→</a> <a id="8839" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="8848" href="Peras.SmallStep.html#8805" class="Function">VotingRule-1A</a> <a id="8862" class="Symbol">(</a><a id="8863" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="8877" href="Peras.SmallStep.html#8877" class="Bound">r</a><a id="8878" class="Symbol">)</a> <a id="8880" href="Peras.SmallStep.html#8880" class="Bound">t</a> <a id="8882" class="Symbol">=</a> <a id="8884" href="Peras.SmallStep.html#8877" class="Bound">r</a> <a id="8886" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="8888" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="8900" class="Symbol">(</a><a id="8901" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="8916" href="Peras.SmallStep.html#8880" class="Bound">t</a><a id="8917" class="Symbol">)</a> <a id="8919" href="Agda.Builtin.Nat.html#336" class="Primitive Operator">+</a> <a id="8921" class="Number">1</a>
+</pre>
+VR-1B: The extends the block certified by cert-r−1,
+<pre class="Agda">    <a id="8992" href="Peras.SmallStep.html#8992" class="Function">VotingRule-1B</a> <a id="9006" class="Symbol">:</a> <a id="9008" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="9019" class="Symbol">→</a> <a id="9021" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="9023" class="Symbol">→</a> <a id="9025" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="9034" href="Peras.SmallStep.html#8992" class="Function">VotingRule-1B</a> <a id="9048" href="Peras.SmallStep.html#9048" class="Bound">s</a> <a id="9050" href="Peras.SmallStep.html#9050" class="Bound">t</a> <a id="9052" class="Symbol">=</a>
+      <a id="9060" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="9064" class="Symbol">(</a><a id="9065" href="Peras.SmallStep.html#8471" class="Function">ChainExtends</a> <a id="9078" class="Symbol">(</a><a id="9079" href="Peras.SmallStep.html#8297" class="Function">BlockSelection</a> <a id="9094" href="Peras.SmallStep.html#9048" class="Bound">s</a> <a id="9096" href="Peras.SmallStep.html#9050" class="Bound">t</a><a id="9097" class="Symbol">)</a> <a id="9099" class="Symbol">(</a><a id="9100" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="9115" href="Peras.SmallStep.html#9050" class="Bound">t</a><a id="9116" class="Symbol">))</a> <a id="9119" class="Symbol">(</a><a id="9120" href="Peras.SmallStep.html#5649" class="Function">allChains</a> <a id="9130" href="Peras.SmallStep.html#9050" class="Bound">t</a><a id="9131" class="Symbol">)</a>
+</pre>
+VR-1: Both VR-1A and VR-1B hold
+<pre class="Agda">    <a id="9181" href="Peras.SmallStep.html#9181" class="Function">VotingRule-1</a> <a id="9194" class="Symbol">:</a> <a id="9196" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="9207" class="Symbol">→</a> <a id="9209" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="9211" class="Symbol">→</a> <a id="9213" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="9222" href="Peras.SmallStep.html#9181" class="Function">VotingRule-1</a> <a id="9235" href="Peras.SmallStep.html#9235" class="Bound">s</a> <a id="9237" href="Peras.SmallStep.html#9237" class="Bound">t</a> <a id="9239" class="Symbol">=</a>
+        <a id="9249" href="Peras.SmallStep.html#8805" class="Function">VotingRule-1A</a> <a id="9263" class="Symbol">(</a><a id="9264" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="9272" href="Peras.SmallStep.html#9235" class="Bound">s</a><a id="9273" class="Symbol">)</a> <a id="9275" href="Peras.SmallStep.html#9237" class="Bound">t</a>
+      <a id="9283" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="9285" href="Peras.SmallStep.html#8992" class="Function">VotingRule-1B</a> <a id="9299" href="Peras.SmallStep.html#9235" class="Bound">s</a> <a id="9301" href="Peras.SmallStep.html#9237" class="Bound">t</a>
+</pre>
+VR-2A: The last certificate a party has seen is from a round at least R
+rounds back
+<pre class="Agda">    <a id="9403" href="Peras.SmallStep.html#9403" class="Function">VotingRule-2A</a> <a id="9417" class="Symbol">:</a> <a id="9419" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="9431" class="Symbol">→</a> <a id="9433" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="9435" class="Symbol">→</a> <a id="9437" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="9446" href="Peras.SmallStep.html#9403" class="Function">VotingRule-2A</a> <a id="9460" class="Symbol">(</a><a id="9461" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="9475" href="Peras.SmallStep.html#9475" class="Bound">r</a><a id="9476" class="Symbol">)</a> <a id="9478" href="Peras.SmallStep.html#9478" class="Bound">t</a> <a id="9480" class="Symbol">=</a> <a id="9482" href="Peras.SmallStep.html#9475" class="Bound">r</a> <a id="9484" href="Data.Nat.Base.html#2259" class="Function Operator">≥</a> <a id="9486" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="9498" class="Symbol">(</a><a id="9499" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="9514" href="Peras.SmallStep.html#9478" class="Bound">t</a><a id="9515" class="Symbol">)</a> <a id="9517" href="Agda.Builtin.Nat.html#336" class="Primitive Operator">+</a> <a id="9519" href="Peras.Params.html#221" class="Field">R</a>
+</pre>
+VR-2B: The last certificate included in a party’s current chain is from
+a round exactly c⋆K rounds ago for some c : ℕ, c ≥ 0 <!--
+<pre class="Agda">    <a id="9667" href="Peras.SmallStep.html#9667" class="Function Operator">_mod_</a> <a id="9673" class="Symbol">:</a> <a id="9675" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a> <a id="9677" class="Symbol">→</a> <a id="9679" class="Symbol">(</a><a id="9680" href="Peras.SmallStep.html#9680" class="Bound">n</a> <a id="9682" class="Symbol">:</a> <a id="9684" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a><a id="9685" class="Symbol">)</a> <a id="9687" class="Symbol">→</a> <a id="9689" class="Symbol">⦃</a> <a id="9691" href="Data.Nat.Base.html#3260" class="Record">NonZero</a> <a id="9699" href="Peras.SmallStep.html#9680" class="Bound">n</a> <a id="9701" class="Symbol">⦄</a> <a id="9703" class="Symbol">→</a> <a id="9705" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+    <a id="9711" href="Peras.SmallStep.html#9667" class="Function Operator">_mod_</a> <a id="9717" href="Peras.SmallStep.html#9717" class="Bound">a</a> <a id="9719" href="Peras.SmallStep.html#9719" class="Bound">b</a> <a id="9721" class="Symbol">⦃</a> <a id="9723" href="Peras.SmallStep.html#9723" class="Bound">prf</a> <a id="9727" class="Symbol">⦄</a> <a id="9729" class="Symbol">=</a> <a id="9731" href="Data.Nat.Base.html#7279" class="Function Operator">_%_</a> <a id="9735" href="Peras.SmallStep.html#9717" class="Bound">a</a> <a id="9737" href="Peras.SmallStep.html#9719" class="Bound">b</a> <a id="9739" class="Symbol">⦃</a> <a id="9741" href="Peras.SmallStep.html#9723" class="Bound">prf</a> <a id="9745" class="Symbol">⦄</a>
+</pre>-->
+<pre class="Agda">    <a id="9767" href="Peras.SmallStep.html#9767" class="Function">VotingRule-2B</a> <a id="9781" class="Symbol">:</a> <a id="9783" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="9795" class="Symbol">→</a> <a id="9797" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="9799" class="Symbol">→</a> <a id="9801" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="9810" href="Peras.SmallStep.html#9767" class="Function">VotingRule-2B</a> <a id="9824" class="Symbol">(</a><a id="9825" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="9839" href="Peras.SmallStep.html#9839" class="Bound">r</a><a id="9840" class="Symbol">)</a> <a id="9842" href="Peras.SmallStep.html#9842" class="Bound">t</a> <a id="9844" class="Symbol">=</a>
+        <a id="9854" href="Peras.SmallStep.html#9839" class="Bound">r</a> <a id="9856" href="Data.Nat.Base.html#2289" class="Function Operator">&gt;</a> <a id="9858" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="9870" class="Symbol">(</a><a id="9871" href="Peras.SmallStep.html#6046" class="Function">latestCertOnChain</a> <a id="9889" href="Peras.SmallStep.html#9842" class="Bound">t</a><a id="9890" class="Symbol">)</a>
+      <a id="9898" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="9900" href="Peras.SmallStep.html#9839" class="Bound">r</a> <a id="9902" href="Peras.SmallStep.html#9667" class="Function Operator">mod</a> <a id="9906" href="Peras.Params.html#207" class="Field">K</a> <a id="9908" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="9910" class="Symbol">(</a><a id="9911" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="9923" class="Symbol">(</a><a id="9924" href="Peras.SmallStep.html#6046" class="Function">latestCertOnChain</a> <a id="9942" href="Peras.SmallStep.html#9842" class="Bound">t</a><a id="9943" class="Symbol">))</a> <a id="9946" href="Peras.SmallStep.html#9667" class="Function Operator">mod</a> <a id="9950" href="Peras.Params.html#207" class="Field">K</a>
+</pre>
+VR-2: Both VR-2A and VR-2B hold
+<pre class="Agda">    <a id="10000" href="Peras.SmallStep.html#10000" class="Function">VotingRule-2</a> <a id="10013" class="Symbol">:</a> <a id="10015" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="10027" class="Symbol">→</a> <a id="10029" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="10031" class="Symbol">→</a> <a id="10033" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="10042" href="Peras.SmallStep.html#10000" class="Function">VotingRule-2</a> <a id="10055" href="Peras.SmallStep.html#10055" class="Bound">r</a> <a id="10057" href="Peras.SmallStep.html#10057" class="Bound">t</a> <a id="10059" class="Symbol">=</a>
+        <a id="10069" href="Peras.SmallStep.html#9403" class="Function">VotingRule-2A</a> <a id="10083" href="Peras.SmallStep.html#10055" class="Bound">r</a> <a id="10085" href="Peras.SmallStep.html#10057" class="Bound">t</a>
+      <a id="10093" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="10095" href="Peras.SmallStep.html#9767" class="Function">VotingRule-2B</a> <a id="10109" href="Peras.SmallStep.html#10055" class="Bound">r</a> <a id="10111" href="Peras.SmallStep.html#10057" class="Bound">t</a>
+</pre>
+If either VR-1A and VR-1B or VR-2A and VR-2B hold, voting is expected
+<pre class="Agda">    <a id="10199" href="Peras.SmallStep.html#10199" class="Function">VotingRule</a> <a id="10210" class="Symbol">:</a> <a id="10212" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="10223" class="Symbol">→</a> <a id="10225" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="10227" class="Symbol">→</a> <a id="10229" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="10238" href="Peras.SmallStep.html#10199" class="Function">VotingRule</a> <a id="10249" href="Peras.SmallStep.html#10249" class="Bound">s</a> <a id="10251" href="Peras.SmallStep.html#10251" class="Bound">t</a> <a id="10253" class="Symbol">=</a>
+        <a id="10263" href="Peras.SmallStep.html#9181" class="Function">VotingRule-1</a> <a id="10276" href="Peras.SmallStep.html#10249" class="Bound">s</a> <a id="10278" href="Peras.SmallStep.html#10251" class="Bound">t</a>
+      <a id="10286" href="Data.Sum.Base.html#625" class="Datatype Operator">⊎</a> <a id="10288" href="Peras.SmallStep.html#10000" class="Function">VotingRule-2</a> <a id="10301" class="Symbol">(</a><a id="10302" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="10310" href="Peras.SmallStep.html#10249" class="Bound">s</a><a id="10311" class="Symbol">)</a> <a id="10313" href="Peras.SmallStep.html#10251" class="Bound">t</a>
+</pre>
+<h3 id="state">State</h3>
+<p>The small-step semantics rely on a global state, which consists of
+the following fields:</p>
+<ul>
+<li>Current slot of the system</li>
+<li>Map with local state per party</li>
+<li>All the messages that have been sent but not yet been delivered</li>
+<li>All the messages that have been sent</li>
+<li>Adversarial state</li>
+</ul>
+<pre class="Agda">    <a id="10620" class="Keyword">record</a> <a id="10627" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="10633" class="Symbol">:</a> <a id="10635" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="10640" class="Keyword">where</a>
+      <a id="10652" class="Keyword">constructor</a> <a id="10664" href="Peras.SmallStep.html#10664" class="InductiveConstructor Operator">⟦_,_,_,_,_⟧</a>
+      <a id="10682" class="Keyword">field</a>
+        <a id="10696" href="Peras.SmallStep.html#10696" class="Field">clock</a> <a id="10702" class="Symbol">:</a> <a id="10704" href="Peras.Numbering.html#742" class="Record">SlotNumber</a>
+        <a id="10723" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="10734" class="Symbol">:</a> <a id="10736" href="Prelude.AssocList.html#211" class="Function">AssocList</a> <a id="10746" href="Peras.Block.html#1249" class="Function">PartyId</a> <a id="10754" href="Peras.SmallStep.html#7284" class="Bound">T</a>
+        <a id="10764" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="10773" class="Symbol">:</a> <a id="10775" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="10780" href="Peras.SmallStep.html#2769" class="Record">Envelope</a>
+        <a id="10797" href="Peras.SmallStep.html#10797" class="Field">history</a> <a id="10805" class="Symbol">:</a> <a id="10807" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="10812" href="Peras.SmallStep.html#2131" class="Datatype">Message</a>
+        <a id="10828" href="Peras.SmallStep.html#10828" class="Field">adversarialState</a> <a id="10845" class="Symbol">:</a> <a id="10847" href="Peras.SmallStep.html#7331" class="Bound">S</a>
+
+      <a id="10856" href="Peras.SmallStep.html#10856" class="Function">blockTrees&#39;</a> <a id="10868" class="Symbol">:</a> <a id="10870" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="10875" href="Peras.SmallStep.html#7284" class="Bound">T</a>
+      <a id="10883" href="Peras.SmallStep.html#10856" class="Function">blockTrees&#39;</a> <a id="10895" class="Symbol">=</a> <a id="10897" href="Data.List.Base.html#1631" class="Function">map</a> <a id="10901" href="Data.Product.Base.html#650" class="Field">proj₂</a> <a id="10907" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a>
+
+      <a id="10925" href="Peras.SmallStep.html#10925" class="Function">v-rnd</a> <a id="10931" class="Symbol">:</a> <a id="10933" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a>
+      <a id="10951" href="Peras.SmallStep.html#10925" class="Function">v-rnd</a> <a id="10957" class="Symbol">=</a> <a id="10959" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="10967" href="Peras.SmallStep.html#10696" class="Field">clock</a>
+
+      <a id="10980" href="Peras.SmallStep.html#10980" class="Function">v-rnd&#39;</a> <a id="10987" class="Symbol">:</a> <a id="10989" href="Agda.Builtin.Nat.html#203" class="Datatype">ℕ</a>
+      <a id="10997" href="Peras.SmallStep.html#10980" class="Function">v-rnd&#39;</a> <a id="11004" class="Symbol">=</a> <a id="11006" href="Peras.Numbering.html#1729" class="Field">getRoundNumber</a> <a id="11021" href="Peras.SmallStep.html#10925" class="Function">v-rnd</a>
+</pre>
+<h4 id="progress">Progress</h4>
+Rather than keeping track of progress, we introduce a predicate stating
+that all messages that are not delayed have been delivered. This is a
+precondition that must hold before transitioning to the next slot.
+<pre class="Agda">    <a id="11267" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="11275" class="Symbol">:</a> <a id="11277" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="11283" class="Symbol">→</a> <a id="11285" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="11294" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="11302" class="Symbol">=</a> <a id="11304" href="Data.List.Relation.Unary.All.html#1627" class="Datatype">All</a> <a id="11308" class="Symbol">(λ</a> <a id="11311" class="Symbol">{</a> <a id="11313" href="Peras.SmallStep.html#11313" class="Bound">z</a> <a id="11315" class="Symbol">→</a> <a id="11317" href="Peras.SmallStep.html#2913" class="Field">delay</a> <a id="11323" href="Peras.SmallStep.html#11313" class="Bound">z</a> <a id="11325" href="Relation.Binary.PropositionalEquality.Core.html#858" class="Function Operator">≢</a> <a id="11327" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a> <a id="11329" class="Symbol">})</a> <a id="11332" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="11334" href="Peras.SmallStep.html#10764" class="Field">messages</a>
+      <a id="11349" class="Keyword">where</a> <a id="11355" class="Keyword">open</a> <a id="11360" href="Peras.SmallStep.html#10627" class="Module">State</a>
+</pre>
+Predicate for a global state stating that the current slot is the last
+slot of a voting round.
+<pre class="Agda">    <a id="11477" href="Peras.SmallStep.html#11477" class="Function">LastSlotInRound</a> <a id="11493" class="Symbol">:</a> <a id="11495" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="11501" class="Symbol">→</a> <a id="11503" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="11512" href="Peras.SmallStep.html#11477" class="Function">LastSlotInRound</a> <a id="11528" href="Peras.SmallStep.html#11528" class="Bound">M</a> <a id="11530" class="Symbol">=</a>
+      <a id="11538" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="11542" class="Symbol">(</a><a id="11543" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="11547" class="Symbol">(</a><a id="11548" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="11562" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="11567" class="Symbol">))</a> <a id="11570" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="11572" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="11576" class="Symbol">(</a><a id="11577" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="11581" class="Symbol">(</a><a id="11582" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="11596" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="11601" class="Symbol">))</a>
+      <a id="11610" class="Keyword">where</a> <a id="11616" class="Keyword">open</a> <a id="11621" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="11627" href="Peras.SmallStep.html#11528" class="Bound">M</a>
+</pre>
+<pre class="Agda">    <a id="11645" href="Peras.SmallStep.html#11645" class="Function">LastSlotInRound?</a> <a id="11662" class="Symbol">:</a> <a id="11664" class="Symbol">(</a><a id="11665" href="Peras.SmallStep.html#11665" class="Bound">s</a> <a id="11667" class="Symbol">:</a> <a id="11669" href="Peras.SmallStep.html#10627" class="Record">State</a><a id="11674" class="Symbol">)</a> <a id="11676" class="Symbol">→</a> <a id="11678" href="Relation.Nullary.Decidable.Core.html#1485" class="Record">Dec</a> <a id="11682" class="Symbol">(</a><a id="11683" href="Peras.SmallStep.html#11477" class="Function">LastSlotInRound</a> <a id="11699" href="Peras.SmallStep.html#11665" class="Bound">s</a><a id="11700" class="Symbol">)</a>
+    <a id="11706" href="Peras.SmallStep.html#11645" class="Function">LastSlotInRound?</a> <a id="11723" href="Peras.SmallStep.html#11723" class="Bound">M</a> <a id="11725" class="Symbol">=</a>
+      <a id="11733" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="11737" class="Symbol">(</a><a id="11738" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="11742" class="Symbol">(</a><a id="11743" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="11757" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="11762" class="Symbol">))</a> <a id="11765" href="Data.Nat.Properties.html#3311" class="Function Operator">≟</a> <a id="11767" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="11771" class="Symbol">(</a><a id="11772" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="11776" class="Symbol">(</a><a id="11777" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="11791" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="11796" class="Symbol">))</a>
+      <a id="11805" class="Keyword">where</a> <a id="11811" class="Keyword">open</a> <a id="11816" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="11822" href="Peras.SmallStep.html#11723" class="Bound">M</a>
+</pre>
+Predicate for a global state stating that the next slot will be in a new
+voting round.
+<pre class="Agda">    <a id="11927" href="Peras.SmallStep.html#11927" class="Function">NextSlotInSameRound</a> <a id="11947" class="Symbol">:</a> <a id="11949" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="11955" class="Symbol">→</a> <a id="11957" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="11966" href="Peras.SmallStep.html#11927" class="Function">NextSlotInSameRound</a> <a id="11986" href="Peras.SmallStep.html#11986" class="Bound">M</a> <a id="11988" class="Symbol">=</a>
+      <a id="11996" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="12000" class="Symbol">(</a><a id="12001" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="12015" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="12020" class="Symbol">)</a> <a id="12022" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="12024" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="12028" class="Symbol">(</a><a id="12029" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="12033" class="Symbol">(</a><a id="12034" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="12048" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="12053" class="Symbol">))</a>
+      <a id="12062" class="Keyword">where</a> <a id="12068" class="Keyword">open</a> <a id="12073" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="12079" href="Peras.SmallStep.html#11986" class="Bound">M</a>
+</pre>
+<pre class="Agda">    <a id="12097" href="Peras.SmallStep.html#12097" class="Function">NextSlotInSameRound?</a> <a id="12118" class="Symbol">:</a> <a id="12120" class="Symbol">(</a><a id="12121" href="Peras.SmallStep.html#12121" class="Bound">s</a> <a id="12123" class="Symbol">:</a> <a id="12125" href="Peras.SmallStep.html#10627" class="Record">State</a><a id="12130" class="Symbol">)</a> <a id="12132" class="Symbol">→</a> <a id="12134" href="Relation.Nullary.Decidable.Core.html#1485" class="Record">Dec</a> <a id="12138" class="Symbol">(</a><a id="12139" href="Peras.SmallStep.html#11927" class="Function">NextSlotInSameRound</a> <a id="12159" href="Peras.SmallStep.html#12121" class="Bound">s</a><a id="12160" class="Symbol">)</a>
+    <a id="12166" href="Peras.SmallStep.html#12097" class="Function">NextSlotInSameRound?</a> <a id="12187" href="Peras.SmallStep.html#12187" class="Bound">M</a> <a id="12189" class="Symbol">=</a>
+      <a id="12197" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="12201" class="Symbol">(</a><a id="12202" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="12216" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="12221" class="Symbol">)</a> <a id="12223" href="Data.Nat.Properties.html#3311" class="Function Operator">≟</a> <a id="12225" href="Peras.Chain.html#5021" class="Function">rnd</a> <a id="12229" class="Symbol">(</a><a id="12230" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="12234" class="Symbol">(</a><a id="12235" href="Peras.Numbering.html#800" class="Field">getSlotNumber</a> <a id="12249" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="12254" class="Symbol">))</a>
+      <a id="12263" class="Keyword">where</a> <a id="12269" class="Keyword">open</a> <a id="12274" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="12280" href="Peras.SmallStep.html#12187" class="Bound">M</a>
+</pre>
+<p>Predicate for a global state asserting that parties of the voting
+committee for a the current voting round have voted. This is needed as a
+condition when transitioning from one voting round to another.</p>
+<strong>TODO</strong>: Properly define the condition for required votes
+<pre class="Agda">    <a id="12560" href="Peras.SmallStep.html#12560" class="Function">RequiredVotes</a> <a id="12574" class="Symbol">:</a> <a id="12576" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="12582" class="Symbol">→</a> <a id="12584" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+    <a id="12593" href="Peras.SmallStep.html#12560" class="Function">RequiredVotes</a> <a id="12607" href="Peras.SmallStep.html#12607" class="Bound">M</a> <a id="12609" class="Symbol">=</a>
+         <a id="12620" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="12624" class="Symbol">(</a><a id="12625" href="Peras.SmallStep.html#10199" class="Function">VotingRule</a> <a id="12636" href="Peras.SmallStep.html#10696" class="Field">clock</a> <a id="12642" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="12644" href="Data.Product.Base.html#650" class="Field">proj₂</a><a id="12649" class="Symbol">)</a> <a id="12651" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a>
+       <a id="12669" class="Symbol">→</a> <a id="12671" href="Data.List.Relation.Unary.Any.html#1163" class="Datatype">Any</a> <a id="12675" class="Symbol">(</a><a id="12676" href="Peras.SmallStep.html#6501" class="Function">hasVote</a> <a id="12684" class="Symbol">(</a><a id="12685" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="12693" href="Peras.SmallStep.html#10696" class="Field">clock</a><a id="12698" class="Symbol">)</a> <a id="12700" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="12702" href="Data.Product.Base.html#650" class="Field">proj₂</a><a id="12707" class="Symbol">)</a> <a id="12709" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a>
+      <a id="12726" class="Keyword">where</a> <a id="12732" class="Keyword">open</a> <a id="12737" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="12743" href="Peras.SmallStep.html#12607" class="Bound">M</a>
+</pre>
+Ticking the global clock increments the slot number and decrements the
+delay of all the messages in the message buffer.
+<pre class="Agda">    <a id="12881" href="Peras.SmallStep.html#12881" class="Function">tick</a> <a id="12886" class="Symbol">:</a> <a id="12888" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="12894" class="Symbol">→</a> <a id="12896" href="Peras.SmallStep.html#10627" class="Record">State</a>
+    <a id="12906" href="Peras.SmallStep.html#12881" class="Function">tick</a> <a id="12911" href="Peras.SmallStep.html#12911" class="Bound">M</a> <a id="12913" class="Symbol">=</a>
+      <a id="12921" class="Keyword">record</a> <a id="12928" href="Peras.SmallStep.html#12911" class="Bound">M</a>
+        <a id="12938" class="Symbol">{</a> <a id="12940" href="Peras.SmallStep.html#10696" class="Field">clock</a> <a id="12946" class="Symbol">=</a> <a id="12948" href="Peras.Numbering.html#821" class="Function">next</a> <a id="12953" href="Peras.SmallStep.html#10696" class="Field">clock</a>
+        <a id="12967" class="Symbol">;</a> <a id="12969" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="12978" class="Symbol">=</a>
+            <a id="12992" href="Data.List.Base.html#1631" class="Function">map</a> <a id="12996" class="Symbol">(λ</a> <a id="12999" class="Keyword">where</a> <a id="13005" href="Peras.SmallStep.html#13005" class="Bound">e</a> <a id="13007" class="Symbol">→</a> <a id="13009" class="Keyword">record</a> <a id="13016" href="Peras.SmallStep.html#13005" class="Bound">e</a> <a id="13018" class="Symbol">{</a> <a id="13020" href="Peras.SmallStep.html#2913" class="Field">delay</a> <a id="13026" class="Symbol">=</a> <a id="13028" href="Data.Fin.Base.html#6461" class="Function">pred</a> <a id="13033" class="Symbol">(</a><a id="13034" href="Peras.SmallStep.html#2913" class="Field">delay</a> <a id="13040" href="Peras.SmallStep.html#13005" class="Bound">e</a><a id="13041" class="Symbol">)</a> <a id="13043" class="Symbol">})</a>
+              <a id="13060" href="Peras.SmallStep.html#10764" class="Field">messages</a>
+        <a id="13077" class="Symbol">}</a>
+      <a id="13085" class="Keyword">where</a> <a id="13091" class="Keyword">open</a> <a id="13096" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="13102" href="Peras.SmallStep.html#12911" class="Bound">M</a>
+</pre>
+Updating the global state inserting the updated block-tree for a given
+party, adding messages to the message buffer for the other parties and
+appending the history
+<pre class="Agda">    <a id="13284" href="Peras.SmallStep.html#13284" class="Function Operator">_,_,_,_⇑_</a> <a id="13294" class="Symbol">:</a> <a id="13296" href="Peras.SmallStep.html#2131" class="Datatype">Message</a> <a id="13304" class="Symbol">→</a> <a id="13306" href="Peras.SmallStep.html#2557" class="Function">Delay</a> <a id="13312" class="Symbol">→</a> <a id="13314" href="Peras.Block.html#1249" class="Function">PartyId</a> <a id="13322" class="Symbol">→</a> <a id="13324" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="13326" class="Symbol">→</a> <a id="13328" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="13334" class="Symbol">→</a> <a id="13336" href="Peras.SmallStep.html#10627" class="Record">State</a>
+    <a id="13346" href="Peras.SmallStep.html#13346" class="Bound">m</a> <a id="13348" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13350" href="Peras.SmallStep.html#13350" class="Bound">d</a> <a id="13352" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13354" href="Peras.SmallStep.html#13354" class="Bound">p</a> <a id="13356" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13358" href="Peras.SmallStep.html#13358" class="Bound">l</a> <a id="13360" href="Peras.SmallStep.html#13284" class="Function Operator">⇑</a> <a id="13362" href="Peras.SmallStep.html#13362" class="Bound">M</a> <a id="13364" class="Symbol">=</a>
+      <a id="13372" class="Keyword">record</a> <a id="13379" href="Peras.SmallStep.html#13362" class="Bound">M</a>
+        <a id="13389" class="Symbol">{</a> <a id="13391" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="13402" class="Symbol">=</a> <a id="13404" href="Prelude.AssocList.html#1372" class="Function">set</a> <a id="13408" href="Peras.SmallStep.html#13354" class="Bound">p</a> <a id="13410" href="Peras.SmallStep.html#13358" class="Bound">l</a> <a id="13412" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a>
+        <a id="13431" class="Symbol">;</a> <a id="13433" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="13442" class="Symbol">=</a>
+            <a id="13456" href="Data.List.Base.html#1631" class="Function">map</a> <a id="13460" class="Symbol">(</a><a id="13461" href="Data.Product.Base.html#3109" class="Function">uncurry</a> <a id="13469" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦅_,_,</a> <a id="13475" href="Peras.SmallStep.html#13346" class="Bound">m</a> <a id="13477" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="13479" href="Peras.SmallStep.html#13350" class="Bound">d</a> <a id="13481" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦆</a><a id="13482" class="Symbol">)</a>
+              <a id="13498" class="Symbol">(</a><a id="13499" href="Data.List.Base.html#10878" class="Function">filter</a> <a id="13506" class="Symbol">(</a><a id="13507" href="Relation.Nullary.Decidable.Core.html#2517" class="Function">¬?</a> <a id="13510" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="13512" class="Symbol">(</a><a id="13513" href="Peras.SmallStep.html#13354" class="Bound">p</a> <a id="13515" href="Data.Nat.Properties.html#3311" class="Function Operator">≟_</a><a id="13517" class="Symbol">)</a> <a id="13519" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="13521" href="Data.Product.Base.html#636" class="Field">proj₁</a><a id="13526" class="Symbol">)</a> <a id="13528" href="Peras.SmallStep.html#7435" class="Bound">parties</a><a id="13535" class="Symbol">)</a>
+            <a id="13549" href="Data.List.Base.html#1954" class="Function Operator">++</a> <a id="13552" href="Peras.SmallStep.html#10764" class="Field">messages</a>
+        <a id="13569" class="Symbol">;</a> <a id="13571" href="Peras.SmallStep.html#10797" class="Field">history</a> <a id="13579" class="Symbol">=</a> <a id="13581" href="Peras.SmallStep.html#13346" class="Bound">m</a> <a id="13583" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">∷</a> <a id="13585" href="Peras.SmallStep.html#10797" class="Field">history</a>
+        <a id="13601" class="Symbol">}</a>
+      <a id="13609" class="Keyword">where</a> <a id="13615" class="Keyword">open</a> <a id="13620" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="13626" href="Peras.SmallStep.html#13362" class="Bound">M</a>
+
+    <a id="13633" href="Peras.SmallStep.html#13633" class="Function Operator">add_to_diffuse_</a> <a id="13649" class="Symbol">:</a> <a id="13651" class="Symbol">(</a><a id="13652" href="Peras.SmallStep.html#2131" class="Datatype">Message</a> <a id="13660" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="13662" href="Peras.SmallStep.html#2557" class="Function">Delay</a> <a id="13668" href="Data.Product.Base.html#1618" class="Function Operator">×</a> <a id="13670" href="Peras.Block.html#1249" class="Function">PartyId</a><a id="13677" class="Symbol">)</a> <a id="13679" class="Symbol">→</a> <a id="13681" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="13683" class="Symbol">→</a> <a id="13685" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="13691" class="Symbol">→</a> <a id="13693" href="Peras.SmallStep.html#10627" class="Record">State</a>
+    <a id="13703" href="Peras.SmallStep.html#13633" class="Function Operator">add</a> <a id="13707" class="Symbol">(</a><a id="13708" href="Peras.SmallStep.html#13708" class="Bound">m</a><a id="13709" class="Symbol">@(</a><a id="13711" href="Peras.SmallStep.html#2156" class="InductiveConstructor">ChainMsg</a> <a id="13720" href="Peras.SmallStep.html#13720" class="Bound">x</a><a id="13721" class="Symbol">)</a> <a id="13723" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="13725" href="Peras.SmallStep.html#13725" class="Bound">d</a> <a id="13727" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="13729" href="Peras.SmallStep.html#13729" class="Bound">p</a><a id="13730" class="Symbol">)</a> <a id="13732" href="Peras.SmallStep.html#13633" class="Function Operator">to</a> <a id="13735" href="Peras.SmallStep.html#13735" class="Bound">t</a> <a id="13737" href="Peras.SmallStep.html#13633" class="Function Operator">diffuse</a> <a id="13745" href="Peras.SmallStep.html#13745" class="Bound">M</a> <a id="13747" class="Symbol">=</a> <a id="13749" href="Peras.SmallStep.html#13708" class="Bound">m</a> <a id="13751" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13753" href="Peras.SmallStep.html#13725" class="Bound">d</a> <a id="13755" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13757" href="Peras.SmallStep.html#13729" class="Bound">p</a> <a id="13759" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13761" href="Peras.SmallStep.html#5618" class="Function">newChain</a> <a id="13770" href="Peras.SmallStep.html#13735" class="Bound">t</a> <a id="13772" href="Peras.SmallStep.html#13720" class="Bound">x</a> <a id="13774" href="Peras.SmallStep.html#13284" class="Function Operator">⇑</a> <a id="13776" href="Peras.SmallStep.html#13745" class="Bound">M</a>
+    <a id="13782" href="Peras.SmallStep.html#13633" class="Function Operator">add</a> <a id="13786" class="Symbol">(</a><a id="13787" href="Peras.SmallStep.html#13787" class="Bound">m</a><a id="13788" class="Symbol">@(</a><a id="13790" href="Peras.SmallStep.html#2187" class="InductiveConstructor">VoteMsg</a> <a id="13798" href="Peras.SmallStep.html#13798" class="Bound">x</a><a id="13799" class="Symbol">)</a> <a id="13801" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="13803" href="Peras.SmallStep.html#13803" class="Bound">d</a> <a id="13805" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="13807" href="Peras.SmallStep.html#13807" class="Bound">p</a><a id="13808" class="Symbol">)</a> <a id="13810" href="Peras.SmallStep.html#13633" class="Function Operator">to</a> <a id="13813" href="Peras.SmallStep.html#13813" class="Bound">t</a> <a id="13815" href="Peras.SmallStep.html#13633" class="Function Operator">diffuse</a> <a id="13823" href="Peras.SmallStep.html#13823" class="Bound">M</a> <a id="13825" class="Symbol">=</a> <a id="13827" href="Peras.SmallStep.html#13787" class="Bound">m</a> <a id="13829" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13831" href="Peras.SmallStep.html#13803" class="Bound">d</a> <a id="13833" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13835" href="Peras.SmallStep.html#13807" class="Bound">p</a> <a id="13837" href="Peras.SmallStep.html#13284" class="Function Operator">,</a> <a id="13839" href="Peras.SmallStep.html#5716" class="Function">addVote</a> <a id="13847" href="Peras.SmallStep.html#13813" class="Bound">t</a> <a id="13849" href="Peras.SmallStep.html#13798" class="Bound">x</a> <a id="13851" href="Peras.SmallStep.html#13284" class="Function Operator">⇑</a> <a id="13853" href="Peras.SmallStep.html#13823" class="Bound">M</a>
+</pre>
+<h2 id="fetching">Fetching</h2>
+<p>A party receives messages from the global state by fetching messages
+assigned to the party, updating the local block tree and putting the
+local state back into the global state.</p>
+<pre class="Agda">    <a id="14063" class="Keyword">data</a> <a id="14068" href="Peras.SmallStep.html#14068" class="Datatype Operator">_⊢_[_]⇀_</a> <a id="14077" class="Symbol">:</a> <a id="14079" class="Symbol">{</a><a id="14080" href="Peras.SmallStep.html#14080" class="Bound">p</a> <a id="14082" class="Symbol">:</a> <a id="14084" href="Peras.Block.html#1249" class="Function">PartyId</a><a id="14091" class="Symbol">}</a> <a id="14093" class="Symbol">→</a> <a id="14095" href="Peras.Block.html#2015" class="Datatype">Honesty</a> <a id="14103" href="Peras.SmallStep.html#14080" class="Bound">p</a> <a id="14105" class="Symbol">→</a> <a id="14107" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="14113" class="Symbol">→</a> <a id="14115" href="Peras.SmallStep.html#2131" class="Datatype">Message</a> <a id="14123" class="Symbol">→</a> <a id="14125" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="14131" class="Symbol">→</a> <a id="14133" href="Agda.Primitive.html#388" class="Primitive">Type</a>
+      <a id="14144" class="Keyword">where</a>
+</pre>
+An honest party consumes a message from the global message buffer and
+updates the local state
+<pre class="Agda">      <a id="14262" href="Peras.SmallStep.html#14262" class="InductiveConstructor">honest</a> <a id="14269" class="Symbol">:</a> <a id="14271" class="Symbol">∀</a> <a id="14273" class="Symbol">{</a><a id="14274" href="Peras.SmallStep.html#14274" class="Bound">p</a><a id="14275" class="Symbol">}</a> <a id="14277" class="Symbol">{</a><a id="14278" href="Peras.SmallStep.html#14278" class="Bound">t</a> <a id="14280" href="Peras.SmallStep.html#14280" class="Bound">t′</a><a id="14282" class="Symbol">}</a> <a id="14284" class="Symbol">{</a><a id="14285" href="Peras.SmallStep.html#14285" class="Bound">m</a><a id="14286" class="Symbol">}</a> <a id="14288" class="Symbol">{</a><a id="14289" href="Peras.SmallStep.html#14289" class="Bound">N</a><a id="14290" class="Symbol">}</a> <a id="14292" class="Symbol">→</a> <a id="14294" class="Keyword">let</a> <a id="14298" class="Keyword">open</a> <a id="14303" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="14309" href="Peras.SmallStep.html#14289" class="Bound">N</a> <a id="14311" class="Keyword">in</a>
+          <a id="14324" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="14335" href="Prelude.AssocList.html#834" class="Function Operator">⁉</a> <a id="14337" href="Peras.SmallStep.html#14274" class="Bound">p</a> <a id="14339" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="14341" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="14346" href="Peras.SmallStep.html#14278" class="Bound">t</a>
+        <a id="14356" class="Symbol">→</a> <a id="14358" class="Symbol">(</a><a id="14359" href="Peras.SmallStep.html#14359" class="Bound">m∈ms</a> <a id="14364" class="Symbol">:</a> <a id="14366" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦅</a> <a id="14368" href="Peras.SmallStep.html#14274" class="Bound">p</a> <a id="14370" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14372" href="Peras.Block.html#2048" class="InductiveConstructor">Honest</a> <a id="14379" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14381" href="Peras.SmallStep.html#14285" class="Bound">m</a> <a id="14383" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14385" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a> <a id="14387" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦆</a> <a id="14389" href="Data.List.Membership.Setoid.html#950" class="Function Operator">∈</a> <a id="14391" href="Peras.SmallStep.html#10764" class="Field">messages</a><a id="14399" class="Symbol">)</a>
+        <a id="14409" class="Symbol">→</a> <a id="14411" href="Peras.SmallStep.html#14278" class="Bound">t</a> <a id="14413" href="Peras.SmallStep.html#7800" class="Datatype Operator">[</a> <a id="14415" href="Peras.SmallStep.html#14285" class="Bound">m</a> <a id="14417" href="Peras.SmallStep.html#7800" class="Datatype Operator">]→</a> <a id="14420" href="Peras.SmallStep.html#14280" class="Bound">t′</a>
+          <a id="14433" class="Comment">---------------------------------------------</a>
+        <a id="14487" class="Symbol">→</a> <a id="14489" href="Peras.Block.html#2048" class="InductiveConstructor">Honest</a> <a id="14496" class="Symbol">{</a><a id="14497" href="Peras.SmallStep.html#14274" class="Bound">p</a><a id="14498" class="Symbol">}</a> <a id="14500" href="Peras.SmallStep.html#14068" class="Datatype Operator">⊢</a>
+          <a id="14512" href="Peras.SmallStep.html#14289" class="Bound">N</a> <a id="14514" href="Peras.SmallStep.html#14068" class="Datatype Operator">[</a> <a id="14516" href="Peras.SmallStep.html#14285" class="Bound">m</a> <a id="14518" href="Peras.SmallStep.html#14068" class="Datatype Operator">]⇀</a> <a id="14521" class="Keyword">record</a> <a id="14528" href="Peras.SmallStep.html#14289" class="Bound">N</a>
+            <a id="14542" class="Symbol">{</a> <a id="14544" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="14555" class="Symbol">=</a> <a id="14557" href="Prelude.AssocList.html#1372" class="Function">set</a> <a id="14561" href="Peras.SmallStep.html#14274" class="Bound">p</a> <a id="14563" href="Peras.SmallStep.html#14280" class="Bound">t′</a> <a id="14566" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a>
+            <a id="14589" class="Symbol">;</a> <a id="14591" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="14600" class="Symbol">=</a> <a id="14602" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="14611" href="Data.List.Relation.Unary.Any.html#2138" class="Function Operator">─</a> <a id="14613" href="Peras.SmallStep.html#14359" class="Bound">m∈ms</a>
+            <a id="14630" class="Symbol">}</a>
+</pre>
+An adversarial party might delay a message
+<pre class="Agda">      <a id="14693" href="Peras.SmallStep.html#14693" class="InductiveConstructor">corrupt</a> <a id="14701" class="Symbol">:</a> <a id="14703" class="Symbol">∀</a> <a id="14705" class="Symbol">{</a><a id="14706" href="Peras.SmallStep.html#14706" class="Bound">p</a><a id="14707" class="Symbol">}</a> <a id="14709" class="Symbol">{</a><a id="14710" href="Peras.SmallStep.html#14710" class="Bound">as</a><a id="14712" class="Symbol">}</a> <a id="14714" class="Symbol">{</a><a id="14715" href="Peras.SmallStep.html#14715" class="Bound">m</a><a id="14716" class="Symbol">}</a> <a id="14718" class="Symbol">{</a><a id="14719" href="Peras.SmallStep.html#14719" class="Bound">N</a><a id="14720" class="Symbol">}</a> <a id="14722" class="Symbol">→</a> <a id="14724" class="Keyword">let</a> <a id="14728" class="Keyword">open</a> <a id="14733" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="14739" href="Peras.SmallStep.html#14719" class="Bound">N</a> <a id="14741" class="Keyword">in</a>
+          <a id="14754" class="Symbol">(</a><a id="14755" href="Peras.SmallStep.html#14755" class="Bound">m∈ms</a> <a id="14760" class="Symbol">:</a> <a id="14762" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦅</a> <a id="14764" href="Peras.SmallStep.html#14706" class="Bound">p</a> <a id="14766" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14768" href="Peras.Block.html#2092" class="InductiveConstructor">Corrupt</a> <a id="14776" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14778" href="Peras.SmallStep.html#14715" class="Bound">m</a> <a id="14780" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14782" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a> <a id="14784" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦆</a> <a id="14786" href="Data.List.Membership.Setoid.html#950" class="Function Operator">∈</a> <a id="14788" href="Peras.SmallStep.html#10764" class="Field">messages</a><a id="14796" class="Symbol">)</a>
+          <a id="14808" class="Comment">----------------------------------------------</a>
+        <a id="14863" class="Symbol">→</a>  <a id="14866" href="Peras.Block.html#2092" class="InductiveConstructor">Corrupt</a> <a id="14874" class="Symbol">{</a><a id="14875" href="Peras.SmallStep.html#14706" class="Bound">p</a><a id="14876" class="Symbol">}</a> <a id="14878" href="Peras.SmallStep.html#14068" class="Datatype Operator">⊢</a>
+          <a id="14890" href="Peras.SmallStep.html#14719" class="Bound">N</a> <a id="14892" href="Peras.SmallStep.html#14068" class="Datatype Operator">[</a> <a id="14894" href="Peras.SmallStep.html#14715" class="Bound">m</a> <a id="14896" href="Peras.SmallStep.html#14068" class="Datatype Operator">]⇀</a> <a id="14899" class="Keyword">record</a> <a id="14906" href="Peras.SmallStep.html#14719" class="Bound">N</a>
+            <a id="14920" class="Symbol">{</a> <a id="14922" href="Peras.SmallStep.html#10764" class="Field">messages</a> <a id="14931" class="Symbol">=</a> <a id="14933" href="Peras.SmallStep.html#14755" class="Bound">m∈ms</a> <a id="14938" href="Peras.SmallStep.html#419" class="Function Operator">∷ˡ=</a> <a id="14942" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦅</a> <a id="14944" href="Peras.SmallStep.html#14706" class="Bound">p</a> <a id="14946" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14948" href="Peras.Block.html#2092" class="InductiveConstructor">Corrupt</a> <a id="14956" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14958" href="Peras.SmallStep.html#14715" class="Bound">m</a> <a id="14960" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">,</a> <a id="14962" href="Peras.SmallStep.html#2614" class="InductiveConstructor">𝟙</a> <a id="14964" href="Peras.SmallStep.html#2807" class="InductiveConstructor Operator">⦆</a>
+            <a id="14978" class="Symbol">;</a> <a id="14980" href="Peras.SmallStep.html#10828" class="Field">adversarialState</a> <a id="14997" class="Symbol">=</a> <a id="14999" href="Peras.SmallStep.html#14710" class="Bound">as</a>
+            <a id="15014" class="Symbol">}</a>
+</pre>
+<h2 id="voting">Voting</h2>
+Helper function for creating a vote
+<pre class="Agda">    <a id="15079" href="Peras.SmallStep.html#15079" class="Function">createVote</a> <a id="15090" class="Symbol">:</a> <a id="15092" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="15103" class="Symbol">→</a> <a id="15105" href="Peras.Block.html#1249" class="Function">PartyId</a> <a id="15113" class="Symbol">→</a> <a id="15115" href="Peras.Crypto.html#1944" class="Record">MembershipProof</a> <a id="15131" class="Symbol">→</a> <a id="15133" href="Peras.Crypto.html#2898" class="Record">Signature</a> <a id="15143" class="Symbol">→</a> <a id="15145" href="Peras.Crypto.html#1431" class="Record">Hash</a> <a id="15150" href="Peras.Block.html#2950" class="Record">Block</a> <a id="15156" class="Symbol">→</a> <a id="15158" href="Peras.Chain.html#1480" class="Record">Vote</a>
+    <a id="15167" href="Peras.SmallStep.html#15079" class="Function">createVote</a> <a id="15178" href="Peras.SmallStep.html#15178" class="Bound">s</a> <a id="15180" href="Peras.SmallStep.html#15180" class="Bound">p</a> <a id="15182" href="Peras.SmallStep.html#15182" class="Bound">prf</a> <a id="15186" href="Peras.SmallStep.html#15186" class="Bound">sig</a> <a id="15190" href="Peras.SmallStep.html#15190" class="Bound">hb</a> <a id="15193" class="Symbol">=</a>
+      <a id="15201" class="Keyword">record</a>
+        <a id="15216" class="Symbol">{</a> <a id="15218" href="Peras.Chain.html#1526" class="Field">votingRound</a> <a id="15230" class="Symbol">=</a> <a id="15232" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="15240" href="Peras.SmallStep.html#15178" class="Bound">s</a>
+        <a id="15250" class="Symbol">;</a> <a id="15252" href="Peras.Chain.html#1560" class="Field">creatorId</a> <a id="15262" class="Symbol">=</a> <a id="15264" href="Peras.SmallStep.html#15180" class="Bound">p</a>
+        <a id="15274" class="Symbol">;</a> <a id="15276" href="Peras.Chain.html#1590" class="Field">proofM</a> <a id="15283" class="Symbol">=</a> <a id="15285" href="Peras.SmallStep.html#15182" class="Bound">prf</a>
+        <a id="15297" class="Symbol">;</a> <a id="15299" href="Peras.Chain.html#1628" class="Field">blockHash</a> <a id="15309" class="Symbol">=</a> <a id="15311" href="Peras.SmallStep.html#15190" class="Bound">hb</a>
+        <a id="15322" class="Symbol">;</a> <a id="15324" href="Peras.Chain.html#1661" class="Field">signature</a> <a id="15334" class="Symbol">=</a> <a id="15336" href="Peras.SmallStep.html#15186" class="Bound">sig</a>
+        <a id="15348" class="Symbol">}</a>
+</pre>
+<p>A party can vote for a block, if * the current slot is the first slot
+in a voting round * the party is a member of the voting committee * the
+chain is not in a cool-down phase</p>
+Voting updates the party’s local state and for all other parties a
+message is added to be consumed immediately.
+<pre class="Agda">    <a id="15661" class="Keyword">infix</a> <a id="15667" class="Number">2</a> <a id="15669" href="Peras.SmallStep.html#15685" class="Datatype Operator">_⊢_⇉_</a>
+
+    <a id="15680" class="Keyword">data</a> <a id="15685" href="Peras.SmallStep.html#15685" class="Datatype Operator">_⊢_⇉_</a> <a id="15691" class="Symbol">:</a> <a id="15693" class="Symbol">{</a><a id="15694" href="Peras.SmallStep.html#15694" class="Bound">p</a> <a id="15696" class="Symbol">:</a> <a id="15698" href="Peras.Block.html#1249" class="Function">PartyId</a><a id="15705" class="Symbol">}</a> <a id="15707" class="Symbol">→</a> <a id="15709" href="Peras.Block.html#2015" class="Datatype">Honesty</a> <a id="15717" href="Peras.SmallStep.html#15694" class="Bound">p</a> <a id="15719" class="Symbol">→</a> <a id="15721" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="15727" class="Symbol">→</a> <a id="15729" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="15735" class="Symbol">→</a> <a id="15737" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="15742" class="Keyword">where</a>
+
+      <a id="15755" href="Peras.SmallStep.html#15755" class="InductiveConstructor">honest</a> <a id="15762" class="Symbol">:</a> <a id="15764" class="Symbol">∀</a> <a id="15766" class="Symbol">{</a><a id="15767" href="Peras.SmallStep.html#15767" class="Bound">p</a><a id="15768" class="Symbol">}</a> <a id="15770" class="Symbol">{</a><a id="15771" href="Peras.SmallStep.html#15771" class="Bound">t</a><a id="15772" class="Symbol">}</a> <a id="15774" class="Symbol">{</a><a id="15775" href="Peras.SmallStep.html#15775" class="Bound">M</a><a id="15776" class="Symbol">}</a> <a id="15778" class="Symbol">{</a><a id="15779" href="Peras.SmallStep.html#15779" class="Bound">π</a><a id="15780" class="Symbol">}</a> <a id="15782" class="Symbol">{</a><a id="15783" href="Peras.SmallStep.html#15783" class="Bound">σ</a><a id="15784" class="Symbol">}</a> <a id="15786" class="Symbol">{</a><a id="15787" href="Peras.SmallStep.html#15787" class="Bound">b</a><a id="15788" class="Symbol">}</a>
+        <a id="15798" class="Symbol">→</a> <a id="15800" class="Keyword">let</a>
+            <a id="15816" class="Keyword">open</a> <a id="15821" href="Peras.SmallStep.html#10627" class="Module">State</a>
+            <a id="15839" href="Peras.SmallStep.html#15839" class="Bound">s</a> <a id="15841" class="Symbol">=</a> <a id="15843" href="Peras.SmallStep.html#10696" class="Field">clock</a> <a id="15849" href="Peras.SmallStep.html#15775" class="Bound">M</a>
+            <a id="15863" href="Peras.SmallStep.html#15863" class="Bound">r</a> <a id="15865" class="Symbol">=</a> <a id="15867" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="15875" href="Peras.SmallStep.html#15839" class="Bound">s</a>
+            <a id="15889" href="Peras.SmallStep.html#15889" class="Bound">v</a> <a id="15891" class="Symbol">=</a> <a id="15893" href="Peras.SmallStep.html#15079" class="Function">createVote</a> <a id="15904" href="Peras.SmallStep.html#15839" class="Bound">s</a> <a id="15906" href="Peras.SmallStep.html#15767" class="Bound">p</a> <a id="15908" href="Peras.SmallStep.html#15779" class="Bound">π</a> <a id="15910" href="Peras.SmallStep.html#15783" class="Bound">σ</a> <a id="15912" class="Symbol">(</a><a id="15913" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="15918" href="Peras.SmallStep.html#15787" class="Bound">b</a><a id="15919" class="Symbol">)</a>
+          <a id="15931" class="Keyword">in</a>
+        <a id="15942" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="15944" href="Peras.SmallStep.html#8297" class="Function">BlockSelection</a> <a id="15959" href="Peras.SmallStep.html#15839" class="Bound">s</a> <a id="15961" href="Peras.SmallStep.html#15771" class="Bound">t</a> <a id="15963" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="15965" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="15970" href="Peras.SmallStep.html#15787" class="Bound">b</a>
+        <a id="15980" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="15982" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="15993" href="Peras.SmallStep.html#15775" class="Bound">M</a> <a id="15995" href="Prelude.AssocList.html#834" class="Function Operator">⁉</a> <a id="15997" href="Peras.SmallStep.html#15767" class="Bound">p</a> <a id="15999" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="16001" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="16006" href="Peras.SmallStep.html#15771" class="Bound">t</a>
+        <a id="16016" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="16018" href="Peras.Chain.html#2990" class="Field">IsVoteSignature</a> <a id="16034" href="Peras.SmallStep.html#15889" class="Bound">v</a> <a id="16036" href="Peras.SmallStep.html#15783" class="Bound">σ</a>
+        <a id="16046" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="16048" href="Peras.Chain.html#4738" class="Function">StartOfRound</a> <a id="16061" href="Peras.SmallStep.html#15839" class="Bound">s</a> <a id="16063" href="Peras.SmallStep.html#15863" class="Bound">r</a>
+        <a id="16073" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="16075" href="Peras.Chain.html#2873" class="Field">IsCommitteeMember</a> <a id="16093" href="Peras.SmallStep.html#15767" class="Bound">p</a> <a id="16095" href="Peras.SmallStep.html#15863" class="Bound">r</a> <a id="16097" href="Peras.SmallStep.html#15779" class="Bound">π</a>
+        <a id="16107" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="16109" href="Peras.SmallStep.html#10199" class="Function">VotingRule</a> <a id="16120" href="Peras.SmallStep.html#15839" class="Bound">s</a> <a id="16122" href="Peras.SmallStep.html#15771" class="Bound">t</a>
+          <a id="16134" href="Prelude.InferenceRules.html#13576" class="Function Operator">───────────────────────────────────</a>
+          <a id="16180" href="Peras.Block.html#2048" class="InductiveConstructor">Honest</a> <a id="16187" class="Symbol">{</a><a id="16188" href="Peras.SmallStep.html#15767" class="Bound">p</a><a id="16189" class="Symbol">}</a> <a id="16191" href="Peras.SmallStep.html#15685" class="Datatype Operator">⊢</a>
+            <a id="16205" href="Peras.SmallStep.html#15775" class="Bound">M</a> <a id="16207" href="Peras.SmallStep.html#15685" class="Datatype Operator">⇉</a> <a id="16209" href="Peras.SmallStep.html#13633" class="Function Operator">add</a> <a id="16213" class="Symbol">(</a><a id="16214" href="Peras.SmallStep.html#2187" class="InductiveConstructor">VoteMsg</a> <a id="16222" href="Peras.SmallStep.html#15889" class="Bound">v</a> <a id="16224" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="16226" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a> <a id="16228" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="16230" href="Peras.SmallStep.html#15767" class="Bound">p</a><a id="16231" class="Symbol">)</a> <a id="16233" href="Peras.SmallStep.html#13633" class="Function Operator">to</a> <a id="16236" href="Peras.SmallStep.html#15771" class="Bound">t</a>
+                <a id="16254" href="Peras.SmallStep.html#13633" class="Function Operator">diffuse</a> <a id="16262" href="Peras.SmallStep.html#15775" class="Bound">M</a>
+</pre>
+<p>Rather than creating a delayed vote, an adversary can honestly create
+it and delay the message.</p>
+<h2 id="block-creation">Block creation</h2>
+<p>Certificates are conditionally added to a block. The following
+function determines if there needs to be a certificate provided for a
+given voting round and a local block-tree. The conditions are as
+follows</p>
+<ol type="a">
+<li>There is no certificate from 2 rounds ago in certs</li>
+<li>The last seen certificate is not expired</li>
+<li>The last seen certificate is from a later round than the last
+certificate on chain</li>
+</ol>
+<pre class="Agda">    <a id="16791" href="Peras.SmallStep.html#16791" class="Function">needCert</a> <a id="16800" class="Symbol">:</a> <a id="16802" href="Peras.Numbering.html#1669" class="Record">RoundNumber</a> <a id="16814" class="Symbol">→</a> <a id="16816" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="16818" class="Symbol">→</a> <a id="16820" href="Agda.Builtin.Maybe.html#135" class="Datatype">Maybe</a> <a id="16826" href="Peras.Block.html#2992" class="Record">Certificate</a>
+    <a id="16842" href="Peras.SmallStep.html#16791" class="Function">needCert</a> <a id="16851" class="Symbol">(</a><a id="16852" href="Peras.Numbering.html#1707" class="InductiveConstructor">MkRoundNumber</a> <a id="16866" href="Peras.SmallStep.html#16866" class="Bound">r</a><a id="16867" class="Symbol">)</a> <a id="16869" href="Peras.SmallStep.html#16869" class="Bound">t</a> <a id="16871" class="Symbol">=</a>
+      <a id="16879" class="Keyword">let</a>
+        <a id="16891" href="Peras.SmallStep.html#16891" class="Bound">cert⋆</a> <a id="16897" class="Symbol">=</a> <a id="16899" href="Peras.SmallStep.html#6046" class="Function">latestCertOnChain</a> <a id="16917" href="Peras.SmallStep.html#16869" class="Bound">t</a>
+        <a id="16927" href="Peras.SmallStep.html#16927" class="Bound">cert′</a> <a id="16933" class="Symbol">=</a> <a id="16935" href="Peras.SmallStep.html#6181" class="Function">latestCertSeen</a> <a id="16950" href="Peras.SmallStep.html#16869" class="Bound">t</a>
+      <a id="16958" class="Keyword">in</a>
+        <a id="16969" href="Data.Bool.Base.html#1505" class="Function Operator">if</a> <a id="16972" href="Data.Bool.Base.html#941" class="Function">not</a> <a id="16976" class="Symbol">(</a><a id="16977" href="Data.List.Base.html#4896" class="Function">any</a> <a id="16981" class="Symbol">(λ</a> <a id="16984" class="Symbol">{</a><a id="16985" href="Peras.SmallStep.html#16985" class="Bound">c</a> <a id="16987" class="Symbol">→</a> <a id="16989" href="Relation.Nullary.Decidable.Core.html#3623" class="Function Operator">⌊</a> <a id="16991" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="17003" href="Peras.SmallStep.html#16985" class="Bound">c</a> <a id="17005" href="Agda.Builtin.Nat.html#336" class="Primitive Operator">+</a> <a id="17007" class="Number">2</a> <a id="17009" href="Data.Nat.Properties.html#3311" class="Function Operator">≟</a> <a id="17011" href="Peras.SmallStep.html#16866" class="Bound">r</a> <a id="17013" href="Relation.Nullary.Decidable.Core.html#3623" class="Function Operator">⌋</a><a id="17014" class="Symbol">})</a> <a id="17017" class="Symbol">(</a><a id="17018" href="Peras.SmallStep.html#5774" class="Function">certs</a> <a id="17024" href="Peras.SmallStep.html#16869" class="Bound">t</a><a id="17025" class="Symbol">))</a> <a id="17028" class="Comment">-- (a)</a>
+           <a id="17046" href="Data.Bool.Base.html#995" class="Function Operator">∧</a> <a id="17048" class="Symbol">(</a><a id="17049" href="Peras.SmallStep.html#16866" class="Bound">r</a> <a id="17051" href="Data.Nat.Base.html#1477" class="Function Operator">≤ᵇ</a> <a id="17054" href="Peras.Params.html#249" class="Field">A</a> <a id="17056" href="Agda.Builtin.Nat.html#336" class="Primitive Operator">+</a> <a id="17058" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="17070" href="Peras.SmallStep.html#16927" class="Bound">cert′</a><a id="17075" class="Symbol">)</a>                          <a id="17102" class="Comment">-- (b)</a>
+           <a id="17120" href="Data.Bool.Base.html#995" class="Function Operator">∧</a> <a id="17122" class="Symbol">(</a><a id="17123" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="17135" href="Peras.SmallStep.html#16891" class="Bound">cert⋆</a> <a id="17141" href="Data.Nat.Base.html#1457" class="Primitive Operator">&lt;ᵇ</a> <a id="17144" href="Peras.Block.html#3144" class="Function">roundNumber</a> <a id="17156" href="Peras.SmallStep.html#16927" class="Bound">cert′</a><a id="17161" class="Symbol">)</a>              <a id="17176" class="Comment">-- (c)</a>
+        <a id="17191" href="Data.Bool.Base.html#1505" class="Function Operator">then</a> <a id="17196" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="17201" href="Peras.SmallStep.html#16927" class="Bound">cert′</a>
+        <a id="17215" href="Data.Bool.Base.html#1505" class="Function Operator">else</a> <a id="17220" href="Agda.Builtin.Maybe.html#194" class="InductiveConstructor">nothing</a>
+</pre>
+Helper function for creating a block
+<pre class="Agda">    <a id="17281" href="Peras.SmallStep.html#17281" class="Function">createBlock</a> <a id="17293" class="Symbol">:</a> <a id="17295" href="Peras.Numbering.html#742" class="Record">SlotNumber</a> <a id="17306" class="Symbol">→</a> <a id="17308" href="Peras.Block.html#1249" class="Function">PartyId</a> <a id="17316" class="Symbol">→</a> <a id="17318" href="Peras.Crypto.html#2376" class="Record">LeadershipProof</a> <a id="17334" class="Symbol">→</a> <a id="17336" href="Peras.Crypto.html#2898" class="Record">Signature</a> <a id="17346" class="Symbol">→</a> <a id="17348" href="Peras.SmallStep.html#7284" class="Bound">T</a> <a id="17350" class="Symbol">→</a> <a id="17352" href="Peras.Block.html#2950" class="Record">Block</a>
+    <a id="17362" href="Peras.SmallStep.html#17281" class="Function">createBlock</a> <a id="17374" href="Peras.SmallStep.html#17374" class="Bound">s</a> <a id="17376" href="Peras.SmallStep.html#17376" class="Bound">p</a> <a id="17378" href="Peras.SmallStep.html#17378" class="Bound">π</a> <a id="17380" href="Peras.SmallStep.html#17380" class="Bound">σ</a> <a id="17382" href="Peras.SmallStep.html#17382" class="Bound">t</a> <a id="17384" class="Symbol">=</a>
+      <a id="17392" class="Keyword">record</a>
+        <a id="17407" class="Symbol">{</a> <a id="17409" href="Peras.Block.html#3378" class="Field">slotNumber</a> <a id="17420" class="Symbol">=</a> <a id="17422" href="Peras.SmallStep.html#17374" class="Bound">s</a>
+        <a id="17432" class="Symbol">;</a> <a id="17434" href="Peras.Block.html#3410" class="Field">creatorId</a> <a id="17444" class="Symbol">=</a> <a id="17446" href="Peras.SmallStep.html#17376" class="Bound">p</a>
+        <a id="17456" class="Symbol">;</a> <a id="17458" href="Peras.Block.html#3438" class="Field">parentBlock</a> <a id="17470" class="Symbol">=</a>
+            <a id="17484" class="Keyword">let</a> <a id="17488" class="Keyword">open</a> <a id="17493" href="Peras.SmallStep.html#3603" class="Module">IsTreeType</a>
+            <a id="17516" class="Keyword">in</a> <a id="17519" href="Peras.Chain.html#6084" class="Function">tipHash</a> <a id="17527" class="Symbol">(</a><a id="17528" href="Peras.SmallStep.html#5906" class="Function">is-TreeType</a> <a id="17540" class="Symbol">.</a><a id="17541" href="Peras.SmallStep.html#4389" class="Field">valid</a> <a id="17547" href="Peras.SmallStep.html#17382" class="Bound">t</a><a id="17548" class="Symbol">)</a>
+        <a id="17558" class="Symbol">;</a> <a id="17560" href="Peras.Block.html#3471" class="Field">certificate</a> <a id="17572" class="Symbol">=</a>
+            <a id="17586" class="Keyword">let</a> <a id="17590" href="Peras.SmallStep.html#17590" class="Bound">r</a> <a id="17592" class="Symbol">=</a> <a id="17594" href="Peras.Chain.html#5083" class="Function">v-round</a> <a id="17602" href="Peras.SmallStep.html#17374" class="Bound">s</a>
+            <a id="17616" class="Keyword">in</a> <a id="17619" href="Peras.SmallStep.html#16791" class="Function">needCert</a> <a id="17628" href="Peras.SmallStep.html#17590" class="Bound">r</a> <a id="17630" href="Peras.SmallStep.html#17382" class="Bound">t</a>
+        <a id="17640" class="Symbol">;</a> <a id="17642" href="Peras.Block.html#3511" class="Field">leadershipProof</a> <a id="17658" class="Symbol">=</a> <a id="17660" href="Peras.SmallStep.html#17378" class="Bound">π</a>
+        <a id="17670" class="Symbol">;</a> <a id="17672" href="Peras.Block.html#3583" class="Field">bodyHash</a> <a id="17681" class="Symbol">=</a>
+            <a id="17695" class="Keyword">let</a> <a id="17699" href="Peras.SmallStep.html#17699" class="Bound">txs</a> <a id="17703" class="Symbol">=</a> <a id="17705" href="Peras.SmallStep.html#7377" class="Bound">txSelection</a> <a id="17717" href="Peras.SmallStep.html#17374" class="Bound">s</a> <a id="17719" href="Peras.SmallStep.html#17376" class="Bound">p</a>
+            <a id="17733" class="Keyword">in</a> <a id="17736" href="Peras.Block.html#3920" class="Field">blockHash</a>
+                 <a id="17763" class="Keyword">record</a>
+                   <a id="17789" class="Symbol">{</a> <a id="17791" href="Peras.Block.html#3920" class="Field">blockHash</a> <a id="17801" class="Symbol">=</a> <a id="17803" href="Peras.Crypto.html#1816" class="Field">hash</a> <a id="17808" href="Peras.SmallStep.html#17699" class="Bound">txs</a>
+                   <a id="17831" class="Symbol">;</a> <a id="17833" href="Peras.Block.html#3953" class="Field">payload</a> <a id="17841" class="Symbol">=</a> <a id="17843" href="Peras.SmallStep.html#17699" class="Bound">txs</a>
+                   <a id="17866" class="Symbol">}</a>
+        <a id="17876" class="Symbol">;</a> <a id="17878" href="Peras.Block.html#3553" class="Field">signature</a> <a id="17888" class="Symbol">=</a> <a id="17890" href="Peras.SmallStep.html#17380" class="Bound">σ</a>
+        <a id="17900" class="Symbol">}</a>
+</pre>
+<p>A party can create a new block by adding it to the local block tree
+and diffuse the block creation messages to the other parties. Block
+creation is possible, if as in <em>Praos</em></p>
+<ul>
+<li>the block signature is correct</li>
+<li>the party is the slot leader</li>
+</ul>
+Block creation updates the party’s local state and for all other parties
+a message is added to the message buffer
+<pre class="Agda">    <a id="18277" class="Keyword">infix</a> <a id="18283" class="Number">2</a> <a id="18285" href="Peras.SmallStep.html#18301" class="Datatype Operator">_⊢_↷_</a>
+
+    <a id="18296" class="Keyword">data</a> <a id="18301" href="Peras.SmallStep.html#18301" class="Datatype Operator">_⊢_↷_</a> <a id="18307" class="Symbol">:</a> <a id="18309" class="Symbol">{</a><a id="18310" href="Peras.SmallStep.html#18310" class="Bound">p</a> <a id="18312" class="Symbol">:</a> <a id="18314" href="Peras.Block.html#1249" class="Function">PartyId</a><a id="18321" class="Symbol">}</a> <a id="18323" class="Symbol">→</a> <a id="18325" href="Peras.Block.html#2015" class="Datatype">Honesty</a> <a id="18333" href="Peras.SmallStep.html#18310" class="Bound">p</a> <a id="18335" class="Symbol">→</a> <a id="18337" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="18343" class="Symbol">→</a> <a id="18345" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="18351" class="Symbol">→</a> <a id="18353" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="18358" class="Keyword">where</a>
+
+      <a id="18371" href="Peras.SmallStep.html#18371" class="InductiveConstructor">honest</a> <a id="18378" class="Symbol">:</a> <a id="18380" class="Symbol">∀</a> <a id="18382" class="Symbol">{</a><a id="18383" href="Peras.SmallStep.html#18383" class="Bound">p</a><a id="18384" class="Symbol">}</a> <a id="18386" class="Symbol">{</a><a id="18387" href="Peras.SmallStep.html#18387" class="Bound">t</a><a id="18388" class="Symbol">}</a> <a id="18390" class="Symbol">{</a><a id="18391" href="Peras.SmallStep.html#18391" class="Bound">M</a><a id="18392" class="Symbol">}</a> <a id="18394" class="Symbol">{</a><a id="18395" href="Peras.SmallStep.html#18395" class="Bound">π</a><a id="18396" class="Symbol">}</a> <a id="18398" class="Symbol">{</a><a id="18399" href="Peras.SmallStep.html#18399" class="Bound">σ</a><a id="18400" class="Symbol">}</a>
+        <a id="18410" class="Symbol">→</a> <a id="18412" class="Keyword">let</a>
+            <a id="18428" class="Keyword">open</a> <a id="18433" href="Peras.SmallStep.html#10627" class="Module">State</a>
+            <a id="18451" href="Peras.SmallStep.html#18451" class="Bound">s</a> <a id="18453" class="Symbol">=</a> <a id="18455" href="Peras.SmallStep.html#10696" class="Field">clock</a> <a id="18461" href="Peras.SmallStep.html#18391" class="Bound">M</a>
+            <a id="18475" href="Peras.SmallStep.html#18475" class="Bound">b</a> <a id="18477" class="Symbol">=</a> <a id="18479" href="Peras.SmallStep.html#17281" class="Function">createBlock</a> <a id="18491" href="Peras.SmallStep.html#18451" class="Bound">s</a> <a id="18493" href="Peras.SmallStep.html#18383" class="Bound">p</a> <a id="18495" href="Peras.SmallStep.html#18395" class="Bound">π</a> <a id="18497" href="Peras.SmallStep.html#18399" class="Bound">σ</a> <a id="18499" href="Peras.SmallStep.html#18387" class="Bound">t</a>
+            <a id="18513" href="Peras.SmallStep.html#18513" class="Bound">pref</a> <a id="18518" class="Symbol">=</a> <a id="18520" href="Peras.SmallStep.html#5682" class="Function">preferredChain</a> <a id="18535" href="Peras.SmallStep.html#18387" class="Bound">t</a>
+          <a id="18547" class="Keyword">in</a>
+        <a id="18558" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="18560" href="Peras.SmallStep.html#10723" class="Field">blockTrees</a> <a id="18571" href="Peras.SmallStep.html#18391" class="Bound">M</a> <a id="18573" href="Prelude.AssocList.html#834" class="Function Operator">⁉</a> <a id="18575" href="Peras.SmallStep.html#18383" class="Bound">p</a> <a id="18577" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="18579" href="Agda.Builtin.Maybe.html#173" class="InductiveConstructor">just</a> <a id="18584" href="Peras.SmallStep.html#18387" class="Bound">t</a>
+        <a id="18594" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="18596" href="Peras.Chain.html#5743" class="Datatype">ValidChain</a> <a id="18607" class="Symbol">(</a><a id="18608" href="Peras.SmallStep.html#18475" class="Bound">b</a> <a id="18610" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">∷</a> <a id="18612" href="Peras.SmallStep.html#18513" class="Bound">pref</a><a id="18616" class="Symbol">)</a>
+          <a id="18628" href="Prelude.InferenceRules.html#13868" class="Function Operator">───────────────────────────</a>
+          <a id="18666" href="Peras.Block.html#2048" class="InductiveConstructor">Honest</a> <a id="18673" class="Symbol">{</a><a id="18674" href="Peras.SmallStep.html#18383" class="Bound">p</a><a id="18675" class="Symbol">}</a> <a id="18677" href="Peras.SmallStep.html#18301" class="Datatype Operator">⊢</a>
+            <a id="18691" href="Peras.SmallStep.html#18391" class="Bound">M</a> <a id="18693" href="Peras.SmallStep.html#18301" class="Datatype Operator">↷</a> <a id="18695" href="Peras.SmallStep.html#13633" class="Function Operator">add</a> <a id="18699" class="Symbol">(</a>
+                  <a id="18719" href="Peras.SmallStep.html#2156" class="InductiveConstructor">ChainMsg</a> <a id="18728" class="Symbol">(</a><a id="18729" href="Peras.SmallStep.html#18475" class="Bound">b</a> <a id="18731" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">∷</a> <a id="18733" href="Peras.SmallStep.html#18513" class="Bound">pref</a><a id="18737" class="Symbol">)</a>
+                <a id="18755" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="18757" href="Peras.SmallStep.html#2594" class="InductiveConstructor">𝟘</a>
+                <a id="18775" href="Agda.Builtin.Sigma.html#235" class="InductiveConstructor Operator">,</a> <a id="18777" href="Peras.SmallStep.html#18383" class="Bound">p</a><a id="18778" class="Symbol">)</a> <a id="18780" href="Peras.SmallStep.html#13633" class="Function Operator">to</a> <a id="18783" href="Peras.SmallStep.html#18387" class="Bound">t</a>
+                <a id="18801" href="Peras.SmallStep.html#13633" class="Function Operator">diffuse</a> <a id="18809" href="Peras.SmallStep.html#18391" class="Bound">M</a>
+</pre>
+<h2 id="small-step-semantics-1">Small-step semantics</h2>
+The small-step semantics describe the evolution of the global state.
+<pre class="Agda">    <a id="18921" class="Keyword">variable</a>
+      <a id="18936" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="18938" href="Peras.SmallStep.html#18938" class="Generalizable">N</a> <a id="18940" href="Peras.SmallStep.html#18940" class="Generalizable">O</a> <a id="18942" class="Symbol">:</a> <a id="18944" href="Peras.SmallStep.html#10627" class="Record">State</a>
+      <a id="18956" href="Peras.SmallStep.html#18956" class="Generalizable">p</a> <a id="18958" class="Symbol">:</a> <a id="18960" href="Peras.Block.html#1249" class="Function">PartyId</a>
+      <a id="18974" href="Peras.SmallStep.html#18974" class="Generalizable">h</a> <a id="18976" class="Symbol">:</a> <a id="18978" href="Peras.Block.html#2015" class="Datatype">Honesty</a> <a id="18986" href="Peras.SmallStep.html#18956" class="Generalizable">p</a>
+</pre>
+<p>The relation allows</p>
+<ul>
+<li>Fetching messages at the beginning of each slot</li>
+<li>Block creation</li>
+<li>Voting</li>
+<li>Transitioning to next slot in the same voting round</li>
+<li>Transitioning to next slot in a new voting round</li>
+</ul>
+Note, when transitioning to the next slot we need to distinguish whether
+the next slot is in the same or a new voting round. This is necessary in
+order to detect adversarial behaviour with respect to voting
+(adversarialy not voting in a voting round)
+<pre class="Agda">    <a id="19458" class="Keyword">data</a> <a id="19463" href="Peras.SmallStep.html#19463" class="Datatype Operator">_↝_</a> <a id="19467" class="Symbol">:</a> <a id="19469" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="19475" class="Symbol">→</a> <a id="19477" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="19483" class="Symbol">→</a> <a id="19485" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="19490" class="Keyword">where</a>
+
+      <a id="19503" href="Peras.SmallStep.html#19503" class="InductiveConstructor">Fetch</a> <a id="19509" class="Symbol">:</a> <a id="19511" class="Symbol">∀</a> <a id="19513" class="Symbol">{</a><a id="19514" href="Peras.SmallStep.html#19514" class="Bound">m</a><a id="19515" class="Symbol">}</a> <a id="19517" class="Symbol">→</a>
+        <a id="19527" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="19529" href="Peras.SmallStep.html#18974" class="Generalizable">h</a> <a id="19531" href="Peras.SmallStep.html#14068" class="Datatype Operator">⊢</a> <a id="19533" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19535" href="Peras.SmallStep.html#14068" class="Datatype Operator">[</a> <a id="19537" href="Peras.SmallStep.html#19514" class="Bound">m</a> <a id="19539" href="Peras.SmallStep.html#14068" class="Datatype Operator">]⇀</a> <a id="19542" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+          <a id="19554" href="Prelude.InferenceRules.html#14206" class="Function Operator">──────────────</a>
+          <a id="19579" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19581" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="19583" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+
+      <a id="19592" href="Peras.SmallStep.html#19592" class="InductiveConstructor">CreateVote</a> <a id="19603" class="Symbol">:</a>
+        <a id="19613" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="19615" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="19623" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+        <a id="19633" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="19635" href="Peras.SmallStep.html#18974" class="Generalizable">h</a> <a id="19637" href="Peras.SmallStep.html#15685" class="Datatype Operator">⊢</a> <a id="19639" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19641" href="Peras.SmallStep.html#15685" class="Datatype Operator">⇉</a> <a id="19643" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+          <a id="19655" href="Prelude.InferenceRules.html#14291" class="Function Operator">─────────</a>
+          <a id="19675" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19677" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="19679" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+
+      <a id="19688" href="Peras.SmallStep.html#19688" class="InductiveConstructor">CreateBlock</a> <a id="19700" class="Symbol">:</a>
+        <a id="19710" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="19712" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="19720" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+        <a id="19730" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="19732" href="Peras.SmallStep.html#18974" class="Generalizable">h</a> <a id="19734" href="Peras.SmallStep.html#18301" class="Datatype Operator">⊢</a> <a id="19736" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19738" href="Peras.SmallStep.html#18301" class="Datatype Operator">↷</a> <a id="19740" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+          <a id="19752" href="Prelude.InferenceRules.html#14291" class="Function Operator">─────────</a>
+          <a id="19772" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19774" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="19776" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+
+      <a id="19785" href="Peras.SmallStep.html#19785" class="InductiveConstructor">NextSlot</a> <a id="19794" class="Symbol">:</a>
+        <a id="19804" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="19806" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="19814" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+        <a id="19824" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="19826" href="Peras.SmallStep.html#11927" class="Function">NextSlotInSameRound</a> <a id="19846" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+          <a id="19858" href="Prelude.InferenceRules.html#14045" class="Function Operator">─────────────────────</a>
+          <a id="19890" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="19892" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="19894" href="Peras.SmallStep.html#12881" class="Function">tick</a> <a id="19899" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+
+      <a id="19908" href="Peras.SmallStep.html#19908" class="InductiveConstructor">NextSlotNewRound</a> <a id="19925" class="Symbol">:</a>
+        <a id="19935" href="Prelude.InferenceRules.html#56074" class="Function Operator">∙</a> <a id="19937" href="Peras.SmallStep.html#11267" class="Function">Fetched</a> <a id="19945" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+        <a id="19955" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="19957" href="Peras.SmallStep.html#11477" class="Function">LastSlotInRound</a> <a id="19973" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+        <a id="19983" href="Prelude.InferenceRules.html#56005" class="Function Operator">∙</a> <a id="19985" href="Peras.SmallStep.html#12560" class="Function">RequiredVotes</a> <a id="19999" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+          <a id="20011" href="Prelude.InferenceRules.html#14143" class="Function Operator">─────────────────</a>
+          <a id="20039" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20041" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="20043" href="Peras.SmallStep.html#12881" class="Function">tick</a> <a id="20048" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+</pre>
+<h4 id="reflexive-transitive-closure">Reflexive, transitive closure</h4>
+List-like structure for defining execution paths.
+<pre class="Agda">    <a id="20151" class="Keyword">infix</a>  <a id="20158" class="Number">2</a> <a id="20160" href="Peras.SmallStep.html#20207" class="Datatype Operator">_↝⋆_</a>
+    <a id="20169" class="Keyword">infixr</a> <a id="20176" class="Number">2</a> <a id="20178" href="Peras.SmallStep.html#20264" class="InductiveConstructor Operator">_↣_</a>
+    <a id="20186" class="Keyword">infix</a>  <a id="20193" class="Number">3</a> <a id="20195" href="Peras.SmallStep.html#20247" class="InductiveConstructor">∎</a>
+
+    <a id="20202" class="Keyword">data</a> <a id="20207" href="Peras.SmallStep.html#20207" class="Datatype Operator">_↝⋆_</a> <a id="20212" class="Symbol">:</a> <a id="20214" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="20220" class="Symbol">→</a> <a id="20222" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="20228" class="Symbol">→</a> <a id="20230" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="20235" class="Keyword">where</a>
+      <a id="20247" href="Peras.SmallStep.html#20247" class="InductiveConstructor">∎</a> <a id="20249" class="Symbol">:</a> <a id="20251" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20253" href="Peras.SmallStep.html#20207" class="Datatype Operator">↝⋆</a> <a id="20256" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+      <a id="20264" href="Peras.SmallStep.html#20264" class="InductiveConstructor Operator">_↣_</a> <a id="20268" class="Symbol">:</a> <a id="20270" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20272" href="Peras.SmallStep.html#19463" class="Datatype Operator">↝</a> <a id="20274" href="Peras.SmallStep.html#18938" class="Generalizable">N</a> <a id="20276" class="Symbol">→</a> <a id="20278" href="Peras.SmallStep.html#18938" class="Generalizable">N</a> <a id="20280" href="Peras.SmallStep.html#20207" class="Datatype Operator">↝⋆</a> <a id="20283" href="Peras.SmallStep.html#18940" class="Generalizable">O</a> <a id="20285" class="Symbol">→</a> <a id="20287" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20289" href="Peras.SmallStep.html#20207" class="Datatype Operator">↝⋆</a> <a id="20292" href="Peras.SmallStep.html#18940" class="Generalizable">O</a>
+</pre>
+<!--
+### Composition
+<pre class="Agda"><a id="20327" class="Comment">{-
+    ↝⋆∘↝⋆ :
+        M ↝⋆ N
+      → N ↝⋆ O
+      → M ↝⋆ O
+    ↝⋆∘↝⋆ ∎ M↝⋆O = M↝⋆O
+    ↝⋆∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝⋆O = M↝M₁ ↣ ↝⋆∘↝⋆ M₁↝⋆N N↝⋆O
+-}</a>
+</pre>### Post-composition
+<pre class="Agda"><a id="20503" class="Comment">{-
+    ↝∘↝⋆ :
+        M ↝⋆ N
+      → N ↝ O
+      → M ↝⋆ O
+    ↝∘↝⋆ ∎ N↝O =  N↝O ↣ ∎
+    ↝∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝O = M↝M₁ ↣ ↝∘↝⋆ M₁↝⋆N N↝O
+-}</a>
+</pre>-->
+<h3 id="transitions-of-voting-rounds">Transitions of voting rounds</h3>
+Transitioning of voting rounds can be described with respect of the
+small-step semantics.
+<pre class="Agda">    <a id="20785" class="Keyword">data</a> <a id="20790" href="Peras.SmallStep.html#20790" class="Datatype Operator">_↦_</a> <a id="20794" class="Symbol">:</a> <a id="20796" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="20802" class="Symbol">→</a> <a id="20804" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="20810" class="Symbol">→</a> <a id="20812" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="20817" class="Keyword">where</a>
+
+      <a id="20830" href="Peras.SmallStep.html#20830" class="InductiveConstructor">NextRound</a> <a id="20840" class="Symbol">:</a> <a id="20842" class="Keyword">let</a> <a id="20846" class="Keyword">open</a> <a id="20851" href="Peras.SmallStep.html#10627" class="Module">State</a> <a id="20857" class="Keyword">in</a>
+          <a id="20870" href="Agda.Builtin.Nat.html#234" class="InductiveConstructor">suc</a> <a id="20874" class="Symbol">(</a><a id="20875" href="Peras.SmallStep.html#10980" class="Function">v-rnd&#39;</a> <a id="20882" href="Peras.SmallStep.html#18936" class="Generalizable">M</a><a id="20883" class="Symbol">)</a> <a id="20885" href="Agda.Builtin.Equality.html#150" class="Datatype Operator">≡</a> <a id="20887" href="Peras.SmallStep.html#10980" class="Function">v-rnd&#39;</a> <a id="20894" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+        <a id="20904" class="Symbol">→</a> <a id="20906" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20908" href="Peras.SmallStep.html#20207" class="Datatype Operator">↝⋆</a> <a id="20911" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+        <a id="20921" class="Symbol">→</a> <a id="20923" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="20925" href="Peras.SmallStep.html#20790" class="Datatype Operator">↦</a> <a id="20927" href="Peras.SmallStep.html#18938" class="Generalizable">N</a>
+</pre>
+<h4 id="reflexive-transitive-closure-1">Reflexive, transitive
+closure</h4>
+List-like structure for executions for voting round transitions
+<pre class="Agda">    <a id="21044" class="Keyword">infix</a>  <a id="21051" class="Number">2</a> <a id="21053" href="Peras.SmallStep.html#21100" class="Datatype Operator">_↦⋆_</a>
+    <a id="21062" class="Keyword">infixr</a> <a id="21069" class="Number">2</a> <a id="21071" href="Peras.SmallStep.html#21157" class="InductiveConstructor Operator">_⨾_</a>
+    <a id="21079" class="Keyword">infix</a>  <a id="21086" class="Number">3</a> <a id="21088" href="Peras.SmallStep.html#21140" class="InductiveConstructor">ρ</a>
+
+    <a id="21095" class="Keyword">data</a> <a id="21100" href="Peras.SmallStep.html#21100" class="Datatype Operator">_↦⋆_</a> <a id="21105" class="Symbol">:</a> <a id="21107" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="21113" class="Symbol">→</a> <a id="21115" href="Peras.SmallStep.html#10627" class="Record">State</a> <a id="21121" class="Symbol">→</a> <a id="21123" href="Agda.Primitive.html#388" class="Primitive">Type</a> <a id="21128" class="Keyword">where</a>
+      <a id="21140" href="Peras.SmallStep.html#21140" class="InductiveConstructor">ρ</a> <a id="21142" class="Symbol">:</a> <a id="21144" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="21146" href="Peras.SmallStep.html#21100" class="Datatype Operator">↦⋆</a> <a id="21149" href="Peras.SmallStep.html#18936" class="Generalizable">M</a>
+      <a id="21157" href="Peras.SmallStep.html#21157" class="InductiveConstructor Operator">_⨾_</a> <a id="21161" class="Symbol">:</a> <a id="21163" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="21165" href="Peras.SmallStep.html#20790" class="Datatype Operator">↦</a> <a id="21167" href="Peras.SmallStep.html#18938" class="Generalizable">N</a> <a id="21169" class="Symbol">→</a> <a id="21171" href="Peras.SmallStep.html#18938" class="Generalizable">N</a> <a id="21173" href="Peras.SmallStep.html#21100" class="Datatype Operator">↦⋆</a> <a id="21176" href="Peras.SmallStep.html#18940" class="Generalizable">O</a> <a id="21178" class="Symbol">→</a> <a id="21180" href="Peras.SmallStep.html#18936" class="Generalizable">M</a> <a id="21182" href="Peras.SmallStep.html#21100" class="Datatype Operator">↦⋆</a> <a id="21185" href="Peras.SmallStep.html#18940" class="Generalizable">O</a>
+</pre>
+<!--
+## Collision free predicate
+
+<pre class="Agda">    <a id="21237" class="Keyword">open</a> <a id="21242" href="Peras.SmallStep.html#10627" class="Module">State</a>
+</pre>
+Rather than assuming a global axiom on the injectivity of the hash function
+or that any reachable state is collision-free, there is a predicate assuming
+that there are no hash collisions during the execution of the protocol.
+
+<pre class="Agda"><a id="21487" class="Comment">{-
+    data CollisionFree (N : State) : Type where
+
+      collision-free : ∀ {b₁ b₂ : Block}
+        → All
+          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
+               (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
+          (cartesianProduct (history N) (history N))
+        → CollisionFree N
+-}</a>
+</pre>-->
+<!--
+<pre class="Agda"><a id="21810" class="Comment">{-
+    open import Data.List.Relation.Binary.Subset.Propositional.Properties
+    open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
+    open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
+
+    open import Data.List.Membership.Propositional.Properties
+
+    ⊆→⊆-cartesianProduct : ∀ {a b} → a ⊆ₘ b → cartesianProduct a a ⊆ₘₓ cartesianProduct b b
+    ⊆→⊆-cartesianProduct {a} a⊆b x =
+      let x₁ , x₂ = ∈-cartesianProduct⁻ a a x
+       in ∈-cartesianProduct⁺ (a⊆b x₁) (a⊆b x₂)
+
+    collision-free-resp-⊇ : ∀ {M N}
+      → CollisionFree N
+      → history N ⊇ history M
+      → CollisionFree M
+    collision-free-resp-⊇ (collision-free {b₁} {b₂} cf) x =
+      collision-free {b₁ = b₁} {b₂ = b₂} (All-resp-⊇ (⊆→⊆-cartesianProduct x) cf)
+
+    -- Receive
+
+    []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
+      → h ⊢ M [ m ]⇀ N
+      → history M ⊆ₘ history N
+    []-hist-common-prefix (honest _ _ _) x = x
+    []-hist-common-prefix (corrupt _) x = x
+
+    []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
+      → CollisionFree N
+      → h ⊢ M [ m ]⇀ N
+      → CollisionFree M
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
+
+    -- Create
+
+    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → h ⊢ M ↷ N
+      → history M ⊆ₘ history N
+    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
+
+    []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
+      → h ⊢ M ⇉ N
+      → history M ⊆ₘ history N
+    []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
+
+    []↷-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → h ⊢ M ↷ N
+      → CollisionFree M
+    []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
+
+    []⇉-collision-free : ∀ {M N p} {h : Honesty p}
+      → CollisionFree N
+      → h ⊢ M ⇉ N
+      → CollisionFree M
+    []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
+-}</a>
+</pre>-->
+<!--
+### Properties
+
+When the current state is collision free, the pervious state was so too
+
+<pre class="Agda"><a id="24297" class="Comment">{-
+    ↝-collision-free :
+        M ↝ N
+      → CollisionFree N
+        ----------------
+      → CollisionFree M
+-}</a>
+</pre>-->
+<!--
+<pre class="Agda"><a id="24434" class="Comment">{-
+    ↝-collision-free (Fetch x) cf-N = []⇀-collision-free cf-N x
+    ↝-collision-free (CreateVote _ x) cf-N = []⇉-collision-free cf-N x
+    ↝-collision-free (CreateBlock _ x) cf-N =  []↷-collision-free cf-N x
+    ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
+    ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
+-}</a>
+</pre>-->
+<!--
+When the current state is collision free, previous states were so too
+
+<pre class="Agda"><a id="24898" class="Comment">{-
+    ↝⋆-collision-free :
+        M ↝⋆ N
+      → CollisionFree N
+        ----------------
+      → CollisionFree M
+-}</a>
+</pre>-->
+<!--
+<pre class="Agda"><a id="25037" class="Comment">{-
+    ↝⋆-collision-free ∎ N = N
+    ↝⋆-collision-free (M↝N ↣ N↝⋆O) O =
+      ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
+-}</a>
+</pre>-->
+<!--
+## Forging free predicate
+
+Signatures are not modelled explicitly. Instead we assume that the adversary
+cannot send any block with the `creatorId` of an honest party that is not
+already in the block history.
+
+<pre class="Agda"><a id="25396" class="Comment">{-
+    data ForgingFree (N : State) : Type where
+
+      forging-free : ∀ {M : State} {b} {p}
+        → Corrupt {p} ⊢ M ↷ N
+        → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
+            → m ∈ history M }) (history N)
+        → ForgingFree N
+-}</a>
+</pre><pre class="Agda">  <a id="25659" class="Keyword">open</a> <a id="25664" href="Peras.SmallStep.html#7262" class="Module">Semantics</a> <a id="25674" class="Keyword">public</a>
+</pre>-->
+</body>
+</html>
