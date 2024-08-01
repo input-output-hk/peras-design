@@ -27,11 +27,11 @@ Because of the distributed, decentralized and probabilistic nature of the protoc
 * Transactions included in blocks also need to travel across the network before reaching the SPO that will forge a block including them,
 * ...
 
-This phenomenon is well known as _forking_: a node's current best chain can be superseded by a new best chain which is very similar but for the last few blocks.
+This phenomenon is known as _forking_: a node's current best chain can be superseded by a new best chain which is very similar but for the last few blocks. Short (eg. a couple of blocks long) forks happen all the time, and they are usually non-problematic: rolled back blocks will be mostly identical, including the same transactions perhaps distributed differently among blocks, or with minor differences. But they can be harmful: if an end-user takes a decision, for example to ship some goods to another user, based on some transaction that's later rolled back and never appears again because it was actually invalid, double-spending some UTxO, this opens up the possibility of fraud.
 
-For an end-user submitting a transaction to the network, this raises the all important question: _When can they consider their transaction will never be rolled back_? In other words, when can they consider the transaction to be _settled_?
+Therefore, from the point of view of an end-user submitting to or depending on a specific transaction, the important question is: _When can they consider their transaction will never be rolled back_? In other words, when can they consider the transaction to be _settled_?
 
-In the context of this work, settlement is therefore considered from an _observability_ perspective (pun intended):
+In the context of this work, settlement is henceforth defined from an _observability_ perspective:
 
 > Settlement time is the duration after which a block (or transaction) added to node's best chain has a negligible probability of being rolled back because of a fork
 
