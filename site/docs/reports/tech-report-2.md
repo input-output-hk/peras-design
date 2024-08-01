@@ -14,7 +14,6 @@ pagestyle: headings
 
 The goal of this document is to provide a detailed analysis of the Peras protocol from an engineering point of view, based upon the work done by the _Innovation team_ between April and July 2024. It is based on the _pre-alpha_ version of the protocol as designed by the _Research team_.
 
-
 ## Executive summary
 
 This section lists a number of findings, conclusions, ideas, and known risks that we have garnered as part of the Peras innovation project. Overall, work on the Peras protocol has matured to Software Readiness Level (SRL) 4 and, although a few aspects of the innovation project require completion and polish, the post-innovation roadmapping and processes can proceed.

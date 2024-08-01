@@ -467,7 +467,7 @@ Average latency numbers are drawn from table 1 in the paper and depend on the (p
 
 For each step in the diffusion of a block, we assume an equal ($\frac{1}{3}$) chance for each class of distance.
 
-:::NOTE
+:::note
 
 The actual maximum block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available. We need to actually measure the real value for this block size and other significant increments.
 
