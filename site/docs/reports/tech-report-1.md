@@ -69,7 +69,7 @@ There remain a number of open questions that could be investigated in future wor
 
 ### Peras workshop
 
-A follow-up action from the [Peras workshop in Edinburgh](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit), which happened in September 2023, was to define a set of questions and experiments to be conducted in order to better understand the properties of the Peras protocol, along with an assessment of the protocol's _Software readiness level_. The following sections recall the questions that were raised during the workshop, points to the answers given, and details the SRL assessment along with a comparison with current estimated SRL.
+The following sections recall the questions that were raised during the kick-off workshop in September 2023, points to the answers given, and details the SRL assessment along with a comparison with current estimated SRL.
 
 #### Questions about Peras
 
@@ -157,7 +157,7 @@ We assess the current SRL to be between 3 and 4, given the following [SRL 3](htt
 
 ### Overview
 
-A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides and the research article for details.
+A presentation of the motivation and principles of the protocol is available in these [slides](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit). We summarize the main points here but refer the interested reader to the slides for details.
 
 * Peras adds a Voting layer on top of Praos, Cardano's Nakamoto-style consensus protocol.
 * In every voting round, stakeholders (SPOs) get selected to be part of the voting committee through a stake-based sortition mechanism (using their existing VRF keys) and vote for the newest block at least $L$ slots old, where $L$ is a parameter of the construction (e.g., $L$ = 120 slots).
@@ -172,7 +172,7 @@ The exact construction of Peras certificates is still unknown but we already kno
 
 * A Peras certificate must be reasonably "small" in order to fit within the limits of a single block without leading to increased transmission delay.
   * The current block size on `mainnet` is 90kB, with each transaction limited to 16kB.
-  * In order to not clutter the chain and take up too much block estate, a certificate should fit in a _single transaction_.
+  * In order to not clutter the chain and take up too much block estate, a certificate should ideally fit in a _single transaction_.
 * Certificates need to be produced _locally_ by a single node from the aggregation of multiple votes reaching a quorum.
   * Certificate forging should be reasonably fast but is not critical for block diffusion: A round spans multiple possible blocks so there is more time to produce and broadcast it.
 * A certificate must be reasonably fast to verify as it is on the critical path of chain selection: When a node receives a new block and/or a new certificate, it needs to decide whether or not this changes its best chain according to the weight,
@@ -180,13 +180,7 @@ The exact construction of Peras certificates is still unknown but we already kno
 
 ### Pseudo-code
 
-We initially started working from researchers' pseudo-code which was detailed in various documents:
-
-* The initial [protocol definition](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) as presented in the Edinburgh workshop, in September 2023,
-* The [post-workshop definition](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4)  which considered votes and blocks diffusion and chain selection in a more integrated manner,
-* The newest version from [March 2024](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) which addressed the shortcomings of tallying individual votes in the chain selection process from earlier versions.
-
-In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructured and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on the formal specification, the prototyping work, and the research work. This collective effort led to writing the exact same pseudo-code as a _literate Agda_ document, the internal consistency of which can be checked by the Agda compiler, while providing a similar level of flexibility and readability than the original document.
+We initially started working from researchers' pseudo-code which was detailed in various documents. In the Paris Workshop in April 2024, we tried to address a key issue of this pseudo-code: The fact it lives in an unstructured and informal document, is not machine-checkable, and is therefore poised to be quickly out of the sync with both the R&D work on the formal specification, the prototyping work, and the research work. This collective effort led to writing the exact same pseudo-code as a _literate Agda_ document, the internal consistency of which can be checked by the Agda compiler, while providing a similar level of flexibility and readability than the original document.
 
 This document is available in the [Peras repository](https://github.com/input-output-hk/peras-design/blob/65d8a98817df119b3902e43e5acca86fdcca6f92/src/Peras/ProtocolL.lagda.md#L1) and is a first step towards better integration between research and engineering work streams.
 
@@ -214,9 +208,11 @@ There's however no evidence this situation will continue in the future, obviousl
 
 #### Settlement bounds for Peras
 
-> [!WARNING]
->
-> Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
+:::danger
+
+Take the following analysis with a grain of salt as the researchers are still actively working on the protocol's security properties and numeric analysis.
+
+:::
 
 While these numbers seem comforting and reasonably small to provide a very high degree of confidence after less than 10 minutes (a block is produced on average every 20s), it should be noted that they are based on non-existent to low adversarial power assumption (e.g. lower than 10% total stake), in other words they represent the best case scenario and say nothing about the potential impact of an adversary with significant resources and high motivation to either disrupt the network, e.g. as a form of denial of service to degrade the perceived value of Cardano, or more obviously to double spend. As the stakes increase and the network becomes more valuable, the probability of such an attack increases and our confidence in the settlement time should be adjusted accordingly.
 
@@ -237,7 +233,11 @@ The formal specification of the Peras protocol is implemented in Agda. It is a d
 
 #### Domain model
 
-**Note**: The code here is substantially different from the [pseudo-code](#pseudo-code) mentioned before. These represent two different lines of work that ultimately should be reconciled.
+:::note
+
+The code here is substantially different from the [pseudo-code](#pseudo-code) mentioned before. These represent two different lines of work that ultimately should be reconciled.
+
+:::
 
 The domain model is defined as Agda data types and implemented with Haskell code extraction in mind. The extractable domain model comprises entities like `Block`, `Chain`, `Vote` or `Certificate`. For example the Agda record type for `Block`
 
@@ -425,8 +425,11 @@ We provide in this section the methodology and results of the analysis of the Pe
 
 This section provides high-level analysis of the impact of Peras protocol on the existing Cardano network, using [ΔQSD methodology](https://iohk.io/en/research/library/papers/mind-your-outcomes-the-dqsd-paradigm-for-quality-centric-systems-development-and-its-application-to-a-blockchain-case-study/). In order to provide a baseline to compare with, we first applied ΔQ to the existing Praos protocol reconstructing the results that lead to the current set of parameters defining the performance characteristics of Cardano, following section 4 of the aforementioned paper. We then used the same modeling technique taking into account the Peras protocol **assuming inclusion of certificates in headers** insofar as they impact the core _outcome_ of the Cardano network, namely _block diffusion time_.
 
-> [!NOTE]
-> One of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
+:::note
+
+One of the sub-goals for Peras project is to collaborate with PNSol, the original inventor of ΔQ methodology, to improve the usability of the whole method and promote it as a standard tool for designing distributed systems.
+
+:::
 
 #### Baseline - Praos ΔQ modeling
 
@@ -447,9 +450,12 @@ The block and body sizes are assumed to be:
 * Block header size is smaller than typical MTU of IP network (e.g. 1500 bytes) and therefore requires a single roundtrip of TCP messages for propagation,
 * Block body size is about 64kB which implies propagation requires several TCP packets sending and therefore takes more time.
 
-> [!NOTE]
-> As the Cardano network uses TCP/IP for its transport, we should base the header size on the [Maximum Segment Size](https://en.wikipedia.org/wiki/Maximum_segment_size), not the MTU.
-> This size is 536 for IPv4 and 1220 for IPv6.
+:::note
+
+As the Cardano network uses TCP/IP for its transport, we should base the header size on the [Maximum Segment Size](https://en.wikipedia.org/wiki/Maximum_segment_size), not the MTU.
+This size is 536 for IPv4 and 1220 for IPv6.
+
+:::
 
 Average latency numbers are drawn from table 1 in the paper and depend on the (physical) distance between 2 connected nodes:
 
@@ -461,8 +467,11 @@ Average latency numbers are drawn from table 1 in the paper and depend on the (p
 
 For each step in the diffusion of a block, we assume an equal ($\frac{1}{3}$) chance for each class of distance.
 
-> [!NOTE]
-> The actual maximum block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available. We need to actually measure the real value for this block size and other significant increments.
+:::NOTE
+
+The actual maximum block body size at the time of this writing is 90kB, but for want of an actual delay value for this size, we chose the nearest increment available. We need to actually measure the real value for this block size and other significant increments.
+
+:::
 
 We have chosen to define two models of ΔQ diffusion, one based on an average node degree of 10, and another one on 15. Table 2 gives us the following distribution of paths length:
 
@@ -476,8 +485,11 @@ We have chosen to define two models of ΔQ diffusion, one based on an average no
 
 These numbers are reflected (somewhat inaccurately) in the above graph, representing the probabilities for the number of hops a block will have to go through before reaching another node.
 
-> [!NOTE]
-> The current target valency for cardano-node's connection is 20, and while there are a large number of stake pools in operation, there is some significant concentration of stake, which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
+:::note
+
+The current target valency for cardano-node's connection is 20, and while there are a large number of stake pools in operation, there is some significant concentration of stake, which means the actual number of "core" nodes to consider would be smaller and the distribution of paths length closer to 1.
+
+:::
 
 ##### Modeling process
 
@@ -515,7 +527,7 @@ deltaq15 = combine hopsProba15
 
 Then computing the empirical CDF over 5000 different random samples yield the following graph:
 
-![Praos ΔQ Model CDF](/img/plot-hops-distribution.svg)
+![Praos ΔQ Model CDF](/img/plot-hops-distribution.svg#scale50)
 
 To calibrate our model, we have computed an empirical distribution of block adoption time[^2] observed on the `mainnet` over the course of 4 weeks (from 22nd February 2024 to 18th March 2024), as provided by https://api.clio.one/blocklog/timeline/. The raw data is provided as a file with 12 millions entries similar to:
 
@@ -547,7 +559,7 @@ Therefore the total time for block diffusion is the sum of the last 4 columns.
 
 This data is gathered through a network of over 100 collaborating nodes that agreed to report various statistics to a central aggregator, so it is not exhaustive and could be biased. The following graph compares this observed CDF to various CDFs for different distances (in the graph sense, e.g. number of hops one need to go through from an emitting node to a recipient node) between nodes.
 
-![Multiple hops & empirical CDF](/img/plot-praos-multi-hops.svg)
+![Multiple hops & empirical CDF](/img/plot-praos-multi-hops.svg#scale50)
 
 While this would require some more rigorous analysis to be asserted in a sound way, it seems there is a good correlation between empirical distribution and 1-hop distribution, which is comforting as it validates the relevance of the model.
 
@@ -576,13 +588,20 @@ For the case of 2500 nodes with average degree 15, we get the following distribu
 
 ![Diffusion with and without certificate](/img/network-with-cert.svg)
 
-> [!NOTE]
-> Depending on the value of $U$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, e.g. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that is misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
+:::note
 
-> [!NOTE]
-> In practice, `cardano-node` uses _network-level pipelining_ to avoid having to request individually every block/header: e.g. when sending multiple blocks to a peer a node will not wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
->
-> This is not to be confused with _consensus pipelining_ which streamlines block headers diffusion from upstream to downstream peers before waiting for full block body validation.
+Depending on the value of $U$, the round length, not all block headers will have a certificate and the ratio could actually be quite small, e.g. if $T=60$ then we would expect 1/3rd of the headers to have a certificate on average. While we tried to factor that ratio in the model, that is misleading because of the second order effect an additional certificate fetching could have on the whole system: More delay in the block diffusion process increases the likelihood of forks which have an adversarial impact on the whole system, and averaging this impact hides it.
+
+:::
+
+
+:::note
+
+In practice, `cardano-node` uses _network-level pipelining_ to avoid having to request individually every block/header: e.g. when sending multiple blocks to a peer a node will not wait for its peer's request and will keep sending headers as long as not instructed to do otherwise.
+
+This is not to be confused with _consensus pipelining_ which streamlines block headers diffusion from upstream to downstream peers before waiting for full block body validation.
+
+:::
 
 #### Conclusion
 
@@ -777,12 +796,15 @@ The IOSim-based Haskell simulator for Peras currently provides a provisional imp
 
 The simulation implements the February version of the Peras protocol, illustrated in the [UML](https://en.wikipedia.org/wiki/Unified_Modeling_Language) sequence diagrams below for node behavior, and the activity diagram for node state transitions. Nodes receive messages for entering a new slot or new voting round; they also receive new preferred chains or votes from their upstream peers via messages. When they vote, forge blocks, or adopt a new preferred chain, they notify their downstream peers via messages.
 
-> [!WARNING]
-> The detailed behavior of the February protocol differs somewhat from later versions such as the March protocol.
+:::warning
 
-![UML sequence diagram for the February version of the Peras protocol](/img/sim-expts/peras-sequence.png)
+The detailed behavior of the February protocol differs somewhat from later versions such as the March protocol.
 
-![UML activity diagram for the February version of the Peras protocol](/img/sim-expts/peras-activity.png)
+:::
+
+![UML sequence diagram for the February version of the Peras protocol](/img/sim-expts/peras-sequence.png#scale50)
+
+![UML activity diagram for the February version of the Peras protocol](/img/sim-expts/peras-activity.png#scale50)
 
 #### Design
 
@@ -1315,13 +1337,6 @@ Finally, additional research may further improve the efficiency of the certifica
 
 ## References
 
-* [Protocol overview](https://docs.google.com/presentation/d/1QGCvDoOJIWug8jJgCNv3p9BZV-R8UZCyvosgNmN-lJU/edit?usp=sharing) (April 2023)
-* [Latest version of the algorithm](https://docs.google.com/document/d/1w_jHsojcBxZHgGrr63ZGa4nhkgEpkL6a2cFYiq8Vf8c/edit) (March 2024)
-* [Post-workshop algorithm pseudocode](https://docs.google.com/document/d/1lywi65s1nQpAGgMpzPXD-sLzYNES-FZ8SHXF75VCKuI/edit#heading=h.dqvlvyqlb2s4) (November 2023)
-* [Pre-workshop algorithm pseudocode](https://docs.google.com/document/d/1QMn1CqS4zSbKzvozhcAtc7MN_nMfVHhP25pMTxyhhZ8/edit#heading=h.8bsvt41k7bj1) (November 2023)
-* [Peras Workshop Report](https://docs.google.com/document/d/1dv796m2Fc7WH38DNmGc68WOXnqtxj7F30o-kGzM4zKA/edit) (November 2023)
-* [Quick wins for settlement](https://docs.google.com/document/d/1PsmhCYlpSlkpICghog0vBWVTnWAdICuQT1khGZ_feec/edit#heading=h.wefcmsmvzoy5) (November 2023)
-* [Peras presentation at CSM](https://docs.google.com/presentation/d/1eKkrFeQMKlCRQV72yR7xg_RzD8WHaM4jPtUh9rwsrR0/edit#slide=id.g27ebcf9a0c4_3_0) (September 2023)
 * [Practical Settlement bounds for longest-chain consensus](https://eprint.iacr.org/2022/1571.pdf) (August 2023)
 * [Sidechains requirements for fast settlement](https://input-output.atlassian.net/wiki/spaces/SID/pages/3829956994/Main+Chain+to+Sidechain+Finality+Improvement) (April 2023)
 * [Polkadot's Grandpa finality algorithm](https://github.com/w3f/consensus/blob/master/pdf/grandpa.pdf) (June 2020)
@@ -1330,8 +1345,6 @@ Finally, additional research may further improve the efficiency of the certifica
 * [Goldfish](https://arxiv.org/abs/2209.03255) (September 2022)
 * [Towards Formal Verification of HotStuff-based Byzantine Fault Tolerant Consensus in Agda](https://arxiv.org/abs/2203.14711) (March 2022)
 * [Ouroboros High Assurance work](https://github.com/input-output-hk/ouroboros-high-assurance)
-* [Peras Project February Monthly demo](https://docs.google.com/presentation/d/1xNgpC6ioIC4xM3Gn-LvFPZpw4onwAKNc-3EJY4GKEjs/edit#slide=id.p) (February 2023)
-* [Peras Project March Monthly demo](https://docs.google.com/presentation/d/1LZn1FhfbLH6rXtgxTvui1gz9yN0vT6NpmCrOdo2xnfo/edit#slide=id.g124655d21b1_2_509) (March 2023)
 * [Network Simulation Tools Comparison](https://drive.google.com/file/d/1loxfRSv7q-TBM9f0Ch4Ap_SuBPOKk0uu/view?usp=sharing) (April 2024)
 * [Approximate Lower Bound Arguments (ALBA)](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) (May 2024)
 
