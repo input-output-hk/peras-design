@@ -39,6 +39,12 @@ resource "google_cloud_run_v2_service" "peras_server" {
       "managed-by" = "github-actions"
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      template, client, client_version
+    ]
+  }
 }
 
 resource "google_cloud_run_v2_service_iam_member" "noauth" {
@@ -58,5 +64,11 @@ resource "google_cloud_run_domain_mapping" "peras_server_domain_mapping" {
   }
   spec {
     route_name = google_cloud_run_v2_service.peras_server.name
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata,
+      spec
+    ]
   }
 }

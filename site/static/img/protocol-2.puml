@@ -1,0 +1,25 @@
+@startuml
+title Design 2. Messy Multiplexing
+
+StIdle : client has agency
+
+[*] --> StIdle : BeginSession
+StIdle --> [*] : EndSession
+
+StWait : server has agency
+StIdle --> StWait : FetchChain
+StIdle --> StWait : FetchVotes
+StIdle --> StWait : FetchBlocks
+StWait --> StIdle : Acknowledge
+
+StNext : server has agency
+StIdle --> StNext : Next
+StNext --> StIdle : RollForward
+StNext --> StIdle : RollBack
+StNext --> StIdle : SomeVote
+StNext --> StIdle : SomeBlock
+
+StWait -[dashed]-> StNext
+note left of StWait : Optionally, `StWait` could by pass `Acknowledge`\nand send the first item in the response.
+
+@enduml

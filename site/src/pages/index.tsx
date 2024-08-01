@@ -18,34 +18,34 @@ import HeaderBorderBottomDark from '@site/static/img/hero-border-bottom-dark.svg
 
 function HomepageHeader() {
     const { siteConfig } = useDocusaurusContext();
-    const { isDarkTheme } = useColorMode();  
+    const { isDarkTheme } = useColorMode();
 
     return (
-    <>
-    <div style={{width: "100%", display: "flex"}}>
-        {isDarkTheme ? <HeaderBorderTopDark style={{height: "auto", width: "inherit"}} /> : <HeaderBorderTop style={{height: "auto", width: "inherit"}}/>}
-        </div>
+        <>
+            <div style={{ width: "100%", display: "flex" }}>
+                {isDarkTheme ? <HeaderBorderTopDark style={{ height: "auto", width: "inherit" }} /> : <HeaderBorderTop style={{ height: "auto", width: "inherit" }} />}
+            </div>
             <header className={clsx('hero hero--primary', styles.heroBanner)}>
                 <div className="container">
                     <Heading as="h1" className="hero__title">
                         {siteConfig.title}
                     </Heading>
                     <p className={clsx(styles.heroSubtitle)}>{siteConfig.tagline}</p>
-                        <Link
-                            className={clsx("button button--secondary button--lg", styles.ctaButton)}
-                            to="/docs/intro">
-                            Peras Tutorial - 5min ⏱️
-                        </Link>
+                    <Link
+                        className={clsx("button button--secondary button--lg", styles.ctaButton)}
+                        to="/docs/intro">
+                        Start here 🚀
+                    </Link>
                 </div>
             </header>
-            <div style={{width: "100%", display: "flex"}}>
-         {isDarkTheme ? <HeaderBorderBottomDark style={{height: "auto", width: "inherit"}} /> : <HeaderBorderBottom style={{height: "auto", width: "inherit"}}/>}
-        </div>
+            <div style={{ width: "100%", display: "flex" }}>
+                {isDarkTheme ? <HeaderBorderBottomDark style={{ height: "auto", width: "inherit" }} /> : <HeaderBorderBottom style={{ height: "auto", width: "inherit" }} />}
+            </div>
         </>
     );
 }
 
-export default function Home(){
+export default function Home() {
     const { siteConfig } = useDocusaurusContext();
     return (
         <Layout
@@ -53,7 +53,7 @@ export default function Home(){
             description="Description will go into a meta tag in <head />">
             <HomepageHeader />
             <main>
-                <FeaturesList/>
+                <FeaturesList />
             </main>
         </Layout>
     );

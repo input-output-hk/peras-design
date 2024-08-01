@@ -126,6 +126,7 @@ jobs:
     - name: 🏗️ Agda-to-HTML
       run: |
         nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
+
     - name: Publish Docusaurus build
       uses: actions/upload-artifact@v4
       with:
@@ -134,8 +135,50 @@ jobs:
         path: |
           html/*
 
+  build-pdf-report:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Massage markdown
+        run: |
+          cat site/docs/reports/tech-report-1.md|  sed -e 's/\/img/site\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-1.md
+          cat site/docs/reports/tech-report-2.md|  sed -e 's/\/img/site\/static\/img/g' | sed -e 's/#scale50)/){ width=50% }/g' | sed -e 's/^#//g' > tech-report-2.md
+
+      - name: 📓 Build PDF
+        uses: docker://pandoc/latex:3.2.0
+        with:
+          args: >-  # allows you to break string into multiple lines
+            --pdf-engine=xelatex
+            -N
+            --standalone
+            --output=tech-report-1.pdf
+            tech-report-1.md
+
+      - name: 📓 Build PDF
+        uses: docker://pandoc/latex:3.2.0
+        with:
+          args: >-  # allows you to break string into multiple lines
+            --pdf-engine=xelatex
+            -N
+            --standalone
+            --output=tech-report-2.pdf
+            tech-report-2.md
+
+      - name: 📤 Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: tech-reports
+          if-no-files-found: error
+          path: |
+            tech-report-*.pdf
+
   build-docusaurus:
     runs-on: ubuntu-22.04
+    needs:
+      - build-specification
+      - build-pdf-report
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -151,6 +194,18 @@ jobs:
         working-directory: site
         run: npm ci
 
+      - name: 📥 Download Agda specification
+        uses: actions/download-artifact@v4
+        with:
+          name: agda-specification
+          path: ./site/static/agda_html/
+
+      - name: 📥 Download PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: tech-reports
+          path: ./site/static/
+
       - name: 🏗️ Build Docusaurus site
         working-directory: site
         run: |
@@ -163,6 +218,37 @@ jobs:
           if-no-files-found: error
           path: |
             site/build/*
+
+  # FIXME: remove once merged
+  publish-staging-docs:
+    environment: 'staging'
+    runs-on: ubuntu-latest
+    needs:
+      - build-docusaurus
+    steps:
+      - name: 📥 Download Docusaurus build
+        uses: actions/download-artifact@v4
+        with:
+          name: docusaurus-build
+          path: ./site
+
+      - name: 🔑 Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
+      - name: 🔍 Adding Known Hosts
+        run: ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚅 Deploy with rsync
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr
+          path: site/
+          remote_path: /var/www/${{ secrets.STAGING_HOST }}/public_html
+          remote_host: ${{ secrets.STAGING_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key: ${{ secrets.SSH_KEY }}
 
   publish-docs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

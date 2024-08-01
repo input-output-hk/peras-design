@@ -45,7 +45,7 @@ html[data-theme='dark'] {
   --ifm-footer-background-color: #0A1E14;
 
   --ifm-heading-color: #fff;
-  --ifm-hero-text-color: #fff; 
+  --ifm-hero-text-color: #fff;
   --ifm-menu-color-active: #E0F5EB;
   --ifm-menu-color: #fff;
   --ifm-link-color: #fff;
@@ -53,4 +53,10 @@ html[data-theme='dark'] {
   --ifm-breadcrumb-color: #fff;
   --ifm-navbar-link-color: #fff;
   --ifm-navbar-link-hover-color: #E0F5EB;
+}
+
+img[src $= "#scale50"] {
+    width: 50%;
+    float: left;
+    margin: 0 2em;
 }

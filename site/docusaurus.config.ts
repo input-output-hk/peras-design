@@ -43,22 +43,22 @@ const config: Config = {
                     remarkPlugins: [remarkMath],
                     rehypePlugins: [rehypeKatex],
 
-                }// ,
-                // blog: {
-                //     path: "weekly",
-                //     routeBasePath: "/weekly",
-                //     showReadingTime: true,
-                //     blogTitle: 'Peras R&D Updates',
-                //     blogDescription: 'Regular updates from Peras R&D Team',
-                //     postsPerPage: 5,
-                //     blogSidebarTitle: 'Recent Posts',
-                //     blogSidebarCount: 10,
-                //     feedOptions: {
-                //         type: 'all',
-                //         title: 'Peras R&D Feed',
-                //         description: 'Regular updates from Peras R&D Teams',
-                //     },
-                // }
+                },
+                blog: {
+                    path: "weekly",
+                    routeBasePath: "/weekly",
+                    showReadingTime: true,
+                    blogTitle: 'Peras R&D Updates',
+                    blogDescription: 'Regular updates from Peras R&D Team',
+                    postsPerPage: 5,
+                    blogSidebarTitle: 'Recent Posts',
+                    blogSidebarCount: 10,
+                    feedOptions: {
+                        type: 'all',
+                        title: 'Peras R&D Feed',
+                        description: 'Regular updates from Peras R&D Teams',
+                    },
+                }
                 ,
                 theme: {
                     customCss: './src/css/custom.css',
@@ -76,10 +76,14 @@ const config: Config = {
         },
     ],
     themeConfig: {
+        tableOfContents: {
+            minHeadingLevel: 2,
+            maxHeadingLevel: 3,
+        },
         navbar: {
             title: 'Peras R&D',
             logo: {
-                alt: 'My Site Logo',
+                alt: 'Peras Logo',
                 src: 'img/logo.png',
                 srcDark: 'img/logo-for-dark.png'
             },
@@ -90,14 +94,19 @@ const config: Config = {
                     to: '/docs/intro',
                 },
                 {
-                    to: '/docs/spec',
+                    to: 'pathname:///agda_html/Peras.SmallStep.html',
                     label: 'Formal Specification',
                     position: 'left'
                 },
                 {
-                    to: '/docs/update',
+                    to: '/weekly',
                     label: 'Updates',
                     position: 'left'
+                },
+                {
+                    href: 'https://peras-simulation.cardano-scaling.org/',
+                    label: 'Simulator',
+                    position: 'right',
                 },
                 {
                     href: 'https://github.com/input-output-hk/peras-design',
@@ -135,7 +144,7 @@ const config: Config = {
                     items: [
                         {
                             label: 'Updates',
-                            to: '/docs/update',
+                            to: '/weekly',
                         },
                         {
                             label: 'GitHub',
@@ -156,7 +165,7 @@ const config: Config = {
                         },
                         {
                             label: "Contributors",
-                            to: "https://github.com/input-output-hk/hydra/graphs/contributors",
+                            to: "https://github.com/input-output-hk/peras-design/graphs/contributors",
                         },
                     ],
                 },
