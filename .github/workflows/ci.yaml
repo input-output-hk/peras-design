@@ -219,37 +219,6 @@ jobs:
           path: |
             site/build/*
 
-  # FIXME: remove once merged
-  publish-staging-docs:
-    environment: 'staging'
-    runs-on: ubuntu-latest
-    needs:
-      - build-docusaurus
-    steps:
-      - name: 📥 Download Docusaurus build
-        uses: actions/download-artifact@v4
-        with:
-          name: docusaurus-build
-          path: ./site
-
-      - name: 🔑 Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_KEY }}
-          known_hosts: 'just-a-placeholder-so-we-dont-get-errors'
-      - name: 🔍 Adding Known Hosts
-        run: ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
-
-      - name: 🚅 Deploy with rsync
-        uses: burnett01/rsync-deployments@7.0.1
-        with:
-          switches: -avzr
-          path: site/
-          remote_path: /var/www/${{ secrets.STAGING_HOST }}/public_html
-          remote_host: ${{ secrets.STAGING_HOST }}
-          remote_user: ${{ secrets.SSH_USER }}
-          remote_key: ${{ secrets.SSH_KEY }}
-
   publish-docs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
