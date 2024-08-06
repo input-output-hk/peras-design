@@ -500,7 +500,7 @@ transition s Tick =
         sutVotes = votesInState s'
         certsFromQuorum = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
 transition s (NewChain chain) = do
-  guard (length chain > 0) -- TODO: use NonEmpty
+--  guard (length chain > 0) -- TODO: use NonEmpty
 --  guard (checkBlockNotFromSut (head chain))
   Just ([] , record s
              { allChains = chain ∷ allChains s
@@ -514,7 +514,8 @@ transition s (NewVote v) = do
   --       by the vote creator? We don't have all the block-trees in
   --       the test model. The following should use the block-tree of
   --       the vote creator for checking the voting rules:
-  -- guard (isYes $ checkVotingRules s)
+  guard (isYes $ checkVotingRules s)
+--  guard (hash' (BlockSelection (clock s) s) == blockHash v)
   Just ([] , record s { allVotes = v ∷ allVotes s })
 
 {-# COMPILE AGDA2HS transition #-}

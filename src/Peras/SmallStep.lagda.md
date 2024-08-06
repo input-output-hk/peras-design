@@ -314,9 +314,12 @@ cool-down phase.
 
 #### BlockSelection
 ```agda
+    BlockSelection' : SlotNumber → Chain → Maybe Block
+    BlockSelection' (MkSlotNumber s) =
+      head ∘ filter (λ {b → (slotNumber' b) ≤? (s ∸ L)})
+
     BlockSelection : SlotNumber → T → Maybe Block
-    BlockSelection (MkSlotNumber s) =
-      head ∘ filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) ∘ preferredChain
+    BlockSelection s = BlockSelection' s ∘ preferredChain
 ```
 ```agda
     ChainExtends : Maybe Block → Certificate → Chain → Type
@@ -556,9 +559,9 @@ is added to be consumed immediately.
             open State
             s = clock M
             r = v-round s
-            v = createVote s p π σ (hash b)
+            v = createVote s p π σ b
           in
-        ∙ BlockSelection s t ≡ just b
+        ∙ hash' (BlockSelection s t) ≡ b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r

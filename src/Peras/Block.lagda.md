@@ -7,7 +7,7 @@ module Peras.Block where
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; null; head; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe; maybe′)
+open import Data.Maybe using (Maybe; maybe′; just; nothing)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -231,6 +231,13 @@ instance
   iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
  
 open Hashable
+
+module _ ⦃ hashBlock : Hashable Block ⦄
+  where
+
+  hash' : Maybe Block → Hash Block
+  hash' (just b) = hash hashBlock b
+  hash' nothing = MkHash emptyBS
 
 private
   instance

@@ -36,13 +36,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ postulates : Postulates ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
-         {parties : Parties} -- TODO: use parties from blockTrees
+         {parties : Parties}
     where
 
   open Params ⦃...⦄
   open Network ⦃...⦄
 
-  open Model -- using (NodeModel; sutId)
+  open Model
   open Model.TreeInstance using (NodeModelTree; isTreeType)
 
   open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
@@ -86,7 +86,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInStep (Fetch _) = []
     sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _)) =
       case p ≟ sutId of λ where
-        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ (Hashable.hash hashBlock b)) ∷ []
+        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
         (no _)  → []
     sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _ _) = []
@@ -102,7 +102,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     pref-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → pref (modelState s p) ≡ prefChain (proj₁ ∃tree)
-    pref-equ s p ∃tree rewrite params-equ s p ∃tree = {!refl!}
+    pref-equ s p ∃tree rewrite params-equ s p ∃tree = {!!}
 
     certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
@@ -179,10 +179,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       σ    = signature vote
       field
         {tree}         : NodeModel
-        {block}        : Block
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
-        blockExists    : BlockSelection (State.clock s) tree ≡ just block
-        blockVote      : blockHash vote ≡ Hashable.hash hashBlock block
+        blockExists    : hash' (BlockSelection (State.clock s) tree) ≡ blockHash vote
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -191,13 +189,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with v ← validSignature rewrite correctVote = v
 
-      blockExists' : BlockSelection (State.clock s) tree ≡ just record block { signature = MkSignature (hashBytes (blockHash vote)) }
-      blockExists' with b ← blockExists rewrite blockVote = b
+    open import Data.List.Membership.Propositional using (_∈_; _∉_)
 
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
-        hasTree : ∀ (p : ℕ) → ∃[ t ] (State.blockTrees s ⁉ p ≡ just t)
+        sutTree : ∃[ t ] (State.blockTrees s ⁉ sutId ≡ just t)
+        equalTree : ∀ (p : ℕ) → State.blockTrees s ⁉ sutId ≡ State.blockTrees s ⁉ p
+        -- eqt : Any (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
+
+        -- hasTree : ∀ (p : ℕ) → ∃[ t ] (State.blockTrees s ⁉ p ≡ just t) -- TODO: restrict to p ∈ parties
 
     open Invariant
 
@@ -208,16 +209,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-preconditions s inv refl
       with isYes (checkVotingRules (modelState s sutId)) in checkedVRs
     ... | True = record
-      { tree        = proj₁ (hasTree inv sutId)
+      { tree        = proj₁ (sutTree inv)
       ; block       = {!!}
       ; blockExists = {!!}
       ; validVote   =
         let
           witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-          f₁ = vr-1a⇒VotingRule-1A s sutId (hasTree inv sutId)
-          f₂ = vr-1b⇒VotingRule-1B s sutId (hasTree inv sutId)
-          f₃ = vr-2a⇒VotingRule-2A s sutId (hasTree inv sutId)
-          f₄ = vr-2b⇒VotingRule-2B s sutId (hasTree inv sutId)
+          f₁ = vr-1a⇒VotingRule-1A s sutId (sutTree inv)
+          f₂ = vr-1b⇒VotingRule-1B s sutId (sutTree inv)
+          f₃ = vr-2a⇒VotingRule-2A s sutId (sutTree inv)
+          f₄ = vr-2b⇒VotingRule-2B s sutId (sutTree inv)
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
       }
@@ -235,30 +236,30 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
--- TODO: this is in conflict with refl below, as the vote creatorId is not sut
---         | isYes (checkVotingRules (modelState s (creatorId vote))) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True =
-      record
-      { tree            = proj₁ (hasTree inv (creatorId vote)) -- we don't track the block trees for the environment nodes in the test model!
-      ; block           = {!!}
-      ; creatorExists   = proj₂ (hasTree inv (creatorId vote)) -- maybe invariant that everyone has the same blockTree?
-      ; blockExists     = {!!}
-      ; blockVote       = refl
-      ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
-      ; validSignature  = axiom-checkVoteSignature checkedSig
-      ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-      ; validVote       = {!!}   -- need to check the VR logic also for environment votes
-      {-
-        let
-          witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-          f₁ = vr-1a⇒VotingRule-1A s (creatorId vote) (hasTree inv (creatorId vote))
-          f₂ = vr-1b⇒VotingRule-1B s (creatorId vote) (hasTree inv (creatorId vote))
-          f₃ = vr-2a⇒VotingRule-2A s (creatorId vote) (hasTree inv (creatorId vote))
-          f₄ = vr-2b⇒VotingRule-2B s (creatorId vote) (hasTree inv (creatorId vote))
-        in
-          S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
-       -}
-      }
+         | isYes (checkVotingRules (modelState s sutId)) in checkedVRs
+    newVote-preconditions s vote inv refl | True | True | True =
+      let
+        slot = State.clock s
+        treeₛ = sutTree inv -- hasTree inv (creatorId vote)
+        eqt = equalTree inv (creatorId vote)
+      in
+        record
+          { tree            = proj₁ treeₛ    -- we don't track the block trees for the environment nodes in the test model!
+          ; creatorExists   = let xx = proj₂ treeₛ in trans (sym eqt) xx    -- maybe invariant that everyone has the same blockTree?
+          ; blockExists     = {!!}
+          ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
+          ; validSignature  = axiom-checkVoteSignature checkedSig
+          ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
+          ; validVote       =          -- need to check the VR logic also for environment votes
+            let
+              witness = toWitness (isYes≡True⇒TTrue checkedVRs)
+              f₁ = vr-1a⇒VotingRule-1A s sutId treeₛ
+              f₂ = vr-1b⇒VotingRule-1B s sutId treeₛ
+              f₃ = vr-2a⇒VotingRule-2A s sutId treeₛ
+              f₄ = vr-2b⇒VotingRule-2B s sutId treeₛ
+            in
+              S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
+          }
 
     -- Soundness --
 
@@ -322,7 +323,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; invariant₁  = {!!}
           ; trace       = CreateVote (invFetched inv)
                             (honest {σ = Vote.signature vote}
-                              blockExists'
+                              blockExists
                               creatorExists
                               validSignature'
                               startOfRound
