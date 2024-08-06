@@ -189,16 +189,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with v ← validSignature rewrite correctVote = v
 
-    open import Data.List.Membership.Propositional using (_∈_; _∉_)
-
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
         sutTree : ∃[ t ] (State.blockTrees s ⁉ sutId ≡ just t)
         equalTree : ∀ (p : ℕ) → State.blockTrees s ⁉ sutId ≡ State.blockTrees s ⁉ p
         -- eqt : Any (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
-
-        -- hasTree : ∀ (p : ℕ) → ∃[ t ] (State.blockTrees s ⁉ p ≡ just t) -- TODO: restrict to p ∈ parties
 
     open Invariant
 
@@ -240,17 +236,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv refl | True | True | True =
       let
         slot = State.clock s
-        treeₛ = sutTree inv -- hasTree inv (creatorId vote)
+        treeₛ = sutTree inv
         eqt = equalTree inv (creatorId vote)
       in
         record
-          { tree            = proj₁ treeₛ    -- we don't track the block trees for the environment nodes in the test model!
-          ; creatorExists   = let xx = proj₂ treeₛ in trans (sym eqt) xx    -- maybe invariant that everyone has the same blockTree?
+          { tree            = proj₁ treeₛ -- we don't track the block trees for the environment nodes in the test model!
+          ; creatorExists   = trans (sym eqt) (proj₂ treeₛ)    -- maybe invariant that everyone has the same blockTree?
           ; blockExists     = {!!}
           ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
           ; validSignature  = axiom-checkVoteSignature checkedSig
-          ; correctVote     = {!!}    -- this needs to go in the `transition` (checking preferred chains and L etc)
-          ; validVote       =          -- need to check the VR logic also for environment votes
+          ; correctVote     = {!!}        -- this needs to go in the `transition` (checking preferred chains and L etc)
+          ; validVote       =             -- need to check the VR logic also for environment votes
             let
               witness = toWitness (isYes≡True⇒TTrue checkedVRs)
               f₁ = vr-1a⇒VotingRule-1A s sutId treeₛ
