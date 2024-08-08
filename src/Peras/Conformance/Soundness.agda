@@ -209,7 +209,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ... | True = record
       { tree        = proj₁ (sutTree inv)
       ; block       = {!!}
-      ; validBlockHash = {!!}
+      ; blockExists = {!!}
       ; validVote   =
         let
           witness = toWitness (isYes≡True⇒TTrue checkedVRs)
@@ -236,7 +236,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | checkSignedVote vote in checkedSig
          | checkVoteNotFromSut vote in checkedSut
          | isYes (checkVotingRules (modelState s sutId)) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True | True | True =
+         | hashMaybeBlock (votingBlock (modelState s sutId)) == blockHash vote in isValidBlockHash
+    newVote-preconditions s vote inv refl | True | True | True | True | True =
       let
         slot = State.clock s
         treeₛ = sutTree inv

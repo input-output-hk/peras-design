@@ -324,6 +324,10 @@ checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
 checkBlockNotFromSut :: Block -> Bool
 checkBlockNotFromSut = not . checkBlockFromSut
 
+hashMaybeBlock :: Maybe Block -> Hash Block
+hashMaybeBlock (Just b) = hash b
+hashMaybeBlock Nothing = genesisHash
+
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
   Just
@@ -372,4 +376,5 @@ transition s (NewVote v) =
     guard (checkSignedVote v)
     guard (checkVoteNotFromSut v)
     guard (isYes $ checkVotingRules s)
+    guard (hashMaybeBlock (votingBlock s) == blockHash v)
     Just ([], addVote' s v)

@@ -238,6 +238,8 @@ private
 votingBlock : NodeModel → Maybe Block
 votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
 
+{-# COMPILE AGDA2HS votingBlock #-}
+
 newChain' : NodeModel → Chain → NodeModel
 newChain' s c = record s { allChains = c ∷ (allChains s) }
 
@@ -298,8 +300,6 @@ module TreeInstance
 postulate -- FIXME
   instance
     iRoundNumber : IsLawfulEq RoundNumber
-
-{-# COMPILE AGDA2HS votingBlock #-}
 
 isYes : ∀ {A : Set} → Dec A → Bool
 isYes (True ⟨ _ ⟩) = True
@@ -503,6 +503,12 @@ checkBlockNotFromSut = not ∘ checkBlockFromSut
 
 {-# COMPILE AGDA2HS checkBlockNotFromSut #-}
 
+hashMaybeBlock : Maybe Block → Hash Block
+hashMaybeBlock (Just b) = Hashable.hash hashBlock b
+hashMaybeBlock Nothing = genesisHash
+
+{-# COMPILE AGDA2HS hashMaybeBlock #-}
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
@@ -527,7 +533,7 @@ transition s (NewVote v) = do
   --       the test model. The following should use the block-tree of
   --       the vote creator for checking the voting rules:
   guard (isYes $ checkVotingRules s)
---  guard (hash' (BlockSelection (clock s) s) == blockHash v)
+  guard (hashMaybeBlock (votingBlock s) == blockHash v)
   Just ([] , addVote' s v)
 
 {-# COMPILE AGDA2HS transition #-}
