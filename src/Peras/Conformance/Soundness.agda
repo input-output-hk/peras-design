@@ -96,17 +96,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace ∎              = []
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
-    params-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → Params.B params ≡ perasB (protocol (proj₁ ∃tree))
-    params-equ s p ∃tree = {!!}
-
-    pref-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → pref (modelState s p) ≡ prefChain (proj₁ ∃tree)
-    pref-equ s p ∃tree rewrite params-equ s p ∃tree = {!!}
+    -- TODO: isomorphism of Maybe and Data.Maybe.Maybe
+    from-maybe : ∀ {x} → Maybe x → Data.Maybe.Maybe x
+    from-maybe (Just x) = just x
+    from-maybe Nothing = nothing
 
     certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
-    certS-equ s p ∃tree rewrite pref-equ s p ∃tree = {!!}
+    certS-equ s p ∃tree = {!!} -- TODO: two Maybes, otherwise refl
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
@@ -264,9 +261,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           }
 
         where
-          eq-maybe : ∀ {x} → Maybe x → Data.Maybe.Maybe x
-          eq-maybe (Just x) = just x
-          eq-maybe Nothing = nothing
+          eq-hash : ∀ {x} → hashMaybeBlock x ≡ hash' (eq-maybe x)
+          eq-hash {Nothing} = refl
+          eq-hash {Just _} = refl
 
           checkBlockSelection : eq-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (proj₁ (sutTree inv))
           checkBlockSelection = {!!}
