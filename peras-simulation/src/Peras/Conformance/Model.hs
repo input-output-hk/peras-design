@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
@@ -13,7 +14,7 @@ import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, per
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (catMaybes, comparing, listToMaybe, maximumBy, maybeToList)
+import Peras.Util (catMaybes, comparing, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -170,10 +171,20 @@ chainExtends b c =
 extends :: Block -> Certificate -> [Chain] -> Bool
 extends block cert chains = any (chainExtends block cert) chains
 
+headMaybe :: [a] -> Maybe a
+headMaybe [] = Nothing
+headMaybe (x : _) = Just x
+
 votingBlock :: NodeModel -> Maybe Block
 votingBlock s =
-  listToMaybe
-    (dropWhile (not . blockOldEnough (protocol s) (clock s)) (pref s))
+  headMaybe
+    . filter
+      ( \case
+          b ->
+            getSlotNumber (slotNumber b) + perasL (protocol s)
+              <= getSlotNumber (clock s)
+      )
+    $ pref s
 
 newChain' :: NodeModel -> Chain -> NodeModel
 newChain' s c =

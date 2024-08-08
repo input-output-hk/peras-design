@@ -316,7 +316,7 @@ cool-down phase.
 ```agda
     BlockSelection' : SlotNumber → Chain → Maybe Block
     BlockSelection' (MkSlotNumber s) =
-      head ∘ filter (λ {b → (slotNumber' b) ≤? (s ∸ L)})
+      head ∘ filter (λ {b → (slotNumber' b) + L ≤? s})
 
     BlockSelection : SlotNumber → T → Maybe Block
     BlockSelection s = BlockSelection' s ∘ preferredChain

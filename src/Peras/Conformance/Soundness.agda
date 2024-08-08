@@ -246,10 +246,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         record
           { tree            = proj₁ treeₛ -- we don't track the block trees for the environment nodes in the test model!
           ; creatorExists   = trans (sym eqt) (proj₂ treeₛ)    -- maybe invariant that everyone has the same blockTree?
-          ; validBlockHash     = {!!}
+          ; validBlockHash  = {!!} -- this needs to go in the `transition` (checking preferred chains and L etc)
           ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
           ; validSignature  = axiom-checkVoteSignature checkedSig
-          ; correctVote     = {!refl!}        -- this needs to go in the `transition` (checking preferred chains and L etc)
+          ; correctVote     = {!refl!}
           ; validVote       =             -- need to check the VR logic also for environment votes
             let
               witness = toWitness (isYes≡True⇒TTrue checkedVRs)
@@ -262,6 +262,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; clocksAgree = refl
             ; notFromSut = not-eqℕ-sound checkedSut
           }
+
+        where
+          eq-maybe : ∀ {x} → Maybe x → Data.Maybe.Maybe x
+          eq-maybe (Just x) = just x
+          eq-maybe Nothing = nothing
+
+          checkBlockSelection : eq-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (proj₁ (sutTree inv))
+          checkBlockSelection = {!!}
 
     -- Soundness --
 

@@ -235,8 +235,15 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
+headMaybe : ∀ {a : Set} → List a → Maybe a
+headMaybe [] = Nothing
+headMaybe (x ∷ _) = Just x
+
+{-# COMPILE AGDA2HS headMaybe #-}
+
 votingBlock : NodeModel → Maybe Block
-votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
+votingBlock s = headMaybe ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
+-- votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
 
 {-# COMPILE AGDA2HS votingBlock #-}
 
