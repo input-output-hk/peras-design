@@ -261,11 +261,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           }
 
         where
-          eq-hash : ∀ {x} → hashMaybeBlock x ≡ hash' (eq-maybe x)
+          eq-hash : ∀ {x} → hashMaybeBlock x ≡ hash' (from-maybe x)
           eq-hash {Nothing} = refl
           eq-hash {Just _} = refl
 
-          checkBlockSelection : eq-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (proj₁ (sutTree inv))
+          checkBlockSelection : from-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (proj₁ (sutTree inv))
           checkBlockSelection = {!!}
 
     -- Soundness --
