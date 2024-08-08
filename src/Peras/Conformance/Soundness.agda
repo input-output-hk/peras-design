@@ -97,7 +97,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
     -- TODO: isomorphism of Maybe and Data.Maybe.Maybe
-    from-maybe : ∀ {x} → Maybe x → Data.Maybe.Maybe x
+    from-maybe : ∀ {x : Set} → Maybe x → Data.Maybe.Maybe x
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
 
