@@ -180,7 +180,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       field
         {tree}         : NodeModel
         creatorExists  : State.blockTrees s ⁉ (creatorId vote) ≡ just tree
-        blockExists    : hash' (BlockSelection (State.clock s) tree) ≡ blockHash vote
+        validBlockHash : hash' (BlockSelection (State.clock s) tree) ≡ blockHash vote
         startOfRound   : StartOfRound slot r
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -209,7 +209,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ... | True = record
       { tree        = proj₁ (sutTree inv)
       ; block       = {!!}
-      ; blockExists = {!!}
+      ; validBlockHash = {!!}
       ; validVote   =
         let
           witness = toWitness (isYes≡True⇒TTrue checkedVRs)
@@ -245,7 +245,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         record
           { tree            = proj₁ treeₛ -- we don't track the block trees for the environment nodes in the test model!
           ; creatorExists   = trans (sym eqt) (proj₂ treeₛ)    -- maybe invariant that everyone has the same blockTree?
-          ; blockExists     = {!!}
+          ; validBlockHash     = {!!}
           ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
           ; validSignature  = axiom-checkVoteSignature checkedSig
           ; correctVote     = {!refl!}        -- this needs to go in the `transition` (checking preferred chains and L etc)
@@ -336,7 +336,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         trace : s₀ ↝⋆ s₁
         trace = CreateVote (invFetched inv)
                             (honest {σ = Vote.signature vote}
-                              blockExists
+                              validBlockHash
                               creatorExists
                               validSignature'
                               startOfRound
@@ -367,7 +367,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     --       ; invariant₁  = {!!}
     --       ; trace       = CreateVote (invFetched inv)
     --                         (honest {p = sutId} {t = tree}
-    --                           blockExists
+    --                           validBlockHash
     --                           {!!}
     --                           {!!}
     --                           p
