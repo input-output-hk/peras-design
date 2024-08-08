@@ -8,7 +8,7 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
-import Peras.Chain (Chain, Vote (blockHash, votingRound))
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
@@ -175,6 +175,24 @@ votingBlock s =
   listToMaybe
     (dropWhile (not . blockOldEnough (protocol s) (clock s)) (pref s))
 
+newChain' :: NodeModel -> Chain -> NodeModel
+newChain' s c =
+  NodeModel
+    (clock s)
+    (protocol s)
+    (c : allChains s)
+    (allVotes s)
+    (allSeenCerts s)
+
+addVote' :: NodeModel -> Vote -> NodeModel
+addVote' s v =
+  NodeModel
+    (clock s)
+    (protocol s)
+    (allChains s)
+    (v : allVotes s)
+    (allSeenCerts s)
+
 isYes :: Bool -> Bool
 isYes True = True
 isYes False = False
@@ -294,6 +312,18 @@ newQuora quorum priorCerts (vote : votes) =
             votes
         )
 
+checkVoteFromSut :: Vote -> Bool
+checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
+
+checkVoteNotFromSut :: Vote -> Bool
+checkVoteNotFromSut = not . checkVoteFromSut
+
+checkBlockFromSut :: Block -> Bool
+checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
+
+checkBlockNotFromSut :: Block -> Bool
+checkBlockNotFromSut = not . checkBlockFromSut
+
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
   Just
@@ -323,31 +353,23 @@ transition s Tick =
       (allSeenCerts s)
       (allVotes s)
 transition s (NewChain chain) =
-  do
-    guard (length chain > 0)
-    Just
-      ( []
-      , NodeModel
-          (clock s)
-          (protocol s)
-          (chain : allChains s)
-          (allVotes s)
-          ( foldr
-              insertCert
-              (allSeenCerts s)
-              (catMaybes $ map certificate chain)
-          )
-      )
+  Just
+    ( []
+    , NodeModel
+        (clock s)
+        (protocol s)
+        (chain : allChains s)
+        (allVotes s)
+        ( foldr
+            insertCert
+            (allSeenCerts s)
+            (catMaybes $ map certificate chain)
+        )
+    )
 transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
-    Just
-      ( []
-      , NodeModel
-          (clock s)
-          (protocol s)
-          (allChains s)
-          (v : allVotes s)
-          (allSeenCerts s)
-      )
+    guard (checkVoteNotFromSut v)
+    guard (isYes $ checkVotingRules s)
+    Just ([], addVote' s v)

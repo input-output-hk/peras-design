@@ -259,7 +259,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             in
               S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
             ; clocksAgree = refl
-            ; notFromSut = λ x → {!!}
+            ; notFromSut = not-eqℕ-sound checkedSut
           }
 
     -- Soundness --

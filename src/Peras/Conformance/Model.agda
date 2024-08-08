@@ -241,8 +241,12 @@ votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clo
 newChain' : NodeModel → Chain → NodeModel
 newChain' s c = record s { allChains = c ∷ (allChains s) }
 
+{-# COMPILE AGDA2HS newChain' #-}
+
 addVote' : NodeModel → Vote → NodeModel
 addVote' s v = record s { allVotes = v ∷ (allVotes s) }
+
+{-# COMPILE AGDA2HS addVote' #-}
 
 open import Peras.Params
 open Hashable
@@ -479,13 +483,23 @@ newQuora quorum priorCerts (vote ∷ votes) =
 
 {-# COMPILE AGDA2HS newQuora #-}
 
+checkVoteFromSut : Vote → Bool
+checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
+
+{-# COMPILE AGDA2HS checkVoteFromSut #-}
+
 checkVoteNotFromSut : Vote → Bool
-checkVoteNotFromSut (MkVote _ c _ _ _) = c /= sutId
+checkVoteNotFromSut = not ∘ checkVoteFromSut
 
 {-# COMPILE AGDA2HS checkVoteNotFromSut #-}
 
+checkBlockFromSut : Block → Bool
+checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
+
+{-# COMPILE AGDA2HS checkBlockFromSut #-}
+
 checkBlockNotFromSut : Block → Bool
-checkBlockNotFromSut (MkBlock _ c _ _ _ _ _) = c /= sutId
+checkBlockNotFromSut = not ∘ checkBlockFromSut
 
 {-# COMPILE AGDA2HS checkBlockNotFromSut #-}
 
