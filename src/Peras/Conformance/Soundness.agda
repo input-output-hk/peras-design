@@ -173,7 +173,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
       validChain' with c ← validChain rewrite validHead rewrite validRest = c
 
-    record NewVotePreconditions (s : State) (vote : Vote) : Set where
+    record NewVotePreconditions (s : State) (vote : Vote) (ms : NodeModel) : Set where
       slot = State.clock s
       r    = v-round slot
       σ    = signature vote
@@ -185,6 +185,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
         validVote      : VotingRule slot tree
+        clocksAgree    : State.clock s ≡ clock ms
+        notFromSut     : creatorId vote ≢ sutId
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with v ← validSignature rewrite correctVote = v
@@ -228,12 +230,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     @0 newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
                           → transition (modelState s sutId) (NewVote vote) ≡ Just (vs , ms₁)
-                          → NewVotePreconditions s vote
+                          → NewVotePreconditions s vote ms₁
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
+         | checkVoteNotFromSut vote in checkedSut
          | isYes (checkVotingRules (modelState s sutId)) in checkedVRs
-    newVote-preconditions s vote inv refl | True | True | True =
+    newVote-preconditions s vote inv refl | True | True | True | True =
       let
         slot = State.clock s
         treeₛ = sutTree inv
@@ -245,7 +248,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; blockExists     = {!!}
           ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
           ; validSignature  = axiom-checkVoteSignature checkedSig
-          ; correctVote     = {!!}        -- this needs to go in the `transition` (checking preferred chains and L etc)
+          ; correctVote     = {!refl!}        -- this needs to go in the `transition` (checking preferred chains and L etc)
           ; validVote       =             -- need to check the VR logic also for environment votes
             let
               witness = toWitness (isYes≡True⇒TTrue checkedVRs)
@@ -255,6 +258,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               f₄ = vr-2b⇒VotingRule-2B s sutId treeₛ
             in
               S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
+            ; clocksAgree = refl
+            ; notFromSut = λ x → {!!}
           }
 
     -- Soundness --
@@ -307,17 +312,29 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; votes-agree = {!!} -- refl
           }
 
-    soundness s₀ (NewVote vote) inv prf =
-      let
-        pre = newVote-preconditions s₀ vote inv prf
-        open NewVotePreconditions pre
-      in
+    soundness {ms₁} {vs} s₀ (NewVote vote) inv prf =
         record
-          { s₁          = let v = record vote { votingRound = v-round slot } -- TODO: is this necessary? See correctVote
-                          in VoteMsg v , fzero , creatorId v , addVote tree v ⇑ s₀
+          { s₁          = s₁
           ; invariant₀  = inv
           ; invariant₁  = {!!}
-          ; trace       = CreateVote (invFetched inv)
+          ; trace       = trace
+          ; s₁-agrees   = s₁-agrees
+          ; votes-agree = votes-agree
+          }
+      where
+        pre = newVote-preconditions s₀ vote inv prf
+        open NewVotePreconditions pre
+
+        v : Vote
+        v = record vote { votingRound = v-round slot }
+        -- TODO: rewrite rather than overwrite
+        -- v with v' ← vote rewrite startOfRound = v'
+
+        s₁ : State
+        s₁ = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
+
+        trace : s₀ ↝⋆ s₁
+        trace = CreateVote (invFetched inv)
                             (honest {σ = Vote.signature vote}
                               blockExists
                               creatorExists
@@ -328,9 +345,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                             )
                           -- TODO: also deliver the vote message to establish Fetched s₁
                           ↣ ∎
-          ; s₁-agrees   = {!!} -- refl
-          ; votes-agree = {!!} -- refl
-          }
+
+        s₁-agrees : modelState s₁ sutId ≡ ms₁
+        s₁-agrees = {!refl!} -- TODO: rewrite clocksAgree
+
+        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree = {!!} {- with creatorId vote ≟ sutId
+        ... | yes p = {!!}
+        ... | no ¬p = {!!} -}
 
     -- soundness s₀ Tick inv prf
     --   with StartOfRound? (State.clock s₀) (v-round (State.clock s₀))

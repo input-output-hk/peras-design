@@ -479,7 +479,6 @@ newQuora quorum priorCerts (vote ∷ votes) =
 
 {-# COMPILE AGDA2HS newQuora #-}
 
-{-
 checkVoteNotFromSut : Vote → Bool
 checkVoteNotFromSut (MkVote _ c _ _ _) = c /= sutId
 
@@ -489,7 +488,6 @@ checkBlockNotFromSut : Block → Bool
 checkBlockNotFromSut (MkBlock _ c _ _ _ _ _) = c /= sutId
 
 {-# COMPILE AGDA2HS checkBlockNotFromSut #-}
--}
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
@@ -509,13 +507,13 @@ transition s (NewChain chain) = do
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  -- guard (checkVoteNotFromSut v)
+  guard (checkVoteNotFromSut v)
   -- TODO: do we know that the voting rules have been checked
   --       by the vote creator? We don't have all the block-trees in
   --       the test model. The following should use the block-tree of
   --       the vote creator for checking the voting rules:
   guard (isYes $ checkVotingRules s)
 --  guard (hash' (BlockSelection (clock s) s) == blockHash v)
-  Just ([] , record s { allVotes = v ∷ allVotes s })
+  Just ([] , addVote' s v)
 
 {-# COMPILE AGDA2HS transition #-}
