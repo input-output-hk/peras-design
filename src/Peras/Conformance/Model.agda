@@ -211,6 +211,15 @@ initialModelState = record
   ; allSeenCerts     = genesisCert ∷ []
   }
 
+initialModelState' : PerasParams → NodeModel
+initialModelState' params = record
+  { clock            = 1
+  ; protocol         = params
+  ; allChains        = genesisChain ∷ []
+  ; allVotes         = []
+  ; allSeenCerts     = genesisCert ∷ []
+  }
+
 {-# COMPILE AGDA2HS initialModelState #-}
 
 blockOldEnough : PerasParams → SlotNumber → Block → Bool
@@ -276,6 +285,8 @@ module TreeInstance
 
   postulate
     isTreeType : IsTreeType initialModelState newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
+    isTreeType' : (params : PerasParams) → IsTreeType (initialModelState' params) newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
+
 {-
   isTreeType = record
                  { instantiated = refl
@@ -302,6 +313,18 @@ module TreeInstance
     preferredChain = pref;
     addVote = addVote' ;
     is-TreeType = isTreeType
+    }
+
+  NodeModelTree' : PerasParams → TreeType NodeModel
+  NodeModelTree' params = record {
+    tree₀ = initialModelState' params ;
+    allChains = allChains ;
+    votes = allVotes ;
+    certs = allSeenCerts ;
+    newChain = newChain' ;
+    preferredChain = pref;
+    addVote = addVote' ;
+    is-TreeType = isTreeType' params
     }
 
 postulate -- FIXME

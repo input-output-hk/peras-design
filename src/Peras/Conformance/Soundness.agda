@@ -43,10 +43,25 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   open Network ⦃...⦄
 
   open Model
-  open Model.TreeInstance using (NodeModelTree; isTreeType)
+  open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
-  open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
-  open SmallStep.TreeType NodeModelTree renaming (allChains to chains; preferredChain to prefChain)
+  modelParams : PerasParams
+  modelParams = record
+    { perasU = U
+    ; perasA = A
+    ; perasR = R
+    ; perasL = L
+    ; perasτ = τ
+    ; perasB = B
+    ; perasK = K
+    ; perasT = 0 -- TODO: Missing from Params
+    ; perasΔ = Δ
+    }
+
+  Tree = NodeModelTree' modelParams
+
+  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
+  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
   open SmallStep.IsTreeType
 
   open SmallStep.Message
@@ -59,19 +74,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
            (axiom-checkVoteSignature : ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
          where
-
-    modelParams : PerasParams
-    modelParams = record
-      { perasU = U
-      ; perasA = A
-      ; perasR = R
-      ; perasL = L
-      ; perasτ = τ
-      ; perasB = B
-      ; perasK = K
-      ; perasT = 0 -- TODO: Missing from Params
-      ; perasΔ = Δ
-      }
 
     modelState : State → ℕ → NodeModel
     modelState s p = record
@@ -100,6 +102,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     from-maybe : ∀ {x : Set} → Maybe x → Data.Maybe.Maybe x
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
+
+{-
+    modelState-tree-eq : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t) P.× State.clock s ≡ clock t)
+      → modelState s p ≡ proj₁ ∃tree
+    modelState-tree-eq s p (tree P., (prf P., refl)) rewrite prf = {!refl!}
+-}
 
     cert⋆-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
