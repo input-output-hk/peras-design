@@ -101,9 +101,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
 
-    certS-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+    cert⋆-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
-    certS-equ s p ∃tree = {!!} -- TODO: two Maybes, otherwise refl
+    cert⋆-equ s p ∃tree = {!!} -- TODO: agda2hs vs. stdlib, otherwise refl
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → let
@@ -140,7 +140,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
     vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
-      rewrite sym (certS-equ s p ∃tree)
+      rewrite sym (cert⋆-equ s p ∃tree)
       = x P., y
 
     -- Preconditions ---
