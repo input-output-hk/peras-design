@@ -39,9 +39,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {parties : Parties}
     where
 
-  open Params ⦃...⦄
-  open Network ⦃...⦄
-
   open Model
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
@@ -57,6 +54,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ; perasT = 0 -- TODO: Missing from Params
     ; perasΔ = Δ
     }
+    where
+      open Params params
+      open Network network
 
   Tree = NodeModelTree' modelParams
 
@@ -103,11 +103,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
 
-{-
-    modelState-tree-eq : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t) P.× State.clock s ≡ clock t)
+    modelState-tree-eq : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (
+            State.blockTrees s ⁉ p ≡ just t)
+        P.× State.clock s ≡ clock t
+        P.× modelParams ≡ protocol t)
       → modelState s p ≡ proj₁ ∃tree
-    modelState-tree-eq s p (tree P., (prf P., refl)) rewrite prf = {!refl!}
--}
+    modelState-tree-eq s p (tree P., prf P., refl P., refl) rewrite prf = {!!}
 
     cert⋆-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
       → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
