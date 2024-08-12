@@ -14,7 +14,7 @@ import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, per
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (catMaybes, comparing, maximumBy, maybeToList)
+import Peras.Util (catMaybes, comparing, mapMaybe, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -137,7 +137,7 @@ certS s =
   maximumBy
     genesisCert
     (comparing (\r -> round r))
-    (catMaybes (map certificate (pref s)))
+    (mapMaybe certificate (pref s))
 
 initialModelState :: NodeModel
 initialModelState =

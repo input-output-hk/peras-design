@@ -4,6 +4,13 @@ isJust :: Maybe a -> Bool
 isJust Nothing = False
 isJust (Just _) = True
 
+mapMaybe :: (a -> Maybe b) -> [a] -> [b]
+mapMaybe p [] = []
+mapMaybe p (x : xs) =
+  case p x of
+    Just y -> y : mapMaybe p xs
+    Nothing -> mapMaybe p xs
+
 catMaybes :: [Maybe a] -> [a]
 catMaybes [] = []
 catMaybes (Nothing : xs) = catMaybes xs

@@ -108,44 +108,22 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     certificate-eq record{certificate = just c}  = refl
     certificate-eq record{certificate = nothing} = refl
 
-    catMaybes-Nothing : ∀ {a : Set} {xs : List (Maybe a)}
-      → catMaybes (Nothing ∷ xs) ≡ catMaybes xs
-    catMaybes-Nothing = refl
-
-    catMaybes-Just : ∀ {a : Set} {x : a} {xs : List (Maybe a)}
-      → catMaybes (Just x ∷ xs) ≡ x ∷ catMaybes xs
-    catMaybes-Just = refl
-
-    catMaybes-nothing : ∀ {a : Set} {xs : List (Data.Maybe.Maybe a)}
-      → Data.List.catMaybes (nothing ∷ xs) ≡ Data.List.catMaybes xs
-    catMaybes-nothing = refl
-
-    catMaybes-just : ∀ {a : Set} {x : a} {xs : List (Data.Maybe.Maybe a)}
-      → Data.List.catMaybes (just x ∷ xs) ≡ x ∷ Data.List.catMaybes xs
-    catMaybes-just = refl
-
-    catMaybes-eq : ∀ {c : Chain}
-      → catMaybes (map Model.certificate c) ≡ Data.List.catMaybes (Data.List.map Block.certificate c)
-    catMaybes-eq {[]} = refl
-    catMaybes-eq {x ∷ c} = {!!}
-      {- with Data.Maybe.is-just (Block.certificate x) | isJust (Model.certificate x)
+    mapMaybe-eq : ∀ {c : Chain}
+      → mapMaybe Model.certificate c ≡ Data.List.mapMaybe Block.certificate c
+    mapMaybe-eq {[]} = refl
+    mapMaybe-eq {x ∷ c} = {!!} {-
+      with Data.Maybe.is-just (Block.certificate x) | isJust (Model.certificate x)
     ... | True | True = {!!}
     ... | False | False =
       let
-        h = catMaybes-eq {c}
-        s₁ = trans
-               (catMaybes-Nothing {Certificate} {map Model.certificate c})
-               h
-        s₂ = sym (catMaybes-nothing {Certificate} {Data.List.map Block.certificate c})
-      in
-        trans {!!} {!!} -- s₁ s₂
+        h = mapMaybe-eq {c}
+      in {!!}
     ... | True  | False = {!!}
-    ... | False | True  = {!!}
-      -}
+    ... | False | True  = {!!} -}
 
     cert⋆-equ : ∀ (m : NodeModel)
       → certS m ≡ latestCertOnChain m
-    cert⋆-equ m rewrite catMaybes-eq {pref m} = refl
+    cert⋆-equ m rewrite mapMaybe-eq {pref m} = refl
 
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ)
       → let

@@ -240,7 +240,7 @@ The block-tree type is defined as follows:
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
-      latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ preferredChain
+      latestCert cert₀ ∘ L.mapMaybe certificate ∘ preferredChain
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs

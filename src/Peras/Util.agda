@@ -14,6 +14,15 @@ isJust (Just _) = True
 
 {-# COMPILE AGDA2HS isJust #-}
 
+mapMaybe : (a → Maybe b) → List a → List b
+mapMaybe p []       = []
+mapMaybe p (x ∷ xs) =
+  case p x of
+    λ { (Just y) → y ∷ mapMaybe p xs
+      ; Nothing → mapMaybe p xs }
+
+{-# COMPILE AGDA2HS mapMaybe #-}
+
 catMaybes : List (Maybe a) → List a
 catMaybes [] = []
 catMaybes (Nothing ∷ xs) = catMaybes xs

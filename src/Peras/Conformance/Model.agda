@@ -186,7 +186,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (catMaybes (map certificate (pref s)))
+  in maximumBy genesisCert (comparing round) (mapMaybe certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
