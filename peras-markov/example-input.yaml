@@ -1,8 +1,9 @@
 α: 0.05
-u: 150
-a: 1500
-r: 10
-k: 25
-b: 10
-τ: 450
-c: 600
+u: 90
+l: null  # Not modeled by the Markov-chain simulator.
+b: 15
+a: 27000
+r: 300
+k: 780
+n: 900
+τ: 675
