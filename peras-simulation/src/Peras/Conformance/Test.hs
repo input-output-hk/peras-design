@@ -79,6 +79,7 @@ instance Pretty EnvAction where
   pPrint (NewChain chain) =
     "NewChain" <+> pPrint chain
   pPrint (NewVote vote) = "NewVote" <+> pPrintPrec prettyNormal 10 vote
+  pPrint (BadVote vote) = "BadVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where
   pPrint MkBlock{..} =
@@ -154,12 +155,13 @@ instance StateModel NodeModel where
 
   initialState = initialModelState
 
-  arbitraryAction _ NodeModel{clock, allChains, protocol} =
+  arbitraryAction _ NodeModel{clock, allChains, allVotes, protocol} =
     fmap (Some . Step) $
       frequency $
         [(1, pure Tick)]
           ++ [(1, NewChain <$> genChain)]
           ++ [(8, NewVote <$> genVote) | canGenVotes]
+          ++ [(2, BadVote <$> genBadVote) | canGenBadVote]
    where
     genChain =
       do
@@ -184,6 +186,13 @@ instance StateModel NodeModel where
       do
         block <- elements (concat allChains)
         MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+
+    badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
+    canGenBadVote = canGenVotes && not (null badVoteCandidates)
+    genBadVote = do
+      block <- elements (concat allChains)
+      (r, p) <- elements badVoteCandidates
+      MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
       newRound clock protocol -- Voting is only allowed in the first slot of a round.
         && not (all null allChains) -- There must be some block to vote for.
@@ -200,7 +209,7 @@ instance StateModel NodeModel where
           )
         ]
     validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
-    genPartyId = arbitrary `suchThat` (/= pid modelSUT)
+    genPartyId = choose (2, 5) `suchThat` (/= pid modelSUT)
     genRound = elements [1 .. r]
     r = inRound clock protocol
 
@@ -242,6 +251,9 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
       modify $ \rs -> rs{unfetchedChains = Set.insert c (unfetchedChains rs)}
       pure mempty
     NewVote v -> do
+      modify $ \rs -> rs{unfetchedVotes = Set.insert v (unfetchedVotes rs)}
+      pure mempty
+    BadVote v -> do
       modify $ \rs -> rs{unfetchedVotes = Set.insert v (unfetchedVotes rs)}
       pure mempty
 

@@ -51,10 +51,17 @@ certificate : Block → Maybe Certificate
 certificate record{certificate = just c}  = Just c
 certificate record{certificate = nothing} = Nothing
 
+-- To avoid name clash for Vote.creatorId and Block.creatorId
+voterId : Vote → PartyId
+voterId (MkVote _ p _ _ _) = p
+
+{-# COMPILE AGDA2HS voterId #-}
+
 data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
+  BadVote  : Vote → EnvAction
 
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
@@ -243,6 +250,11 @@ newChain' s c = record s { allChains = c ∷ (allChains s) }
 
 addVote' : NodeModel → Vote → NodeModel
 addVote' s v = record s { allVotes = v ∷ (allVotes s) }
+
+hasVoted : PartyId → RoundNumber → NodeModel → Bool
+hasVoted p r s = any (λ v → p == voterId v && r == votingRound v) (allVotes s)
+
+{-# COMPILE AGDA2HS hasVoted #-}
 
 open import Peras.Params
 open Hashable
@@ -509,6 +521,7 @@ transition s (NewChain chain) = do
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
+  guard (not $ hasVoted (voterId v) (votingRound v) s)
   -- guard (checkVoteNotFromSut v)
   -- TODO: do we know that the voting rules have been checked
   --       by the vote creator? We don't have all the block-trees in
@@ -516,5 +529,8 @@ transition s (NewVote v) = do
   --       the vote creator for checking the voting rules:
   -- guard (isYes $ checkVotingRules s)
   Just ([] , record s { allVotes = v ∷ allVotes s })
+transition s (BadVote v) = do
+  guard (hasVoted (voterId v) (votingRound v) s)
+  Just ([] , s)
 
 {-# COMPILE AGDA2HS transition #-}

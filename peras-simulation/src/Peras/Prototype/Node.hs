@@ -15,10 +15,10 @@ import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Prototype.BlockCreation (blockCreation)
+import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Diffusion (Diffuser, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Trace (PerasLog (..))
 import Peras.Prototype.Types (
   Payload,
