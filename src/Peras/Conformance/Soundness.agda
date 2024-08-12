@@ -6,6 +6,7 @@ open import Haskell.Prim.Tuple
 open import Haskell.Law.Equality
 
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
+import Data.List
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
@@ -103,54 +104,85 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
 
-    modelState-tree-eq : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (
-            State.blockTrees s ⁉ p ≡ just t)
-        P.× State.clock s ≡ clock t
-        P.× modelParams ≡ protocol t)
-      → modelState s p ≡ proj₁ ∃tree
-    modelState-tree-eq s p (tree P., prf P., refl P., refl) rewrite prf = {!!}
+    certificate-eq : ∀ (b : Block) → from-maybe (Model.certificate b) ≡ Block.certificate b
+    certificate-eq record{certificate = just c}  = refl
+    certificate-eq record{certificate = nothing} = refl
 
-    cert⋆-equ : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
-      → certS (modelState s p) ≡ latestCertOnChain (proj₁ ∃tree)
-    cert⋆-equ s p ∃tree = {!!} -- TODO: agda2hs vs. stdlib, otherwise refl
+    catMaybes-Nothing : ∀ {a : Set} {xs : List (Maybe a)}
+      → catMaybes (Nothing ∷ xs) ≡ catMaybes xs
+    catMaybes-Nothing = refl
 
-    vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+    catMaybes-Just : ∀ {a : Set} {x : a} {xs : List (Maybe a)}
+      → catMaybes (Just x ∷ xs) ≡ x ∷ catMaybes xs
+    catMaybes-Just = refl
+
+    catMaybes-nothing : ∀ {a : Set} {xs : List (Data.Maybe.Maybe a)}
+      → Data.List.catMaybes (nothing ∷ xs) ≡ Data.List.catMaybes xs
+    catMaybes-nothing = refl
+
+    catMaybes-just : ∀ {a : Set} {x : a} {xs : List (Data.Maybe.Maybe a)}
+      → Data.List.catMaybes (just x ∷ xs) ≡ x ∷ Data.List.catMaybes xs
+    catMaybes-just = refl
+
+    catMaybes-eq : ∀ {c : Chain}
+      → catMaybes (map Model.certificate c) ≡ Data.List.catMaybes (Data.List.map Block.certificate c)
+    catMaybes-eq {[]} = refl
+    catMaybes-eq {x ∷ c} = {!!}
+      {- with Data.Maybe.is-just (Block.certificate x) | isJust (Model.certificate x)
+    ... | True | True = {!!}
+    ... | False | False =
+      let
+        h = catMaybes-eq {c}
+        s₁ = trans
+               (catMaybes-Nothing {Certificate} {map Model.certificate c})
+               h
+        s₂ = sym (catMaybes-nothing {Certificate} {Data.List.map Block.certificate c})
+      in
+        trans {!!} {!!} -- s₁ s₂
+    ... | True  | False = {!!}
+    ... | False | True  = {!!}
+      -}
+
+    cert⋆-equ : ∀ (m : NodeModel)
+      → certS m ≡ latestCertOnChain m
+    cert⋆-equ m rewrite catMaybes-eq {pref m} = refl
+
+    vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ)
       → let
           m = modelState s p
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
           nextRound (round cert') ≡ rFromSlot m
-      → VotingRule-1A (v-round (clock m)) (proj₁ ∃tree)
-    vr-1a⇒VotingRule-1A s p ∃tree x
+      → VotingRule-1A (v-round (clock m)) m
+    vr-1a⇒VotingRule-1A s p x
         rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
-        rewrite (proj₂ ∃tree)
       = cong getRoundNumber (sym x)
 
-    vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+    vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ)
       → let m = modelState s p
         in Vr1B m
-      → VotingRule-1B (clock m) (proj₁ ∃tree)
-    vr-1b⇒VotingRule-1B s p ∃tree x = {!!}
+      → VotingRule-1B (clock m) m
+    vr-1b⇒VotingRule-1B s p m = {!!}
 
-    vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+    vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ)
       → let
           m = modelState s p
           cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
         in
           getRoundNumber (rFromSlot m) ≥ getRoundNumber (round cert') + perasR (protocol m)
-      → VotingRule-2A (v-round (clock m)) (proj₁ ∃tree)
-    vr-2a⇒VotingRule-2A _ _ ∃tree x rewrite (proj₂ ∃tree) = x
+      → VotingRule-2A (v-round (clock m)) m
+    vr-2a⇒VotingRule-2A _ _ x = x
 
-    vr-2b⇒VotingRule-2B : ∀ (s : State) (p : ℕ) (∃tree : ∃[ t ] (State.blockTrees s ⁉ p ≡ just t))
+    vr-2b⇒VotingRule-2B : ∀ (s : State) (p : ℕ)
       → let
           m = modelState s p
         in
             (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
-      → VotingRule-2B (v-round (clock m)) (proj₁ ∃tree)
-    vr-2b⇒VotingRule-2B s p ∃tree ( x P., y )
-      rewrite sym (cert⋆-equ s p ∃tree)
-      = x P., y
+      → VotingRule-2B (v-round (clock m)) m
+    vr-2b⇒VotingRule-2B s p x
+      rewrite sym (cert⋆-equ (modelState s p))
+      = x
 
     -- Preconditions ---
 
@@ -200,9 +232,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
-        sutTree : ∃[ t ] (State.blockTrees s ⁉ sutId ≡ just t)
-        equalTree : ∀ (p : ℕ) → State.blockTrees s ⁉ sutId ≡ State.blockTrees s ⁉ p
-        -- eqt : Any (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
+        allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
 
     open Invariant
 
@@ -213,16 +243,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-preconditions s inv refl
       with isYes (checkVotingRules (modelState s sutId)) in checkedVRs
     ... | True = record
-      { tree        = proj₁ (sutTree inv)
+      { tree        = modelState s sutId
       ; block       = {!!}
       ; blockExists = {!!}
       ; validVote   =
         let
           witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-          f₁ = vr-1a⇒VotingRule-1A s sutId (sutTree inv)
-          f₂ = vr-1b⇒VotingRule-1B s sutId (sutTree inv)
-          f₃ = vr-2a⇒VotingRule-2A s sutId (sutTree inv)
-          f₄ = vr-2b⇒VotingRule-2B s sutId (sutTree inv)
+          f₁ = vr-1a⇒VotingRule-1A s sutId
+          f₂ = vr-1b⇒VotingRule-1B s sutId
+          f₃ = vr-2a⇒VotingRule-2A s sutId
+          f₄ = vr-2b⇒VotingRule-2B s sutId
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
       }
@@ -246,23 +276,22 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-preconditions s vote inv refl | True | True | True | True | True =
       let
         slot = State.clock s
-        treeₛ = sutTree inv
-        eqt = equalTree inv (creatorId vote)
+        trees-eq = allTreesAreEqual inv
       in
         record
-          { tree            = proj₁ treeₛ -- we don't track the block trees for the environment nodes in the test model!
-          ; creatorExists   = trans (sym eqt) (proj₂ treeₛ)    -- maybe invariant that everyone has the same blockTree?
+          { tree            = modelState s sutId -- we don't track the block trees for the environment nodes in the test model!
+          ; creatorExists   = {!!} -- maybe invariant that everyone has the same blockTree?
           ; validBlockHash  = {!!} -- this needs to go in the `transition` (checking preferred chains and L etc)
           ; startOfRound    = lem-divMod _ _ (eqℕ-sound isSlotZero)
           ; validSignature  = axiom-checkVoteSignature checkedSig
           ; correctVote     = {!refl!}
-          ; validVote       =             -- need to check the VR logic also for environment votes
+          ; validVote       = -- need to check the VR logic also for environment votes
             let
               witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-              f₁ = vr-1a⇒VotingRule-1A s sutId treeₛ
-              f₂ = vr-1b⇒VotingRule-1B s sutId treeₛ
-              f₃ = vr-2a⇒VotingRule-2A s sutId treeₛ
-              f₄ = vr-2b⇒VotingRule-2B s sutId treeₛ
+              f₁ = vr-1a⇒VotingRule-1A s sutId
+              f₂ = vr-1b⇒VotingRule-1B s sutId
+              f₃ = vr-2a⇒VotingRule-2A s sutId
+              f₄ = vr-2b⇒VotingRule-2B s sutId
             in
               S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
             ; clocksAgree = refl
@@ -274,7 +303,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           eq-hash {Nothing} = refl
           eq-hash {Just _} = refl
 
-          checkBlockSelection : from-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (proj₁ (sutTree inv))
+          checkBlockSelection : from-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (modelState s sutId)
           checkBlockSelection = {!!}
 
     -- Soundness --
