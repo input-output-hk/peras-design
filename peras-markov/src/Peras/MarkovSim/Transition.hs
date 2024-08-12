@@ -23,6 +23,7 @@ step ε peras probabilities =
     . Map.filter (> ε)
     . evolve (voting peras probabilities)
     . evolve (blockCreation peras probabilities . fetching peras . tick)
+    . thresholdBehavior
     . getEvolution
 
 evolve :: (Chains -> [(Chains, Probability)]) -> Map Chains Probability -> Map Chains Probability
@@ -41,6 +42,7 @@ pstep ε peras probabilities =
     . Map.unionsWith (+)
     . parMap rpar process
     . Map.toList
+    . thresholdBehavior
     . getEvolution
  where
   blockCreation' = blockCreation peras probabilities . fetching peras . tick
@@ -176,6 +178,18 @@ isSplit MkBehavior{adverseSplitting} slot =
     NoSplitting -> False
     MkAdverseSplit{splitStart, splitFinish} -> splitStart <= slot && slot <= splitFinish
 
+thresholdBehavior :: Map Chains Probability -> Map Chains Probability
+thresholdBehavior evolution
+  | thresholding behavior == MkThreshold (slot + 1) =
+      let
+        evolution' = Map.filterWithKey (const . not . adversaryEverLonger) evolution
+        mass = sum evolution'
+       in
+        Map.map (/ mass) evolution'
+  | otherwise = evolution
+ where
+  MkChains{slot, behavior} = fst $ Map.findMin evolution
+
 crosschainBehavior :: Chains -> Chains
 crosschainBehavior chains@MkChains{..}
   | isSplit behavior slot = chains
@@ -233,15 +247,19 @@ crosschainBehavior chains@MkChains{..}
           }
 
 updatePublicWeight :: Chains -> Chains
-updatePublicWeight chains@MkChains{honest, adversary, publicWeight} =
+updatePublicWeight chains@MkChains{honest, adversary, publicWeight, adversaryEverLonger} =
   let
     -- The honest weight is always a contender for the public weight of the tree.
     honestWeight = weight honest
     -- If the adversary chain just received a certificate, then their weight is a contender,
     -- but otherwise the previous public weight may represent their prior contension.
-    adversaryWeight = maybe publicWeight (const $ weight adversary) $ certPrimeNext adversary
+    adversaryWeight = weight adversary
+    adversaryWeight' = maybe publicWeight (const adversaryWeight) $ certPrimeNext adversary
    in
-    chains{publicWeight = max honestWeight adversaryWeight}
+    chains
+      { publicWeight = max honestWeight adversaryWeight'
+      , adversaryEverLonger = adversaryWeight > honestWeight || adversaryEverLonger
+      }
 
 clean :: [(a, Probability)] -> [(a, Probability)]
 clean = filter $ (> 0) . snd

@@ -118,7 +118,7 @@ project model@Prototype.MkNodeModel{..} =
           else Just . fromIntegral $ Prototype.round newCert
    in
     ( toPeras protocol def
-    , MkChains
+    , def
         { slot = s
         , prefix = 0 -- FIXME: Address this later. It should be the last common block of the chains tied for highest weight.
         , honest =
@@ -132,9 +132,7 @@ project model@Prototype.MkNodeModel{..} =
               , certStar = fromIntegral $ Prototype.round certStar
               , certStarNext = certNext Prototype.certStar
               }
-        , adversary = def
         , publicWeight = minBound -- FIXME: Address this later.
-        , behavior = def
         }
     )
 
@@ -147,5 +145,5 @@ toPeras Prototype.MkPerasParams{..} peras =
     , k = fromIntegral perasK
     , b = fromIntegral perasB
     , τ = fromIntegral perasτ
-    , c = 3 * fromIntegral perasτ `div` 4
+    , n = 3 * fromIntegral perasτ `div` 4
     }

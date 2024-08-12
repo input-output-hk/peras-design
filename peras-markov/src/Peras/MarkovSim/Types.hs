@@ -37,7 +37,7 @@ data Peras = MkPeras
   , k :: Round
   , b :: Int
   , τ :: Votes
-  , c :: Votes
+  , n :: Votes
   }
   deriving stock (Eq, Generic, Show)
 
@@ -69,7 +69,7 @@ instance Default Probabilities where
   def = mkProbabilities def 1000 0
 
 mkProbabilities :: Peras -> Stake -> Stake -> Probabilities
-mkProbabilities MkPeras{α, τ, c} honestStake adversaryStake =
+mkProbabilities MkPeras{α, τ, n} honestStake adversaryStake =
   let
     (//) = on (/) fromIntegral
     τ' = fromIntegral τ - 1
@@ -87,7 +87,7 @@ mkProbabilities MkPeras{α, τ, c} honestStake adversaryStake =
     adversaryBlock = (1 - p') * q'
     mixedBlocks = p' * q'
 
-    beta = c // totalStake
+    beta = n // totalStake
 
     noQuorum = binomial totalStake beta `cumulative` τ'
     honestQuorum = binomial honestStake beta `complCumulative` τ'
@@ -157,12 +157,13 @@ data Chains = MkChains
   , honest :: Chain
   , adversary :: Chain
   , publicWeight :: Int
+  , adversaryEverLonger :: Bool
   , behavior :: Behavior
   }
   deriving stock (Eq, Generic, Ord, Show)
 
 instance Default Chains where
-  def = MkChains 0 0 def def minBound def
+  def = MkChains 0 0 def def minBound False def
 
 data Chain = MkChain
   { weight :: Int
@@ -186,6 +187,7 @@ data Behavior = MkBehavior
   , adverseBlocks :: AdverseBlocks
   , adverseCertification :: AdverseCertification
   , adverseSplitting :: AdverseSplitting
+  , thresholding :: Thresholding
   }
   deriving (Eq, Generic, Ord, Show)
 
@@ -198,15 +200,19 @@ instance Default Behavior where
 
 -- | An honest adversary.
 honestChainBehavior :: Behavior
-honestChainBehavior = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes NoSplitting
+honestChainBehavior = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes NoSplitting NoThresholding
 
 -- | Build and vote for a private chain.
 privateChainBehavior :: Behavior
-privateChainBehavior = MkBehavior VoteForAdversary NeverReveal NeverAdopt PromptBlocks PromptVotes NoSplitting
+privateChainBehavior = MkBehavior VoteForAdversary NeverReveal NeverAdopt PromptBlocks PromptVotes NoSplitting NoThresholding
 
 -- | A temporarily split network.
 splitChainBehavior :: (Slot, Slot) -> Behavior
-splitChainBehavior (splitStart, splitFinish) = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes MkAdverseSplit{..}
+splitChainBehavior (splitStart, splitFinish) = MkBehavior AlwaysVote AlwaysReveal AdoptIfLonger PromptBlocks PromptVotes MkAdverseSplit{..} NoThresholding
+
+-- | Post-facto thresholding.
+thresholdingBehavior :: Slot -> Behavior
+thresholdingBehavior = MkBehavior VoteForAdversary NeverReveal NeverAdopt PromptBlocks PromptVotes NoSplitting . MkThreshold
 
 data AdverseVoting = NeverVote | AlwaysVote | VoteForAdversary
   deriving (Eq, Generic, Ord, Show)
@@ -248,3 +254,11 @@ data AdverseSplitting
 
 instance FromJSON AdverseSplitting
 instance ToJSON AdverseSplitting
+
+data Thresholding
+  = NoThresholding
+  | MkThreshold Slot
+  deriving (Eq, Generic, Ord, Show)
+
+instance FromJSON Thresholding
+instance ToJSON Thresholding
