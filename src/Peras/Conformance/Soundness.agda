@@ -104,22 +104,21 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     from-maybe (Just x) = just x
     from-maybe Nothing = nothing
 
-    certificate-eq : ∀ (b : Block) → from-maybe (Model.certificate b) ≡ Block.certificate b
-    certificate-eq record{certificate = just c}  = refl
-    certificate-eq record{certificate = nothing} = refl
+    to-maybe : ∀ {x : Set} → Data.Maybe.Maybe x → Maybe x
+    to-maybe (just x) = Just x
+    to-maybe nothing = Nothing
+
+    certificate-eq : ∀ {b : Block} → from-maybe (Model.certificate b) ≡ Block.certificate b
+    certificate-eq {b = record{certificate = just c}}  = refl
+    certificate-eq {b = record{certificate = nothing}} = refl
+
+    certificate-eq' : ∀ {b : Block} → Model.certificate b ≡ to-maybe (Block.certificate b)
+    certificate-eq' {b = record{certificate = just c}}  = refl
+    certificate-eq' {b = record{certificate = nothing}} = refl
 
     mapMaybe-eq : ∀ {c : Chain}
       → mapMaybe Model.certificate c ≡ Data.List.mapMaybe Block.certificate c
-    mapMaybe-eq {[]} = refl
-    mapMaybe-eq {x ∷ c} = {!!} {-
-      with Data.Maybe.is-just (Block.certificate x) | isJust (Model.certificate x)
-    ... | True | True = {!!}
-    ... | False | False =
-      let
-        h = mapMaybe-eq {c}
-      in {!!}
-    ... | True  | False = {!!}
-    ... | False | True  = {!!} -}
+    mapMaybe-eq = {!!}
 
     cert⋆-equ : ∀ (m : NodeModel)
       → certS m ≡ latestCertOnChain m
@@ -183,7 +182,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validHead      : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
         validRest      : rest ≡ prefChain tree
         validChain     : ValidChain (block ∷ rest)
-
         validHashes    : tipHash (is-TreeType .valid tree) ≡ parentBlock block
 
       validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
@@ -234,6 +232,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         in
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
       }
+    ... | False = {!!}
 
     @0 newChain-preconditions : ∀ {vs ms₁} s tip rest
                           → Invariant s
