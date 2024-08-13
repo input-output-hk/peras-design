@@ -17,6 +17,7 @@ import Data.Function (on)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
+import Data.Scientific (fromFloatDigits, toRealFloat)
 import Data.Time (getCurrentTime)
 import Data.Time.Clock (diffUTCTime)
 import Data.Version (showVersion)
@@ -43,6 +44,7 @@ import qualified Peras.Markov.Adversary.TwoChain as TwoChain (lookupDelta, separ
 import qualified Peras.Markov.Polynomial as Var (p, q)
 import qualified Peras.MarkovSim.Transition as MarkovSim
 import qualified Peras.MarkovSim.Types as MarkovSim
+import qualified Prelude
 
 main :: IO ()
 main = run =<< O.execParser scenarioParser
@@ -116,13 +118,12 @@ run EverLonger{..} =
               do
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
-                      Map.mapKeysWith (+) MarkovSim.adversaryEverLonger $
+                      Map.mapKeysWith (Prelude.+) MarkovSim.adversaryEverLonger $
                         MarkovSim.getEvolution posterior
-                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary]
-                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup True summary) <> replicate 20 ' ')
+                hPutStrLn hout $ intercalate "\t" [show i, show $ maybe (0 :: Double) toRealFloat $ Map.lookup True summary]
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase (2 :: Double) . toRealFloat) (Map.lookup True summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (maybe True (< stop) $ Map.lookup False summary) $
-                  go (i + 1) posterior
+                go (i + 1) posterior
     when progress $
       hPutStrLn stderr ""
     go (1 :: Int) initial
@@ -144,12 +145,12 @@ run LongerChain{..} =
               do
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
-                      Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (>) MarkovSim.weight honest adversary) $
+                      Map.mapKeysWith (Prelude.+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (>) MarkovSim.weight honest adversary) $
                         MarkovSim.getEvolution posterior
-                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . abs $ 1 - sum summary]
-                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup False summary) <> replicate 20 ' ')
+                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . Prelude.abs $ 1 Prelude.- sum summary]
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase (2 :: Double) . toRealFloat) (Map.lookup False summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (maybe True (< stop) $ Map.lookup False summary) $
+                unless (maybe True (< fromFloatDigits stop) $ Map.lookup False summary) $
                   go (i + 1) posterior
     when progress $
       hPutStrLn stderr ""
@@ -173,7 +174,7 @@ run MarginReach{..} =
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.toList
-                        . Map.mapKeysWith (+) MarkovSim.computeMarginReach
+                        . Map.mapKeysWith (Prelude.+) MarkovSim.computeMarginReach
                         $ MarkovSim.getEvolution posterior
                 hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show $ fst k, show $ snd k, show v]) <$> summary
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
@@ -200,7 +201,7 @@ run LengthDifference{..} =
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.toList
-                        . Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
+                        . Map.mapKeysWith (Prelude.+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
                         $ MarkovSim.getEvolution posterior
                 hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show k, show v]) <$> summary
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
@@ -223,10 +224,10 @@ run Lengths{..} =
             t0 <- getCurrentTime
             let MarkovSim.MkEvolution{MarkovSim.getEvolution} = f ε peras probabilities slots initial
             putStrLn $ "Size: " <> show (Map.size getEvolution)
-            putStrLn $ "Entropy: " <> show (sum $ (\p -> -p * logBase 2 p) <$> toList getEvolution)
+            putStrLn $ "Entropy: " <> show (sum $ (\p -> -toRealFloat p * logBase (2 :: Double) (toRealFloat p)) <$> toList getEvolution)
             putStrLn $ "Total probability: " <> show (sum getEvolution)
-            putStrLn $ "Honest length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.honest chains)) <$> Map.toList getEvolution)
-            putStrLn $ "Adversary length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.adversary chains)) <$> Map.toList getEvolution)
+            putStrLn $ "Honest length: " <> show (sum $ (\(chains, probability) -> probability Prelude.* Prelude.fromIntegral (MarkovSim.weight $ MarkovSim.honest chains)) <$> Map.toList getEvolution)
+            putStrLn $ "Adversary length: " <> show (sum $ (\(chains, probability) -> probability Prelude.* Prelude.fromIntegral (MarkovSim.weight $ MarkovSim.adversary chains)) <$> Map.toList getEvolution)
             t1 <- getCurrentTime
             putStrLn $ "Elapsed time: " <> show (t1 `diffUTCTime` t0)
     putStrLn ""

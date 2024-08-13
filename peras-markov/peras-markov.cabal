@@ -34,6 +34,7 @@ library
                       peras-simulation,
                       prettyprinter,
                       quickcheck-dynamic,
+                      scientific,
                       statistics,
     default-language: Haskell2010
     ghc-options: -O2
@@ -50,6 +51,7 @@ executable  peras-markov
                       optparse-applicative,
                       peras-markov,
                       prettyprinter,
+                      scientific,
                       time,
                       yaml,
     default-language: Haskell2010
