@@ -11,11 +11,12 @@ open import Haskell.Law.Ord.Def
 
 open import Agda.Builtin.Maybe hiding (Maybe)
 import Data.Bool
+import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
 import Data.Product as P
 
-open import Peras.Block renaming (certificate to blockCert)
+open import Peras.Block
 open import Peras.Chain
 open import Peras.Conformance.Params
 open import Peras.Crypto
@@ -33,7 +34,6 @@ import Protocol.Peras
 
   import Prelude hiding (round)
   import Control.Monad.Identity
-  import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
   import Peras.Orphans ()
   import Data.Function (on)
@@ -44,12 +44,6 @@ import Protocol.Peras
   intToInteger :: Int -> Integer
   intToInteger = fromIntegral
 #-}
-
--- Work around `agda2hs` limitations.
-
-certificate : Block → Maybe Certificate
-certificate record{certificate = just c}  = Just c
-certificate record{certificate = nothing} = Nothing
 
 data EnvAction : Set where
   Tick     : EnvAction
@@ -186,7 +180,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (mapMaybe certificate (pref s))
+  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -404,7 +398,7 @@ vr1A s = nextRound (round (cert' s)) === rFromSlot s
 {-# COMPILE AGDA2HS vr1A #-}
 
 open import Relation.Nullary.Decidable as D using (¬?)
-open import Data.List as L using ()
+import Data.List as L
 open import Data.List.Relation.Unary.Any as A using ()
 
 Extends : Block → Certificate → List Chain → Set
@@ -552,7 +546,7 @@ transition s (NewChain chain) = do
 --  guard (checkBlockNotFromSut (head chain))
   Just ([] , record s
              { allChains = chain ∷ allChains s
-             ; allSeenCerts = foldr insertCert (allSeenCerts s) (catMaybes $ map certificate chain)
+             ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate chain)
              })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)

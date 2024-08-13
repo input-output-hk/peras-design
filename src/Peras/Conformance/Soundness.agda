@@ -99,31 +99,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace ∎              = []
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
-    -- TODO: isomorphism of Maybe and Data.Maybe.Maybe
-    from-maybe : ∀ {x : Set} → Maybe x → Data.Maybe.Maybe x
-    from-maybe (Just x) = just x
-    from-maybe Nothing = nothing
-
-    to-maybe : ∀ {x : Set} → Data.Maybe.Maybe x → Maybe x
-    to-maybe (just x) = Just x
-    to-maybe nothing = Nothing
-
-    certificate-eq : ∀ {b : Block} → from-maybe (Model.certificate b) ≡ Block.certificate b
-    certificate-eq {b = record{certificate = just c}}  = refl
-    certificate-eq {b = record{certificate = nothing}} = refl
-
-    certificate-eq' : ∀ {b : Block} → Model.certificate b ≡ to-maybe (Block.certificate b)
-    certificate-eq' {b = record{certificate = just c}}  = refl
-    certificate-eq' {b = record{certificate = nothing}} = refl
-
-    mapMaybe-eq : ∀ {c : Chain}
-      → mapMaybe Model.certificate c ≡ Data.List.mapMaybe Block.certificate c
-    mapMaybe-eq = {!!}
-
-    cert⋆-equ : ∀ (m : NodeModel)
-      → certS m ≡ latestCertOnChain m
-    cert⋆-equ m rewrite mapMaybe-eq {pref m} = refl
-
     vr-1a⇒VotingRule-1A : ∀ (s : State) (p : ℕ)
       → let
           m = modelState s p
@@ -157,9 +132,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) m
-    vr-2b⇒VotingRule-2B s p x
-      rewrite sym (cert⋆-equ (modelState s p))
-      = x
+    vr-2b⇒VotingRule-2B _ _ x = x
 
     -- Preconditions ---
 
@@ -274,14 +247,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; clocksAgree = refl
             ; notFromSut = not-eqℕ-sound checkedSut
           }
-
-        where
-          eq-hash : ∀ {x} → hashMaybeBlock x ≡ hash' (from-maybe x)
-          eq-hash {Nothing} = refl
-          eq-hash {Just _} = refl
-
-          checkBlockSelection : from-maybe (votingBlock (modelState s sutId)) ≡ BlockSelection (State.clock s) (modelState s sutId)
-          checkBlockSelection = {!!}
 
     -- Soundness --
 

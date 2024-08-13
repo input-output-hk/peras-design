@@ -7,21 +7,21 @@
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
+import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
+import Peras.Block (Block (MkBlock, certificate, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (catMaybes, comparing, mapMaybe, maximumBy, maybeToList)
+import Peras.Util (comparing, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Integer
-import Peras.Block (blockRef, certificate)
 import Peras.Crypto (hash)
 import Peras.Orphans ()
 import Prelude hiding (round)
@@ -137,7 +137,7 @@ certS s =
   maximumBy
     genesisCert
     (comparing (\r -> round r))
-    (mapMaybe certificate (pref s))
+    (mapMaybe (\r -> certificate r) (pref s))
 
 initialModelState :: NodeModel
 initialModelState =
@@ -378,7 +378,7 @@ transition s (NewChain chain) =
         ( foldr
             insertCert
             (allSeenCerts s)
-            (catMaybes $ map certificate chain)
+            (mapMaybe (\r -> certificate r) chain)
         )
     )
 transition s (NewVote v) =
