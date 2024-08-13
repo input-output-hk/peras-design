@@ -18,8 +18,9 @@ mapMaybe : (a → Maybe b) → List a → List b
 mapMaybe p []       = []
 mapMaybe p (x ∷ xs) =
   case p x of
-    λ { (Just y) → y ∷ mapMaybe p xs
-      ; Nothing → mapMaybe p xs }
+    λ { Nothing → mapMaybe p xs
+      ; (Just y) → y ∷ mapMaybe p xs
+      }
 
 {-# COMPILE AGDA2HS mapMaybe #-}
 

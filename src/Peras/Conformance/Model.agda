@@ -10,10 +10,10 @@ open import Haskell.Law.Eq.Instances
 open import Haskell.Law.Ord.Def
 
 open import Agda.Builtin.Maybe hiding (Maybe)
-open import Data.Bool using ()
+import Data.Bool
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
-open import Data.Product as P using ()
+import Data.Product as P
 
 open import Peras.Block renaming (certificate to blockCert)
 open import Peras.Chain
@@ -23,7 +23,7 @@ open import Peras.Foreign
 open import Peras.Numbering
 open import Peras.SmallStep
 open import Peras.Util
-open import Protocol.Peras using ()
+import Protocol.Peras
 
 {-# FOREIGN AGDA2HS
   {-# LANGUAGE RecordWildCards #-}
@@ -458,7 +458,7 @@ vr2A s = ge (getRoundNumber (rFromSlot s)) (getRoundNumber (round (cert' s)) + p
 
 Vr2B : NodeModel → Set
 Vr2B s = ((getRoundNumber (rFromSlot s)) Data.Nat.> (getRoundNumber (round (certS s))))
-       P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+    P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
 
 vr2B : (s : NodeModel) → Dec (Vr2B s)
 vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s))))
