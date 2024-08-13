@@ -246,7 +246,6 @@ headMaybe (x ∷ _) = Just x
 
 votingBlock : NodeModel → Maybe Block
 votingBlock s = headMaybe ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
--- votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
 
 {-# COMPILE AGDA2HS votingBlock #-}
 
@@ -512,8 +511,9 @@ checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 
 {-# COMPILE AGDA2HS checkVoteFromSut #-}
 
-checkVoteNotFromSut : Vote → Bool
-checkVoteNotFromSut = not ∘ checkVoteFromSut
+opaque
+  checkVoteNotFromSut : Vote → Bool
+  checkVoteNotFromSut = not ∘ checkVoteFromSut
 
 {-# COMPILE AGDA2HS checkVoteNotFromSut #-}
 

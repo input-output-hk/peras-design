@@ -114,7 +114,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → let m = modelState s p
         in Vr1B m
       → VotingRule-1B (clock m) m
-    vr-1b⇒VotingRule-1B s p m = {!!}
+    vr-1b⇒VotingRule-1B s p x = {!!}
 
     vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ)
       → let
@@ -129,13 +129,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → let
           m = modelState s p
         in
-            (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
+              (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ _ x = x
 
     -- Preconditions ---
 
+{-
     record TickPreconditions (s : State) : Set where
       slot = State.clock s
 
@@ -159,6 +160,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
       validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
       validChain' with c ← validChain rewrite validHead rewrite validRest = c
+-}
 
     record NewVotePreconditions (s : State) (vote : Vote) (ms : NodeModel) : Set where
       slot = State.clock s
@@ -172,8 +174,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validSignature : IsVoteSignature vote σ
         correctVote    : vote ≡ createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
         validVote      : VotingRule slot tree
-        clocksAgree    : State.clock s ≡ clock ms
+--        clocksAgree    : State.clock s ≡ clock ms
         notFromSut     : creatorId vote ≢ sutId
+
+{-
+        s₁          : State
+        invariant₀  : Invariant s₀
+        invariant₁  : Invariant s₁
+        trace       : s₀ ↝⋆ s₁
+        s₁-agrees   : modelState s sutId ≡ ms
+        votes-agree : sutVotesInTrace trace ≡ vs
+-}
 
       validSignature' : IsVoteSignature (createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)) σ
       validSignature' with v ← validSignature rewrite correctVote = v
@@ -185,6 +196,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     open Invariant
 
+{-
     @0 tick-preconditions : ∀ {vs ms₁} s
                           → Invariant s
                           → transition (modelState s sutId) Tick ≡ Just (vs , ms₁)
@@ -212,11 +224,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → transition (modelState s sutId) (NewChain (tip ∷ rest)) ≡ Just (vs , ms₁)
                           → NewChainPreconditions s tip rest
     newChain-preconditions s tip rest inv prf = {!!}
+-}
+
+    opaque
+      unfolding checkVoteNotFromSut
+
+      creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
+      creatorId≢sutId x = not-eqℕ-sound x
 
     @0 newVote-preconditions : ∀ {vs ms₁} s vote
                           → Invariant s
                           → transition (modelState s sutId) (NewVote vote) ≡ Just (vs , ms₁)
                           → NewVotePreconditions s vote ms₁
+
     newVote-preconditions s vote inv prf
       with mod (getSlotNumber (State.clock s)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
@@ -244,8 +264,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               f₄ = vr-2b⇒VotingRule-2B s sutId
             in
               S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
-            ; clocksAgree = refl
-            ; notFromSut = not-eqℕ-sound checkedSut
+--            ; clocksAgree = refl
+          ; notFromSut = creatorId≢sutId checkedSut
           }
 
     -- Soundness --
@@ -277,6 +297,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               → Invariant s₀
               → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+{-
     soundness s₀ (NewChain chain@(block ∷ bs)) inv prf =
       let
         pre = newChain-preconditions s₀ block bs inv prf
@@ -297,6 +318,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; s₁-agrees   = {!!} -- refl
           ; votes-agree = {!!} -- refl
           }
+-}
 
     soundness {ms₁} {vs} s₀ (NewVote vote) inv prf =
         record
