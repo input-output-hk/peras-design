@@ -8,29 +8,6 @@ uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
 uneraseNonZero {zero} ()
 uneraseNonZero {suc n} _ = _
 
-isJust : Maybe a → Bool
-isJust Nothing = False
-isJust (Just _) = True
-
-{-# COMPILE AGDA2HS isJust #-}
-
-mapMaybe : (a → Maybe b) → List a → List b
-mapMaybe p []       = []
-mapMaybe p (x ∷ xs) =
-  case p x of
-    λ { Nothing → mapMaybe p xs
-      ; (Just y) → y ∷ mapMaybe p xs
-      }
-
-{-# COMPILE AGDA2HS mapMaybe #-}
-
-catMaybes : List (Maybe a) → List a
-catMaybes [] = []
-catMaybes (Nothing ∷ xs) = catMaybes xs
-catMaybes (Just x ∷ xs) = x ∷ catMaybes xs
-
-{-# COMPILE AGDA2HS catMaybes #-}
-
 maybeToList : Maybe a → List a
 maybeToList Nothing = []
 maybeToList (Just x) = x ∷ []
