@@ -55,7 +55,6 @@ data Scenario
       , paramFile :: FilePath
       , behaviorFile :: FilePath
       , outFile :: FilePath
-      , stop :: Double
       , progress :: Bool
       }
   | LongerChain
@@ -124,10 +123,13 @@ run EverLonger{..} =
                 hFlush hout
                 unless (maybe True (< stop) $ Map.lookup False summary) $
                   go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr $ replicate 80 ' '
+    when progress $
+      hPutStrLn stderr $
+        replicate 80 ' '
 run LongerChain{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -149,10 +151,13 @@ run LongerChain{..} =
                 hFlush hout
                 unless (maybe True (< stop) $ Map.lookup False summary) $
                   go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr $ replicate 80 ' '
+    when progress $
+      hPutStrLn stderr $
+        replicate 80 ' '
 run MarginReach{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -174,10 +179,12 @@ run MarginReach{..} =
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr "                       "
+    when progress $
+      hPutStrLn stderr "                       "
 run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -199,10 +206,12 @@ run LengthDifference{..} =
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr "                       "
+    when progress $
+      hPutStrLn stderr "                       "
 run Lengths{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -306,7 +315,7 @@ scenarioParser =
     progressOption = O.switch $ O.long "progress" <> O.help "Show the progress of the simulation."
     postFactoCommand =
       O.command "ever-longer" $
-        O.info (EverLonger <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> stopOption <*> progressOption) $
+        O.info (EverLonger <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> progressOption) $
           O.progDesc "Compute the probability of a private adversarial chain being longer than the honest one."
     longerChainCommand =
       O.command "longer-chain" $
