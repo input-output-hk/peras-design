@@ -50,6 +50,7 @@ library
                      Peras.Block
                      Peras.Chain
                      Peras.Conformance.Model
+                     Peras.Conformance.Orphans
                      Peras.Conformance.Params
                      Peras.Conformance.Test
                      Peras.Crypto
