@@ -78,8 +78,8 @@ tickNode ::
   SlotNumber ->
   RoundNumber ->
   Payload ->
-  Set Chain ->
-  Set Vote ->
+  [Chain] ->
+  [Vote] ->
   m (PerasResult ())
 tickNode tracer diffuser params party state s r payload newChains newVotes =
   -- 1. Get votes and chains from the network.
