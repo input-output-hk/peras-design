@@ -16,7 +16,7 @@ import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import Data.Function (on)
-import Data.List (groupBy, maximumBy, sortBy)
+import Data.List (groupBy, maximumBy, nubBy, sortBy)
 import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
@@ -39,8 +39,8 @@ fetching ::
   Party ->
   TVar m PerasState ->
   SlotNumber ->
-  Set Chain ->
-  Set Vote ->
+  [Chain] ->
+  [Vote] ->
   m (PerasResult ())
 fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
   runExceptT $ do
@@ -48,16 +48,19 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
 
     -- 1. Fetch new chains Cnew and votes Vnew.
     lift . traceWith tracer $ NewChainAndVotes (pid party) newChains newVotes
+    let isEquivocatedVote = on (==) (Vote.votingRound &&& Vote.creatorId)
+    let newVotes' = Set.fromList $ nubBy isEquivocatedVote newVotes
+        newChains' = Set.fromList newChains
 
     -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
-    let chains' = chains `Set.union` newChains
-        certsReceived = (,slot) <$> extractNewCertificates (Map.keysSet certs) newChains
+    let chains' = chains `Set.union` newChains'
+        certsReceived = (,slot) <$> extractNewCertificates (Map.keysSet certs) newChains'
         certsOldAndReceived = certs `Map.union` Map.fromList certsReceived
     unless (null certsReceived) . lift $ traceWith tracer (NewCertificatesReceived (pid party) certsReceived)
 
     -- 3. Add Vnew to V and turn any new quorum in V into a certificate cert.
-    let equivocatedVote v = any (on (==) (Vote.votingRound &&& Vote.creatorId) v) votes
-        unequivocatedVotes = Set.filter (not . equivocatedVote) newVotes
+    let equivocatedVote v = any (isEquivocatedVote v) votes
+        unequivocatedVotes = Set.filter (not . equivocatedVote) newVotes'
         votes' = votes `Set.union` unequivocatedVotes
         newQuora = findNewQuora (fromIntegral perasτ) (Map.keysSet certsOldAndReceived) votes'
     certsCreated <- ExceptT $ sequence <$> mapM (createSignedCertificate party) newQuora
