@@ -244,8 +244,9 @@ headMaybe (x ∷ _) = Just x
 
 {-# COMPILE AGDA2HS headMaybe #-}
 
-votingBlock : NodeModel → Maybe Block
-votingBlock s = headMaybe ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
+opaque
+  votingBlock : NodeModel → Maybe Block
+  votingBlock s = headMaybe ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
 
 {-# COMPILE AGDA2HS votingBlock #-}
 
@@ -462,11 +463,12 @@ vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s
 CheckVotingRules : NodeModel → Set
 CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
-checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
-checkVotingRules s =
-  decS
-    (decP (vr1A s) (vr1B s))
-    (decP (vr2A s) (vr2B s))
+opaque
+  checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
+  checkVotingRules s =
+    decS
+      (decP (vr1A s) (vr1B s))
+      (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
