@@ -5,8 +5,10 @@ open import Haskell.Prelude
 open import Haskell.Prim.Tuple
 open import Haskell.Law.Equality
 
+open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 import Data.List
+open import Data.List.Membership.Propositional
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
@@ -24,10 +26,10 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
 open import Prelude.AssocList
-open import Prelude.DecEq using (DecEq)
+open import Prelude.DecEq hiding (_==_; _≟_)
 import Peras.SmallStep as SmallStep
 
-import Peras.Conformance.Model as Model
+open import Peras.Conformance.Model as Model
 open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
 
@@ -38,9 +40,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
          {parties : Parties}
+         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
     where
 
-  open Model
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
   modelParams : PerasParams
@@ -87,13 +89,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
     sutVotesInStep (Fetch _) = []
-    sutVotesInStep {s₀ = s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _)) =
-      case p ≟ sutId of λ where
-        (yes _) → (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
-        (no _)  → []
     sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _ _) = []
     sutVotesInStep (NextSlotNewRound _ _ _) = []
+    sutVotesInStep {s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _))
+      with p ≟ sutId
+    ... | (yes _) = (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
+    ... | (no _)  = []
 
     sutVotesInTrace : ∀ {s₀ s₁} → s₀ ↝⋆ s₁ → List (SlotNumber × Vote)
     sutVotesInTrace ∎              = []
@@ -242,18 +244,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | isYes (checkVotingRules (modelState s₀ sutId)) in checkedVRs
          | hashMaybeBlock (votingBlock (modelState s₀ sutId)) == blockHash vote in isValidBlockHash
     newVote-preconditions {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
-      let
-        trees-eq = allTreesAreEqual inv
-        notFromSut = creatorId≢sutId checkedSut
-      in
-        record
-          { s₁          = s₁
-          ; invariant₀  = inv
-          ; invariant₁  = {!!}
-          ; trace       = trace
-          ; s₁-agrees   = s₁-agrees
-          ; votes-agree = votes-agree
-          }
+      record
+        { s₁          = s₁
+        ; invariant₀  = inv
+        ; invariant₁  = {!!}
+        ; trace       = trace
+        ; s₁-agrees   = s₁-agrees
+        ; votes-agree = votes-agree
+        }
 
       where
         slot : SlotNumber
@@ -264,6 +262,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
+
+        trees-eq : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s₀ ⁉ sutId }) (State.blockTrees s₀)
+        trees-eq = allTreesAreEqual inv
 
         startOfRound : StartOfRound slot r
         startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -312,11 +313,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   -- TODO: also deliver the vote message to establish Fetched s₁
                   ↣ ∎
 
-        s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees = {!!}
+        notFromSut : creatorId vote ≢ sutId
+        notFromSut = creatorId≢sutId checkedSut
 
-        votes-agree : sutVotesInTrace trace ≡ (map (State.clock s₀ ,_) vs)
-        votes-agree = {!!}
+        s₁-agrees : modelState s₁ sutId ≡ ms₁
+        s₁-agrees = {!!} {- with sutId ∈ᵐ? State.blockTrees s₀
+        ... | yes p = {!refl!}
+        ... | no ¬p = ? -}
+
+        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree with creatorId vote ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no _  = refl
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
