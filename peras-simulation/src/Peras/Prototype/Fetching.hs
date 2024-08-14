@@ -8,6 +8,7 @@ module Peras.Prototype.Fetching (
   findNewQuora,
 ) where
 
+import Control.Arrow ((&&&))
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar', readTVarIO)
 import Control.Monad (unless, when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
@@ -19,9 +20,10 @@ import Data.List (groupBy, maximumBy, sortBy)
 import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import Data.Set as Set (fromList, intersection, map, notMember, size, union)
+import qualified Data.Set as Set (filter, fromList, intersection, map, notMember, size, union)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
+import qualified Peras.Chain as Vote (Vote (creatorId, votingRound))
 import Peras.Crypto (Hash, hash)
 import Peras.Numbering (SlotNumber)
 import Peras.Prototype.Crypto (createSignedCertificate)
@@ -54,7 +56,9 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
     unless (null certsReceived) . lift $ traceWith tracer (NewCertificatesReceived (pid party) certsReceived)
 
     -- 3. Add Vnew to V and turn any new quorum in V into a certificate cert.
-    let votes' = votes `Set.union` newVotes
+    let equivocatedVote v = any (on (==) (Vote.votingRound &&& Vote.creatorId) v) votes
+        unequivocatedVotes = Set.filter (not . equivocatedVote) newVotes
+        votes' = votes `Set.union` unequivocatedVotes
         newQuora = findNewQuora (fromIntegral perasτ) (Map.keysSet certsOldAndReceived) votes'
     certsCreated <- ExceptT $ sequence <$> mapM (createSignedCertificate party) newQuora
     let certs' = certsOldAndReceived `Map.union` Map.fromList ((,slot) <$> certsCreated)
