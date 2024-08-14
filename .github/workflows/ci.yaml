@@ -28,12 +28,14 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+          max-jobs = 1
     - name: 🏗️ Typecheck Agda
       run: |
-        nix build --show-trace --accept-flake-config .#peras
+        nix build --show-trace .#peras
     - name: 🏗️ Build `peras-simulation`.
       run: |
-        nix build --show-trace --accept-flake-config .#peras-simulation-test
+        nix build --show-trace .#peras-simulation-test
 
   simulate-hs:
     name: Run simulations
@@ -51,13 +53,15 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+          max-jobs = 1
     - name: 🗳️ Simulate Peras
       run: |
-        nix run --accept-flake-config .#peras-simulate -- \
+        nix run .#peras-simulate -- \
           --in-file peras-simulation/example-input.yaml \
           --out-file peras-simulation/tmp-output.yaml \
           --trace-file peras-simulation/tmp-trace.jsonarray
-        nix run --accept-flake-config .#peras-visualize -- \
+        nix run .#peras-visualize -- \
           --trace-file peras-simulation/tmp-trace.jsonarray \
           --dot-file peras-simulation/tmp.dot
   tests:
@@ -77,9 +81,17 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+          max-jobs = 1
     - name: 🔬 Test with `peras-simulation-test`
       run: |
-        nix run --accept-flake-config .#peras-simulation-test
+        nix run .#peras-simulation-test
+    - name: 🔬 Test with `peras-markov-test`
+      run: |
+        nix run .#peras-markov-test
+    - name: 🔬 Test with `peras-vote-test`
+      run: |
+        nix run .#peras-vote-test
 
   test-demo:
     name: Test Demo
@@ -97,15 +109,17 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+          max-jobs = 1
     - name: 🏗️ Compile Agda
       run: |
-        nix build --accept-flake-config .#test-demo-agda
+        nix build .#test-demo-agda
     - name: 🏗️ Compile Haskell Library
       run: |
-        nix build --accept-flake-config .#test-demo
+        nix build .#test-demo
     - name: 🏗️ Compile Haskell Executable
       run: |
-        nix build --accept-flake-config .#test-demo-test
+        nix build .#test-demo-test
 
   build-specification:
     name: Build HTML Specification
@@ -123,6 +137,8 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+          max-jobs = 1
     - name: 🏗️ Agda-to-HTML
       run: |
         nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
