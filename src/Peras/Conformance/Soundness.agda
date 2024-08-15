@@ -242,7 +242,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | checkSignedVote vote in checkedSig
          | checkVoteNotFromSut vote in checkedSut
          | isYes (checkVotingRules (modelState s₀ sutId)) in checkedVRs
-         | hashMaybeBlock (votingBlock (modelState s₀ sutId)) == blockHash vote in isValidBlockHash
+         | votingBlockHash (modelState s₀ sutId) == blockHash vote in isValidBlockHash
     newVote-preconditions {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
       record
         { s₁          = s₁
@@ -287,7 +287,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
 
         correctVote : vote ≡ v
-        correctVote = {!refl!}
+        correctVote = {!!}
 
         s₁ : State
         s₁ = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
@@ -295,8 +295,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
         creatorExists = {!!}
 
-        validBlockHash : hash' (BlockSelection (State.clock s₀) tree) ≡ blockHash vote
-        validBlockHash = {!!}
+        blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
+        blockSelection-eq = {!!}
+
+        validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
+        validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
 
         validSignature : IsVoteSignature v σ
         validSignature with v ← axiom-checkVoteSignature checkedSig rewrite correctVote = v
@@ -316,10 +319,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         notFromSut : creatorId vote ≢ sutId
         notFromSut = creatorId≢sutId checkedSut
 
+        {-
+        open import Prelude.Decidable
+        instance
+          xxx : ∀ {x y} → (x ∈ᵐ y) ⁇
+          xxx = ⁇ ({!!} Relation.Nullary.Decidable.because {!!})
+        -}
+
         s₁-agrees : modelState s₁ sutId ≡ ms₁
         s₁-agrees = {!!} {- with sutId ∈ᵐ? State.blockTrees s₀
         ... | yes p = {!refl!}
-        ... | no ¬p = ? -}
+        ... | no ¬p = {!refl!}
+        -}
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId

@@ -314,19 +314,23 @@ cool-down phase.
 
 #### BlockSelection
 ```agda
-    BlockSelection' : SlotNumber → Chain → Maybe Block
+    BlockSelection' : SlotNumber → Chain → Hash Block
     BlockSelection' (MkSlotNumber s) =
-      head ∘ filter (λ {b → (slotNumber' b) + L ≤? s})
+      hashHead ∘ filter (λ {b → (slotNumber' b) + L ≤? s})
+      where
+        hashHead : List Block → Hash Block
+        hashHead [] = MkHash emptyBS
+        hashHead (x ∷ _) = hash x
 
-    BlockSelection : SlotNumber → T → Maybe Block
+
+    BlockSelection : SlotNumber → T → Hash Block
     BlockSelection s = BlockSelection' s ∘ preferredChain
 ```
 ```agda
-    ChainExtends : Maybe Block → Certificate → Chain → Type
-    ChainExtends nothing _ _ = ⊥
-    ChainExtends (just b) c =
+    ChainExtends : Hash Block → Certificate → Chain → Type
+    ChainExtends h c =
       Any (λ block → (hash block ≡ blockRef c))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
 ```
 #### Voting rules
 
@@ -561,7 +565,7 @@ is added to be consumed immediately.
             r = v-round s
             v = createVote s p π σ b
           in
-        ∙ hash' (BlockSelection s t) ≡ b
+        ∙ BlockSelection s t ≡ b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r

@@ -1,9 +1,5 @@
 module Peras.Util where
 
-isJust :: Maybe a -> Bool
-isJust Nothing = False
-isJust (Just _) = True
-
 maybeToList :: Maybe a -> [a]
 maybeToList Nothing = []
 maybeToList (Just x) = [x]

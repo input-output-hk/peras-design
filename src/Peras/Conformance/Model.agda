@@ -137,12 +137,12 @@ preferredChain params certs =
 
 {-# COMPILE AGDA2HS preferredChain #-}
 
-makeVote : PerasParams → SlotNumber → Block → Vote
-makeVote params slot block =
+makeVote : PerasParams → SlotNumber → Hash Block → Vote
+makeVote params slot h =
   let r = slotToRound params slot
       party = mkParty 1 [] (r ∷ [])
       proof = createMembershipProof r (party ∷ [])
-  in createSignedVote party r (Hashable.hash hashBlock block) proof 1
+  in createSignedVote party r h proof 1
 
 {-# COMPILE AGDA2HS makeVote #-}
 
@@ -222,15 +222,15 @@ blockOldEnough params clock record{slotNumber = slot} =
 
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
-chainExtends : Block → Certificate → Chain → Bool
-chainExtends b c =
+chainExtends : Hash Block → Certificate → Chain → Bool
+chainExtends h c =
   any (λ block → Hashable.hash hashBlock block == blockRef c)
-    ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock b)
+    ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= h)
 
 {-# COMPILE AGDA2HS chainExtends #-}
 
-extends : Block → Certificate → List Chain → Bool
-extends block cert chains = any (chainExtends block cert) chains
+extends : Hash Block → Certificate → List Chain → Bool
+extends h cert chains = any (chainExtends h cert) chains
 
 {-# COMPILE AGDA2HS extends #-}
 
@@ -238,17 +238,17 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
-headMaybe : ∀ {a : Set} → List a → Maybe a
-headMaybe [] = Nothing
-headMaybe (x ∷ _) = Just x
+hashHead : List Block → Hash Block
+hashHead [] = genesisHash
+hashHead (x ∷ _) = Hashable.hash hashBlock x
 
-{-# COMPILE AGDA2HS headMaybe #-}
+{-# COMPILE AGDA2HS hashHead #-}
 
 opaque
-  votingBlock : NodeModel → Maybe Block
-  votingBlock s = headMaybe ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
+  votingBlockHash : NodeModel → Hash Block
+  votingBlockHash s = hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
 
-{-# COMPILE AGDA2HS votingBlock #-}
+{-# COMPILE AGDA2HS votingBlockHash #-}
 
 newChain' : NodeModel → Chain → NodeModel
 newChain' s c = record s { allChains = c ∷ (allChains s) }
@@ -401,36 +401,29 @@ open import Relation.Nullary.Decidable as D using (¬?)
 import Data.List as L
 open import Data.List.Relation.Unary.Any as A using ()
 
-Extends : Block → Certificate → List Chain → Set
-Extends b c chains = A.Any (λ { chain →
+Extends : Hash Block → Certificate → List Chain → Set
+Extends h c chains = A.Any (λ { chain →
   A.Any (λ block → (hash hashBlock block ≡ blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash hash hashBlock b)) chain)
+      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash h)) chain)
     }) chains
   where
     open Certificate
     open Hashable
 
-Extends? : (b : Block) → (c : Certificate) → (chains : List Chain) → D.Dec (Extends b c chains)
-Extends? b c chains = A.any? (λ { chain →
+Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → D.Dec (Extends h c chains)
+Extends? h c chains = A.any? (λ { chain →
   A.any? (λ block → (hash hashBlock block ≟-BlockHash blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash hash hashBlock b)) chain)
+      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash h)) chain)
     }) chains
   where
     open Certificate
     open Hashable
 
 Vr1B : NodeModel → Set
-Vr1B s
-  with votingBlock s
-... | Nothing = ⊥
-... | Just block = Extends block (cert' s) (allChains s)
+Vr1B s = Extends (votingBlockHash s) (cert' s) (allChains s)
 
 vr1B' : NodeModel → Bool
-vr1B' s =
-  case votingBlock s of
-    λ { Nothing → False
-      ; (Just block) → extends block (cert' s) (allChains s)
-      }
+vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
 
@@ -475,8 +468,8 @@ opaque
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
   guard (isYes $ checkVotingRules s)
-  block ← votingBlock s
-  pure $ makeVote (protocol s) (clock s) block
+  guard (votingBlockHash s /= genesisHash)
+  pure $ makeVote (protocol s) (clock s) (votingBlockHash s)
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
@@ -529,12 +522,6 @@ checkBlockNotFromSut = not ∘ checkBlockFromSut
 
 {-# COMPILE AGDA2HS checkBlockNotFromSut #-}
 
-hashMaybeBlock : Maybe Block → Hash Block
-hashMaybeBlock (Just b) = Hashable.hash hashBlock b
-hashMaybeBlock Nothing = genesisHash
-
-{-# COMPILE AGDA2HS hashMaybeBlock #-}
-
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
@@ -559,7 +546,7 @@ transition s (NewVote v) = do
   --       the test model. The following should use the block-tree of
   --       the vote creator for checking the voting rules:
   guard (isYes $ checkVotingRules s)
-  guard (hashMaybeBlock (votingBlock s) == blockHash v)
+  guard (votingBlockHash s == blockHash v)
   Just ([] , addVote' s v)
 
 {-# COMPILE AGDA2HS transition #-}

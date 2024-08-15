@@ -98,12 +98,12 @@ preferredChain params certs =
     genesisChain
     (compareChains (fromIntegral (perasB params)) certs)
 
-makeVote :: PerasParams -> SlotNumber -> Block -> Vote
-makeVote params slot block =
+makeVote :: PerasParams -> SlotNumber -> Hash Block -> Vote
+makeVote params slot h =
   createSignedVote
     (mkParty 1 [] [slotToRound params slot])
     (slotToRound params slot)
-    (hash block)
+    h
     ( createMembershipProof
         (slotToRound params slot)
         [mkParty 1 [] [slotToRound params slot]]
@@ -163,21 +163,21 @@ blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
   getSlotNumber slot + perasL params + perasT params
     <= getSlotNumber clock
 
-chainExtends :: Block -> Certificate -> Chain -> Bool
-chainExtends b c =
+chainExtends :: Hash Block -> Certificate -> Chain -> Bool
+chainExtends h c =
   any (\block -> hash block == blockRef c)
-    . dropWhile (\block' -> hash block' /= hash b)
+    . dropWhile (\block' -> hash block' /= h)
 
-extends :: Block -> Certificate -> [Chain] -> Bool
-extends block cert chains = any (chainExtends block cert) chains
+extends :: Hash Block -> Certificate -> [Chain] -> Bool
+extends h cert chains = any (chainExtends h cert) chains
 
-headMaybe :: [a] -> Maybe a
-headMaybe [] = Nothing
-headMaybe (x : _) = Just x
+hashHead :: [Block] -> Hash Block
+hashHead [] = genesisHash
+hashHead (x : _) = hash x
 
-votingBlock :: NodeModel -> Maybe Block
-votingBlock s =
-  headMaybe
+votingBlockHash :: NodeModel -> Hash Block
+votingBlockHash s =
+  hashHead
     . filter
       ( \case
           b ->
@@ -230,10 +230,7 @@ vr1A :: NodeModel -> Bool
 vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 vr1B' :: NodeModel -> Bool
-vr1B' s =
-  case votingBlock s of
-    Nothing -> False
-    Just block -> extends block (cert' s) (allChains s)
+vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 vr1B :: NodeModel -> Bool
 vr1B s = vr1B' s
@@ -264,8 +261,8 @@ makeVote' :: NodeModel -> Maybe Vote
 makeVote' s =
   do
     guard (isYes $ checkVotingRules s)
-    block <- votingBlock s
-    pure $ makeVote (protocol s) (clock s) block
+    guard (votingBlockHash s /= genesisHash)
+    pure $ makeVote (protocol s) (clock s) (votingBlockHash s)
 
 votesInState :: NodeModel -> [Vote]
 votesInState s =
@@ -335,10 +332,6 @@ checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
 checkBlockNotFromSut :: Block -> Bool
 checkBlockNotFromSut = not . checkBlockFromSut
 
-hashMaybeBlock :: Maybe Block -> Hash Block
-hashMaybeBlock (Just b) = hash b
-hashMaybeBlock Nothing = genesisHash
-
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
   Just
@@ -387,5 +380,5 @@ transition s (NewVote v) =
     guard (checkSignedVote v)
     guard (checkVoteNotFromSut v)
     guard (isYes $ checkVotingRules s)
-    guard (hashMaybeBlock (votingBlock s) == blockHash v)
+    guard (votingBlockHash s == blockHash v)
     Just ([], addVote' s v)

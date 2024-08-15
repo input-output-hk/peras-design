@@ -232,13 +232,6 @@ instance
  
 open Hashable
 
-module _ ⦃ hashBlock : Hashable Block ⦄
-  where
-
-  hash' : Maybe Block → Hash Block
-  hash' (just b) = hash hashBlock b
-  hash' nothing = MkHash emptyBS
-
 private
   instance
     hashBlock : Hashable Block

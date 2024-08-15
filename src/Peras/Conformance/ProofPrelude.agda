@@ -16,6 +16,7 @@ open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
 open import Relation.Binary.PropositionalEquality using (_≢_)
 open import Relation.Nullary.Decidable using (Dec; yes; no)
 
+open import Peras.Crypto
 open import Peras.Util
 
 
@@ -47,3 +48,4 @@ lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 suc-definition : ∀ {n} → suc n ≡ n + 1
 suc-definition {zero} = refl
 suc-definition {suc n} = cong suc (suc-definition {n})
+
