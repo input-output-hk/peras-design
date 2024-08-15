@@ -42,7 +42,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
           let newChain = block : currentChain
           writeTVar chain newChain
           pure newChain
-        pure $ insertChains systemStart (Set.singleton newChain) diffuser
+        pure $ insertChains systemStart (pure newChain) diffuser
     | otherwise = pure diffuser
 
   -- generate 10 votes every slot in a round
@@ -63,7 +63,7 @@ simpleScenario chain params@MkPerasParams{perasU, perasL} slotNumber =
                   proof <- ExceptT $ createMembershipProof round (Set.singleton party)
                   ExceptT $ createSignedVote party round blockHash proof 1
               )
-        pure $ insertVotes systemStart (Set.fromList votes) $ defaultDiffuser 0
+        pure $ insertVotes systemStart votes $ defaultDiffuser 0
 
 blockBefore :: Integer -> Integer -> Chain -> Maybe Block
 blockBefore cutoff slot = \case

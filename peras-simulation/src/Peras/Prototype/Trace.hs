@@ -21,7 +21,7 @@ import Peras.Prototype.Types (PerasParams, VotingWeight)
 data PerasLog
   = Protocol {parameters :: PerasParams}
   | Tick {slot :: SlotNumber, roundNumber :: RoundNumber}
-  | NewChainAndVotes {partyId :: PartyId, newChains :: Set Chain, newVotes :: Set Vote}
+  | NewChainAndVotes {partyId :: PartyId, newChains :: [Chain], newVotes :: [Vote]}
   | NewChainPref {partyId :: PartyId, newChainPref :: Chain}
   | NewCertificatesReceived {partyId :: PartyId, newCertificates :: [(Certificate, SlotNumber)]}
   | NewCertificatesFromQuorum {partyId :: PartyId, newQuorums :: [Certificate]}

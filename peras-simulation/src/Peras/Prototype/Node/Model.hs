@@ -143,7 +143,7 @@ tickModeled :: NodeModel -> ((), NodeModel)
 tickModeled node@MkNodeModel{clock} = ((), node{clock = clock + 1})
 
 -- FIXME: Replace with an executable specification generated from Agda.
-fetchingModeled :: Set Chain -> Set Vote -> NodeModel -> ((), NodeModel)
+fetchingModeled :: [Chain] -> [Vote] -> NodeModel -> ((), NodeModel)
 fetchingModeled newChains newVotes node@MkNodeModel{self, clock, protocol, state} =
   either (error . show) id $
     runSim $ do
@@ -186,14 +186,14 @@ votingModeled isMember node@MkNodeModel{self, clock, protocol, state} =
         newVote <- assertOneVote =<< lift (popChainsAndVotes diffuserVar clock)
         pure (newVote, node{state = s})
 
-assertOneChain :: MonadError PerasError m => (Set Chain, Set Vote) -> m (Maybe Chain)
+assertOneChain :: MonadError PerasError m => ([Chain], [Vote]) -> m (Maybe Chain)
 assertOneChain (newChains, newVotes) =
   case (toList newChains, toList newVotes) of
     ([], []) -> pure Nothing
     ([newChain], []) -> pure $ Just newChain
     _ -> throwError MultipleItemsDiffused
 
-assertOneVote :: MonadError PerasError m => (Set Chain, Set Vote) -> m (Maybe Vote)
+assertOneVote :: MonadError PerasError m => ([Chain], [Vote]) -> m (Maybe Vote)
 assertOneVote (newChains, newVotes) =
   case (toList newChains, toList newVotes) of
     ([], []) -> pure Nothing
@@ -206,7 +206,7 @@ instance StateModel NodeModel where
   data Action NodeModel a where
     Initialize :: Party -> SlotNumber -> PerasParams -> Action NodeModel ()
     Tick :: Action NodeModel ()
-    Fetching :: Set Chain -> Set Vote -> Action NodeModel ()
+    Fetching :: [Chain] -> [Vote] -> Action NodeModel ()
     BlockCreation :: IsSlotLeader -> Payload -> Action NodeModel (Maybe Chain)
     Voting :: IsCommitteeMember -> Action NodeModel (Maybe Vote)
 
@@ -242,7 +242,7 @@ instance StateModel NodeModel where
           ]
       else pure . Some $ Initialize (mkParty 1 mempty mempty) (systemStart + 1) def -- FIXME: Use arbitraries.
    where
-    genChains = Set.fromList <$> listOf genChain
+    genChains = listOf genChain
     genChain =
       do
         tip' <- elements $ toList chains
@@ -261,7 +261,7 @@ instance StateModel NodeModel where
             <*> arbitrary
             <*> arbitrary
     genVotes
-      | canGenVotes = Set.fromList <$> listOf genVote
+      | canGenVotes = listOf genVote
       | otherwise = pure mempty
     genVote =
       do
