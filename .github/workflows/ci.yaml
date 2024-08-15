@@ -1,8 +1,8 @@
 name: CI
 env:
   ALLOWED_URIS: "https://github.com https://api.github.com"
-  TRUSTED_PUBLIC_KEYS: "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-  SUBSTITUTERS: "https://cache.nixos.org/ https://cache.iog.io"
+  TRUSTED_PUBLIC_KEYS: "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= thelio:KyHAYh2EtAT5skKWlArHRcLhiq3d13u0Pt9BwDJp7UY="
+  SUBSTITUTERS: "https://cache.nixos.org/ https://cache.iog.io http://thelio.functionally.dev:5000"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -14,7 +14,7 @@ on:
 jobs:
   typecheck:
     name: Build libraries
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
 
   simulate-hs:
     name: Run simulations
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
   tests:
     if: true
     name: Run tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
 
   test-demo:
     name: Test Demo
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
 
   build-specification:
     name: Build HTML Specification
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
