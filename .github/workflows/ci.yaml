@@ -29,7 +29,6 @@ jobs:
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
           accept-flake-config = true
-          max-jobs = 1
     - name: 🏗️ Typecheck Agda
       run: |
         nix build --show-trace .#peras
@@ -54,7 +53,6 @@ jobs:
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
           accept-flake-config = true
-          max-jobs = 1
     - name: 🗳️ Simulate Peras
       run: |
         nix run .#peras-simulate -- \
@@ -82,7 +80,6 @@ jobs:
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
           accept-flake-config = true
-          max-jobs = 1
     - name: 🔬 Test with `peras-simulation-test`
       run: |
         nix run .#peras-simulation-test
@@ -110,7 +107,6 @@ jobs:
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
           accept-flake-config = true
-          max-jobs = 1
     - name: 🏗️ Compile Agda
       run: |
         nix build .#test-demo-agda
@@ -138,11 +134,14 @@ jobs:
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
           accept-flake-config = true
-          max-jobs = 1
-    - name: 🏗️ Agda-to-HTML
+    - name: 🏗️ Agda-to-HTML via `nix develop`
+      if: false
       run: |
         nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
-
+    - name: 🏗️ Agda-to-HTML via `nix run`
+      if: true
+      run: |
+        nix run .#peras-html-spec
     - name: Publish Docusaurus build
       uses: actions/upload-artifact@v4
       with:
