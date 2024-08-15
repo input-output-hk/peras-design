@@ -308,7 +308,7 @@ castVote' ::
   Voter ->
   -- | The vote, if the voter is selected
   Maybe (Vote a)
-castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{k, m, f} roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
+castVote' blockHash totalStake (MkMembershipInput h) VotingParameters{m, f} roundNumber@RoundNumber{unRoundNumber} MkVoter{..} =
   let certVRF = VRF.evalCertified @_ @MembershipInput () nonce vrfSignKey
       certKES = KES.signKES () kesPeriod (getSignableRepresentation certVRF <> getSignableRepresentation blockHash) kesSignKey
       nonce = mkNonce h unRoundNumber

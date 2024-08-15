@@ -1,10 +1,8 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -79,6 +77,7 @@ instance Pretty EnvAction where
   pPrint (NewChain chain) =
     "NewChain" <+> pPrint chain
   pPrint (NewVote vote) = "NewVote" <+> pPrintPrec prettyNormal 10 vote
+  pPrint (BadVote vote) = "BadVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where
   pPrint MkBlock{..} =
@@ -118,8 +117,8 @@ instance Pretty Trace.PerasLog where
     Trace.NewChainAndVotes{newChains, newVotes} ->
       hang "NewChainAndVotes" 2 $
         vcat $
-          [hang "Chains:" 2 $ vcat (map pPrint $ Set.toList newChains) | not $ null newChains]
-            ++ [hang "Votes:" 2 $ vcat (map pPrint $ Set.toList newVotes) | not $ null newVotes]
+          [hang "Chains:" 2 $ vcat (map pPrint newChains) | not $ null newChains]
+            ++ [hang "Votes:" 2 $ vcat (map pPrint newVotes) | not $ null newVotes]
     Trace.NewChainPref{newChainPref} -> hang "NewChainPref:" 2 $ pPrint newChainPref
     Trace.NewCertificatesReceived{newCertificates} ->
       hang "NewCerts:" 2 $
@@ -154,12 +153,13 @@ instance StateModel NodeModel where
 
   initialState = initialModelState
 
-  arbitraryAction _ NodeModel{clock, allChains, protocol} =
+  arbitraryAction _ NodeModel{clock, allChains, allVotes, protocol} =
     fmap (Some . Step) $
       frequency $
         [(1, pure Tick)]
           ++ [(1, NewChain <$> genChain)]
           ++ [(8, NewVote <$> genVote) | canGenVotes]
+          ++ [(2, BadVote <$> genBadVote) | canGenBadVote]
    where
     genChain =
       do
@@ -183,7 +183,16 @@ instance StateModel NodeModel where
     genVote =
       do
         block <- elements (concat allChains)
-        MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+        let unequivocated v@MkVote{votingRound = r, creatorId = p} = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
+        flip suchThat unequivocated $
+          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+
+    badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
+    canGenBadVote = canGenVotes && not (null badVoteCandidates)
+    genBadVote = do
+      block <- elements (concat allChains)
+      (r, p) <- elements badVoteCandidates
+      MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
       newRound clock protocol -- Voting is only allowed in the first slot of a round.
         && not (all null allChains) -- There must be some block to vote for.
@@ -200,7 +209,7 @@ instance StateModel NodeModel where
           )
         ]
     validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
-    genPartyId = arbitrary `suchThat` (/= pid modelSUT)
+    genPartyId = choose (2, 5_000_000) `suchThat` (/= pid modelSUT)
     genRound = elements [1 .. r]
     r = inRound clock protocol
 
@@ -216,8 +225,8 @@ data RunState m = RunState
   { stateVar :: TVar m PerasState
   , diffuserVar :: TVar m Diffuser
   , tracer :: Tracer m Trace.PerasLog
-  , unfetchedChains :: Set Chain
-  , unfetchedVotes :: Set Vote
+  , unfetchedChains :: [Chain]
+  , unfetchedVotes :: [Vote]
   }
 
 type Runtime m = StateT (RunState m) m
@@ -237,12 +246,15 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
             diffuser = diffuseVote diffuserVar
         _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
         (cs, vs) <- popChainsAndVotes diffuserVar clock'
-        pure $ Set.toList vs
+        pure vs
     NewChain c -> do
-      modify $ \rs -> rs{unfetchedChains = Set.insert c (unfetchedChains rs)}
+      modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
       pure mempty
     NewVote v -> do
-      modify $ \rs -> rs{unfetchedVotes = Set.insert v (unfetchedVotes rs)}
+      modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
+      pure mempty
+    BadVote v -> do
+      modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
   postcondition (s, s') (Step a) _ r = do

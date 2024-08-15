@@ -8,6 +8,7 @@ module Peras.Prototype.Fetching (
   findNewQuora,
 ) where
 
+import Control.Arrow ((&&&))
 import Control.Concurrent.Class.MonadSTM (MonadSTM, TVar, atomically, modifyTVar', readTVarIO)
 import Control.Monad (unless, when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
@@ -15,13 +16,14 @@ import Control.Monad.Trans (lift)
 import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import Data.Function (on)
-import Data.List (groupBy, maximumBy, sortBy)
+import Data.List (groupBy, maximumBy, nubBy, sortBy)
 import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import Data.Set as Set (fromList, intersection, map, notMember, size, union)
+import qualified Data.Set as Set (filter, fromList, intersection, map, notMember, size, union)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
+import qualified Peras.Chain as Vote (Vote (creatorId, votingRound))
 import Peras.Crypto (Hash, hash)
 import Peras.Numbering (SlotNumber)
 import Peras.Prototype.Crypto (createSignedCertificate)
@@ -37,8 +39,8 @@ fetching ::
   Party ->
   TVar m PerasState ->
   SlotNumber ->
-  Set Chain ->
-  Set Vote ->
+  [Chain] ->
+  [Vote] ->
   m (PerasResult ())
 fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
   runExceptT $ do
@@ -46,15 +48,20 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
 
     -- 1. Fetch new chains Cnew and votes Vnew.
     lift . traceWith tracer $ NewChainAndVotes (pid party) newChains newVotes
+    let isEquivocatedVote = on (==) (Vote.votingRound &&& Vote.creatorId)
+    let newVotes' = Set.fromList $ nubBy isEquivocatedVote newVotes
+        newChains' = Set.fromList newChains
 
     -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
-    let chains' = chains `Set.union` newChains
-        certsReceived = (,slot) <$> extractNewCertificates (Map.keysSet certs) newChains
+    let chains' = chains `Set.union` newChains'
+        certsReceived = (,slot) <$> extractNewCertificates (Map.keysSet certs) newChains'
         certsOldAndReceived = certs `Map.union` Map.fromList certsReceived
     unless (null certsReceived) . lift $ traceWith tracer (NewCertificatesReceived (pid party) certsReceived)
 
     -- 3. Add Vnew to V and turn any new quorum in V into a certificate cert.
-    let votes' = votes `Set.union` newVotes
+    let equivocatedVote v = any (isEquivocatedVote v) votes
+        unequivocatedVotes = Set.filter (not . equivocatedVote) newVotes'
+        votes' = votes `Set.union` unequivocatedVotes
         newQuora = findNewQuora (fromIntegral perasτ) (Map.keysSet certsOldAndReceived) votes'
     certsCreated <- ExceptT $ sequence <$> mapM (createSignedCertificate party) newQuora
     let certs' = certsOldAndReceived `Map.union` Map.fromList ((,slot) <$> certsCreated)

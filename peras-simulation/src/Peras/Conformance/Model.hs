@@ -8,7 +8,7 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
-import Peras.Chain (Chain, Vote (blockHash, votingRound))
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
@@ -28,10 +28,14 @@ import Prelude hiding (round)
 intToInteger :: Int -> Integer
 intToInteger = fromIntegral
 
+voterId :: Vote -> PartyId
+voterId (MkVote _ p _ _ _) = p
+
 data EnvAction
   = Tick
   | NewChain Chain
   | NewVote Vote
+  | BadVote Vote
   deriving (Eq, Show)
 
 genesisHash :: Hash Block
@@ -174,6 +178,10 @@ votingBlock :: NodeModel -> Maybe Block
 votingBlock s =
   listToMaybe
     (dropWhile (not . blockOldEnough (protocol s) (clock s)) (pref s))
+
+hasVoted :: PartyId -> RoundNumber -> NodeModel -> Bool
+hasVoted p r s =
+  any (\v -> p == voterId v && r == votingRound v) (allVotes s)
 
 isYes :: Bool -> Bool
 isYes True = True
@@ -342,6 +350,7 @@ transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
+    guard (not $ hasVoted (voterId v) (votingRound v) s)
     Just
       ( []
       , NodeModel
@@ -351,3 +360,7 @@ transition s (NewVote v) =
           (v : allVotes s)
           (allSeenCerts s)
       )
+transition s (BadVote v) =
+  do
+    guard (hasVoted (voterId v) (votingRound v) s)
+    Just ([], s)
