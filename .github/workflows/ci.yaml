@@ -202,13 +202,13 @@ jobs:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
 
-    - name: 💾 Cache Nix store
-      uses: actions/cache@v3.0.8
-      id: nix-cache
-      with:
-        path: /tmp/nixcache
-        key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
-        restore-keys: ${{ runner.os }}-nix-
+#   - name: 💾 Cache Nix store
+#     uses: actions/cache@v3.0.8
+#     id: nix-cache
+#     with:
+#       path: /tmp/nixcache
+#       key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+#       restore-keys: ${{ runner.os }}-nix-
 
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
@@ -222,9 +222,9 @@ jobs:
           experimental-features = nix-command flakes
           accept-flake-config = true
 
-    - name: 💾➤ Import Nix store cache
-      if: "steps.nix-cache.outputs.cache-hit == 'true'"
-      run: "nix-store --import < /tmp/nixcache"
+#   - name: 💾➤ Import Nix store cache
+#     if: "steps.nix-cache.outputs.cache-hit == 'true'"
+#     run: "nix-store --import < /tmp/nixcache"
 
     - name: 🏗️ Agda-to-HTML
 #     run: |
@@ -240,9 +240,9 @@ jobs:
         path: |
           html/*
 
-    - name: ➤💾 Export Nix store cache
-      if: "steps.nix-cache.outputs.cache-hit != 'true'"
-      run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
+#   - name: ➤💾 Export Nix store cache
+#     if: "steps.nix-cache.outputs.cache-hit != 'true'"
+#     run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
 
   build-pdf-report:
     runs-on: ubuntu-22.04
