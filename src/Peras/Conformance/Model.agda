@@ -230,7 +230,7 @@ chainExtends h c =
 {-# COMPILE AGDA2HS chainExtends #-}
 
 extends : Hash Block → Certificate → List Chain → Bool
-extends h cert chains = any (chainExtends h cert) chains
+extends h cert = any (chainExtends h cert)
 
 {-# COMPILE AGDA2HS extends #-}
 

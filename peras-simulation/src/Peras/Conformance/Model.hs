@@ -169,7 +169,7 @@ chainExtends h c =
     . dropWhile (\block' -> hash block' /= h)
 
 extends :: Hash Block -> Certificate -> [Chain] -> Bool
-extends h cert chains = any (chainExtends h cert) chains
+extends h cert = any (chainExtends h cert)
 
 hashHead :: [Block] -> Hash Block
 hashHead [] = genesisHash

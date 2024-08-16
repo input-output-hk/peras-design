@@ -322,7 +322,6 @@ cool-down phase.
         hashHead [] = MkHash emptyBS
         hashHead (x ∷ _) = hash x
 
-
     BlockSelection : SlotNumber → T → Hash Block
     BlockSelection s = BlockSelection' s ∘ preferredChain
 ```

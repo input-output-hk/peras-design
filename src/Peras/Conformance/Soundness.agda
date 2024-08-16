@@ -232,18 +232,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees   : modelState s₁ sutId ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs
 
-    @0 newVote-preconditions : ∀ {vs ms₁} s₀ vote
+    @0 newVote-soundness : ∀ {vs ms₁} s₀ vote
                           → Invariant s₀
                           → transition (modelState s₀ sutId) (NewVote vote) ≡ Just (vs , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
-    newVote-preconditions s₀ vote inv prf
+    newVote-soundness s₀ vote inv prf
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
          | checkVoteNotFromSut vote in checkedSut
          | isYes (checkVotingRules (modelState s₀ sutId)) in checkedVRs
          | votingBlockHash (modelState s₀ sutId) == blockHash vote in isValidBlockHash
-    newVote-preconditions {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
+    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
       record
         { s₁          = s₁
         ; invariant₀  = inv
@@ -296,7 +296,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists = {!!}
 
         blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-        blockSelection-eq = {!!}
+        blockSelection-eq = {!refl!}
 
         validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
         validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
@@ -342,7 +342,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
-    soundness s₀ (NewVote vote) inv prf = newVote-preconditions s₀ vote inv prf
+    soundness s₀ (NewVote vote) inv prf = newVote-soundness s₀ vote inv prf
 
     soundness s₀ (NewChain chain) inv prf = {!!}
     {-
