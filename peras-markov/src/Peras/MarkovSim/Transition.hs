@@ -9,10 +9,13 @@ import Data.Bifunctor (second)
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+import Data.Ratio ((%))
+import Data.Scientific
 import Peras.MarkovSim.Types
 import Prelude hiding (round)
 
 import qualified Data.Map.Strict as Map
+import qualified Prelude (round)
 
 steps :: Double -> Peras -> Probabilities -> Int -> Evolution -> Evolution
 steps ε peras probabilities n initial = foldr id initial . replicate n $ step ε peras probabilities
@@ -20,9 +23,11 @@ steps ε peras probabilities n initial = foldr id initial . replicate n $ step �
 step :: Double -> Peras -> Probabilities -> Evolution -> Evolution
 step ε peras probabilities =
   MkEvolution
-    . Map.filter (> ε)
+    . Map.filter (> fromFloatDigits ε)
+    . Map.map (trim ε)
     . evolve (voting peras probabilities)
     . evolve (blockCreation peras probabilities . fetching peras . tick)
+    . thresholdBehavior ε
     . getEvolution
 
 evolve :: (Chains -> [(Chains, Probability)]) -> Map Chains Probability -> Map Chains Probability
@@ -37,10 +42,12 @@ psteps ε peras probabilities n initial = foldr id initial . replicate n $ pstep
 pstep :: Double -> Peras -> Probabilities -> Evolution -> Evolution
 pstep ε peras probabilities =
   MkEvolution
-    . Map.filter (> ε)
+    . Map.filter (> fromFloatDigits ε)
+    . Map.map (trim ε)
     . Map.unionsWith (+)
     . parMap rpar process
     . Map.toList
+    . thresholdBehavior ε
     . getEvolution
  where
   blockCreation' = blockCreation peras probabilities . fetching peras . tick
@@ -49,6 +56,22 @@ pstep ε peras probabilities =
     Map.fromListWith (+)
       . concatMap (\(chains', probability') -> second (* (probability * probability')) <$> voting' chains')
       $ blockCreation' chains
+
+trim :: Double -> Scientific -> Scientific
+trim 0 x = x
+trim ε x =
+  let
+    c = coefficient x
+    d = Prelude.round $ logBase 10 (fromIntegral c :: Double)
+    n = d + Prelude.round (logBase 10 ε) - 1
+    c' = c `div` 10 ^ n
+    e = base10Exponent x
+    e' = e + n
+   in
+    normalize $
+      if n > 0
+        then scientific c' e'
+        else x
 
 tick :: Chains -> Chains
 tick chains@MkChains{slot} =
@@ -176,6 +199,24 @@ isSplit MkBehavior{adverseSplitting} slot =
     NoSplitting -> False
     MkAdverseSplit{splitStart, splitFinish} -> splitStart <= slot && slot <= splitFinish
 
+thresholdBehavior :: Double -> Map Chains Probability -> Map Chains Probability
+thresholdBehavior ε evolution
+  | thresholding behavior == MkThreshold (slot + 1) =
+      let
+        evolution' = Map.filterWithKey (const . not . adversaryEverLonger) evolution
+        d = -Prelude.round (logBase 10 ε) + 1
+        mass = trim ε $ sum evolution'
+        massi =
+          trim ε $
+            scientific
+              (floor $ 10 ^ (2 * d) % coefficient mass)
+              (-base10Exponent mass - 2 * d)
+       in
+        Map.map ((trim ε) . (* massi)) evolution'
+  | otherwise = evolution
+ where
+  MkChains{slot, behavior} = fst $ Map.findMin evolution
+
 crosschainBehavior :: Chains -> Chains
 crosschainBehavior chains@MkChains{..}
   | isSplit behavior slot = chains
@@ -233,15 +274,19 @@ crosschainBehavior chains@MkChains{..}
           }
 
 updatePublicWeight :: Chains -> Chains
-updatePublicWeight chains@MkChains{honest, adversary, publicWeight} =
+updatePublicWeight chains@MkChains{honest, adversary, publicWeight, adversaryEverLonger} =
   let
     -- The honest weight is always a contender for the public weight of the tree.
     honestWeight = weight honest
     -- If the adversary chain just received a certificate, then their weight is a contender,
     -- but otherwise the previous public weight may represent their prior contension.
-    adversaryWeight = maybe publicWeight (const $ weight adversary) $ certPrimeNext adversary
+    adversaryWeight = weight adversary
+    adversaryWeight' = maybe publicWeight (const adversaryWeight) $ certPrimeNext adversary
    in
-    chains{publicWeight = max honestWeight adversaryWeight}
+    chains
+      { publicWeight = max honestWeight adversaryWeight'
+      , adversaryEverLonger = adversaryWeight > honestWeight || adversaryEverLonger
+      }
 
 clean :: [(a, Probability)] -> [(a, Probability)]
 clean = filter $ (> 0) . snd

@@ -4,5 +4,7 @@ adverseAdoption: AdoptIfLonger
 adverseBlocks:
   tag: PromptBlocks
 adverseCertification: PromptVotes
-addverseSplitting:
+adverseSplitting:
   tag: NoSplitting
+thresholding:
+  tag: NoThresholding

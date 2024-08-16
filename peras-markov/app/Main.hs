@@ -17,6 +17,7 @@ import Data.Function (on)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
+import Data.Scientific (fromFloatDigits, toRealFloat)
 import Data.Time (getCurrentTime)
 import Data.Time.Clock (diffUTCTime)
 import Data.Version (showVersion)
@@ -43,12 +44,22 @@ import qualified Peras.Markov.Adversary.TwoChain as TwoChain (lookupDelta, separ
 import qualified Peras.Markov.Polynomial as Var (p, q)
 import qualified Peras.MarkovSim.Transition as MarkovSim
 import qualified Peras.MarkovSim.Types as MarkovSim
+import qualified Prelude
 
 main :: IO ()
 main = run =<< O.execParser scenarioParser
 
 data Scenario
-  = LongerChain
+  = EverLonger
+      { ε :: Double
+      , slots :: Int
+      , stake :: (Int, Int)
+      , paramFile :: FilePath
+      , behaviorFile :: FilePath
+      , outFile :: FilePath
+      , progress :: Bool
+      }
+  | LongerChain
       { ε :: Double
       , slots :: Int
       , stake :: (Int, Int)
@@ -88,6 +99,38 @@ data Scenario
   deriving (Eq, Ord, Read, Show)
 
 run :: Scenario -> IO ()
+run EverLonger{..} =
+  do
+    peras <- decodeFileThrow paramFile
+    behavior <- decodeFileThrow behaviorFile
+    hout <- openFile outFile WriteMode
+    hPutStrLn hout $
+      intercalate
+        "\t"
+        [ "Slot"
+        , "P(adversary >= honest | θ = " <> show (case MarkovSim.thresholding behavior of MarkovSim.NoThresholding -> 0; MarkovSim.MkThreshold t -> t) <> ")"
+        ]
+    let probabilities = uncurry (MarkovSim.mkProbabilities peras) stake
+        initial = MarkovSim.behavioralEvolution behavior
+        go i prior
+          | i > slots = return ()
+          | otherwise =
+              do
+                let posterior = MarkovSim.pstep ε peras probabilities prior
+                    summary =
+                      Map.mapKeysWith (Prelude.+) MarkovSim.adversaryEverLonger $
+                        MarkovSim.getEvolution posterior
+                hPutStrLn hout $ intercalate "\t" [show i, show $ maybe (0 :: Double) toRealFloat $ Map.lookup True summary]
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase (2 :: Double) . toRealFloat) (Map.lookup True summary) <> replicate 20 ' ')
+                hFlush hout
+                go (i + 1) posterior
+    when progress $
+      hPutStrLn stderr ""
+    go (1 :: Int) initial
+    hClose hout
+    when progress $
+      hPutStrLn stderr $
+        replicate 80 ' '
 run LongerChain{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -102,17 +145,20 @@ run LongerChain{..} =
               do
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
-                      Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (>) MarkovSim.weight honest adversary) $
+                      Map.mapKeysWith (Prelude.+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (>) MarkovSim.weight honest adversary) $
                         MarkovSim.getEvolution posterior
-                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . abs $ 1 - sum summary]
-                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup False summary) <> replicate 20 ' ')
+                hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary, show $ fromMaybe 0 $ Map.lookup False summary, show . Prelude.abs $ 1 Prelude.- sum summary]
+                when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase (2 :: Double) . toRealFloat) (Map.lookup False summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (maybe True (< stop) $ Map.lookup False summary) $
+                unless (maybe True (< fromFloatDigits stop) $ Map.lookup False summary) $
                   go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr $ replicate 80 ' '
+    when progress $
+      hPutStrLn stderr $
+        replicate 80 ' '
 run MarginReach{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -128,16 +174,18 @@ run MarginReach{..} =
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.toList
-                        . Map.mapKeysWith (+) MarkovSim.computeMarginReach
+                        . Map.mapKeysWith (Prelude.+) MarkovSim.computeMarginReach
                         $ MarkovSim.getEvolution posterior
                 hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show $ fst k, show $ snd k, show v]) <$> summary
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr "                       "
+    when progress $
+      hPutStrLn stderr "                       "
 run LengthDifference{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -153,16 +201,18 @@ run LengthDifference{..} =
                 let posterior = MarkovSim.pstep ε peras probabilities prior
                     summary =
                       Map.toList
-                        . Map.mapKeysWith (+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
+                        . Map.mapKeysWith (Prelude.+) (\MarkovSim.MkChains{MarkovSim.honest, MarkovSim.adversary} -> on (-) MarkovSim.weight honest adversary)
                         $ MarkovSim.getEvolution posterior
                 hPutStr hout $ unlines $ (\(k, v) -> intercalate "\t" [show i, show k, show v]) <$> summary
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> take 15 (show (Map.size $ MarkovSim.getEvolution posterior) <> replicate 15 ' ')
                 hFlush hout
                 go (i + 1) posterior
-    hPutStrLn stderr ""
+    when progress $
+      hPutStrLn stderr ""
     go (1 :: Int) initial
     hClose hout
-    hPutStrLn stderr "                       "
+    when progress $
+      hPutStrLn stderr "                       "
 run Lengths{..} =
   do
     peras <- decodeFileThrow paramFile
@@ -174,10 +224,10 @@ run Lengths{..} =
             t0 <- getCurrentTime
             let MarkovSim.MkEvolution{MarkovSim.getEvolution} = f ε peras probabilities slots initial
             putStrLn $ "Size: " <> show (Map.size getEvolution)
-            putStrLn $ "Entropy: " <> show (sum $ (\p -> -p * logBase 2 p) <$> toList getEvolution)
+            putStrLn $ "Entropy: " <> show (sum $ (\p -> -toRealFloat p * logBase (2 :: Double) (toRealFloat p)) <$> toList getEvolution)
             putStrLn $ "Total probability: " <> show (sum getEvolution)
-            putStrLn $ "Honest length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.honest chains)) <$> Map.toList getEvolution)
-            putStrLn $ "Adversary length: " <> show (sum $ (\(chains, probability) -> probability * fromIntegral (MarkovSim.weight $ MarkovSim.adversary chains)) <$> Map.toList getEvolution)
+            putStrLn $ "Honest length: " <> show (sum $ (\(chains, probability) -> probability Prelude.* Prelude.fromIntegral (MarkovSim.weight $ MarkovSim.honest chains)) <$> Map.toList getEvolution)
+            putStrLn $ "Adversary length: " <> show (sum $ (\(chains, probability) -> probability Prelude.* Prelude.fromIntegral (MarkovSim.weight $ MarkovSim.adversary chains)) <$> Map.toList getEvolution)
             t1 <- getCurrentTime
             putStrLn $ "Elapsed time: " <> show (t1 `diffUTCTime` t0)
     putStrLn ""
@@ -264,6 +314,10 @@ scenarioParser =
     stopOption = O.option O.auto $ O.long "stop" <> O.value 0 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Stop simulation when probabilities are smaller than this value."
     behaviorOption = O.strOption $ O.long "behavior-file" <> O.metavar "FILE" <> O.help "Path to input YAML file containing the adversarial behaviors."
     progressOption = O.switch $ O.long "progress" <> O.help "Show the progress of the simulation."
+    postFactoCommand =
+      O.command "ever-longer" $
+        O.info (EverLonger <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> progressOption) $
+          O.progDesc "Compute the probability of a private adversarial chain being longer than the honest one."
     longerChainCommand =
       O.command "longer-chain" $
         O.info (LongerChain <$> εOption <*> slotOption <*> stakeOption <*> paramOption <*> behaviorOption <*> outOption <*> stopOption <*> progressOption) $
@@ -292,7 +346,7 @@ scenarioParser =
     O.info
       ( O.helper
           <*> O.infoOption ("peras-markov " <> showVersion version) (O.long "version" <> O.help "Show version.")
-          <*> O.hsubparser (longerChainCommand <> marginReachCommand <> lengthDifferenceCommand <> lengthsCommand <> commonCandidateDemoCommand <> separateChainsDemoCommand)
+          <*> O.hsubparser (postFactoCommand <> longerChainCommand <> marginReachCommand <> lengthDifferenceCommand <> lengthsCommand <> commonCandidateDemoCommand <> separateChainsDemoCommand)
       )
       ( O.fullDesc
           <> O.progDesc "This command-line tool runs Markov-chain simulations of the Peras protocol."
