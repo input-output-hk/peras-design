@@ -9,7 +9,7 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, certificate, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId)
+import Peras.Block (Block (MkBlock, certificate, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
@@ -170,10 +170,6 @@ chainExtends h c =
 
 extends :: Hash Block -> Certificate -> [Chain] -> Bool
 extends h cert = any (chainExtends h cert)
-
-hashHead :: [Block] -> Hash Block
-hashHead [] = genesisHash
-hashHead (x : _) = hash x
 
 votingBlockHash :: NodeModel -> Hash Block
 votingBlockHash s =
