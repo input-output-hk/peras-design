@@ -391,16 +391,6 @@ vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 {-# COMPILE AGDA2HS vr1A #-}
 
-open import Relation.Nullary.Decidable as D using (¬?)
-import Data.List as L
-open import Data.List.Relation.Unary.Any as A using ()
-
-Extends : Hash Block → Certificate → List Chain → Set
-Extends h c = A.Any (ChainExtends h c)
-
-Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → D.Dec (Extends h c chains)
-Extends? h c = A.any? (ChainExtends? h c)
-
 Vr1B : NodeModel → Set
 Vr1B s = Extends (votingBlockHash s) (cert' s) (allChains s)
 

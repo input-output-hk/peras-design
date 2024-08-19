@@ -331,8 +331,7 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
     VotingRule-1B : SlotNumber → T → Type
-    VotingRule-1B s t =
-      Any (ChainExtends (BlockSelection s t) (latestCertSeen t)) (allChains t)
+    VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda

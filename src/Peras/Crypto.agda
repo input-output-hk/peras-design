@@ -52,11 +52,11 @@ record Hash (a : Set) : Set where
 
 open Hash public
 
-MkHash-inj : ∀ {a : Set} {b₁ b₂ : Hash a} → hashBytes b₁ ≡ hashBytes b₂ → b₁ ≡ b₂
-MkHash-inj refl = refl
-
 {-# COMPILE AGDA2HS Hash newtype deriving (Generic) #-}
 {-# COMPILE GHC Hash = data G.Hash (G.MkHash) #-}
+
+MkHash-inj : ∀ {a : Set} {b₁ b₂ : Hash a} → hashBytes b₁ ≡ hashBytes b₂ → b₁ ≡ b₂
+MkHash-inj refl = refl
 
 instance
   iHashEq : {a : Set} → Eq (Hash a)
