@@ -230,18 +230,20 @@ instance
   iBlockBodyEq : Eq BlockBody
   iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
 
-open Hashable
-
-module _ ⦃ hashBlock : Hashable Block ⦄
+module _ {a : Set} ⦃ _ : Hashable a ⦄
   where
 
-  hashHead : List Block → Hash Block
+  open Hashable ⦃...⦄
+
+  hashHead : List a → Hash a
   hashHead Data.List.[] = MkHash emptyBS
-  hashHead (x Data.List.∷ _) = Hashable.hash hashBlock x
+  hashHead (x Data.List.∷ _) = hash x
 
 {-# COMPILE AGDA2HS hashHead #-}
 
 private
+  open Hashable
+
   instance
     hashBlock : Hashable Block
     hashBlock .hash = MkHash ∘ bytesS ∘ signature
