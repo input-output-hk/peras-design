@@ -136,33 +136,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ _ x = x
 
-    -- Preconditions ---
+    opaque
+      unfolding checkVoteNotFromSut
 
-{-
-    record TickPreconditions (s : State) : Set where
-      slot = State.clock s
-
-      field
-        {tree}         : NodeModel
-        {block}        : Block
-        blockExists    : BlockSelection slot tree ≡ just block
-        validVote      : VotingRule slot tree
-
-    record NewChainPreconditions (s : State) (block : Block) (rest : Chain) : Set where
-      slot = State.clock s
-      r    = v-round slot
-      field
-        {tree}         : NodeModel
-        creatorExists  : State.blockTrees s ⁉ (creatorId block) ≡ just tree
-        blockExists    : BlockSelection (State.clock s) tree ≡ just block
-        validHead      : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
-        validRest      : rest ≡ prefChain tree
-        validChain     : ValidChain (block ∷ rest)
-        validHashes    : tipHash (is-TreeType .valid tree) ≡ parentBlock block
-
-      validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
-      validChain' with c ← validChain rewrite validHead rewrite validRest = c
--}
+      creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
+      creatorId≢sutId x = not-eqℕ-sound x
 
     record Invariant (s : State) : Set where
       field
@@ -170,42 +148,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
 
     open Invariant
-
-{-
-    @0 tick-preconditions : ∀ {vs ms₁} s
-                          → Invariant s
-                          → transition (modelState s sutId) Tick ≡ Just (vs , ms₁)
-                          → TickPreconditions s
-    tick-preconditions s inv refl
-      with isYes (checkVotingRules (modelState s sutId)) in checkedVRs
-    ... | True = record
-      { tree        = modelState s sutId
-      ; block       = {!!}
-      ; blockExists = {!!}
-      ; validVote   =
-        let
-          witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-          f₁ = vr-1a⇒VotingRule-1A s sutId
-          f₂ = vr-1b⇒VotingRule-1B s sutId
-          f₃ = vr-2a⇒VotingRule-2A s sutId
-          f₄ = vr-2b⇒VotingRule-2B s sutId
-        in
-          S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
-      }
-    ... | False = {!!}
-
-    @0 newChain-preconditions : ∀ {vs ms₁} s tip rest
-                          → Invariant s
-                          → transition (modelState s sutId) (NewChain (tip ∷ rest)) ≡ Just (vs , ms₁)
-                          → NewChainPreconditions s tip rest
-    newChain-preconditions s tip rest inv prf = {!!}
--}
-
-    opaque
-      unfolding checkVoteNotFromSut
-
-      creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
-      creatorId≢sutId x = not-eqℕ-sound x
 
     -- Soundness --
 
@@ -295,8 +237,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
         creatorExists = {!!}
 
-        blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-        blockSelection-eq = {!refl!}
+        postulate -- TODO
+          filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ}→
+            filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
+
+        opaque
+          unfolding votingBlockHash
+
+          blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
+          blockSelection-eq rewrite (filter-eq {prefChain tree} {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}} {getSlotNumber slot}) = refl
 
         validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
         validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
@@ -342,9 +291,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
-    soundness s₀ (NewVote vote) inv prf = newVote-soundness s₀ vote inv prf
-
+    soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
     soundness s₀ (NewChain chain) inv prf = {!!}
+    soundness s₀ Tick inv prf = {!!}
+
     {-
     soundness s₀ (NewChain chain@(block ∷ bs)) inv prf
       let
@@ -367,7 +317,64 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; votes-agree = {!!} -- refl
           }
 -}
-    soundness s₀ Tick inv prf = {!!}
+
+{-
+    record TickPreconditions (s : State) : Set where
+      slot = State.clock s
+
+      field
+        {tree}         : NodeModel
+        {block}        : Block
+        blockExists    : BlockSelection slot tree ≡ just block
+        validVote      : VotingRule slot tree
+
+    record NewChainPreconditions (s : State) (block : Block) (rest : Chain) : Set where
+      slot = State.clock s
+      r    = v-round slot
+      field
+        {tree}         : NodeModel
+        creatorExists  : State.blockTrees s ⁉ (creatorId block) ≡ just tree
+        blockExists    : BlockSelection (State.clock s) tree ≡ just block
+        validHead      : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+        validRest      : rest ≡ prefChain tree
+        validChain     : ValidChain (block ∷ rest)
+        validHashes    : tipHash (is-TreeType .valid tree) ≡ parentBlock block
+
+      validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
+      validChain' with c ← validChain rewrite validHead rewrite validRest = c
+-}
+
+{-
+    @0 tick-preconditions : ∀ {vs ms₁} s
+                          → Invariant s
+                          → transition (modelState s sutId) Tick ≡ Just (vs , ms₁)
+                          → TickPreconditions s
+    tick-preconditions s inv refl
+      with isYes (checkVotingRules (modelState s sutId)) in checkedVRs
+    ... | True = record
+      { tree        = modelState s sutId
+      ; block       = {!!}
+      ; blockExists = {!!}
+      ; validVote   =
+        let
+          witness = toWitness (isYes≡True⇒TTrue checkedVRs)
+          f₁ = vr-1a⇒VotingRule-1A s sutId
+          f₂ = vr-1b⇒VotingRule-1B s sutId
+          f₃ = vr-2a⇒VotingRule-2A s sutId
+          f₄ = vr-2b⇒VotingRule-2B s sutId
+        in
+          S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
+      }
+    ... | False = {!!}
+
+    @0 newChain-preconditions : ∀ {vs ms₁} s tip rest
+                          → Invariant s
+                          → transition (modelState s sutId) (NewChain (tip ∷ rest)) ≡ Just (vs , ms₁)
+                          → NewChainPreconditions s tip rest
+    newChain-preconditions s tip rest inv prf = {!!}
+-}
+
+
     --   with StartOfRound? (State.clock s₀) (v-round (State.clock s₀))
     -- soundness s₀ Tick inv prf | yes p =
     --   let
