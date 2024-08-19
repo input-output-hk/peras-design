@@ -148,7 +148,7 @@ record Certificate where
 
   roundNumber : ℕ
   roundNumber = getRoundNumber round
-  
+
 open Certificate public
 
 latestCert : Certificate → List Certificate → Certificate
@@ -166,7 +166,7 @@ record Block where
 
   slotNumber' : ℕ
   slotNumber' = getSlotNumber slotNumber
-  
+
 open Block public
 
 _≟-BlockHash_ : DecidableEquality (Hash Block)
@@ -214,7 +214,7 @@ instance
 instance
   iCertificateEq : Eq Certificate
   iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
-  
+
 instance
   iBlockEq : Eq Block
   iBlockEq ._==_ x y = slotNumber x == slotNumber y
@@ -229,8 +229,17 @@ instance
 instance
   iBlockBodyEq : Eq BlockBody
   iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
- 
+
 open Hashable
+
+module _ ⦃ hashBlock : Hashable Block ⦄
+  where
+
+  hashHead : List Block → Hash Block
+  hashHead Data.List.[] = MkHash emptyBS
+  hashHead (x Data.List.∷ _) = Hashable.hash hashBlock x
+
+{-# COMPILE AGDA2HS hashHead #-}
 
 private
   instance

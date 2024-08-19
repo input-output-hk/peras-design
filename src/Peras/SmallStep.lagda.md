@@ -317,10 +317,6 @@ cool-down phase.
     BlockSelection' : SlotNumber → Chain → Hash Block
     BlockSelection' (MkSlotNumber s) =
       hashHead ∘ filter (λ {b → (slotNumber' b) + L ≤? s})
-      where
-        hashHead : List Block → Hash Block
-        hashHead [] = MkHash emptyBS
-        hashHead (x ∷ _) = hash x
 
     BlockSelection : SlotNumber → T → Hash Block
     BlockSelection s = BlockSelection' s ∘ preferredChain

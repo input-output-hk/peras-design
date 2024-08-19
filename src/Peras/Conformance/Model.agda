@@ -238,12 +238,6 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
-hashHead : List Block → Hash Block
-hashHead [] = genesisHash
-hashHead (x ∷ _) = Hashable.hash hashBlock x
-
-{-# COMPILE AGDA2HS hashHead #-}
-
 opaque
   votingBlockHash : NodeModel → Hash Block
   votingBlockHash s = hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
