@@ -15,7 +15,7 @@ open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; _$_)
-open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Relation.Nullary using (¬_; Dec; yes; no; ¬?)
 open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
 
@@ -188,6 +188,24 @@ The weight of a chain is defined with respect of the Peras parameters
 ```agda
 open Params ⦃...⦄
 ```
+
+```agda
+module _ ⦃ _ : Hashable Block ⦄
+         where
+
+  open Hashable ⦃...⦄
+
+  ChainExtends : Hash Block → Certificate → Chain → Set
+  ChainExtends h c =
+    Any (λ block → (hash block ≡ blockRef c))
+      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
+
+  ChainExtends? : (h : Hash Block) → (c : Certificate) → (chain : Chain) → Dec (ChainExtends h c chain)
+  ChainExtends? h c =
+    any? (λ block → (hash block ≟-BlockHash blockRef c))
+      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
+```
+
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄

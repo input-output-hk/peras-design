@@ -321,12 +321,6 @@ cool-down phase.
     BlockSelection : SlotNumber → T → Hash Block
     BlockSelection s = BlockSelection' s ∘ preferredChain
 ```
-```agda
-    ChainExtends : Hash Block → Certificate → Chain → Type
-    ChainExtends h c =
-      Any (λ block → (hash block ≡ blockRef c))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
-```
 #### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1

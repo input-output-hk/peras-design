@@ -396,22 +396,10 @@ import Data.List as L
 open import Data.List.Relation.Unary.Any as A using ()
 
 Extends : Hash Block → Certificate → List Chain → Set
-Extends h c chains = A.Any (λ { chain →
-  A.Any (λ block → (hash hashBlock block ≡ blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash h)) chain)
-    }) chains
-  where
-    open Certificate
-    open Hashable
+Extends h c chains = A.Any (ChainExtends h c) chains
 
 Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → D.Dec (Extends h c chains)
-Extends? h c chains = A.any? (λ { chain →
-  A.any? (λ block → (hash hashBlock block ≟-BlockHash blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash h)) chain)
-    }) chains
-  where
-    open Certificate
-    open Hashable
+Extends? h c chains = A.any? (ChainExtends? h c) chains
 
 Vr1B : NodeModel → Set
 Vr1B s = Extends (votingBlockHash s) (cert' s) (allChains s)
