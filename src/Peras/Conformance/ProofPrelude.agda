@@ -48,3 +48,11 @@ lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 suc-definition : ∀ {n} → suc n ≡ n + 1
 suc-definition {zero} = refl
 suc-definition {suc n} = cong suc (suc-definition {n})
+
+import Data.List
+open import Peras.Block
+open import Peras.Chain
+
+postulate -- TODO
+  filter-eq' : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
+    filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l

@@ -109,14 +109,25 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           nextRound (round cert') ≡ rFromSlot m
       → VotingRule-1A (v-round (clock m)) m
     vr-1a⇒VotingRule-1A s p x
-        rewrite suc-definition {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
+      rewrite
+        suc-definition
+          {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s p))))}
       = cong getRoundNumber (sym x)
 
-    vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ)
-      → let m = modelState s p
-        in Vr1B m
-      → VotingRule-1B (clock m) m
-    vr-1b⇒VotingRule-1B s p x = {!!}
+    opaque
+      unfolding votingBlockHash
+
+      vr-1b⇒VotingRule-1B : ∀ (s : State) (p : ℕ)
+        → let m = modelState s p
+          in Vr1B m
+        → VotingRule-1B (clock m) m
+      vr-1b⇒VotingRule-1B s p x
+        rewrite
+          filter-eq'
+            {prefChain (modelState s p)}
+            {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
+            {getSlotNumber (clock (modelState s p))}
+        = x
 
     vr-2a⇒VotingRule-2A : ∀ (s : State) (p : ℕ)
       → let
@@ -241,14 +252,20 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists = {!!}
 
         postulate -- TODO
-          filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ}→
+          filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
             filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
 
         opaque
           unfolding votingBlockHash
 
           blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-          blockSelection-eq rewrite (filter-eq {prefChain tree} {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}} {getSlotNumber slot}) = refl
+          blockSelection-eq
+            rewrite
+              filter-eq
+                {prefChain tree}
+                {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
+                {getSlotNumber slot}
+             = refl
 
         validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
         validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
