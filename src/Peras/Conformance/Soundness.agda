@@ -228,8 +228,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           in
             S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
 
+        postulate -- TODO
+          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+
         correctVote : vote ≡ v
-        correctVote = {!!}
+        correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
         s₁ : State
         s₁ = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
