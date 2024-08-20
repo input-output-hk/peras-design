@@ -40,9 +40,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
          {parties : Parties}
---         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
-         {honesty-sut : Honesty sutId}
+         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
     where
+
+
+  -- TODO: how to defined honesty?
+  honesty-sut : Honesty sutId
+  honesty-sut = Honest {sutId}
 
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
@@ -250,10 +254,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ =
           let
             s' = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
+            open State s'
           in
             record s'
-              { blockTrees = set sutId (addVote tree v) (State.blockTrees s')
-              ; messages = State.messages s₀
+              { blockTrees = set sutId (addVote tree v) blockTrees
+              ; messages = messages ─ {!!}
               }
 
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
@@ -291,7 +296,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     axiom-everyoneIsOnTheCommittee
                     validVote
                   )
-              ↣ Fetch {h = honesty-sut} {m = VoteMsg v} {!!}
+              ↣ Fetch {h = honesty-sut} {m = VoteMsg v}
+                  (honest {p = sutId}
+                    {!!}
+                    {!!}
+                    VoteReceived
+                  )
               ↣ ∎
 
         notFromSut : creatorId vote ≢ sutId
@@ -323,13 +333,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 -}
 
         s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees = {!!}
-        {-
+        s₁-agrees
           rewrite get∘set≡id
             {k = sutId}
             {v = addVote' (modelState s₀ sutId) v}
             {m = State.blockTrees s₀}
-            = {!refl!} -}
+            = {!refl!}
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
