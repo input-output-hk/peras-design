@@ -22,7 +22,6 @@ open import Peras.Conformance.Params
 open import Peras.Crypto
 open import Peras.Foreign
 open import Peras.Numbering
-open import Peras.SmallStep
 open import Peras.Util
 import Protocol.Peras
 
@@ -270,6 +269,8 @@ module TreeInstance
   ... | [] = Genesis
   ... | x ∷ xxx = Cons {!!} {!!} {!!} {!!} {!!}
 -}
+
+  open import Peras.SmallStep using (TreeType; IsTreeType)
 
   postulate
     isTreeType : IsTreeType initialModelState newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
