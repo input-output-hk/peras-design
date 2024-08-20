@@ -40,7 +40,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
          {parties : Parties}
-         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
+--         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
+         {honesty-sut : Honesty sutId}
     where
 
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
@@ -246,7 +247,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
         s₁ : State
-        s₁ = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
+        s₁ =
+          let
+            s' = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
+          in
+            record s'
+              { blockTrees = set sutId (addVote tree v) (State.blockTrees s')
+              ; messages = State.messages s₀
+              }
 
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
         creatorExists = {!!}
@@ -273,6 +281,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validSignature : IsVoteSignature v σ
         validSignature with v ← axiom-checkVoteSignature checkedSig rewrite correctVote = v
 
+        trace : s₀ ↝⋆ s₁
         trace = CreateVote (invFetched inv)
                   (honest {σ = Vote.signature vote}
                     validBlockHash
@@ -282,19 +291,45 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     axiom-everyoneIsOnTheCommittee
                     validVote
                   )
-                  -- TODO: also deliver the vote message to establish Fetched s₁
-                  ↣ ∎
+              ↣ Fetch {h = honesty-sut} {m = VoteMsg v} {!!}
+              ↣ ∎
 
         notFromSut : creatorId vote ≢ sutId
         notFromSut = creatorId≢sutId checkedSut
 
+{-
+        xxx :
+          modelState
+            (record s₀
+              { blockTrees =
+                  set
+                    sutId -- (creatorId vote)
+                    (record (modelState s₀ sutId)
+                      { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                    )
+                    (State.blockTrees s₀)
+              }
+            )
+            sutId
+          ≡
+          record (modelState s₀ sutId)
+            { allVotes =
+                vote ∷ (allVotes (modelState s₀ sutId))
+            }
+
+        xxx with creatorId vote ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no q = {!!}
+-}
+
         s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees
+        s₁-agrees = {!!}
+        {-
           rewrite get∘set≡id
             {k = sutId}
             {v = addVote' (modelState s₀ sutId) v}
             {m = State.blockTrees s₀}
-            = {!refl!}
+            = {!refl!} -}
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
