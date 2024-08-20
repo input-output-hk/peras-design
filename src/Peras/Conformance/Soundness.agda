@@ -301,14 +301,32 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
+    @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
+                          → Invariant s₀
+                          → transition (modelState s₀ sutId) (NewChain chain) ≡ Just (vs , ms₁)
+                          → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+    newChain-soundness s chain inv prf = {!!}
+
+    @0 tick-soundness : ∀ {vs ms₁} s₀
+                          → Invariant s₀
+                          → transition (modelState s₀ sutId) Tick ≡ Just (vs , ms₁)
+                          → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+    tick-soundness s inv prf = {!!}
+
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
               → transition (modelState s₀ sutId) a ≡ Just (vs , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
-    soundness s₀ (NewChain chain) inv prf = {!!}
-    soundness s₀ Tick inv prf = {!!}
+    soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
+    soundness s₀ Tick = tick-soundness s₀
+
+
+
+
+
+
 
     {-
     soundness s₀ (NewChain chain@(block ∷ bs)) inv prf
@@ -381,14 +399,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
       }
     ... | False = {!!}
-
-    @0 newChain-preconditions : ∀ {vs ms₁} s tip rest
-                          → Invariant s
-                          → transition (modelState s sutId) (NewChain (tip ∷ rest)) ≡ Just (vs , ms₁)
-                          → NewChainPreconditions s tip rest
-    newChain-preconditions s tip rest inv prf = {!!}
 -}
-
 
     --   with StartOfRound? (State.clock s₀) (v-round (State.clock s₀))
     -- soundness s₀ Tick inv prf | yes p =
