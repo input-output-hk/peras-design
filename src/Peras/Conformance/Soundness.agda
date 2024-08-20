@@ -63,11 +63,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   Tree = NodeModelTree' modelParams
 
-  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
-  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
-  open SmallStep.IsTreeType
-
   open SmallStep.Message
+  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
+
+  open SmallStep.IsTreeType
+  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
 
   module Assumptions
            (let open Postulates postulates)
@@ -288,18 +288,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         notFromSut : creatorId vote ≢ sutId
         notFromSut = creatorId≢sutId checkedSut
 
-        {-
-        open import Prelude.Decidable
-        instance
-          xxx : ∀ {x y} → (x ∈ᵐ y) ⁇
-          xxx = ⁇ ({!!} Relation.Nullary.Decidable.because {!!})
-        -}
-
         s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees = {!!} {- with sutId ∈ᵐ? State.blockTrees s₀
-        ... | yes p = {!refl!}
-        ... | no ¬p = {!refl!}
-        -}
+        s₁-agrees
+          rewrite get∘set≡id
+            {k = sutId}
+            {v = addVote' (modelState s₀ sutId) v}
+            {m = State.blockTrees s₀}
+            = {!refl!}
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
