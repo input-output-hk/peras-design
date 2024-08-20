@@ -59,7 +59,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ; perasτ = τ
     ; perasB = B
     ; perasK = K
-    ; perasT = 0 -- TODO: Missing from Params
+    ; perasT = T
     ; perasΔ = Δ
     }
     where
@@ -161,7 +161,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
-        allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
+        -- allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
 
     open Invariant
 
@@ -205,7 +205,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       record
         { s₁          = s₁
         ; invariant₀  = inv
-        ; invariant₁  = {!!}
+        ; invariant₁  = inv₁
         ; trace       = trace
         ; s₁-agrees   = s₁-agrees
         ; votes-agree = votes-agree
@@ -221,8 +221,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
 
-        trees-eq : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s₀ ⁉ sutId }) (State.blockTrees s₀)
-        trees-eq = allTreesAreEqual inv
+        -- trees-eq : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s₀ ⁉ sutId }) (State.blockTrees s₀)
+        -- trees-eq = allTreesAreEqual inv
 
         startOfRound : StartOfRound slot r
         startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -344,6 +344,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         votes-agree with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
+
+        -- msg₀≡msg₁ : State.messages s₀ ≡ State.messages s₁
+        -- msg₀≡msg₁ = {!refl!}
+
+        inv₁ : Invariant s₁
+        inv₁ = {!!}
 
     @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
                           → Invariant s₀
