@@ -57,3 +57,7 @@ module _ {K V : Type} where
       m ‼d k with m ⁉ k
       ... | nothing = def
       ... | just v  = v
+
+      postulate -- TODO: proof
+        get∘set≡id : ∀ {k : K} {v : V} {m : AssocList K V}
+          → set k v m ⁉ k ≡ just v
