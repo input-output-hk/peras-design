@@ -9,6 +9,7 @@ open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 import Data.List
 open import Data.List.Membership.Propositional
+open import Data.List.Relation.Unary.Any.Properties
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
@@ -250,25 +251,29 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         correctVote : vote ≡ v
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
-        sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈
-                Data.List.map
-                  (P.uncurry SmallStep.⦅_,_, (VoteMsg v) , fzero ⦆)
-                  (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
-                Data.List.++ State.messages s₀
-        sut∈messages = {!!}
+        notFromSut : creatorId vote ≢ sutId
+        notFromSut = creatorId≢sutId checkedSut
+
+        msg : List SmallStep.Envelope
+        msg =
+          Data.List.map
+            (P.uncurry SmallStep.⦅_,_, (VoteMsg v) , fzero ⦆)
+            (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+
+        sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
+        sut∈messages' = {!!}
+
+        sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+        sut∈messages = ++⁺ˡ sut∈messages'
 
         s₁ : State
         s₁ = record s₀
                { blockTrees = set sutId (addVote tree v) (set (creatorId vote) (addVote tree v) blockTrees)
-               ; messages =
-                   (Data.List.map (P.uncurry ⦅_,_, (VoteMsg v) , fzero ⦆)
-                      (Data.List.filter (λ { x → ¬? ((creatorId vote) ≟ proj₁ x)}) parties)
-                    Data.List.++ messages) ─ sut∈messages
+               ; messages = (msg Data.List.++ messages) ─ sut∈messages
                ; history = (VoteMsg v) ∷ history
                }
              where
                open State s₀
-               open SmallStep
 
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
         creatorExists = {!!}
@@ -313,20 +318,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ ∎
 
-        notFromSut : creatorId vote ≢ sutId
-        notFromSut = creatorId≢sutId checkedSut
-
-{-
-        xxx :
+        lem-s₁-agrees :
           modelState
             (record s₀
               { blockTrees =
-                  set
-                    sutId -- (creatorId vote)
-                    (record (modelState s₀ sutId)
-                      { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                  set sutId (addVote tree v)
+                    (set
+                      (creatorId vote)
+                      (record (modelState s₀ sutId)
+                        { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                      )
+                      (State.blockTrees s₀)
                     )
-                    (State.blockTrees s₀)
               }
             )
             sutId
@@ -336,18 +339,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                 vote ∷ (allVotes (modelState s₀ sutId))
             }
 
-        xxx with creatorId vote ≟ sutId
+        lem-s₁-agrees with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q = {!!}
--}
-
-        s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees
+        ... | no q = {-
           rewrite get∘set≡id
             {k = sutId}
             {v = addVote' (modelState s₀ sutId) v}
             {m = State.blockTrees s₀}
-            = {!refl!}
+            = {!refl!} -} {!!}
+
+        s₁-agrees : modelState s₁ sutId ≡ ms₁
+        s₁-agrees = lem-s₁-agrees
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
