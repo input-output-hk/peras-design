@@ -278,16 +278,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree -- TODO: always the same tree?
         creatorExists = {!!}
 
-        sutExists  : State.blockTrees s₀ ⁉ sutId ≡ just tree
-        sutExists = {!!}
+        sutExists'  : State.blockTrees s₀ ⁉ sutId ≡ just tree
+        sutExists' = {!!}
 
-        creatorExists' : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
-        creatorExists' with creatorId vote ≟ sutId
+        sutExists : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
+        sutExists with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no q =
           trans
             (k≢k'-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} q)
-            sutExists
+            sutExists'
 
         postulate -- TODO
           filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
@@ -323,7 +323,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ Fetch {h = honesty-sut} {m = VoteMsg v}
                   (honest {p = sutId}
-                    creatorExists'
+                    sutExists
                     sut∈messages
                     VoteReceived
                   )
