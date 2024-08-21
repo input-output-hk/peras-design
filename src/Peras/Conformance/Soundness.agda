@@ -250,13 +250,20 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         correctVote : vote ≡ v
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
+        sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈
+                Data.List.map
+                  (P.uncurry SmallStep.⦅_,_, (VoteMsg v) , fzero ⦆)
+                  (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+                Data.List.++ State.messages s₀
+        sut∈messages = {!!}
+
         s₁ : State
         s₁ = record s₀
                { blockTrees = set sutId (addVote tree v) (set (creatorId vote) (addVote tree v) blockTrees)
                ; messages =
                    (Data.List.map (P.uncurry ⦅_,_, (VoteMsg v) , fzero ⦆)
                       (Data.List.filter (λ { x → ¬? ((creatorId vote) ≟ proj₁ x)}) parties)
-                    Data.List.++ messages) ─ {!!}
+                    Data.List.++ messages) ─ sut∈messages
                ; history = (VoteMsg v) ∷ history
                }
              where
@@ -301,7 +308,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ↣ Fetch {h = honesty-sut} {m = VoteMsg v}
                   (honest {p = sutId}
                     {!!}
-                    {!!}
+                    sut∈messages
                     VoteReceived
                   )
               ↣ ∎
