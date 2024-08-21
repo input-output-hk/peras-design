@@ -275,8 +275,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              where
                open State s₀
 
-        creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
+        creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree -- TODO: always the same tree?
         creatorExists = {!!}
+
+        sutExists  : State.blockTrees s₀ ⁉ sutId ≡ just tree
+        sutExists = {!!}
+
+        creatorExists' : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
+        creatorExists' with creatorId vote ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no q =
+          trans
+            (k≢k'-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} q)
+            sutExists
 
         postulate -- TODO
           filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
@@ -290,7 +301,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             rewrite
               filter-eq
                 {prefChain tree}
-                {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
+                {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
                 {getSlotNumber slot}
              = refl
 
@@ -312,7 +323,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ Fetch {h = honesty-sut} {m = VoteMsg v}
                   (honest {p = sutId}
-                    {!!}
+                    creatorExists'
                     sut∈messages
                     VoteReceived
                   )

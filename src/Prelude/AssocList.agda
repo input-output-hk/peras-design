@@ -46,9 +46,9 @@ module _ {K V : Type} where
 
     module _ ⦃ _ : Default V ⦄ where
       modify : K → (V → V) → Op₁ (AssocList K V)
-      modify k f m = case k ∈ᵐ? m of λ where
-        (no _)  → (k , f def) ∷ m
-        (yes p) → p ∷= f (m ‼ p)
+      modify k f m with k ∈ᵐ? m
+      ... | no _  = (k , f def) ∷ m
+      ... | yes p = p ∷= f (m ‼ p)
 
       set : K → V → Op₁ (AssocList K V)
       set k v = modify k (const v)
@@ -61,3 +61,7 @@ module _ {K V : Type} where
       postulate -- TODO: proof
         get∘set≡id : ∀ {k : K} {v : V} {m : AssocList K V}
           → set k v m ⁉ k ≡ just v
+
+        k≢k'-get∘set : ∀ {k k' : K} {v : V} {m : AssocList K V}
+          → k' ≢ k
+          → (set k' v m ⁉ k) ≡ (m ⁉ k)
