@@ -27,6 +27,7 @@ open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
 open import Prelude.AssocList
+open import Prelude.Default
 open import Prelude.DecEq hiding (_==_; _≟_)
 import Peras.SmallStep as SmallStep
 
@@ -74,6 +75,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   open SmallStep.IsTreeType
   open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
+
+  private
+    instance
+      Default-T : Default NodeModel
+      Default-T .def = tree₀
 
   module Assumptions
            (let open Postulates postulates)

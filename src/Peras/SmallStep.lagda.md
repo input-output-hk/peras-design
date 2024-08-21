@@ -287,9 +287,10 @@ additionally:
 
     open TreeType blockTree
 
-    instance
-      Default-T : Default T
-      Default-T .def = tree₀
+    private
+      instance
+        Default-T : Default T
+        Default-T .def = tree₀
 ```
 #### Block-tree update
 
