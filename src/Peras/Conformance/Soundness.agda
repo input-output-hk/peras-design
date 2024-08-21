@@ -355,12 +355,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         lem-s₁-agrees with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q = {-
+        ... | no q
+          rewrite sym correctVote
           rewrite get∘set≡id
             {k = sutId}
-            {v = addVote' (modelState s₀ sutId) v}
-            {m = State.blockTrees s₀}
-            = {!refl!} -} {!!}
+            {v = addVote' (modelState s₀ sutId) vote}
+            {m =
+              set
+                (creatorId vote)
+                (addVote (modelState s₀ sutId) vote)
+                (State.blockTrees s₀)}
+
+            = {!refl!}
 
         s₁-agrees : modelState s₁ sutId ≡ ms₁
         s₁-agrees = lem-s₁-agrees
