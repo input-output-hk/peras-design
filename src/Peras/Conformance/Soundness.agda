@@ -15,7 +15,7 @@ open import Data.Nat.DivMod
 open import Data.Maybe using (maybe′; nothing; just)
 open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
 open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
-open import Relation.Nullary.Decidable using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Block
@@ -251,15 +251,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
         s₁ : State
-        s₁ =
-          let
-            s' = VoteMsg v , fzero , creatorId vote , addVote tree v ⇑ s₀
-            open State s'
-          in
-            record s'
-              { blockTrees = set sutId (addVote tree v) blockTrees
-              ; messages = messages ─ {!!}
-              }
+        s₁ = record s₀
+               { blockTrees = set sutId (addVote tree v) (set (creatorId vote) (addVote tree v) blockTrees)
+               ; messages =
+                   (Data.List.map (P.uncurry ⦅_,_, (VoteMsg v) , fzero ⦆)
+                      (Data.List.filter (λ { x → ¬? ((creatorId vote) ≟ proj₁ x)}) parties)
+                    Data.List.++ messages) ─ {!!}
+               ; history = (VoteMsg v) ∷ history
+               }
+             where
+               open State s₀
+               open SmallStep
 
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
         creatorExists = {!!}
