@@ -32,10 +32,11 @@ module _ {K V : Type} where
     _‼_ : ∀ {k : K} (m : AssocList K V) → k ∈ᵐ m → V
     m ‼ p = L.First.satisfied p .proj₁ .proj₂
 
-    _⁉_ : AssocList K V → K → Maybe V
-    m ⁉ k with k ∈ᵐ? m
-    ... | yes p = just (m ‼ p)
-    ... | no  _ = nothing
+    opaque
+      _⁉_ : AssocList K V → K → Maybe V
+      m ⁉ k with k ∈ᵐ? m
+      ... | yes p = just (m ‼ p)
+      ... | no  _ = nothing
 
     module _ {k : K} {m : AssocList K V} where
       _∷~_ : k ∈ᵐ m → (V → V) → AssocList K V
@@ -45,13 +46,15 @@ module _ {K V : Type} where
       p ∷= v = p ∷~ const v
 
     module _ ⦃ _ : Default V ⦄ where
+
       modify : K → (V → V) → Op₁ (AssocList K V)
       modify k f m with k ∈ᵐ? m
       ... | no _  = (k , f def) ∷ m
       ... | yes p = p ∷= f (m ‼ p)
 
-      set : K → V → Op₁ (AssocList K V)
-      set k v = modify k (const v)
+      opaque
+        set : K → V → Op₁ (AssocList K V)
+        set k v = modify k (const v)
 
       _‼d_ : AssocList K V → K → V
       m ‼d k with m ⁉ k
@@ -64,4 +67,4 @@ module _ {K V : Type} where
 
         k≢k'-get∘set : ∀ {k k' : K} {v : V} {m : AssocList K V}
           → k' ≢ k
-          → (set k' v m ⁉ k) ≡ (m ⁉ k)
+          → set k' v m ⁉ k ≡ m ⁉ k
