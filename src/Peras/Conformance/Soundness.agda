@@ -322,7 +322,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           modelState
             (record s₀
               { blockTrees =
-                  set sutId (addVote tree v)
+                  set sutId
+                    (record (modelState s₀ sutId)
+                      { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                    )
                     (set
                       (creatorId vote)
                       (record (modelState s₀ sutId)
