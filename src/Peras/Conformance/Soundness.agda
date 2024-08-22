@@ -432,11 +432,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
-        -- msg₀≡msg₁ : State.messages s₀ ≡ State.messages s₁
-        -- msg₀≡msg₁ = {!refl!}
+        -- TODO: need to fetch messages for all parties!
+        msg₀≡msg₁ : State.messages s₀ ≡ State.messages s₁
+        msg₀≡msg₁ = {!!}
 
         inv₁ : Invariant s₁
-        inv₁ = {!!}
+        inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ = record { invFetched = i }
 
     @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
                           → Invariant s₀
