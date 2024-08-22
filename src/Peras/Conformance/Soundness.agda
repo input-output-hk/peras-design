@@ -278,22 +278,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
             (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
 
+        apply-filter : Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+        apply-filter = {!!}
 
-        {-
-        msgxx : Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
-        msgxx = {!!}
-
-        msgx : Data.List.map
+        map∘apply-filter : Data.List.map
                  (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
                    (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
             ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
-        msgx rewrite msgxx = refl
-        -}
+        map∘apply-filter rewrite apply-filter = refl
 
         sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
-        sut∈messages' = {!!}
-        --  let xx = singleton⁺ (SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆)
-        --  in {!!}
+        sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
 
         sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
         sut∈messages = ++⁺ˡ sut∈messages'
@@ -314,11 +309,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         sutExists' = {!!}
 
         sutExists : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
-        sutExists with creatorId vote ≟ sutId
-        ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q =
+        sutExists =
           trans
-            (k'≢k-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} q)
+            (k'≢k-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} notFromSut)
             sutExists'
 
         postulate -- TODO
@@ -384,16 +377,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
             }
 
-        set-irrelevant with creatorId vote ≟ sutId
-        ... | yes p = ⊥-elim (notFromSut p)
-        ... | no  q
+        set-irrelevant
           rewrite k'≢k-get∘set∘set
             {k  = sutId}
             {k' = creatorId vote}
             {v  = addVote' tree vote}
             {v' = addVote' tree vote}
             {m  = State.blockTrees s₀}
-            q = refl
+            notFromSut = refl
 
         addVote-votes : vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ votes [] (set sutId newVote bt₀ ⁉ sutId)
         addVote-votes rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
@@ -459,9 +450,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | no _  = refl
 
         msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
-        msg₀≡msg₁ =
-          let xx = sym (++-identityʳ (State.messages s₀))
-          in {!!}
+        msg₀≡msg₁ = {!!}
 
         inv₁ : Invariant s₁
         inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ = record { invFetched = i }
