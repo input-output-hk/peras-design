@@ -143,7 +143,7 @@ open import Relation.Binary public
   using (Rel; REL; DecidableEquality; Transitive)
   renaming (Decidable to Decidable²; Irrelevant to Irrelevant²)
 open import Relation.Binary.PropositionalEquality public
-  using (_≡_; _≢_; refl; cong; subst; sym; module ≡-Reasoning)
+  using (_≡_; _≢_; refl; cong; subst; sym; trans; module ≡-Reasoning)
 
 open import Algebra.Core public
   using (Op₁; Op₂)
