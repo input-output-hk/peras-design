@@ -292,7 +292,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no q =
           trans
-            (k≢k'-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} q)
+            (k'≢k-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} q)
             sutExists'
 
         postulate -- TODO
@@ -335,18 +335,76 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ ∎
 
+        set-irrelevant :
+          record
+            { clock        = State.clock record s₀ { blockTrees = set sutId (addVote' tree vote) (set (creatorId vote) (addVote' tree vote) (State.blockTrees s₀)) }
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (set (creatorId vote) (addVote' tree vote) (State.blockTrees s₀)) } ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (set (creatorId vote) (addVote' tree vote) (State.blockTrees s₀)) } ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (set (creatorId vote) (addVote' tree vote) (State.blockTrees s₀)) } ⁉ sutId)
+            }
+          ≡
+          record
+            { clock        = State.clock record s₀ { blockTrees = set sutId (addVote' tree vote) (State.blockTrees s₀) }
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (State.blockTrees s₀) } ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (State.blockTrees s₀) } ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (addVote' tree vote) (State.blockTrees s₀) } ⁉ sutId)
+            }
+
+        set-irrelevant with creatorId vote ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no  q
+          rewrite k'≢k-get∘set∘set
+            {k  = sutId}
+            {k' = creatorId vote}
+            {v  = addVote' tree vote}
+            {v' = addVote' tree vote}
+            {m  = State.blockTrees s₀}
+            q = refl
+
+        addVote-votes : vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId))
+            ≡ maybe′ votes [] (set sutId (addVote' tree vote) (State.blockTrees s₀) ⁉ sutId)
+        addVote-votes rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
+
+        addVote-chains : maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+             ≡ maybe′ chains [] (set sutId (addVote' tree vote) (State.blockTrees s₀) ⁉ sutId)
+        addVote-chains rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
+
+        addVote-certs : maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
+             ≡ maybe′ certs [] (set sutId (addVote' tree vote) (State.blockTrees s₀) ⁉ sutId)
+        addVote-certs rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
+
+        addVote-modelState :
+          modelState
+            record s₀ { blockTrees = set sutId (addVote' tree vote) (State.blockTrees s₀) }
+            sutId
+          ≡
+          record
+            { clock        = State.clock s₀
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+            ; allVotes     = vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId))
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₀ ⁉ sutId)
+            }
+        addVote-modelState
+          rewrite addVote-votes
+          rewrite addVote-chains
+          rewrite addVote-certs
+          = refl
+
         lem-s₁-agrees :
           modelState
             (record s₀
               { blockTrees =
                   set sutId
-                    (record (modelState s₀ sutId)
-                      { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                    (record tree
+                      { allVotes = v ∷ (allVotes tree) }
                     )
                     (set
                       (creatorId vote)
-                      (record (modelState s₀ sutId)
-                        { allVotes = v ∷ (allVotes (modelState s₀ sutId)) }
+                      (record tree
+                        { allVotes = v ∷ (allVotes tree) }
                       )
                       (State.blockTrees s₀)
                     )
@@ -354,25 +412,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             )
             sutId
           ≡
-          record (modelState s₀ sutId)
+          record tree
             { allVotes =
-                vote ∷ (allVotes (modelState s₀ sutId))
+                vote ∷ (allVotes tree)
             }
 
         lem-s₁-agrees with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q
-          rewrite sym correctVote
-          rewrite get∘set≡id
-            {k = sutId}
-            {v = addVote' (modelState s₀ sutId) vote}
-            {m =
-              set
-                (creatorId vote)
-                (addVote (modelState s₀ sutId) vote)
-                (State.blockTrees s₀)}
-
-            = {!refl!}
+        ... | no q rewrite sym correctVote = trans set-irrelevant addVote-modelState
 
         s₁-agrees : modelState s₁ sutId ≡ ms₁
         s₁-agrees = lem-s₁-agrees

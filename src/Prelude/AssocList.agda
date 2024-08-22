@@ -65,6 +65,10 @@ module _ {K V : Type} where
         get∘set≡id : ∀ {k : K} {v : V} {m : AssocList K V}
           → set k v m ⁉ k ≡ just v
 
-        k≢k'-get∘set : ∀ {k k' : K} {v : V} {m : AssocList K V}
+        k'≢k-get∘set : ∀ {k k' : K} {v : V} {m : AssocList K V}
           → k' ≢ k
           → set k' v m ⁉ k ≡ m ⁉ k
+
+        k'≢k-get∘set∘set : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
+          → k' ≢ k
+          → set k v (set k' v' m) ⁉ k ≡ set k v m ⁉ k
