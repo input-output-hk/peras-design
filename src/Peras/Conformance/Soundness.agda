@@ -252,6 +252,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | Any.here px = ⊥-elim (notFromSut px)
         ... | Any.there (Any.here px) = px
 
+        notFromSut' : 2 ≢ sutId
+        notFromSut' x rewrite sym voterId = notFromSut x
+
         v : Vote
         v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
 
@@ -278,14 +281,23 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
             (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
 
-        apply-filter : Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
-        apply-filter = {!!}
+        apply-filter : Data.List.filter (λ x → ¬? (2 ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+        apply-filter =
+          let f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
+                     {x = ( sutId P., Honest {sutId} ) }
+                     {xs = ( 2 P., Honest {2} ) ∷ [] }
+                     notFromSut'
+              f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
+                     {x = ( 2 P., Honest {2} ) }
+                     {xs = [] }
+                     notFromSut'
+          in trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
 
         map∘apply-filter : Data.List.map
                  (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
                    (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
             ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
-        map∘apply-filter rewrite apply-filter = refl
+        map∘apply-filter rewrite apply-filter rewrite voterId = refl
 
         sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
