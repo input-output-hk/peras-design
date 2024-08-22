@@ -9,6 +9,8 @@ open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 import Data.List
 open import Data.List.Membership.Propositional
+open import Data.List.Properties
+import Data.List.Relation.Unary.Any as Any
 open import Data.List.Relation.Unary.Any.Properties
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
 open import Data.Nat.Properties
@@ -41,14 +43,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ postulates : Postulates ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
-         {parties : Parties}
-         {sut∈parties : (sutId P., Honest {sutId}) ∈ parties}
     where
 
+  parties : Parties
+  parties = (sutId P., Honest {sutId}) ∷ (2 P., Honest {2}) ∷ [] -- wlog
 
-  -- TODO: how to defined honesty?
-  honesty-sut : Honesty sutId
-  honesty-sut = Honest {sutId}
+  sut∈parties : (sutId P., Honest {sutId}) ∈ parties
+  sut∈parties = Any.here refl
+
+  sutHonesty : Honesty sutId
+  sutHonesty = proj₂ (Any.lookup sut∈parties)
 
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
@@ -225,6 +229,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         r : RoundNumber
         r = v-round slot
 
+        notFromSut : creatorId vote ≢ sutId
+        notFromSut = creatorId≢sutId checkedSut
+
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
 
@@ -236,6 +243,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         σ : Signature
         σ = signature vote
+
+        postulate -- TODO: as invariant?
+          voter∈parties : creatorId vote ∈ map proj₁ parties
+
+        voterId : creatorId vote ≡ 2
+        voterId with voter∈parties
+        ... | Any.here px = ⊥-elim (notFromSut px)
+        ... | Any.there (Any.here px) = px
 
         v : Vote
         v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -257,17 +272,28 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         correctVote : vote ≡ v
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
-        notFromSut : creatorId vote ≢ sutId
-        notFromSut = creatorId≢sutId checkedSut
-
         msg : List SmallStep.Envelope
         msg =
           Data.List.map
-            (P.uncurry SmallStep.⦅_,_, (VoteMsg v) , fzero ⦆)
+            (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
             (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+
+
+        {-
+        msgxx : Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+        msgxx = {!!}
+
+        msgx : Data.List.map
+                 (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
+                   (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+            ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
+        msgx rewrite msgxx = refl
+        -}
 
         sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
         sut∈messages' = {!!}
+        --  let xx = singleton⁺ (SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆)
+        --  in {!!}
 
         sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
         sut∈messages = ++⁺ˡ sut∈messages'
@@ -327,7 +353,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     axiom-everyoneIsOnTheCommittee
                     validVote
                   )
-              ↣ Fetch {h = honesty-sut} {m = VoteMsg v}
+              ↣ Fetch {h = sutHonesty} {m = VoteMsg v}
                   (honest {p = sutId}
                     sutExists
                     sut∈messages
@@ -432,9 +458,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
-        -- TODO: need to fetch messages for all parties!
-        msg₀≡msg₁ : State.messages s₀ ≡ State.messages s₁
-        msg₀≡msg₁ = {!!}
+        msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
+        msg₀≡msg₁ =
+          let xx = sym (++-identityʳ (State.messages s₀))
+          in {!!}
 
         inv₁ : Invariant s₁
         inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ = record { invFetched = i }
