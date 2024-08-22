@@ -1,0 +1,9 @@
+
+.metric input {
+  width: 200px
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
