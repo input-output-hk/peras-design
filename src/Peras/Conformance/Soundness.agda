@@ -391,7 +391,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
             }
-
         set-irrelevant
           rewrite k'≢k-get∘set∘set
             {k  = sutId}
@@ -477,15 +476,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newChain-soundness s₀ [] inv refl = {!!}
     newChain-soundness s₀ (block ∷ rest) inv prf with
                checkBlockNotFromSut block in checkedSut
-    newChain-soundness s₀ (block ∷ rest) inv refl
+    newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
                | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
         ; invariant₁ = inv₁
         ; trace = trace
-        ; s₁-agrees = {!!}
-        ; votes-agree = {!!}
+        ; s₁-agrees = {!!} -- s₁-agrees
+        ; votes-agree = votes-agree
         }
       where
 
@@ -594,6 +593,31 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ ∎
 
+        set-irrelevant :
+          record
+            { clock        = State.clock record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) }
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
+            }
+          ≡
+          record
+            { clock        = State.clock record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
+            }
+        set-irrelevant
+          rewrite k'≢k-get∘set∘set
+            {k  = sutId}
+            {k' = creatorId block}
+            {v  = newChain tree chain}
+            {v' = newChain tree chain}
+            {m  = State.blockTrees s₀}
+            notFromSut = refl
+
         newChain-votes : (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ votes [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-votes rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
@@ -603,7 +627,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         newChain-certs : maybe′ certs [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
-{-
         newChain-modelState :
           modelState
             record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
@@ -614,14 +637,46 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
+            ; allSeenCerts = {!!} -- maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
             }
         newChain-modelState
           rewrite newChain-votes
           rewrite newChain-chains
           rewrite newChain-certs
           = refl
--}
+
+        s₁-agrees :
+          modelState
+            (record s₀
+              { blockTrees =
+                  set sutId
+                    (record tree
+                      { allChains = chain ∷ (allChains tree) }
+                    )
+                    (set
+                      (creatorId block)
+                      (record tree
+                        { allChains = chain ∷ (allChains tree) }
+                      )
+                      (State.blockTrees s₀)
+                    )
+              }
+            )
+            sutId
+          ≡
+          record tree
+            { allChains =
+                chain ∷ (allChains tree)
+            }
+
+        s₁-agrees with creatorId block ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no q rewrite sym validHead = {!!} -- trans set-irrelevant newChain-modelState
+
+        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree with creatorId block ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no _  = refl
 
         msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
         msg₀≡msg₁ = {!!} -- rewrite map∘apply-filter = refl
@@ -637,7 +692,57 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition (modelState s₀ sutId) Tick ≡ Just (vs , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    tick-soundness s inv prf = {!!}
+    tick-soundness s₀ inv prf
+      with StartOfRound? (State.clock s₀) (v-round (State.clock s₀))
+    tick-soundness s₀ inv refl
+      | yes p =
+        record
+          { s₁ = {!!}
+          ; invariant₀ = inv
+          ; invariant₁ = {!!}
+          ; trace = CreateVote (invFetched inv)
+                      (honest {p = sutId} {t = modelState s₀ sutId}
+                      {!!} -- validBlockHash
+                      {!!}
+                      {!!}
+                      p
+                      axiom-everyoneIsOnTheCommittee
+                      {!!} -- validVote
+                      )
+                    ↣ ∎
+          ; s₁-agrees = {!!}
+          ; votes-agree = {!!}
+          }
+        where
+
+          slot : SlotNumber
+          slot = State.clock s₀
+
+    tick-soundness s₀ inv refl
+      | no ¬p with NextSlotInSameRound? s₀
+    tick-soundness s₀ inv refl
+      | no ¬p
+      | yes q =
+        record
+          { s₁ = tick s₀
+          ; invariant₀ = {!!}
+          ; invariant₁ = {!!}
+          ; trace = NextSlot (invFetched inv) q ↣ ∎
+          ; s₁-agrees = {!!}
+          ; votes-agree = {!!}
+          }
+
+    tick-soundness s₀ inv refl
+      | no ¬p
+      | no ¬q =
+        record
+          { s₁ = tick s₀
+          ; invariant₀ = {!!}
+          ; invariant₁ = {!!}
+          ; trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
+          ; s₁-agrees = {!!}
+          ; votes-agree = {!!}
+          }
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
@@ -647,86 +752,3 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
     soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
     soundness s₀ Tick = tick-soundness s₀
-
-
-{-
-    record TickPreconditions (s : State) : Set where
-      slot = State.clock s
-
-      field
-        {tree}         : NodeModel
-        {block}        : Block
-        blockExists    : BlockSelection slot tree ≡ just block
-        validVote      : VotingRule slot tree
-
-    @0 tick-preconditions : ∀ {vs ms₁} s
-                          → Invariant s
-                          → transition (modelState s sutId) Tick ≡ Just (vs , ms₁)
-                          → TickPreconditions s
-    tick-preconditions s inv refl
-      with isYes (checkVotingRules (modelState s sutId)) in checkedVRs
-    ... | True = record
-      { tree        = modelState s sutId
-      ; block       = {!!}
-      ; blockExists = {!!}
-      ; validVote   =
-        let
-          witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-          f₁ = vr-1a⇒VotingRule-1A s sutId
-          f₂ = vr-1b⇒VotingRule-1B s sutId
-          f₃ = vr-2a⇒VotingRule-2A s sutId
-          f₄ = vr-2b⇒VotingRule-2B s sutId
-        in
-          S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
-      }
-    ... | False = {!!}
--}
-
-    --   with StartOfRound? (State.clock s₀) (v-round (State.clock s₀))
-    -- soundness s₀ Tick inv prf | yes p =
-    --   let
-    --     pre = tick-preconditions s₀ inv prf
-    --     open TickPreconditions pre
-    --   in
-    --     record
-    --       { s₁          = {!!}
-    --       ; invariant₀  = inv
-    --       ; invariant₁  = {!!}
-    --       ; trace       = CreateVote (invFetched inv)
-    --                         (honest {p = sutId} {t = tree}
-    --                           validBlockHash
-    --                           {!!}
-    --                           {!!}
-    --                           p
-    --                           axiom-everyoneIsOnTheCommittee
-    --                           validVote
-    --                         )
-    --                       ↣ ∎
-    --       ; s₁-agrees   = {!!}
-    --       ; votes-agree = {!!}
-    --       }
-
-    -- soundness s₀ Tick inv prf | no ¬p
-    --   with NextSlotInSameRound? s₀
-    -- soundness s₀ Tick inv prf | no ¬p | yes q =
-    --   let
-    --     pre = tick-preconditions s₀ inv prf
-    --     open TickPreconditions pre
-    --   in
-    --     record
-    --       { s₁          = tick s₀
-    --       ; invariant₀  = inv
-    --       ; invariant₁  = {!!}
-    --       ; trace       = NextSlot (invFetched inv) q ↣ ∎
-    --       ; s₁-agrees   = {!refl!}
-    --       ; votes-agree = {!refl!}
-    --       }
-    -- soundness s₀ Tick inv prf | no ¬p | no ¬q =
-    --   record
-    --     { s₁          = tick s₀
-    --     ; invariant₀  = inv
-    --     ; invariant₁  = {!!}
-    --     ; trace       = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
-    --     ; s₁-agrees   = {!refl!}
-    --     ; votes-agree = {!refl!}
-    --     }
