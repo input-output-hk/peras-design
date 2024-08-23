@@ -1,6 +1,6 @@
 α: 0.05
 u: 90
-l: 30
+l: null  # Not modeled by the Markov-chain simulator.
 b: 15
 a: 27000
 r: 300
