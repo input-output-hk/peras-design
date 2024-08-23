@@ -7,12 +7,10 @@
 module Peras.MarkovSim.Types where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Bifunctor (second)
 import Data.Default (Default (def))
 import Data.Function (on)
 import Data.List (sort)
 import Data.Map.Strict (Map)
-import Data.Scientific
 import GHC.Generics (Generic)
 import Peras.Foreign (IsCommitteeMember, IsSlotLeader)
 import Prettyprinter (Pretty (pretty), fill, vsep, (<+>))
@@ -29,7 +27,7 @@ type Stake = Int
 
 type Votes = Int
 
-type Probability = Scientific
+type Probability = Double
 
 data Peras = MkPeras
   { α :: Double
@@ -81,8 +79,8 @@ mkProbabilities MkPeras{α, τ, n} honestStake adversaryStake =
     p = honestStake // totalStake
     q = adversaryStake // totalStake
 
-    p' = fromFloatDigits $ 1 - (1 - α) ** p
-    q' = fromFloatDigits $ 1 - (1 - α) ** q
+    p' = 1 - (1 - α) ** p
+    q' = 1 - (1 - α) ** q
 
     noBlock = (1 - p') * (1 - q')
     honestBlock = p' * (1 - q')
@@ -91,9 +89,9 @@ mkProbabilities MkPeras{α, τ, n} honestStake adversaryStake =
 
     beta = n // totalStake
 
-    noQuorum = fromFloatDigits $ binomial totalStake beta `cumulative` τ'
-    honestQuorum = fromFloatDigits $ binomial honestStake beta `complCumulative` τ'
-    adversaryQuorum = fromFloatDigits $ binomial adversaryStake beta `complCumulative` τ'
+    noQuorum = binomial totalStake beta `cumulative` τ'
+    honestQuorum = binomial honestStake beta `complCumulative` τ'
+    adversaryQuorum = binomial adversaryStake beta `complCumulative` τ'
     mixedQuorum = 1 - noQuorum - honestQuorum - adversaryQuorum
    in
     MkProbabilities{..}
@@ -148,9 +146,9 @@ instance Pretty Evolution where
           ]
         footer =
           [ pretty ""
-          , pretty "Deficit:" <+> pretty (toRealFloat (1 - sum getEvolution) :: Double)
+          , pretty "Deficit:" <+> pretty (1 - sum getEvolution)
           ]
-        rows = pretty' <$> sort (second (toRealFloat :: Probability -> Double) <$> Map.toList getEvolution)
+        rows = pretty' <$> sort (Map.toList getEvolution)
      in vsep $ header <> rows <> footer
 
 data Chains = MkChains
