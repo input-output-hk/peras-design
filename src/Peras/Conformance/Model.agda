@@ -479,9 +479,8 @@ checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 
 {-# COMPILE AGDA2HS checkVoteFromSut #-}
 
-opaque
-  checkVoteNotFromSut : Vote → Bool
-  checkVoteNotFromSut = not ∘ checkVoteFromSut
+checkVoteNotFromSut : Vote → Bool
+checkVoteNotFromSut = not ∘ checkVoteFromSut
 
 {-# COMPILE AGDA2HS checkVoteNotFromSut #-}
 
@@ -503,12 +502,12 @@ transition s Tick =
   where s' = record s { clock = nextSlot (clock s) }
         sutVotes = votesInState s'
         certsFromQuorum = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
-transition s (NewChain chain) = do
---  guard (length chain > 0) -- TODO: use NonEmpty
---  guard (checkBlockNotFromSut (head chain))
+transition s (NewChain []) = Just ([] , s)
+transition s (NewChain (block ∷ rest)) = do
+  guard (checkBlockNotFromSut block)
   Just ([] , record s
-             { allChains = chain ∷ allChains s
-             ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate chain)
+             { allChains = (block ∷ rest) ∷ allChains s
+             ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
              })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)

@@ -163,11 +163,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ _ x = x
 
-    opaque
-      unfolding checkVoteNotFromSut
+    creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
+    creatorId≢sutId x = not-eqℕ-sound x
 
-      creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
-      creatorId≢sutId x = not-eqℕ-sound x
+    blockCreatorId≢sutId : ∀ {block : Block} → checkBlockNotFromSut block ≡ True → creatorId block ≢ sutId
+    blockCreatorId≢sutId x = not-eqℕ-sound x
 
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
@@ -237,7 +237,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         r = v-round slot
 
         notFromSut : creatorId vote ≢ sutId
-        notFromSut = creatorId≢sutId checkedSut
+        notFromSut = creatorId≢sutId {vote} checkedSut
 
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
@@ -361,13 +361,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     axiom-everyoneIsOnTheCommittee
                     validVote
                   )
-              ↣ Fetch {h = sutHonesty} {m = VoteMsg v}
-                  (honest {p = sutId}
-                    sutExists
-                    sut∈messages
-                    VoteReceived
-                  )
-              ↣ ∎
+             ↣ Fetch {h = sutHonesty} {m = VoteMsg v}
+                 (honest {p = sutId}
+                   sutExists
+                   sut∈messages
+                   VoteReceived
+                 )
+             ↣ ∎
 
         newVote : NodeModel
         newVote = addVote' tree vote
@@ -474,7 +474,126 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition (modelState s₀ sutId) (NewChain chain) ≡ Just (vs , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s chain inv prf = {!!}
+    newChain-soundness s₀ [] inv refl = {!!}
+    newChain-soundness s₀ (block ∷ rest) inv prf with
+               checkBlockNotFromSut block in checkedSut
+    newChain-soundness s₀ (block ∷ rest) inv refl
+               | True =
+      record
+        { s₁ = s₁
+        ; invariant₀ = inv
+        ; invariant₁ = inv₁
+        ; trace = trace
+        ; s₁-agrees = {!!}
+        ; votes-agree = {!!}
+        }
+      where
+
+        slot : SlotNumber
+        slot = State.clock s₀
+
+        notFromSut : creatorId block ≢ sutId
+        notFromSut = blockCreatorId≢sutId {block} checkedSut
+
+        tree : NodeModel
+        tree = modelState s₀ sutId
+
+        β : Block
+        β = createBlock (State.clock s₀) (creatorId block) (leadershipProof block) (signature block) tree
+
+        chain : Chain
+        chain = β ∷ prefChain tree
+
+        validHead : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+        validHead = {!!}
+
+        validRest : rest ≡ prefChain tree
+        validRest = {!!}
+
+        validChain : ValidChain (block ∷ rest)
+        validChain = {!!}
+
+
+        postulate -- TODO: as invariant?
+          blockCreator∈parties : creatorId block ∈ map proj₁ parties
+
+        blockId : creatorId block ≡ 2
+        blockId with blockCreator∈parties
+        ... | Any.here px = ⊥-elim (notFromSut px)
+        ... | Any.there (Any.here px) = px
+
+        notFromSut' : 2 ≢ sutId
+        notFromSut' x rewrite sym blockId = notFromSut x
+
+        msg : List SmallStep.Envelope
+        msg =
+          Data.List.map
+            (P.uncurry SmallStep.⦅_,_, ChainMsg chain , fzero ⦆)
+            (Data.List.filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
+
+        apply-filter : Data.List.filter (λ x → ¬? (2 ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+        apply-filter =
+          let
+            f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
+                   {x = ( sutId P., Honest {sutId} ) }
+                   {xs = ( 2 P., Honest {2} ) ∷ [] }
+                   notFromSut'
+            f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
+                   {x = ( 2 P., Honest {2} ) }
+                   {xs = [] }
+                   notFromSut'
+          in
+            trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
+
+        map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
+        map∘apply-filter rewrite apply-filter rewrite blockId = refl
+
+        sut∈messages' : SmallStep.⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg
+        sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
+
+        sut∈messages : SmallStep.⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+        sut∈messages = {!!} -- ++⁺ˡ sut∈messages'
+
+        s₁ : State
+        s₁ = record s₀
+               { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) blockTrees)
+               ; messages = (msg Data.List.++ messages) ─ sut∈messages
+               ; history = (ChainMsg chain) ∷ history
+               }
+             where
+               open State s₀
+
+        validChain' : ValidChain
+          (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+            ∷ prefChain tree)
+        validChain' with c ← validChain rewrite validHead rewrite validRest = c
+
+        -- validHashes : tipHash (is-TreeType .valid tree) ≡ parentBlock block
+        -- blockExists : BlockSelection (State.clock s) tree ≡ just block
+
+        creatorExists  : State.blockTrees s₀ ⁉ (creatorId block) ≡ just tree -- TODO: always the same tree?
+        creatorExists = {!!}
+
+        sutExists : set (creatorId block) (newChain tree chain) (State.blockTrees s₀) ⁉ sutId ≡ just tree
+        sutExists = {!!}
+
+        trace : s₀ ↝⋆ s₁
+        trace = CreateBlock
+                  (invFetched inv)
+                  (honest
+                    creatorExists
+                    validChain'
+                  )
+              ↣ Fetch {h = sutHonesty} {m = ChainMsg chain}
+                  (honest {p = sutId}
+                    sutExists
+                    sut∈messages
+                    ChainReceived
+                  )
+              ↣ ∎
+
+        inv₁ : Invariant s₁
+        inv₁ = {!!}
 
     @0 tick-soundness : ∀ {vs ms₁} s₀
                           → Invariant s₀
@@ -492,34 +611,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ Tick = tick-soundness s₀
 
 
-
-
-
-
-
-    {-
-    soundness s₀ (NewChain chain@(block ∷ bs)) inv prf
-      let
-        pre = newChain-preconditions s₀ block bs inv prf
-        open NewChainPreconditions pre
-      in
-        record
-          { s₁          = let b = createBlock (State.clock s₀) (creatorId block) (leadershipProof block) (signature block) tree
-                          in ChainMsg (b ∷ prefChain tree) , fzero , creatorId b , newChain tree (b ∷ prefChain tree) ⇑ s₀
-          ; invariant₀  = inv
-          ; invariant₁  = {!!}
-          ; trace       = CreateBlock
-                            (invFetched inv)
-                            (honest
-                              creatorExists
-                              validChain'
-                            )
-                          ↣ ∎
-          ; s₁-agrees   = {!!} -- refl
-          ; votes-agree = {!!} -- refl
-          }
--}
-
 {-
     record TickPreconditions (s : State) : Set where
       slot = State.clock s
@@ -530,23 +621,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         blockExists    : BlockSelection slot tree ≡ just block
         validVote      : VotingRule slot tree
 
-    record NewChainPreconditions (s : State) (block : Block) (rest : Chain) : Set where
-      slot = State.clock s
-      r    = v-round slot
-      field
-        {tree}         : NodeModel
-        creatorExists  : State.blockTrees s ⁉ (creatorId block) ≡ just tree
-        blockExists    : BlockSelection (State.clock s) tree ≡ just block
-        validHead      : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
-        validRest      : rest ≡ prefChain tree
-        validChain     : ValidChain (block ∷ rest)
-        validHashes    : tipHash (is-TreeType .valid tree) ≡ parentBlock block
-
-      validChain' : ValidChain (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree ∷ prefChain tree)
-      validChain' with c ← validChain rewrite validHead rewrite validRest = c
--}
-
-{-
     @0 tick-preconditions : ∀ {vs ms₁} s
                           → Invariant s
                           → transition (modelState s sutId) Tick ≡ Just (vs , ms₁)

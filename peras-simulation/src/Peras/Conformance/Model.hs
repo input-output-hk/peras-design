@@ -356,20 +356,23 @@ transition s Tick =
       (fromIntegral (perasτ (protocol s)))
       (allSeenCerts s)
       (allVotes s)
-transition s (NewChain chain) =
-  Just
-    ( []
-    , NodeModel
-        (clock s)
-        (protocol s)
-        (chain : allChains s)
-        (allVotes s)
-        ( foldr
-            insertCert
-            (allSeenCerts s)
-            (mapMaybe (\r -> certificate r) chain)
-        )
-    )
+transition s (NewChain []) = Just ([], s)
+transition s (NewChain (block : rest)) =
+  do
+    guard (checkBlockNotFromSut block)
+    Just
+      ( []
+      , NodeModel
+          (clock s)
+          (protocol s)
+          ((block : rest) : allChains s)
+          (allVotes s)
+          ( foldr
+              insertCert
+              (allSeenCerts s)
+              (mapMaybe (\r -> certificate r) (block : rest))
+          )
+      )
 transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
