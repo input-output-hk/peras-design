@@ -513,7 +513,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validChain : ValidChain (block ∷ rest)
         validChain = {!!}
 
-
         postulate -- TODO: as invariant?
           blockCreator∈parties : creatorId block ∈ map proj₁ parties
 
@@ -552,7 +551,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
 
         sut∈messages : SmallStep.⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
-        sut∈messages = {!!} -- ++⁺ˡ sut∈messages'
+        sut∈messages = ++⁺ˡ sut∈messages'
 
         s₁ : State
         s₁ = record s₀
@@ -575,7 +574,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists = {!!}
 
         sutExists : set (creatorId block) (newChain tree chain) (State.blockTrees s₀) ⁉ sutId ≡ just tree
-        sutExists = {!!}
+        sutExists =
+          trans
+            (k'≢k-get∘set {k = sutId} {k' = creatorId block} {v = newChain tree chain} {m = State.blockTrees s₀} notFromSut)
+            (sutTree inv)
 
         trace : s₀ ↝⋆ s₁
         trace = CreateBlock
@@ -592,8 +594,44 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ ∎
 
+        newChain-votes : (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ votes [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
+        newChain-votes rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
+
+        newChain-chains : (chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ chains [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
+        newChain-chains rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
+
+        newChain-certs : maybe′ certs [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
+        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
+
+{-
+        newChain-modelState :
+          modelState
+            record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+            sutId
+          ≡
+          record
+            { clock        = State.clock s₀
+            ; protocol     = modelParams
+            ; allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+            ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
+            ; allSeenCerts = maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
+            }
+        newChain-modelState
+          rewrite newChain-votes
+          rewrite newChain-chains
+          rewrite newChain-certs
+          = refl
+-}
+
+        msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
+        msg₀≡msg₁ = {!!} -- rewrite map∘apply-filter = refl
+
         inv₁ : Invariant s₁
-        inv₁ = {!!}
+        inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
+          record
+            { invFetched = i
+            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            }
 
     @0 tick-soundness : ∀ {vs ms₁} s₀
                           → Invariant s₀
