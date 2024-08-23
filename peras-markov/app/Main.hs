@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
@@ -121,8 +122,7 @@ run EverLonger{..} =
                 hPutStrLn hout $ intercalate "\t" [show i, show $ fromMaybe 0 $ Map.lookup True summary]
                 when progress . hPutStr stderr $ "\rSlot: " <> show i <> "  Size: " <> show (Map.size $ MarkovSim.getEvolution posterior) <> "  Surprise: " <> take 10 (maybe "∞" (show . negate . logBase 2) (Map.lookup True summary) <> replicate 20 ' ')
                 hFlush hout
-                unless (maybe True (< stop) $ Map.lookup False summary) $
-                  go (i + 1) posterior
+                go (i + 1) posterior
     when progress $
       hPutStrLn stderr ""
     go (1 :: Int) initial
@@ -307,7 +307,7 @@ scenarioParser =
   let
     εOption = O.option O.auto $ O.long "epsilon" <> O.value 1e-30 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Threshhold for discarding small probabilities."
     slotOption = O.option O.auto $ O.long "slots" <> O.value 1000 <> O.showDefault <> O.metavar "NATURAL" <> O.help "Number of slots to simulate."
-    stakeOption = fmap (\x -> (1000 - round (1000 * x :: Double), round (1000 * x))) . O.option O.auto $ O.long "adversarial-stake" <> O.value 0.05 <> O.showDefault <> O.metavar "FRACTION" <> O.help "Fraction [%/100] of adversarial stake."
+    stakeOption = fmap (\x -> (1_000_000_000 - round (1_000_000_000 * x :: Double), round (1_000_000_000 * x))) . O.option O.auto $ O.long "adversarial-stake" <> O.value 0.05 <> O.showDefault <> O.metavar "FRACTION" <> O.help "Fraction [%/100] of adversarial stake."
     paramOption = O.strOption $ O.long "param-file" <> O.metavar "FILE" <> O.help "Path to input YAML file containing the Peras protocol parameters."
     outOption = O.strOption $ O.long "out-file" <> O.value "/dev/stdout" <> O.showDefault <> O.metavar "FILE" <> O.help "Path to output TSV file containing the simulation results."
     stopOption = O.option O.auto $ O.long "stop" <> O.value 0 <> O.showDefault <> O.metavar "DOUBLE" <> O.help "Stop simulation when probabilities are smaller than this value."

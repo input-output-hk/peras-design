@@ -9,7 +9,30 @@ import Data.Bifunctor (second)
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
-import Peras.MarkovSim.Types
+import Peras.MarkovSim.Types (
+  AdverseAdoption (AdoptIfLonger, NeverAdopt),
+  AdverseBlocks (DelayBlocks, PromptBlocks),
+  AdverseCertification (DelayVotes, PromptVotes),
+  AdverseRevelation (AlwaysReveal, NeverReveal, RevealIfLonger),
+  AdverseSplitting (
+    MkAdverseSplit,
+    NoSplitting,
+    splitFinish,
+    splitStart
+  ),
+  AdverseVoting (AlwaysVote, NeverVote, VoteForAdversary),
+  Behavior (..),
+  Chain (..),
+  Chains (..),
+  Evolution (..),
+  Peras (MkPeras, a, b, k, r),
+  Probabilities (..),
+  Probability,
+  Slot,
+  Thresholding (MkThreshold),
+  inRound,
+  newRound,
+ )
 import Prelude hiding (round)
 
 import qualified Data.Map.Strict as Map
