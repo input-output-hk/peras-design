@@ -169,9 +169,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
       creatorId≢sutId x = not-eqℕ-sound x
 
+    postulate -- TODO
+      existsTrees : ∀ {p sᵢ sⱼ}
+        → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ p)
+        → sᵢ ↝⋆ sⱼ
+        → State.blockTrees sⱼ ⁉ p ≡ just (modelState sⱼ p)
+
     record Invariant (s : State) : Set where
       field
         invFetched : Fetched s
+        sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s sutId)
         -- allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
 
     open Invariant
@@ -269,7 +276,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           in
             S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
 
-        postulate -- TODO
+        postulate -- TODO: put this as we into the `transition`...?
           vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
 
         correctVote : vote ≡ v
@@ -316,14 +323,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree -- TODO: always the same tree?
         creatorExists = {!!}
 
-        sutExists'  : State.blockTrees s₀ ⁉ sutId ≡ just tree
-        sutExists' = {!!}
-
         sutExists : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
           trans
             (k'≢k-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} notFromSut)
-            sutExists'
+            (sutTree inv)
 
         postulate -- TODO
           filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
@@ -424,7 +428,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite addVote-certs
           = refl
 
-        lem-s₁-agrees :
+        s₁-agrees :
           modelState
             (record s₀
               { blockTrees =
@@ -447,13 +451,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             { allVotes =
                 vote ∷ (allVotes tree)
             }
-
-        lem-s₁-agrees with creatorId vote ≟ sutId
+        s₁-agrees with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no q rewrite sym correctVote = trans set-irrelevant addVote-modelState
-
-        s₁-agrees : modelState s₁ sutId ≡ ms₁
-        s₁-agrees = lem-s₁-agrees
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
@@ -464,7 +464,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         msg₀≡msg₁ rewrite map∘apply-filter = refl
 
         inv₁ : Invariant s₁
-        inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ = record { invFetched = i }
+        inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
+          record
+            { invFetched = i
+            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            }
 
     @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
                           → Invariant s₀
