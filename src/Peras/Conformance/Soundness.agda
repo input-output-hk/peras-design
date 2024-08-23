@@ -637,13 +637,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = {!!} -- maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
+            ; allSeenCerts = foldr insertCert (allSeenCerts tree) (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId))
             }
         newChain-modelState
           rewrite newChain-votes
           rewrite newChain-chains
           rewrite newChain-certs
-          = refl
+          = {!!} -- refl
 
         s₁-agrees :
           modelState
@@ -707,7 +707,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       {!!}
                       p
                       axiom-everyoneIsOnTheCommittee
-                      {!!} -- validVote
+                      validVote
                       )
                     ↣ ∎
           ; s₁-agrees = {!!}
@@ -718,6 +718,38 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           slot : SlotNumber
           slot = State.clock s₀
 
+          tree : NodeModel
+          tree = modelState s₀ sutId
+
+          validVote : VotingRule slot tree
+          validVote = {!!} {-
+            let
+              witness = toWitness (isYes≡True⇒TTrue checkedVRs)
+              f₁ = vr-1a⇒VotingRule-1A s₀ sutId
+              f₂ = vr-1b⇒VotingRule-1B s₀ sutId
+              f₃ = vr-2a⇒VotingRule-2A s₀ sutId
+              f₄ = vr-2b⇒VotingRule-2B s₀ sutId
+            in
+              S.map (P.map f₁ f₂) (P.map f₃ f₄) witness -}
+
+{-
+          postulate -- TODO
+            filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
+              filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
+
+          blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
+          blockSelection-eq
+            rewrite
+              filter-eq
+                {prefChain tree}
+                {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
+                {getSlotNumber slot}
+             = refl
+
+          validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
+          validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
+-}
+
     tick-soundness s₀ inv refl
       | no ¬p with NextSlotInSameRound? s₀
     tick-soundness s₀ inv refl
@@ -725,7 +757,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | yes q =
         record
           { s₁ = tick s₀
-          ; invariant₀ = {!!}
+          ; invariant₀ = inv
           ; invariant₁ = {!!}
           ; trace = NextSlot (invFetched inv) q ↣ ∎
           ; s₁-agrees = {!!}
@@ -737,7 +769,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | no ¬q =
         record
           { s₁ = tick s₀
-          ; invariant₀ = {!!}
+          ; invariant₀ = inv
           ; invariant₁ = {!!}
           ; trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
           ; s₁-agrees = {!!}
