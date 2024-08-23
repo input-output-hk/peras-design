@@ -283,20 +283,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         apply-filter : Data.List.filter (λ x → ¬? (2 ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
         apply-filter =
-          let f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
-                     {x = ( sutId P., Honest {sutId} ) }
-                     {xs = ( 2 P., Honest {2} ) ∷ [] }
-                     notFromSut'
-              f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
-                     {x = ( 2 P., Honest {2} ) }
-                     {xs = [] }
-                     notFromSut'
-          in trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
+          let
+            f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
+                   {x = ( sutId P., Honest {sutId} ) }
+                   {xs = ( 2 P., Honest {2} ) ∷ [] }
+                   notFromSut'
+            f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
+                   {x = ( 2 P., Honest {2} ) }
+                   {xs = [] }
+                   notFromSut'
+          in
+            trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
 
-        map∘apply-filter : Data.List.map
-                 (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
-                   (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
-            ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
+        map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
         map∘apply-filter rewrite apply-filter rewrite voterId = refl
 
         sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
@@ -462,7 +461,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | no _  = refl
 
         msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
-        msg₀≡msg₁ = {!!}
+        msg₀≡msg₁ rewrite map∘apply-filter = refl
 
         inv₁ : Invariant s₁
         inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ = record { invFetched = i }
