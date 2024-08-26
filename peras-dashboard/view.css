@@ -1,6 +1,33 @@
 
-.metric input {
-  width: 200px
+#uiPanels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#uiTopPanel {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+#uiLeftPanel #uiRightPanel {
+  width: 48%;
+}
+
+.control input {
+  width: 200px;
+  font-family: monospace;
+}
+
+.metricOutput {
+  width: 200px;
+  font-family: monospace;
+}
+
+td {
+  font-family: monospace;
+  text-align: right;
 }
 
 body {

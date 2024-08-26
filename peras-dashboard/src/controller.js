@@ -2,18 +2,17 @@
 'use strict'
 
 
+import * as d3  from "d3"
 import {jStat} from "jstat"
 
-export const jstat = jStat
-
-export function pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction) {
+function pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction) {
   const quorum = tau * committeeSize
   const beta = committeeSize / totalStake
   const honestStake = (1 - adversaryStakeFraction) * totalStake
   return jStat.binomial.cdf(quorum, honestStake, beta)
 }
 
-export function pEvolve(n, p, q, s0, k) {
+function pEvolve(n, p, q, s0, k) {
   function adv(s) {
     const s1 = new Array(n + 2).fill(0)
     for (let k = 0; k < n + 2; ++k) {
@@ -36,7 +35,7 @@ export function pEvolve(n, p, q, s0, k) {
   return s
 }
 
-export function pPreBoostRollback (adversaryStakeFraction, activeSlotCoefficient, U, L) {
+function pPreRollback (adversaryStakeFraction, activeSlotCoefficient, U, L) {
   const n = U + L
   const p = 1 - (1 - activeSlotCoefficient)**(1 - adversaryStakeFraction)
   const q = 1 - (1 - activeSlotCoefficient)**adversaryStakeFraction
@@ -45,7 +44,7 @@ export function pPreBoostRollback (adversaryStakeFraction, activeSlotCoefficient
   return pEvolve(n, p, q, s, n)
 }
 
-export function pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
+function pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
   const n = U + L
   const p = 1 - (1 - activeSlotCoefficient)**(1 - adversaryStakeFraction)
   const q = 1 - (1 - activeSlotCoefficient)**adversaryStakeFraction
@@ -60,11 +59,22 @@ export function pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient
   return pEvolve(n, p, q, s, 1000)
 }
 
-export function pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
-    const p0 = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, 0)
-    const pB = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)
+function pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
+    const p0 = pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)
+    const pB = pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)
     const pNQ = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
     return p0[0] * pNQ + pB[0] * (1 - pNQ)
+}
+
+let resultData = []
+
+function appendTable(data) {
+  const tr = d3.select("#uiResultTable").insert("tr", ":first-child")
+  for (let i = 0; i < data.length; ++i) {
+    const td = tr.append("td")
+    const x = data[i]
+    td.html(() => i > 6 ? x.toExponential(4) : x.toString())
+  }
 }
 
 export function calculate() {
@@ -76,11 +86,120 @@ export function calculate() {
   const U = parseInt(uiU.value)
   const L = parseInt(uiL.value)
   const B = parseInt(uiB.value)
-  uiNoQuorum.value = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
-  uiPreBoost.value = pPreBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
-  uiPost.value = pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
-  uiPostBoost.value = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
+  const pPostBoost = pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
+  const pPre = pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
+  const pPost = pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
+  const pNoQuorum = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
+  uiPostBoost.innerText = pPostBoost.toExponential(4)
+  uiPre.innerText = pPre.toExponential(4)
+  uiPost.innerText = pPost.toExponential(4)
+  uiNoQuorum.innerText = pNoQuorum.toExponential(4)
+  const x = [
+      B
+    , U
+    , L
+    , committeeSize
+    , tau
+    , activeSlotCoefficient
+    , adversaryStakeFraction
+    , pPostBoost
+    , pPre
+    , pPost
+    , pNoQuorum
+  ]
+  resultData.push(x)
+  appendTable(x)
+  plotData("#uiPlot1", 8, 9)
+  plotData("#uiPlot2", 7, 10)
+}
+
+const plots = {
+  "#uiPlot1" : null
+, "#uiPlot2" : null
+}
+
+function setupPlot(el, xlab, ylab) {
+
+  const margin = {top: 20, right: 30, bottom: 50, left: 60}
+  const width = 600 - margin.left - margin.right
+  const height = 400 - margin.top - margin.bottom
+ 
+  d3.select(el).selectAll("*").remove()
+ 
+  const svg = d3.select(el)
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+  
+  const xScale = d3.scaleLog().domain([1e-3, 1]).range([0, width])
+  const yScale = d3.scaleLog().domain([1e-3, 1]).range([height, 0])
+  const xAxis = d3.axisBottom(xScale).ticks(5, ".0e")
+  const yAxis = d3.axisLeft(yScale).ticks(5, ".0e")
+
+  const xAxisGroup = svg.append("g").attr("transform", `translate(0,${height})`)
+  const yAxisGroup = svg.append("g").call(yAxis)
+
+  xAxisGroup.call(xAxis)
+  yAxisGroup.call(yAxis)
+
+  svg.append("text")
+     .attr("class", "x axis-label")
+     .attr("text-anchor", "middle")
+     .attr("x", width / 2)
+     .attr("y", height + margin.bottom - 10)
+     .text(xlab)
+  svg.append("text")
+     .attr("class", "y axis-label")
+     .attr("text-anchor", "middle")
+     .attr("x", -height / 2)
+     .attr("y", -margin.left + 15)
+     .attr("transform", "rotate(-90)")
+     .text(ylab)
+
+  plots[el] = {
+    xScale : xScale
+  , yScale : yScale
+  , xAxisGroup : xAxisGroup
+  , yAxisGroup : yAxisGroup
+  }
+}
+
+function plotData(el, i, j) {
+  const svg = d3.select(el)
+  const xScale = plots[el].xScale
+  const yScale = plots[el].yScale
+  const xAxisGroup = plots[el].xAxisGroup
+  const yAxisGroup = plots[el].yAxisGroup
+
+  xScale.domain([d3.min(resultData, d => d[i]) / 2, d3.max(resultData, d => d[i]) * 2])
+  yScale.domain([d3.min(resultData, d => d[j]) / 2, d3.max(resultData, d => d[j]) * 2])
+
+  xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(5, ".0e"))
+  yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(5, ".0e"))
+
+  const previous = svg.selectAll("circle").data(resultData)
+  previous.enter().append("circle")
+          .attr("cx", d => xScale(d[i]))
+          .attr("cy", d => yScale(d[j]))
+          .attr("r", 3)
+          .attr("fill", "steelblue")
+          .merge(previous)
+          .transition()
+          .duration(500)
+          .attr("cx", d => xScale(d[i]))
+          .attr("cy", d => yScale(d[j]))
+  previous.exit().remove()
+}
+
+export function reset() {
+  resultData = []
+  d3.select("#uiResultTable").selectAll("tr").remove()
+  setupPlot("#uiPlot1", "Probability of a rollback in first U+L slots", "Probability of a rollback after surviving U+L slots")
+  setupPlot("#uiPlot2", "Probability of a rollback after one boosting", "Probability of a round not reaching quorum")
 }
 
 export async function initialize() {
+  reset()
+  calculate()
 }
