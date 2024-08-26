@@ -45,14 +45,23 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {txSelection : SlotNumber → PartyId → List Tx}
     where
 
+  otherId : ℕ
+  otherId = 2
+
   parties : Parties
-  parties = (sutId P., Honest {sutId}) ∷ (2 P., Honest {2}) ∷ [] -- wlog
+  parties = (sutId P., Honest {sutId}) ∷ (otherId P., Honest {otherId}) ∷ [] -- wlog
 
   sut∈parties : (sutId P., Honest {sutId}) ∈ parties
   sut∈parties = Any.here refl
 
   sutHonesty : Honesty sutId
   sutHonesty = proj₂ (Any.lookup sut∈parties)
+
+  other∈parties : (otherId P., Honest {otherId}) ∈ parties
+  other∈parties = Any.there (Any.here refl)
+
+  otherHonesty : Honesty otherId
+  otherHonesty = proj₂ (Any.lookup other∈parties)
 
   open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
@@ -708,19 +717,25 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness s₀ inv refl
       | yes p =
         record
-          { s₁ = {!!}
+          { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = {!!}
           ; trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀ sutId}
-                      {!!} -- validBlockHash
-                      {!!}
-                      {!!}
-                      p
-                      axiom-everyoneIsOnTheCommittee
-                      validVote
+                        {!!} -- validBlockHash
+                        {!!}
+                        {!!}
+                        p
+                        axiom-everyoneIsOnTheCommittee
+                        validVote
                       )
-                    ↣ ∎
+                  ↣ Fetch {h = otherHonesty} {m = VoteMsg vote}
+                      (honest {p = otherId}
+                        {!!} -- sutExists
+                        {!!} -- sut∈messages
+                        VoteReceived
+                      )
+                  ↣ ∎
           ; s₁-agrees = {!!}
           ; votes-agree = {!!}
           }
@@ -731,6 +746,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           tree : NodeModel
           tree = modelState s₀ sutId
+
+          vote : Vote
+          vote = createVote slot sutId {!!} {!!} {!!}
+
+          s₁ : State
+          s₁ = record s₀
+                 { blockTrees = set otherId (addVote tree vote) (set sutId (addVote tree vote) blockTrees)
+                 ; messages = ({!!} ++ messages) ─ {!!}
+                 ; history = (VoteMsg vote) ∷ history
+                 }
+               where
+                 open State s₀
 
           validVote : VotingRule slot tree
           validVote = {!!} {-
