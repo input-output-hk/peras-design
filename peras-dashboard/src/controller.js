@@ -76,11 +76,12 @@ export function calculate() {
   const U = parseInt(uiU.value)
   const L = parseInt(uiL.value)
   const B = parseInt(uiB.value)
-  uiNoQuorum.value = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
-  uiPreBoost.value = pPreBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
-  uiPost.value = pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
-  uiPostBoost.value = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
+  uiNoQuorum.innerText = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
+  uiPreBoost.innerText = pPreBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
+  uiPost.innerText = pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
+  uiPostBoost.innerText = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
 }
 
 export async function initialize() {
+  calculate()
 }
