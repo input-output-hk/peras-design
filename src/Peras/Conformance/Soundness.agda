@@ -491,7 +491,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; invariant₀ = inv
         ; invariant₁ = inv₁
         ; trace = trace
-        ; s₁-agrees = {!!} -- s₁-agrees
+        ; s₁-agrees = s₁-agrees
         ; votes-agree = votes-agree
         }
       where
@@ -632,9 +632,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         newChain-chains : (chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ chains [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-chains rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
-        newChain-certs : foldr insertCert (allSeenCerts tree) (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) ≡
+        newChain-certs : foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (Data.List.mapMaybe certificate chain) ≡
           maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
-        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = {!refl!}
+        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
         newChain-modelState :
           modelState
@@ -646,7 +646,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = foldr insertCert (allSeenCerts tree) (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId))
+            ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (Data.List.mapMaybe certificate chain)
             }
         newChain-modelState
           rewrite newChain-votes
@@ -660,27 +660,29 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               { blockTrees =
                   set sutId
                     (record tree
-                      { allChains = chain ∷ (allChains tree) }
+                      { allChains = chain ∷ (allChains tree)
+                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate chain)
+                      }
                     )
                     (set
                       (creatorId block)
                       (record tree
-                        { allChains = chain ∷ (allChains tree) }
+                        { allChains = chain ∷ (allChains tree)
+                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate chain)
+                        }
                       )
                       (State.blockTrees s₀)
                     )
               }
             )
             sutId
-          ≡
-          record tree
-            { allChains =
-                chain ∷ (allChains tree)
-            }
-
+            ≡ record tree
+                { allChains = (block ∷ rest) ∷ Data.Maybe.maybe allChains [] (State.blockTrees s₀ ⁉ 1)
+                ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate (block ∷ rest))
+                }
         s₁-agrees with creatorId block ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q rewrite sym validHead = {!!} -- trans set-irrelevant newChain-modelState
+        ... | no q rewrite validHead rewrite validRest = trans set-irrelevant newChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId block ≟ sutId
@@ -688,7 +690,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | no _  = refl
 
         msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
-        msg₀≡msg₁ = {!!} -- rewrite map∘apply-filter = refl
+        msg₀≡msg₁ rewrite map∘apply-filter = refl
 
         inv₁ : Invariant s₁
         inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
