@@ -2,18 +2,19 @@
 'use strict'
 
 
+import * as d3  from "d3"
 import {jStat} from "jstat"
 
-export const jstat = jStat
+let resultData = []
 
-export function pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction) {
+function pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction) {
   const quorum = tau * committeeSize
   const beta = committeeSize / totalStake
   const honestStake = (1 - adversaryStakeFraction) * totalStake
   return jStat.binomial.cdf(quorum, honestStake, beta)
 }
 
-export function pEvolve(n, p, q, s0, k) {
+function pEvolve(n, p, q, s0, k) {
   function adv(s) {
     const s1 = new Array(n + 2).fill(0)
     for (let k = 0; k < n + 2; ++k) {
@@ -36,7 +37,7 @@ export function pEvolve(n, p, q, s0, k) {
   return s
 }
 
-export function pPreBoostRollback (adversaryStakeFraction, activeSlotCoefficient, U, L) {
+function pPreRollback (adversaryStakeFraction, activeSlotCoefficient, U, L) {
   const n = U + L
   const p = 1 - (1 - activeSlotCoefficient)**(1 - adversaryStakeFraction)
   const q = 1 - (1 - activeSlotCoefficient)**adversaryStakeFraction
@@ -45,7 +46,7 @@ export function pPreBoostRollback (adversaryStakeFraction, activeSlotCoefficient
   return pEvolve(n, p, q, s, n)
 }
 
-export function pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
+function pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
   const n = U + L
   const p = 1 - (1 - activeSlotCoefficient)**(1 - adversaryStakeFraction)
   const q = 1 - (1 - activeSlotCoefficient)**adversaryStakeFraction
@@ -60,11 +61,25 @@ export function pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient
   return pEvolve(n, p, q, s, 1000)
 }
 
-export function pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
-    const p0 = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, 0)
-    const pB = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)
+function pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B) {
+    const p0 = pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)
+    const pB = pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)
     const pNQ = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
     return p0[0] * pNQ + pB[0] * (1 - pNQ)
+}
+
+function appendTable(data) {
+  const tr = d3.select("#uiResultTable").append("tr")
+  for (let i = 0; i < data.length; ++i) {
+    const td = tr.append("td")
+    const x = data[i]
+    td.html(() => i > 6 ? x.toExponential(4) : x.toString())
+  }
+}
+
+export function reset() {
+  resultData = []
+  d3.select("#uiResultTable").selectAll("tr").remove()
 }
 
 export function calculate() {
@@ -76,10 +91,29 @@ export function calculate() {
   const U = parseInt(uiU.value)
   const L = parseInt(uiL.value)
   const B = parseInt(uiB.value)
-  uiNoQuorum.innerText = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
-  uiPreBoost.innerText = pPreBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
-  uiPost.innerText = pPostRollback(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
-  uiPostBoost.innerText = pPostBoostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
+  const pPostBoost = pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
+  const pPre = pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
+  const pPost = pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
+  const pNoQuorum = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
+  uiPostBoost.innerText = pPostBoost.toExponential(4)
+  uiPre.innerText = pPre.toExponential(4)
+  uiPost.innerText = pPost.toExponential(4)
+  uiNoQuorum.innerText = pNoQuorum.toExponential(4)
+  const x = [
+      B
+    , U
+    , L
+    , committeeSize
+    , tau
+    , activeSlotCoefficient
+    , adversaryStakeFraction
+    , pPostBoost
+    , pPre
+    , pPost
+    , pNoQuorum
+  ]
+  resultData.push(x)
+  appendTable(x)
 }
 
 export async function initialize() {

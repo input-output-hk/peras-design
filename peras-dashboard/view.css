@@ -25,6 +25,10 @@
   font-family: monospace;
 }
 
+td {
+  font-family: monospace;
+}
+
 body {
   max-width: 100%;
   overflow-x: hidden;
