@@ -54,11 +54,9 @@
             <h2>Scenario</h2>
             <div class="control">
               <label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="TO BE ADDED">&#9432;</span></label>
-              <input id="uiAdversary" type="number" min="0" max="1" value="0.20" step="0.01"/>
+              <input id="uiAdversary" type="number" min="0.01" max="0.99" value="0.20" step="0.01"/>
             </div>
           </div>
-        </div>
-        <div id="uiRightPanel">
           <div id="uiMetrics">
             <h2>Performance metrics</h2>
             <div class="metric">
@@ -81,6 +79,10 @@
             <button type="button" onclick="Controller.calculate()">Calculate</button>
             <button type="button" onclick="Controller.reset()">Reset</button>
           </div>
+        </div>
+        <div id="uiRightPanel">
+          <svg id="uiPlot1" width="600" height="400"></svg>
+          <svg id="uiPlot2" width="600" height="400"></svg>
         </div>
       </div>
       <div id="uiBottomPanel">
