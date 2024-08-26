@@ -473,7 +473,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition (modelState s₀ sutId) (NewChain chain) ≡ Just (vs , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s₀ [] inv refl = {!!}
+    newChain-soundness s₀ [] inv refl =
+      record
+        { s₁ = s₀
+        ; invariant₀ = inv
+        ; invariant₁ = inv
+        ; trace = ∎
+        ; s₁-agrees = refl
+        ; votes-agree = refl
+        }
     newChain-soundness s₀ (block ∷ rest) inv prf with
                checkBlockNotFromSut block in checkedSut
     newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
