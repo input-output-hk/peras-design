@@ -626,14 +626,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
-        newChain-votes : (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ votes [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
+        newChain-votes : maybe′ votes [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ votes [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-votes rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
         newChain-chains : (chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ chains [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-chains rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
-        newChain-certs : maybe′ certs [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
-        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
+        newChain-certs : foldr insertCert (allSeenCerts tree) (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) ≡
+          maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
+        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = {!refl!}
 
         newChain-modelState :
           modelState
@@ -651,7 +652,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite newChain-votes
           rewrite newChain-chains
           rewrite newChain-certs
-          = {!!} -- refl
+          = refl
 
         s₁-agrees :
           modelState

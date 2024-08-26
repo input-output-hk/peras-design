@@ -244,7 +244,11 @@ opaque
 {-# COMPILE AGDA2HS votingBlockHash #-}
 
 newChain' : NodeModel → Chain → NodeModel
-newChain' s c = record s { allChains = c ∷ (allChains s) }
+newChain' s c =
+  record s
+    { allChains = c ∷ (allChains s)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
+    }
 
 {-# COMPILE AGDA2HS newChain' #-}
 
