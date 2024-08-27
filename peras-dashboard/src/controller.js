@@ -77,6 +77,26 @@ function appendTable(data) {
   }
 }
 
+function highlightData(d) {
+  let j = resultData.length - 1
+  d3.select("#uiResultTable")
+    .selectAll("tr")
+    .each(function(r) {
+      let found = true
+      for (let i = 0; i < 7; ++i)
+        found = found && d[i] == resultData[j][i]
+      if (found)
+        d3.select(this).style("background-color", "aliceblue")
+      j = j - 1
+    })
+}
+
+function clearHightlights() {
+  d3.select("#uiResultTable")
+    .selectAll("tr")
+    .style("background-color", "white")
+}
+
 export function calculate() {
   const tau = parseFloat(uiTau.value)
   const committeeSize = parseInt(uiCommittee.value)
@@ -123,8 +143,6 @@ function setupPlot(el, xlab, ylab) {
   const margin = {top: 20, right: 30, bottom: 50, left: 60}
   const width = (uiRightPanel.clientWidth - 20) / 2 - margin.left - margin.right
   const height = uiTopPanel.clientHeight - margin.top - margin.bottom
-  console.log(width)
-  console.log(height)
  
   d3.select(el).selectAll("*").remove()
  
@@ -186,6 +204,8 @@ function plotData(el, i, j) {
           .attr("cy", d => yScale(d[j]))
           .attr("r", 3)
           .attr("fill", "steelblue")
+          .on("mouseenter", (evt, d) => highlightData(d))
+          .on("mouseout", () => clearHightlights())
           .merge(previous)
           .transition()
           .duration(500)
