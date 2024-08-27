@@ -11,18 +11,52 @@
   justify-content: space-between;
 }
 
-#uiLeftPanel #uiRightPanel {
-  width: 48%;
+#uiLeftPanel {
+  width: 550px;
 }
 
-.control input {
-  width: 200px;
+#uiRightPanel {
+  width: 100%;
+}
+
+#uiBottomPanel {
+  width: 100%;
+}
+
+#uiProtocolParameters, #uiScenario, #uiMetrics {
+  display: grid;
+  grid-template-columns: auto auto;
+  padding: 10px
+}
+
+#uiProtocolParameters div, #uiScenario div, #uiMetrics div {
+  width: 400px;
+}
+
+input {
+  width: 75px;
+  text-align: right;
   font-family: monospace;
 }
 
 .metricOutput {
-  width: 200px;
+  width: 75px;
   font-family: monospace;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid black;
+  padding: 8px;
+}
+
+th {
+  background-color: #f2f2f2;
+  text-align: center;
 }
 
 td {
@@ -30,7 +64,12 @@ td {
   text-align: right;
 }
 
+h1, h2 {
+  margin-block-end: 0;
+}
+
 body {
   max-width: 100%;
   overflow-x: hidden;
+  font-family: sans-serif;
 }

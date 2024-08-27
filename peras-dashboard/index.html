@@ -7,82 +7,56 @@
     <title>Peras Probabilities</title>
   </head>
   <body id="uiBody" onload="Controller.initialize()">
-    <h1>Peras probability calculator</h1>
     <div id="uiPanels">
       <div id="uiTopPanel">
         <div id="uiLeftPanel">
+          <h1>Peras probability calculator</h1>
+          <h2>Protocol parameters</h2>
           <div id="uiProtocolParameters">
-            <h2>Protocol parameters</h2>
-            <div class="control">
-              <label for="uiB">Boost (<i>B</i>, in blocks): <span class="help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label>
-              <input id="uiB" type="number" min="0" max="100" value="15"/>
-            </div>
-            <div class="control">
-              <label for="uiU">Round length (<i>U</i>, in slots): <span class="help" title="The duration of each voting round.">&#9432;</span></label>
-              <input id="uiU" type="number" min="5" max="1200" value="90" step="1"/>
-            </div>
-            <!--div class="control">
+            <div><label for="uiB">Boost (<i>B</i>, in blocks): <span class="help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label></div>
+            <div><input id="uiB" type="number" min="0" max="100" value="15"/></div>
+            <div><label for="uiU">Round length (<i>U</i>, in slots): <span class="help" title="The duration of each voting round.">&#9432;</span></label></div>
+            <div><input id="uiU" type="number" min="5" max="1200" value="90" step="1"/></div>
+            <!--
               <label for="uiA">Cert. expiration (<i>A</i>, in slots): <span class="help" title="The maximum age for a certificate to be included in a block.">&#9432;</span></label>
               <input id="uiA" type="number" min="30" max="900" value="200"/>
-            </div-->
-            <!--div class="control">
               <label for="uiR">Chain ignorance (<i>R</i>, in rounds): <span class="help" title="The number of rounds for which to ignore certificates after entering a cool-down period.">&#9432;</span></label>
               <input id="uiR" type="number" min="0" max="10" value="10"/>
-            </div-->
-            <!--div class="control">
               <label for="uiK">Cooldown period (<i>K</i>, in rounds): <span class="help" title="The minimum number of rounds to wait before voting again after a cool-down period starts.">&#9432;</span></label>
               <input id="uiK" type="number" min="0" max="50" value="17"/>
-            </div-->
-            <div class="control">
-              <label for="uiL">Block selection offset (<i>L</i>, in slots): <span class="help" title="The minimum age of a candidate block for being voted upon.">&#9432;</span></label>
-              <input id="uiL" type="number" min="1" max="1200" value="30" step="1"/>
-            </div>
-            <div class="control">
-              <label for="uiCommittee">Mean committee size (<i>n</i>, in nodes): <span class="help" title="The number of members on the voting committee.">&#9432;</span></label>
-              <input id="uiCommittee" type="number" min="0" max="3000" value="900" step="1"/>
-            </div>
-            <div class="control">
-              <label for="uiTau">Quorum size (τ / <i>n</i>, in %/100): <span class="help" title="The number of votes, relative to the mean committee size, required to create a certificate.">&#9432;</span></label>
-              <input id="uiTau" type="number" min="0" max="1" value="0.75" step="0.01"/>
-            </div>
-            <div class="control">
-              <label for="uiAlpha">Active slot coefficient (<i>f</i>, in 1/slot): <span class="help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label>
-              <input id="uiAlpha" type="number" min="0" max="1" value="0.05" step="0.01"/>
-            </div>
+            -->
+            <div><label for="uiL">Block selection offset (<i>L</i>, in slots): <span class="help" title="The minimum age of a candidate block for being voted upon.">&#9432;</span></label></div>
+            <div><input id="uiL" type="number" min="1" max="1200" value="30" step="1"/></div>
+            <div><label for="uiCommittee">Mean committee size (<i>n</i>, in nodes): <span class="help" title="The number of members on the voting committee.">&#9432;</span></label></div>
+            <div><input id="uiCommittee" type="number" min="0" max="3000" value="900" step="1"/></div>
+            <div><label for="uiTau">Quorum size (τ / <i>n</i>, in %/100): <span class="help" title="The number of votes, relative to the mean committee size, required to create a certificate.">&#9432;</span></label></div>
+            <div><input id="uiTau" type="number" min="0" max="1" value="0.75" step="0.01"/></div>
+            <div><label for="uiAlpha">Active slot coefficient (<i>f</i>, in 1/slot): <span class="help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label></div>
+            <div><input id="uiAlpha" type="number" min="0" max="1" value="0.05" step="0.01"/></div>
           </div>
+          <h2>Scenario</h2>
           <div id="uiScenario">
-            <h2>Scenario</h2>
-            <div class="control">
-              <label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="TO BE ADDED">&#9432;</span></label>
-              <input id="uiAdversary" type="number" min="0.01" max="0.99" value="0.20" step="0.01"/>
-            </div>
+            <div><label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="TO BE ADDED">&#9432;</span></label></div>
+            <div><input id="uiAdversary" type="number" min="0.01" max="0.99" value="0.20" step="0.01"/></div>
           </div>
+          <h2>Performance metrics</h2>
           <div id="uiMetrics">
-            <h2>Performance metrics</h2>
-            <div class="metric">
-              <span>Probability of a rollback after one boosting:</span> <span class="help" title="TO BE ADDED">&#9432;</span>
-              <span id="uiPostBoost" class="metricOutput"> </span>
-            </div>
-            <div class="metric">
-              <span>Probability of a rollback in first U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span>
-              <span id="uiPre" class="metricOutput"> </span>
-            </div>
-            <div class="metric">
-              <span>Probability of a rollback after surviving U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span>
-              <span id="uiPost" class="metricOutput"> </span>
-            </div>
-            <div class="metric">
-              <span>Probability of a round not reaching quorum:</span> <span class="help" title="TO BE ADDED">&#9432;</span>
-              <span id="uiNoQuorum" class="metricOutput"> </span>
-            </div>
-            <br/>
-            <button type="button" onclick="Controller.calculate()">Calculate</button>
-            <button type="button" onclick="Controller.reset()">Reset</button>
+            <div><span>Probability of a rollback after one boosting:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div id="uiPostBoost" class="metricOutput"> </div>
+            <div><span>Probability of a rollback in first U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div id="uiPre" class="metricOutput"> </div>
+            <div><span>Probability of a rollback after surviving U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div id="uiPost" class="metricOutput"> </div>
+            <div><span>Probability of a round not reaching quorum:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div id="uiNoQuorum" class="metricOutput"> </div>
           </div>
+          <br/>
+          <button type="button" onclick="Controller.calculate()">Calculate</button>
+          <button type="button" onclick="Controller.reset()">Reset</button>
         </div>
         <div id="uiRightPanel">
-          <svg id="uiPlot1" width="600" height="400"></svg>
-          <svg id="uiPlot2" width="600" height="400"></svg>
+          <svg id="uiPlot1"></svg>
+          <svg id="uiPlot2"></svg>
         </div>
       </div>
       <div id="uiBottomPanel">
@@ -98,7 +72,7 @@
               <th>U</th>
               <th>L</th>
               <th>n</th>
-              <th>τ </th>
+              <th>τ / n</th>
               <th>f</th>
               <th>Adversary</th>
               <th>Rollback after boost</th>

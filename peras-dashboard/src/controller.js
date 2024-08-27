@@ -121,8 +121,10 @@ const plots = {
 function setupPlot(el, xlab, ylab) {
 
   const margin = {top: 20, right: 30, bottom: 50, left: 60}
-  const width = 600 - margin.left - margin.right
-  const height = 400 - margin.top - margin.bottom
+  const width = (uiRightPanel.clientWidth - 20) / 2 - margin.left - margin.right
+  const height = uiTopPanel.clientHeight - margin.top - margin.bottom
+  console.log(width)
+  console.log(height)
  
   d3.select(el).selectAll("*").remove()
  
