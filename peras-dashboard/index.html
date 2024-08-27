@@ -16,7 +16,7 @@
           <h2>Scenario</h2>
           <div id="uiScenario">
             <div><label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="The fraction of the total stake that is held by adversaries.">&#9432;</span></label></div>
-            <div><input id="uiAdversary" type="number" min="0.001" max="0.999" value="0.200" step="0.001"/></div>
+            <div><input id="uiAdversary" type="number" min="0.01" max="0.99" value="0.10" step="0.01"/></div>
           </div>
           <h2>Protocol parameters</h2>
           <div id="uiProtocolParameters">
@@ -35,9 +35,9 @@
             <div><label for="uiCommittee">Mean committee size (<i>n</i>, in nodes): <span class="help" title="The number of members on the voting committee.">&#9432;</span></label></div>
             <div><input id="uiCommittee" type="number" min="0" max="3000" value="900" step="1" onchange="Controller.updateParameters()"/></div>
             <div><label for="uiTau">Quorum size (τ / <i>n</i>, in %/100): <span class="help" title="The number of votes, relative to the mean committee size, required to create a certificate.">&#9432;</span></label></div>
-            <div><input id="uiTau" type="number" min="0" max="1" value="0.750" step="0.001" onchange="Controller.updateParameters()"/></div>
+            <div><input id="uiTau" type="number" min="0" max="1" value="0.750" step="0.01" onchange="Controller.updateParameters()"/></div>
             <div><label for="uiAlpha">Active slot coefficient (<i>f</i>, in 1/slot): <span class="help" title="The probability that a party will be the slot leader for a particular slot.">&#9432;</span></label></div>
-            <div><input id="uiAlpha" type="number" min="0.001" max="0.999" value="0.050" step="0.001" onchange="Controller.updateParameters()"/></div>
+            <div><input id="uiAlpha" type="number" min="0.01" max="0.99" value="0.05" step="0.01" onchange="Controller.updateParameters()"/></div>
             <div><label for="uiSecurity">Security parameter (<i>k</i>, in blocks): <span class="help" title="The limit on the number of blocks to reach a common prefix.">&#9432;</span></label></div>
             <div><input id="uiSecurity" type="number" value="3150" step="1" disabled="true"/></div>
           </div>

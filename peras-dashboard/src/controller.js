@@ -108,14 +108,18 @@ export function calculate() {
   const U = parseInt(uiU.value)
   const L = parseInt(uiL.value)
   const B = parseInt(uiB.value)
-  const pPostBoost = pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0]
-  const pPre = pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0]
-  const pPost = pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B)
-  const pNoQuorum = pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction)
+  const pPostBoost = Math.max(1e-50, pPostRollback(adversaryStakeFraction, activeSlotCoefficient, U, L, B)[0])
+  const pPre = Math.max(1e-50, pPreRollback(adversaryStakeFraction, activeSlotCoefficient, U, L)[0])
+  const pPost = Math.max(1e-50, pPostRollbackNet(tau, committeeSize, totalStake, adversaryStakeFraction, activeSlotCoefficient, U, L, B))
+  const pNoQuorum = Math.max(1e-50, pNoHonestQuorum(tau, committeeSize, totalStake, adversaryStakeFraction))
   uiPostBoost.innerText = pPostBoost.toExponential(4)
   uiPre.innerText = pPre.toExponential(4)
   uiPost.innerText = pPost.toExponential(4)
   uiNoQuorum.innerText = pNoQuorum.toExponential(4)
+  if (Number.isNaN(pPostBoost) || Number.isNaN(pPre) || Number.isNaN(pPost) || Number.isNaN(pNoQuorum)) {
+    alert("Propability is too small to plot.")
+    return
+  }
   const x = [
       B
     , U
