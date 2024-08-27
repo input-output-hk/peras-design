@@ -143,7 +143,7 @@ function setupPlot(el, xlab, ylab) {
   const margin = {top: 20, right: 30, bottom: 50, left: 60}
   const width = (uiRightPanel.clientWidth - 20) / 2 - margin.left - margin.right
   const height = uiTopPanel.clientHeight - margin.top - margin.bottom
- 
+
   d3.select(el).selectAll("*").remove()
  
   const svg = d3.select(el)
@@ -192,8 +192,16 @@ function plotData(el, i, j) {
   const xAxisGroup = plots[el].xAxisGroup
   const yAxisGroup = plots[el].yAxisGroup
 
-  xScale.domain([d3.min(resultData, d => d[i]) / 2, d3.max(resultData, d => d[i]) * 2])
-  yScale.domain([d3.min(resultData, d => d[j]) / 2, d3.max(resultData, d => d[j]) * 2])
+  function setScale(k) {
+    const mn = d3.min(resultData, d => d[k])
+    const mx = d3.max(resultData, d => d[k])
+    return [
+      10**Math.floor(Math.log10(mn))
+    , 10**Math.ceil(Math.log10(mx))
+    ]
+  }
+  xScale.domain(setScale(i))
+  yScale.domain(setScale(j))
 
   xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(5, ".0e"))
   yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(5, ".0e"))
