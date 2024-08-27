@@ -828,7 +828,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           ; protocol = modelParams
                           ; allChains = Data.Maybe.maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
                           ; allVotes = vote ∷ xs ++ Data.Maybe.maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
-                          ; allSeenCerts = foldr insertCert (allSeenCerts tree) (newQuora (fromNat (perasτ (protocol tree))) (allSeenCerts tree) (allVotes tree))
+                          ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
                           }
           s₁-agrees = {!!}
 
@@ -850,12 +850,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | False
       | yes q =
         record
-          { s₁ = tick s₀
+          { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = {!!}
-          ; trace = NextSlot (invFetched inv) q ↣ ∎
+          ; trace = trace
           ; s₁-agrees = s₁-agrees
-          ; votes-agree = {!!}
+          ; votes-agree = votes-agree
           }
 
       where
@@ -866,22 +866,64 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         xxx : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
         xxx = {!!}
 
+        noVotes : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noVotes rewrite isSlotZero rewrite xxx = refl
+
+        s₁ : State
+        s₁ = tick s₀
+
         s₁-agrees : modelState (tick s₀) sutId ≡ ms₁
         s₁-agrees
-          rewrite xxx
-          = {!refl!} -- refl
+          -- rewrite isSlotZero
+          -- rewrite noVotes
+          -- rewrite xxx
+          = {!refl!}
 
-    tick-soundness s₀ inv refl
+        trace : s₀ ↝⋆ s₁
+        trace = NextSlot (invFetched inv) q ↣ ∎
+
+        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree rewrite noVotes = refl
+
+    tick-soundness {vs} {ms₁} s₀ inv refl
       | False
       | no ¬q =
         record
-          { s₁ = tick s₀
+          { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = {!!}
-          ; trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
-          ; s₁-agrees = {!!}
-          ; votes-agree = {!!}
+          ; trace = trace
+          ; s₁-agrees = s₁-agrees
+          ; votes-agree = votes-agree
           }
+
+      where
+
+        tree : NodeModel
+        tree = modelState s₀ sutId
+
+        xxx : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
+        xxx = {!!}
+
+        noVotes : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noVotes rewrite isSlotZero rewrite xxx = refl
+
+        s₁ : State
+        s₁ = tick s₀
+
+        s₁-agrees : modelState (tick s₀) sutId ≡ ms₁
+        s₁-agrees
+          -- rewrite isSlotZero
+          -- rewrite noVotes
+          -- rewrite xxx
+          = {!refl!}
+
+        trace : s₀ ↝⋆ s₁
+        trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
+
+        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree rewrite noVotes = refl
+
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
