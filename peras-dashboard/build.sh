@@ -6,3 +6,5 @@ set -ve
 npm install
 
 npx webpack
+
+cp index.html view.css controller.js ../site/static/dashboard/

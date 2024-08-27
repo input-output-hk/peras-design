@@ -77,6 +77,28 @@ function appendTable(data) {
   }
 }
 
+function highlightData(d) {
+  let j = resultData.length - 1
+  d3.select("#uiResultTable")
+    .selectAll("tr")
+    .each(function(r) {
+      let found = true
+      for (let i = 0; i < 7; ++i)
+        found = found && d[i] == resultData[j][i]
+      if (found)
+        d3.select(this).style("color", "steelblue")
+                       .style("background-color", "aliceblue")
+      j = j - 1
+    })
+}
+
+function clearHightlights() {
+  d3.select("#uiResultTable")
+    .selectAll("tr")
+    .style("color", "black")
+    .style("background-color", "white")
+}
+
 export function calculate() {
   const tau = parseFloat(uiTau.value)
   const committeeSize = parseInt(uiCommittee.value)
@@ -121,9 +143,9 @@ const plots = {
 function setupPlot(el, xlab, ylab) {
 
   const margin = {top: 20, right: 30, bottom: 50, left: 60}
-  const width = 600 - margin.left - margin.right
-  const height = 400 - margin.top - margin.bottom
- 
+  const width = (uiRightPanel.clientWidth - 20) / 2 - margin.left - margin.right
+  const height = uiTopPanel.clientHeight - uiDiagram.clientHeight - margin.top - margin.bottom
+
   d3.select(el).selectAll("*").remove()
  
   const svg = d3.select(el)
@@ -132,14 +154,13 @@ function setupPlot(el, xlab, ylab) {
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
   
-  const xScale = d3.scaleLog().domain([1e-3, 1]).range([0, width])
-  const yScale = d3.scaleLog().domain([1e-3, 1]).range([height, 0])
-  const xAxis = d3.axisBottom(xScale).ticks(5, ".0e")
-  const yAxis = d3.axisLeft(yScale).ticks(5, ".0e")
+  const xScale = d3.scaleLog().domain([1e-5, 1]).range([0, width])
+  const yScale = d3.scaleLog().domain([1e-5, 1]).range([height, 0])
+  const xAxis = d3.axisBottom(xScale).ticks(8, ".0e")
+  const yAxis = d3.axisLeft(yScale).ticks(8, ".0e")
 
   const xAxisGroup = svg.append("g").attr("transform", `translate(0,${height})`)
-  const yAxisGroup = svg.append("g").call(yAxis)
-
+  const yAxisGroup = svg.append("g")
   xAxisGroup.call(xAxis)
   yAxisGroup.call(yAxis)
 
@@ -152,13 +173,14 @@ function setupPlot(el, xlab, ylab) {
   svg.append("text")
      .attr("class", "y axis-label")
      .attr("text-anchor", "middle")
-     .attr("x", -height / 2)
-     .attr("y", -margin.left + 15)
+     .attr("x", - height / 2)
+     .attr("y", - margin.left + 15)
      .attr("transform", "rotate(-90)")
      .text(ylab)
 
   plots[el] = {
-    xScale : xScale
+    svg : svg
+  , xScale : xScale
   , yScale : yScale
   , xAxisGroup : xAxisGroup
   , yAxisGroup : yAxisGroup
@@ -166,17 +188,28 @@ function setupPlot(el, xlab, ylab) {
 }
 
 function plotData(el, i, j) {
-  const svg = d3.select(el)
+  const svg = plots[el].svg
   const xScale = plots[el].xScale
   const yScale = plots[el].yScale
   const xAxisGroup = plots[el].xAxisGroup
   const yAxisGroup = plots[el].yAxisGroup
 
-  xScale.domain([d3.min(resultData, d => d[i]) / 2, d3.max(resultData, d => d[i]) * 2])
-  yScale.domain([d3.min(resultData, d => d[j]) / 2, d3.max(resultData, d => d[j]) * 2])
+  function setScale(k) {
+    const mn = d3.min(resultData, d => d[k])
+    const mx = d3.max(resultData, d => d[k])
+    if (false)
+      return [
+        10**Math.floor(Math.log10(mn))
+      , 10**Math.ceil(Math.log10(mx))
+      ]
+    else
+      return [mn / 2, mx * 2]
+  }
+  xScale.domain(setScale(i))
+  yScale.domain(setScale(j))
 
-  xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(5, ".0e"))
-  yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(5, ".0e"))
+  xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(8, ".0e"))
+  yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(8, ".0e"))
 
   const previous = svg.selectAll("circle").data(resultData)
   previous.enter().append("circle")
@@ -184,6 +217,8 @@ function plotData(el, i, j) {
           .attr("cy", d => yScale(d[j]))
           .attr("r", 3)
           .attr("fill", "steelblue")
+          .on("mouseenter", (evt, d) => highlightData(d))
+          .on("mouseout", () => clearHightlights())
           .merge(previous)
           .transition()
           .duration(500)
@@ -199,7 +234,20 @@ export function reset() {
   setupPlot("#uiPlot2", "Probability of a rollback after one boosting", "Probability of a round not reaching quorum")
 }
 
+export function updateParameters() {
+  const B = parseFloat(uiB.value)
+  const U = parseFloat(uiU.value)
+  const activeSlotCoefficient = parseFloat(uiAlpha.value)
+  const k = 2160 + 90 * B
+  uiSecurity.value = Math.round(k)
+  const A = 90 * B / activeSlotCoefficient
+  uiA.value = Math.round(A)
+  uiR.value = Math.round(A / U)
+  uiK.value = Math.round(k / activeSlotCoefficient / U)
+}
+
 export async function initialize() {
+  updateParameters()
   reset()
   calculate()
 }

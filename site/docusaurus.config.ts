@@ -104,6 +104,11 @@ const config: Config = {
                     position: 'left'
                 },
                 {
+                    to: 'pathname:///dashboard/index.html',
+                    label: 'Dashboard',
+                    position: 'right',
+                },
+                {
                     href: 'https://peras-simulation.cardano-scaling.org/',
                     label: 'Simulator',
                     position: 'right',
