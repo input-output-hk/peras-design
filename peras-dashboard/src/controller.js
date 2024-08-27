@@ -86,7 +86,8 @@ function highlightData(d) {
       for (let i = 0; i < 7; ++i)
         found = found && d[i] == resultData[j][i]
       if (found)
-        d3.select(this).style("background-color", "aliceblue")
+        d3.select(this).style("color", "steelblue")
+                       .style("background-color", "aliceblue")
       j = j - 1
     })
 }
@@ -94,6 +95,7 @@ function highlightData(d) {
 function clearHightlights() {
   d3.select("#uiResultTable")
     .selectAll("tr")
+    .style("color", "black")
     .style("background-color", "white")
 }
 
@@ -154,8 +156,8 @@ function setupPlot(el, xlab, ylab) {
   
   const xScale = d3.scaleLog().domain([1e-5, 1]).range([0, width])
   const yScale = d3.scaleLog().domain([1e-5, 1]).range([height, 0])
-  const xAxis = d3.axisBottom(xScale).ticks(5, ".0e")
-  const yAxis = d3.axisLeft(yScale).ticks(5, ".0e")
+  const xAxis = d3.axisBottom(xScale).ticks(8, ".0e")
+  const yAxis = d3.axisLeft(yScale).ticks(8, ".0e")
 
   const xAxisGroup = svg.append("g").attr("transform", `translate(0,${height})`)
   const yAxisGroup = svg.append("g")
@@ -206,8 +208,8 @@ function plotData(el, i, j) {
   xScale.domain(setScale(i))
   yScale.domain(setScale(j))
 
-  xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(5, ".0e"))
-  yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(5, ".0e"))
+  xAxisGroup.transition().duration(500).call(d3.axisBottom(xScale).ticks(8, ".0e"))
+  yAxisGroup.transition().duration(500).call(d3.axisLeft(yScale).ticks(8, ".0e"))
 
   const previous = svg.selectAll("circle").data(resultData)
   previous.enter().append("circle")
@@ -232,7 +234,20 @@ export function reset() {
   setupPlot("#uiPlot2", "Probability of a rollback after one boosting", "Probability of a round not reaching quorum")
 }
 
+export function updateParameters() {
+  const B = parseFloat(uiB.value)
+  const U = parseFloat(uiU.value)
+  const activeSlotCoefficient = parseFloat(uiAlpha.value)
+  const k = 2160 + 90 * B
+  uiSecurity.value = Math.round(k)
+  const A = 90 * B / activeSlotCoefficient
+  uiA.value = Math.round(A)
+  uiR.value = Math.round(A / U)
+  uiK.value = Math.round(k / activeSlotCoefficient / U)
+}
+
 export async function initialize() {
+  updateParameters()
   reset()
   calculate()
 }
