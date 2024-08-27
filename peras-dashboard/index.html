@@ -11,6 +11,13 @@
       <div id="uiTopPanel">
         <div id="uiLeftPanel">
           <h1>Peras probability calculator</h1>
+          <p><em>Explore the safety implications of Peras protocol parameter settings.</em></p>
+          <p>Commencing after a boosted block, the adversaries attempt to build a private fork that is longer then the honest chain. If the adversaries succeed, they reveal their chain so that honest parties abandon the honest chain they built, adopt the longer adversarial fork as their preferred chain, and build blocks upon it. Any blocks and transactions that were on the abandoned segment of the honest chain are rolled back.</p>
+          <h2>Scenario</h2>
+          <div id="uiScenario">
+            <div><label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="The fraction of the total stake that is held by adversaries.">&#9432;</span></label></div>
+            <div><input id="uiAdversary" type="number" min="0.001" max="0.999" value="0.200" step="0.001"/></div>
+          </div>
           <h2>Protocol parameters</h2>
           <div id="uiProtocolParameters">
             <div><label for="uiB">Boost (<i>B</i>, in blocks): <span class="help" title="The extra chain weight that a certificate gives to a block.">&#9432;</span></label></div>
@@ -34,20 +41,15 @@
             <div><label for="uiSecurity">Security parameter (<i>k</i>, in blocks): <span class="help" title="The limit on the number of blocks to reach a common prefix.">&#9432;</span></label></div>
             <div><input id="uiSecurity" type="number" value="3150" step="1" disabled="true"/></div>
           </div>
-          <h2>Scenario</h2>
-          <div id="uiScenario">
-            <div><label for="uiAdversary">Fraction of adversarial stake (%/100): <span class="help" title="TO BE ADDED">&#9432;</span></label></div>
-            <div><input id="uiAdversary" type="number" min="0.001" max="0.999" value="0.200" step="0.001"/></div>
-          </div>
           <h2>Performance metrics</h2>
           <div id="uiMetrics">
-            <div><span>Probability of a rollback after one boosting:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div><span>Probability of a rollback after one boosting:</span> <span class="help" title="The probability of rolling back a block that has itself of a descendant boosted.">&#9432;</span></div>
             <div id="uiPostBoost" class="metricOutput"> </div>
-            <div><span>Probability of a rollback in first U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div><span>Probability of a rollback in first U+L slots:</span> <span class="help" title="The probability that a block created just after a boosted block will be rolled back in the subsequent U+L slots.">&#9432;</span></div>
             <div id="uiPre" class="metricOutput"> </div>
-            <div><span>Probability of a rollback after surviving U+L slots:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div><span>Probability of a rollback after surviving U+L slots:</span> <span class="help" title="The probability that of rolling back a block which not been rolled back in the U+L slots since its creation.">&#9432;</span></div>
             <div id="uiPost" class="metricOutput"> </div>
-            <div><span>Probability of a round not reaching quorum:</span> <span class="help" title="TO BE ADDED">&#9432;</span></div>
+            <div><span>Probability of a round not reaching quorum:</span> <span class="help" title="The probability that honest parties will not have sufficient votes to reach a quorum in a given voting round.">&#9432;</span></div>
             <div id="uiNoQuorum" class="metricOutput"> </div>
           </div>
           <br/>
@@ -57,7 +59,7 @@
         <div id="uiRightPanel">
           <svg
              id="uiDiagram"
-             viewBox="-210 0 840.19394 72.64225"
+             viewBox="-2 -2 425 75"
              version="1.1"
              inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
              sodipodi:docname="block-progression.svg"
