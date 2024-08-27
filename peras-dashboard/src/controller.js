@@ -152,14 +152,13 @@ function setupPlot(el, xlab, ylab) {
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
   
-  const xScale = d3.scaleLog().domain([1e-3, 1]).range([0, width])
-  const yScale = d3.scaleLog().domain([1e-3, 1]).range([height, 0])
+  const xScale = d3.scaleLog().domain([1e-5, 1]).range([0, width])
+  const yScale = d3.scaleLog().domain([1e-5, 1]).range([height, 0])
   const xAxis = d3.axisBottom(xScale).ticks(5, ".0e")
   const yAxis = d3.axisLeft(yScale).ticks(5, ".0e")
 
   const xAxisGroup = svg.append("g").attr("transform", `translate(0,${height})`)
-  const yAxisGroup = svg.append("g").call(yAxis)
-
+  const yAxisGroup = svg.append("g")
   xAxisGroup.call(xAxis)
   yAxisGroup.call(yAxis)
 
@@ -172,13 +171,14 @@ function setupPlot(el, xlab, ylab) {
   svg.append("text")
      .attr("class", "y axis-label")
      .attr("text-anchor", "middle")
-     .attr("x", -height / 2)
-     .attr("y", -margin.left + 15)
+     .attr("x", - height / 2)
+     .attr("y", - margin.left + 15)
      .attr("transform", "rotate(-90)")
      .text(ylab)
 
   plots[el] = {
-    xScale : xScale
+    svg : svg
+  , xScale : xScale
   , yScale : yScale
   , xAxisGroup : xAxisGroup
   , yAxisGroup : yAxisGroup
@@ -186,7 +186,7 @@ function setupPlot(el, xlab, ylab) {
 }
 
 function plotData(el, i, j) {
-  const svg = d3.select(el)
+  const svg = plots[el].svg
   const xScale = plots[el].xScale
   const yScale = plots[el].yScale
   const xAxisGroup = plots[el].xAxisGroup
@@ -195,10 +195,13 @@ function plotData(el, i, j) {
   function setScale(k) {
     const mn = d3.min(resultData, d => d[k])
     const mx = d3.max(resultData, d => d[k])
-    return [
-      10**Math.floor(Math.log10(mn))
-    , 10**Math.ceil(Math.log10(mx))
-    ]
+    if (false)
+      return [
+        10**Math.floor(Math.log10(mn))
+      , 10**Math.ceil(Math.log10(mx))
+      ]
+    else
+      return [mn / 2, mx * 2]
   }
   xScale.domain(setScale(i))
   yScale.domain(setScale(j))
