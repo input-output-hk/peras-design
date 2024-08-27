@@ -144,7 +144,7 @@ function setupPlot(el, xlab, ylab) {
 
   const margin = {top: 20, right: 30, bottom: 50, left: 60}
   const width = (uiRightPanel.clientWidth - 20) / 2 - margin.left - margin.right
-  const height = uiTopPanel.clientHeight - margin.top - margin.bottom
+  const height = uiTopPanel.clientHeight - uiDiagram.clientHeight - margin.top - margin.bottom
 
   d3.select(el).selectAll("*").remove()
  
