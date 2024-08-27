@@ -252,8 +252,38 @@ newChain' s c =
 
 {-# COMPILE AGDA2HS newChain' #-}
 
+{-# TERMINATING #-}
+newQuora : ℕ → List Certificate → List Vote → List Certificate
+newQuora _ _ [] = []
+newQuora quorum priorCerts (vote ∷ votes) =
+  let
+    sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
+    sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
+    hasCertificate = any sameCert priorCerts
+    voteCount = length (filter sameVote votes) + 1
+    hasQuorum = intToInteger voteCount >= fromNat quorum
+    remainder = filter (not ∘ sameVote) votes
+  in
+    if not hasCertificate && hasQuorum
+      then (
+        let newCert = MkCertificate (votingRound vote) (blockHash vote)
+        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
+      )
+      else newQuora quorum priorCerts remainder
+
+{-# COMPILE AGDA2HS newQuora #-}
+
+certsFromQuorum : NodeModel → List Certificate
+certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
+
+{-# COMPILE AGDA2HS certsFromQuorum #-}
+
 addVote' : NodeModel → Vote → NodeModel
-addVote' s v = record s { allVotes = v ∷ (allVotes s) }
+addVote' s v =
+  record s
+    { allVotes = v ∷ (allVotes s)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s)
+    }
 
 {-# COMPILE AGDA2HS addVote' #-}
 
@@ -457,27 +487,6 @@ votesInState s = maybeToList do
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-{-# TERMINATING #-}
-newQuora : ℕ → List Certificate → List Vote → List Certificate
-newQuora _ _ [] = []
-newQuora quorum priorCerts (vote ∷ votes) =
-  let
-    sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
-    sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
-    hasCertificate = any sameCert priorCerts
-    voteCount = length (filter sameVote votes) + 1
-    hasQuorum = intToInteger voteCount >= fromNat quorum
-    remainder = filter (not ∘ sameVote) votes
-  in
-    if not hasCertificate && hasQuorum
-      then (
-        let newCert = MkCertificate (votingRound vote) (blockHash vote)
-        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
-      )
-      else newQuora quorum priorCerts remainder
-
-{-# COMPILE AGDA2HS newQuora #-}
-
 checkVoteFromSut : Vote → Bool
 checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 
@@ -501,11 +510,10 @@ checkBlockNotFromSut = not ∘ checkBlockFromSut
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
-                             ; allSeenCerts = foldr insertCert (allSeenCerts s') certsFromQuorum
+                             ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s)
                              })
   where s' = record s { clock = nextSlot (clock s) }
         sutVotes = votesInState s'
-        certsFromQuorum = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
   guard (checkBlockNotFromSut block)

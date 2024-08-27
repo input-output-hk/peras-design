@@ -189,7 +189,59 @@ newChain' s c =
     (protocol s)
     (c : allChains s)
     (allVotes s)
-    (allSeenCerts s)
+    ( foldr
+        insertCert
+        (allSeenCerts s)
+        (mapMaybe (\r -> certificate r) c)
+    )
+
+newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
+newQuora _ _ [] = []
+newQuora quorum priorCerts (vote : votes) =
+  if not
+    ( any
+        ( \cert ->
+            votingRound vote == round cert && blockHash vote == blockRef cert
+        )
+        priorCerts
+    )
+    && intToInteger
+      ( length
+          ( filter
+              ( \vote' ->
+                  votingRound vote == votingRound vote'
+                    && blockHash vote == blockHash vote'
+              )
+              votes
+          )
+          + 1
+      )
+      >= fromIntegral quorum
+    then
+      MkCertificate (votingRound vote) (blockHash vote)
+        : newQuora
+          quorum
+          (MkCertificate (votingRound vote) (blockHash vote) : priorCerts)
+          ( filter
+              ( not
+                  . \vote' ->
+                    votingRound vote == votingRound vote'
+                      && blockHash vote == blockHash vote'
+              )
+              votes
+          )
+    else
+      newQuora
+        quorum
+        priorCerts
+        ( filter
+            ( not
+                . \vote' ->
+                  votingRound vote == votingRound vote'
+                    && blockHash vote == blockHash vote'
+            )
+            votes
+        )
 
 addVote' :: NodeModel -> Vote -> NodeModel
 addVote' s v =
@@ -198,7 +250,14 @@ addVote' s v =
     (protocol s)
     (allChains s)
     (v : allVotes s)
-    (allSeenCerts s)
+    (foldr insertCert (allSeenCerts s) certsFromQuorum)
+ where
+  certsFromQuorum :: [Certificate]
+  certsFromQuorum =
+    newQuora
+      (fromIntegral (perasτ (protocol s)))
+      (allSeenCerts s)
+      (allVotes s)
 
 isYes :: Bool -> Bool
 isYes True = True
@@ -267,54 +326,6 @@ votesInState s =
         guard (slotInRound (protocol s) (clock s) == 0)
         makeVote' s
     )
-
-newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
-newQuora _ _ [] = []
-newQuora quorum priorCerts (vote : votes) =
-  if not
-    ( any
-        ( \cert ->
-            votingRound vote == round cert && blockHash vote == blockRef cert
-        )
-        priorCerts
-    )
-    && intToInteger
-      ( length
-          ( filter
-              ( \vote' ->
-                  votingRound vote == votingRound vote'
-                    && blockHash vote == blockHash vote'
-              )
-              votes
-          )
-          + 1
-      )
-      >= fromIntegral quorum
-    then
-      MkCertificate (votingRound vote) (blockHash vote)
-        : newQuora
-          quorum
-          (MkCertificate (votingRound vote) (blockHash vote) : priorCerts)
-          ( filter
-              ( not
-                  . \vote' ->
-                    votingRound vote == votingRound vote'
-                      && blockHash vote == blockHash vote'
-              )
-              votes
-          )
-    else
-      newQuora
-        quorum
-        priorCerts
-        ( filter
-            ( not
-                . \vote' ->
-                  votingRound vote == votingRound vote'
-                    && blockHash vote == blockHash vote'
-            )
-            votes
-        )
 
 checkVoteFromSut :: Vote -> Bool
 checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
