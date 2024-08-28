@@ -863,27 +863,45 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree : NodeModel
         tree = modelState s₀ sutId
 
-        xxx : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
-        xxx = {!!}
+        nextSlotNotNewRound : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
+        nextSlotNotNewRound = /-% {n = Params.U params} q isSlotZero
 
-        noVotes : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noVotes rewrite isSlotZero rewrite xxx = refl
+        noVotesInState : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noVotesInState rewrite nextSlotNotNewRound = refl
+
+        noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noCertsFromQuorum = {!!}
 
         s₁ : State
         s₁ = tick s₀
 
-        s₁-agrees : modelState (tick s₀) sutId ≡ ms₁
+        s₁-agrees :
+          record
+            { clock        = State.clock s₁
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s₁ ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s₁ ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₁ ⁉ sutId)
+            }
+          ≡
+          let s' = record tree { clock = nextSlot (clock tree) }
+          in record
+               { clock = State.clock s₁
+               ; protocol = modelParams
+               ; allChains = allChains s'
+               ; allVotes = votesInState s' ++ allVotes s'
+               ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
+               }
         s₁-agrees
-          -- rewrite isSlotZero
-          -- rewrite noVotes
-          -- rewrite xxx
-          = {!refl!}
+          rewrite noVotesInState
+          rewrite noCertsFromQuorum
+          = refl
 
         trace : s₀ ↝⋆ s₁
         trace = NextSlot (invFetched inv) q ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
-        votes-agree rewrite noVotes = refl
+        votes-agree rewrite noVotesInState = refl
 
     tick-soundness {vs} {ms₁} s₀ inv refl
       | False
@@ -902,27 +920,34 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree : NodeModel
         tree = modelState s₀ sutId
 
-        xxx : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
-        xxx = {!!}
-
-        noVotes : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noVotes rewrite isSlotZero rewrite xxx = refl
-
         s₁ : State
         s₁ = tick s₀
 
-        s₁-agrees : modelState (tick s₀) sutId ≡ ms₁
+        s₁-agrees :
+          record
+            { clock        = State.clock s₁
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s₁ ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s₁ ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₁ ⁉ sutId)
+            }
+          ≡
+          let s' = record tree { clock = nextSlot (clock tree) }
+          in record
+               { clock = State.clock s₁
+               ; protocol = modelParams
+               ; allChains = allChains s'
+               ; allVotes = votesInState s' ++ allVotes s'
+               ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
+               }
         s₁-agrees
-          -- rewrite isSlotZero
-          -- rewrite noVotes
-          -- rewrite xxx
-          = {!refl!}
+          = {!!}
 
         trace : s₀ ↝⋆ s₁
         trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
-        votes-agree rewrite noVotes = refl
+        votes-agree = {!!}
 
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)

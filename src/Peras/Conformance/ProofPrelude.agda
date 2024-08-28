@@ -49,6 +49,12 @@ suc-definition : ∀ {n} → suc n ≡ n + 1
 suc-definition {zero} = refl
 suc-definition {suc n} = cong suc (suc-definition {n})
 
+postulate -- TODO: proof
+  /-% : ∀ {x n : ℕ} → ⦃ _ : NonZero n ⦄
+    → x / n ≡ (suc x) / n
+    → (x % n ≡ᵇ 0) ≡ False
+    → ((suc x) % n ≡ᵇ 0) ≡ False
+
 import Data.List
 open import Peras.Block
 open import Peras.Chain
