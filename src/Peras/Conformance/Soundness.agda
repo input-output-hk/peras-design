@@ -19,6 +19,7 @@ open import Data.Maybe using (maybe′; nothing; just)
 open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
 open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
+open import Relation.Nullary.Negation using (¬_)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Block
@@ -798,9 +799,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           validSignature : IsVoteSignature v (signature v)
           validSignature with v ← axiom-checkVoteSignature checkedSig rewrite correctVote = v
 
-          creatorExists  : State.blockTrees s₀ ⁉ sutId ≡ just tree
-          creatorExists = {!!}
-
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
           otherExists = {!!}
 
@@ -808,7 +806,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀ sutId}
                         validBlockHash
-                        creatorExists
+                        (sutTree inv)
                         validSignature
                         startOfRound
                         axiom-everyoneIsOnTheCommittee
@@ -852,7 +850,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         record
           { s₁ = s₁
           ; invariant₀ = inv
-          ; invariant₁ = {!!}
+          ; invariant₁ = inv₁
           ; trace = trace
           ; s₁-agrees = s₁-agrees
           ; votes-agree = votes-agree
@@ -903,13 +901,24 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite noVotesInState = refl
 
+        fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
+        fetched {s} x = {!!}
+
+        inv₁ : Invariant s₁
+        inv₁ =
+          record
+            { invFetched = fetched {s₀} (invFetched inv)
+            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            }
+
+
     tick-soundness {vs} {ms₁} s₀ inv refl
       | False
       | no ¬q =
         record
           { s₁ = s₁
           ; invariant₀ = inv
-          ; invariant₁ = {!!}
+          ; invariant₁ = inv₁
           ; trace = trace
           ; s₁-agrees = s₁-agrees
           ; votes-agree = votes-agree
@@ -943,11 +952,21 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           = {!!}
 
+        lastSlot : ¬ (getSlotNumber (State.clock s₀) / Params.U params ≡ suc (getSlotNumber (State.clock s₀)) / Params.U params) → LastSlotInRound s₀
+        lastSlot x = {!!}
+
         trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) {!!} {!!} ↣ ∎
+        trace = NextSlotNewRound (invFetched inv) (lastSlot ¬q) {!!} ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree = {!!}
+
+        inv₁ : Invariant s₁
+        inv₁ =
+          record
+            { invFetched = {!!}
+            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            }
 
 
     @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
