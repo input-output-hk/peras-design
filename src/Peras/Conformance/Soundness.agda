@@ -388,20 +388,24 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         bt₀ = State.blockTrees s₀
 
         set-irrelevant :
+          let s = record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) }
+          in
           record
-            { clock        = State.clock record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) }
+            { clock        = State.clock s
             ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) } ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) } ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) } ⁉ sutId)
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
+          let s = record s₀ { blockTrees = set sutId newVote bt₀ }
+          in
           record
-            { clock        = State.clock record s₀ { blockTrees = set sutId newVote bt₀ }
+            { clock        = State.clock s
             ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId newVote bt₀ } ⁉ sutId)
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
           rewrite k'≢k-get∘set∘set
@@ -412,19 +416,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
-        addVote-votes : vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ votes [] (set sutId newVote bt₀ ⁉ sutId)
-        addVote-votes rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
-
-        addVote-chains : maybe′ chains [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ chains [] (set sutId newVote bt₀ ⁉ sutId)
-        addVote-chains rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
-
-        addVote-certs : foldr insertCert (allSeenCerts tree) (certsFromQuorum tree) ≡ maybe′ certs [] (set sutId newVote bt₀ ⁉ sutId)
-        addVote-certs rewrite get∘set≡id {k = sutId} {v = addVote' tree vote} {m = State.blockTrees s₀} = refl
-
         addVote-modelState :
-          modelState
-            record s₀ { blockTrees = set sutId newVote bt₀ }
-            sutId
+          let s = record s₀ { blockTrees = set sutId newVote bt₀ }
+          in
+          record
+            { clock        = State.clock s
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+            }
           ≡
           record
             { clock        = State.clock s₀
@@ -434,10 +435,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
             }
         addVote-modelState
-          rewrite addVote-votes
-          rewrite addVote-chains
-          rewrite addVote-certs
-          = refl
+          rewrite get∘set≡id
+            {k = sutId}
+            {v = addVote' tree vote}
+            {m = State.blockTrees s₀} = refl
 
         s₁-agrees :
           modelState
@@ -604,20 +605,24 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ↣ ∎
 
         set-irrelevant :
+          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) }
+          in
           record
-            { clock        = State.clock record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) }
+            { clock        = State.clock s
             ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) } ⁉ sutId)
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
+          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+          in
           record
-            { clock        = State.clock record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+            { clock        = State.clock s
             ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) } ⁉ sutId)
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
           rewrite k'≢k-get∘set∘set
@@ -628,20 +633,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
-        newChain-votes : maybe′ votes [] (State.blockTrees s₀ ⁉ sutId) ≡ maybe′ votes [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
-        newChain-votes rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
-
-        newChain-chains : (chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ chains [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
-        newChain-chains rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
-
-        newChain-certs : foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain) ≡
-          maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
-        newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
-
         newChain-modelState :
-          modelState
-            record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
-            sutId
+          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+          in
+          record
+            { clock        = State.clock s
+            ; protocol     = modelParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+            }
           ≡
           record
             { clock        = State.clock s₀
@@ -651,9 +652,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain)
             }
         newChain-modelState
-          rewrite newChain-votes
-          rewrite newChain-chains
-          rewrite newChain-certs
+          rewrite
+            get∘set≡id
+              {k = sutId}
+              {v = newChain tree chain}
+              {m = State.blockTrees s₀}
           = refl
 
         s₁-agrees :
