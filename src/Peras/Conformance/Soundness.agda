@@ -338,7 +338,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         sutExists : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
           trans
-            (k'≢k-get∘set {k = sutId} {k' = creatorId vote} {v = addVote tree v} {m = State.blockTrees s₀} notFromSut)
+            (k'≢k-get∘set
+              {k = sutId}
+              {k' = creatorId vote}
+              {v = addVote tree v}
+              {m = State.blockTrees s₀}
+              notFromSut)
             (sutTree inv)
 
         postulate -- TODO
@@ -388,7 +393,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         bt₀ = State.blockTrees s₀
 
         set-irrelevant :
-          let s = record s₀ { blockTrees = set sutId newVote (set (creatorId vote) newVote bt₀) }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId newVote
+                          (set (creatorId vote) newVote bt₀) }
           in
           record
             { clock        = State.clock s
@@ -398,7 +406,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
-          let s = record s₀ { blockTrees = set sutId newVote bt₀ }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId newVote bt₀ }
           in
           record
             { clock        = State.clock s
@@ -417,7 +427,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             notFromSut = refl
 
         addVote-modelState :
-          let s = record s₀ { blockTrees = set sutId newVote bt₀ }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId newVote bt₀ }
           in
           record
             { clock        = State.clock s
@@ -577,9 +589,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ∷ prefChain tree)
         validChain' with c ← validChain rewrite validHead rewrite validRest = c
 
-        -- validHashes : tipHash (is-TreeType .valid tree) ≡ parentBlock block
-        -- blockExists : BlockSelection (State.clock s) tree ≡ just block
-
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId block) ≡ just tree -- TODO: always the same tree?
         creatorExists = {!!}
 
@@ -605,7 +614,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ↣ ∎
 
         set-irrelevant :
-          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) (State.blockTrees s₀)) }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId (newChain tree chain)
+                          (set (creatorId block) (newChain tree chain)
+                            (State.blockTrees s₀)) }
           in
           record
             { clock        = State.clock s
@@ -615,7 +628,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
-          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId (newChain tree chain)
+                          (State.blockTrees s₀) }
           in
           record
             { clock        = State.clock s
@@ -634,7 +650,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             notFromSut = refl
 
         newChain-modelState :
-          let s = record s₀ { blockTrees = set sutId (newChain tree chain) (State.blockTrees s₀) }
+          let s = record s₀
+                    { blockTrees =
+                        set sutId (newChain tree chain)
+                          (State.blockTrees s₀) }
           in
           record
             { clock        = State.clock s
