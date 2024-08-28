@@ -1,26 +1,24 @@
 
 module Peras.Conformance.Soundness where
 
-open import Haskell.Prelude
-open import Haskell.Prim.Tuple
-open import Haskell.Law.Equality
+open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
 
 open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
-import Data.List
+open import Data.List using (map; mapMaybe; filter; _++_)
 open import Data.List.Membership.Propositional
 open import Data.List.Properties
 import Data.List.Relation.Unary.Any as Any
 open import Data.List.Relation.Unary.Any.Properties
-open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _≥?_; _>?_)
+open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
-open import Data.Maybe using (maybe′; nothing; just)
-open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂)
+open import Data.Maybe using (maybe; maybe′; nothing; just)
+open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂) renaming (_,_ to _⸴_)
 open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
 open import Relation.Nullary.Negation using (¬_)
-open import Relation.Binary.PropositionalEquality using (_≢_)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans)
 
 open import Peras.Block
 open import Peras.Chain
@@ -32,7 +30,9 @@ open import Peras.Util
 open import Prelude.AssocList
 open import Prelude.Default
 open import Prelude.DecEq hiding (_==_; _≟_)
+
 import Peras.SmallStep as SmallStep
+open SmallStep using (⦅_,_,_,_⦆)
 
 open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
@@ -58,32 +58,32 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   uniqueIds' = λ ()
 
   parties : Parties
-  parties = (sutId P., Honest {sutId}) ∷ (otherId P., Honest {otherId}) ∷ [] -- wlog
+  parties = (sutId ⸴ Honest {sutId}) ∷ (otherId ⸴ Honest {otherId}) ∷ [] -- wlog
 
-  sut∈parties : (sutId P., Honest {sutId}) ∈ parties
+  sut∈parties : (sutId ⸴ Honest {sutId}) ∈ parties
   sut∈parties = Any.here refl
 
   sutHonesty : Honesty sutId
   sutHonesty = proj₂ (Any.lookup sut∈parties)
 
-  other∈parties : (otherId P., Honest {otherId}) ∈ parties
+  other∈parties : (otherId ⸴ Honest {otherId}) ∈ parties
   other∈parties = Any.there (Any.here refl)
 
   otherHonesty : Honesty otherId
   otherHonesty = proj₂ (Any.lookup other∈parties)
 
-  apply-filter : Data.List.filter (λ x → ¬? (otherId ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+  apply-filter : filter (λ x → ¬? (otherId ≟ proj₁ x)) parties ≡ (sutId ⸴ Honest {sutId}) ∷ []
   apply-filter =
     let
       f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x))
-             {sutId P., Honest {sutId}} {(otherId P., Honest {otherId}) ∷ []} uniqueIds
-      f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId P., Honest {otherId})} {[]} uniqueIds
+             {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds
+      f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId ⸴ Honest {otherId})} {[]} uniqueIds
     in
-      trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
+      trans f₁ (cong ((sutId ⸴ Honest {sutId}) ∷_) f₂)
 
-  apply-filter' : Data.List.filter (λ x → ¬? (sutId ≟ proj₁ x)) parties ≡ (otherId P., Honest {otherId}) ∷ []
+  apply-filter' : filter (λ x → ¬? (sutId ≟ proj₁ x)) parties ≡ (otherId ⸴ Honest {otherId}) ∷ []
   apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId))
-                    {sutId P., Honest {sutId}} {(otherId P., Honest {otherId}) ∷ []} uniqueIds'
+                    {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds'
 
   modelParams : PerasParams
   modelParams = record
@@ -187,7 +187,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → let
           m = modelState s p
         in
-              (getRoundNumber (rFromSlot m) Data.Nat.> getRoundNumber (round (certS m)))
+              (getRoundNumber (rFromSlot m) > getRoundNumber (round (certS m)))
           P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ _ x = x
@@ -307,24 +307,27 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         msg : List SmallStep.Envelope
         msg =
-          Data.List.map
-            (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
-            (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+          map
+            (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
+            (filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
 
-        map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
+        map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
         map∘apply-filter rewrite apply-filter rewrite voterId = refl
 
-        sut∈messages' : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
+        sut∈messages' : ⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
 
-        sut∈messages : SmallStep.⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+        sut∈messages : ⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg ++ State.messages s₀
         sut∈messages = ++⁺ˡ sut∈messages'
 
         s₁ : State
         s₁ = record s₀
-               { blockTrees = set sutId (addVote tree v) (set (creatorId vote) (addVote tree v) blockTrees)
-               ; messages = (msg Data.List.++ messages) ─ sut∈messages
-               ; history = (VoteMsg v) ∷ history
+               { blockTrees =
+                   set sutId (addVote tree v)
+                     (set (creatorId vote) (addVote tree v)
+                       blockTrees)
+               ; messages = (msg ++ messages) ─ sut∈messages
+               ; history = VoteMsg v ∷ history
                }
              where
                open State s₀
@@ -340,7 +343,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         postulate -- TODO
           filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-            filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
+            Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
 
         opaque
           unfolding votingBlockHash
@@ -472,7 +475,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
-        msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
+        msg₀≡msg₁ : State.messages s₀ ≡ (msg ++ State.messages s₀) ─ sut∈messages
         msg₀≡msg₁ rewrite map∘apply-filter = refl
 
         inv₁ : Invariant s₁
@@ -543,24 +546,27 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         msg : List SmallStep.Envelope
         msg =
-          Data.List.map
-            (P.uncurry SmallStep.⦅_,_, ChainMsg chain , fzero ⦆)
-            (Data.List.filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
+          map
+            (P.uncurry ⦅_,_, ChainMsg chain , fzero ⦆)
+            (filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
 
-        map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
+        map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
         map∘apply-filter rewrite apply-filter rewrite blockId = refl
 
-        sut∈messages' : SmallStep.⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg
+        sut∈messages' : ⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
 
-        sut∈messages : SmallStep.⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+        sut∈messages : ⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg ++ State.messages s₀
         sut∈messages = ++⁺ˡ sut∈messages'
 
         s₁ : State
         s₁ = record s₀
-               { blockTrees = set sutId (newChain tree chain) (set (creatorId block) (newChain tree chain) blockTrees)
-               ; messages = (msg Data.List.++ messages) ─ sut∈messages
-               ; history = (ChainMsg chain) ∷ history
+               { blockTrees =
+                   set sutId (newChain tree chain)
+                     (set (creatorId block) (newChain tree chain)
+                       blockTrees)
+               ; messages = (msg ++ messages) ─ sut∈messages
+               ; history = ChainMsg chain ∷ history
                }
              where
                open State s₀
@@ -628,7 +634,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         newChain-chains : (chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)) ≡ maybe′ chains [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-chains rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
-        newChain-certs : foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (Data.List.mapMaybe certificate chain) ≡
+        newChain-certs : foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain) ≡
           maybe′ certs [] (set sutId (newChain tree chain) (State.blockTrees s₀) ⁉ sutId)
         newChain-certs rewrite get∘set≡id {k = sutId} {v = newChain tree chain} {m = State.blockTrees s₀} = refl
 
@@ -642,7 +648,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (Data.List.mapMaybe certificate chain)
+            ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain)
             }
         newChain-modelState
           rewrite newChain-votes
@@ -657,14 +663,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   set sutId
                     (record tree
                       { allChains = chain ∷ (allChains tree)
-                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate chain)
+                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
                       }
                     )
                     (set
                       (creatorId block)
                       (record tree
                         { allChains = chain ∷ (allChains tree)
-                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate chain)
+                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
                         }
                       )
                       (State.blockTrees s₀)
@@ -673,8 +679,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             )
             sutId
             ≡ record tree
-                { allChains = (block ∷ rest) ∷ Data.Maybe.maybe allChains [] (State.blockTrees s₀ ⁉ 1)
-                ; allSeenCerts = foldr insertCert (allSeenCerts tree) (Data.List.mapMaybe certificate (block ∷ rest))
+                { allChains = (block ∷ rest) ∷ maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
+                ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate (block ∷ rest))
                 }
         s₁-agrees with creatorId block ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
@@ -685,7 +691,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
-        msg₀≡msg₁ : State.messages s₀ ≡ (msg Data.List.++ State.messages s₀) ─ sut∈messages
+        msg₀≡msg₁ : State.messages s₀ ≡ (msg ++ State.messages s₀) ─ sut∈messages
         msg₀≡msg₁ rewrite map∘apply-filter = refl
 
         inv₁ : Invariant s₁
@@ -741,17 +747,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           msg : List SmallStep.Envelope
           msg =
-            Data.List.map
-              (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
-              (Data.List.filter (λ x → ¬? (sutId ≟ proj₁ x)) parties)
+            map
+              (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
+              (filter (λ x → ¬? (sutId ≟ proj₁ x)) parties)
 
-          map∘apply-filter : msg ≡ SmallStep.⦅ otherId , Honest { otherId } , VoteMsg v , fzero ⦆ ∷ []
+          map∘apply-filter : msg ≡ ⦅ otherId , Honest { otherId } , VoteMsg v , fzero ⦆ ∷ []
           map∘apply-filter rewrite apply-filter' = refl
 
-          other∈messages' : SmallStep.⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg
+          other∈messages' : ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg
           other∈messages' rewrite map∘apply-filter = singleton⁺ refl
 
-          other∈messages : SmallStep.⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+          other∈messages : ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg ++ State.messages s₀
           other∈messages = ++⁺ˡ other∈messages'
 
           s₁ : State
@@ -776,7 +782,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           postulate -- TODO
             filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-              filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
+              Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
 
           blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
           blockSelection-eq
@@ -821,8 +827,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                         record
                           { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
                           ; protocol = modelParams
-                          ; allChains = Data.Maybe.maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
-                          ; allVotes = vote ∷ xs ++ Data.Maybe.maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
+                          ; allChains = maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
+                          ; allVotes = vote ∷ xs Haskell.++ maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
                           ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
                           }
           s₁-agrees = {!!}
@@ -884,7 +890,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                { clock = State.clock s₁
                ; protocol = modelParams
                ; allChains = allChains s'
-               ; allVotes = votesInState s' ++ allVotes s'
+               ; allVotes = votesInState s' Haskell.++ allVotes s'
                ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
                }
         s₁-agrees
@@ -943,7 +949,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                { clock = State.clock s₁
                ; protocol = modelParams
                ; allChains = allChains s'
-               ; allVotes = votesInState s' ++ allVotes s'
+               ; allVotes = votesInState s' Haskell.++ allVotes s'
                ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
                }
         s₁-agrees
