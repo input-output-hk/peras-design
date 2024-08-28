@@ -34,9 +34,11 @@ open import Prelude.Default
 open import Prelude.DecEq hiding (_==_; _≟_)
 import Peras.SmallStep as SmallStep
 
-open import Peras.Conformance.Model as Model
 open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
+
+open import Peras.Conformance.Model as Model
+open Model.TreeInstance using (NodeModelTree'; isTreeType)
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
@@ -48,6 +50,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   otherId : ℕ
   otherId = 2
+
+  uniqueIds : otherId ≢ sutId
+  uniqueIds = λ ()
+
+  uniqueIds' : sutId ≢ otherId
+  uniqueIds' = λ ()
 
   parties : Parties
   parties = (sutId P., Honest {sutId}) ∷ (otherId P., Honest {otherId}) ∷ [] -- wlog
@@ -64,7 +72,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   otherHonesty : Honesty otherId
   otherHonesty = proj₂ (Any.lookup other∈parties)
 
-  open Model.TreeInstance using (NodeModelTree'; isTreeType)
+  apply-filter : Data.List.filter (λ x → ¬? (otherId ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
+  apply-filter =
+    let
+      f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x))
+             {sutId P., Honest {sutId}} {(otherId P., Honest {otherId}) ∷ []} uniqueIds
+      f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId P., Honest {otherId})} {[]} uniqueIds
+    in
+      trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
+
+  apply-filter' : Data.List.filter (λ x → ¬? (sutId ≟ proj₁ x)) parties ≡ (otherId P., Honest {otherId}) ∷ []
+  apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId))
+                    {sutId P., Honest {sutId}} {(otherId P., Honest {otherId}) ∷ []} uniqueIds'
 
   modelParams : PerasParams
   modelParams = record
@@ -238,8 +257,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; s₁-agrees   = s₁-agrees
         ; votes-agree = votes-agree
         }
-
       where
+
         slot : SlotNumber
         slot = State.clock s₀
 
@@ -252,9 +271,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
 
-        -- trees-eq : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s₀ ⁉ sutId }) (State.blockTrees s₀)
-        -- trees-eq = allTreesAreEqual inv
-
         startOfRound : StartOfRound slot r
         startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
@@ -264,13 +280,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         postulate -- TODO: as invariant?
           voter∈parties : creatorId vote ∈ map proj₁ parties
 
-        voterId : creatorId vote ≡ 2
+        voterId : creatorId vote ≡ otherId
         voterId with voter∈parties
         ... | Any.here px = ⊥-elim (notFromSut px)
         ... | Any.there (Any.here px) = px
-
-        notFromSut' : 2 ≢ sutId
-        notFromSut' x rewrite sym voterId = notFromSut x
 
         v : Vote
         v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -297,20 +310,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           Data.List.map
             (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
             (Data.List.filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
-
-        apply-filter : Data.List.filter (λ x → ¬? (2 ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
-        apply-filter =
-          let
-            f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
-                   {x = ( sutId P., Honest {sutId} ) }
-                   {xs = ( 2 P., Honest {2} ) ∷ [] }
-                   notFromSut'
-            f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
-                   {x = ( 2 P., Honest {2} ) }
-                   {xs = [] }
-                   notFromSut'
-          in
-            trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
 
         map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
         map∘apply-filter rewrite apply-filter rewrite voterId = refl
@@ -496,10 +495,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; s₁-agrees = refl
         ; votes-agree = refl
         }
-    newChain-soundness s₀ (block ∷ rest) inv prf with
-               checkBlockNotFromSut block in checkedSut
+    newChain-soundness s₀ (block ∷ rest) inv prf
+      with checkBlockNotFromSut block in checkedSut
     newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
-               | True =
+      | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
@@ -537,33 +536,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         postulate -- TODO: as invariant?
           blockCreator∈parties : creatorId block ∈ map proj₁ parties
 
-        blockId : creatorId block ≡ 2
+        blockId : creatorId block ≡ otherId
         blockId with blockCreator∈parties
         ... | Any.here px = ⊥-elim (notFromSut px)
         ... | Any.there (Any.here px) = px
-
-        notFromSut' : 2 ≢ sutId
-        notFromSut' x rewrite sym blockId = notFromSut x
 
         msg : List SmallStep.Envelope
         msg =
           Data.List.map
             (P.uncurry SmallStep.⦅_,_, ChainMsg chain , fzero ⦆)
             (Data.List.filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
-
-        apply-filter : Data.List.filter (λ x → ¬? (2 ≟ proj₁ x)) parties ≡ (sutId P., Honest {sutId}) ∷ []
-        apply-filter =
-          let
-            f₁ = filter-accept (λ x → ¬? (2 ≟ proj₁ x))
-                   {x = ( sutId P., Honest {sutId} ) }
-                   {xs = ( 2 P., Honest {2} ) ∷ [] }
-                   notFromSut'
-            f₂ = filter-reject (λ x → (proj₁ x ≟ sutId))
-                   {x = ( 2 P., Honest {2} ) }
-                   {xs = [] }
-                   notFromSut'
-          in
-            trans f₁ (cong ((sutId P., Honest {sutId}) ∷_) f₂)
 
         map∘apply-filter : msg ≡ SmallStep.⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
         map∘apply-filter rewrite apply-filter rewrite blockId = refl
@@ -757,11 +739,26 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
+          msg : List SmallStep.Envelope
+          msg =
+            Data.List.map
+              (P.uncurry SmallStep.⦅_,_, VoteMsg v , fzero ⦆)
+              (Data.List.filter (λ x → ¬? (sutId ≟ proj₁ x)) parties)
+
+          map∘apply-filter : msg ≡ SmallStep.⦅ otherId , Honest { otherId } , VoteMsg v , fzero ⦆ ∷ []
+          map∘apply-filter rewrite apply-filter' = refl
+
+          other∈messages' : SmallStep.⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg
+          other∈messages' rewrite map∘apply-filter = singleton⁺ refl
+
+          other∈messages : SmallStep.⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msg Data.List.++ State.messages s₀
+          other∈messages = ++⁺ˡ other∈messages'
+
           s₁ : State
           s₁ = record s₀
                  { blockTrees = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)
-                 ; messages = {!!} -- ({!!} ++ messages) ─ {!!}
-                 ; history = (VoteMsg v) ∷ history
+                 ; messages = (msg ++ messages) ─ other∈messages
+                 ; history = VoteMsg v ∷ history
                  }
                where
                  open State s₀
@@ -815,7 +812,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   ↣ Fetch {h = otherHonesty} {m = VoteMsg v}
                       (honest {p = otherId}
                         otherExists
-                        {!!} -- sut∈messages
+                        other∈messages
                         VoteReceived
                       )
                   ↣ ∎
