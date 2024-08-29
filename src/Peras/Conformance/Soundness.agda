@@ -783,7 +783,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           other∈messages = ++⁺ˡ other∈messages'
 
           s₁ : State
-          s₁ = record s₀
+          s₁ = tick record s₀
                  { blockTrees = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)
                  ; messages = (msg ++ messages) ─ other∈messages
                  ; history = VoteMsg v ∷ history
@@ -843,22 +843,25 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                         other∈messages
                         VoteReceived
                       )
+                  ↣ NextSlot {!!} {!!}
                   ↣ ∎
 
-          s₁-agrees : modelState s₁ sutId ≡
-                        record
-                          { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
-                          ; protocol = modelParams
-                          ; allChains = maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
-                          ; allVotes = vote ∷ xs Haskell.++ maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
-                          ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
-                          }
+          s₁-agrees :
+            modelState s₁ sutId
+            ≡
+            record
+              { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
+              ; protocol = modelParams
+              ; allChains = maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
+              ; allVotes = vote ∷ xs Haskell.++ maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
+              ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
+              }
           s₁-agrees = {!!}
 
-          votes-agree : (State.clock s₀ ,
-                                     createVote (State.clock s₀) sutId (proofM vote) (signature vote)
-                                       (blockHash vote)) ∷ []
-                        ≡ (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) xs
+          votes-agree :
+            (State.clock s₀ ,
+              createVote (State.clock s₀) sutId (proofM vote) (signature vote) (blockHash vote)) ∷ []
+            ≡ (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) xs
           votes-agree = {!!}
 
     tick-soundness s₀ inv refl
@@ -889,9 +892,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         nextSlotNotNewRound : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
         nextSlotNotNewRound = /-% {n = Params.U params} q isSlotZero
 
-        noVotesInState : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noVotesInState rewrite nextSlotNotNewRound = refl
-
         noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
         noCertsFromQuorum = {!!}
 
@@ -908,15 +908,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
           ≡
           let s' = record tree { clock = nextSlot (clock tree) }
-          in record
-               { clock = State.clock s₁
-               ; protocol = modelParams
-               ; allChains = allChains s'
-               ; allVotes = votesInState s' Haskell.++ allVotes s'
-               ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
-               }
+          in
+          record
+            { clock = State.clock s₁
+            ; protocol = modelParams
+            ; allChains = allChains s'
+            ; allVotes = votesInState s' Haskell.++ allVotes s'
+            ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
+            }
         s₁-agrees
-          rewrite noVotesInState
+          rewrite nextSlotNotNewRound
           rewrite noCertsFromQuorum
           = refl
 
@@ -924,7 +925,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         trace = NextSlot (invFetched inv) q ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
-        votes-agree rewrite noVotesInState = refl
+        votes-agree rewrite nextSlotNotNewRound = refl
 
         fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
         fetched {s} x = {!!}
@@ -957,6 +958,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ : State
         s₁ = tick s₀
 
+        lastSlotInRound :
+            ¬ (getSlotNumber (State.clock s₀) / Params.U params
+                ≡ suc (getSlotNumber (State.clock s₀)) / Params.U params)
+          → LastSlotInRound s₀
+        lastSlotInRound x = {!!}
+
         s₁-agrees :
           record
             { clock        = State.clock s₁
@@ -967,21 +974,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
           ≡
           let s' = record tree { clock = nextSlot (clock tree) }
-          in record
-               { clock = State.clock s₁
-               ; protocol = modelParams
-               ; allChains = allChains s'
-               ; allVotes = votesInState s' Haskell.++ allVotes s'
-               ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
-               }
+          in
+          record
+            { clock = State.clock s₁
+            ; protocol = modelParams
+            ; allChains = allChains s'
+            ; allVotes = votesInState s' Haskell.++ allVotes s'
+            ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
+            }
         s₁-agrees
           = {!!}
 
-        lastSlot : ¬ (getSlotNumber (State.clock s₀) / Params.U params ≡ suc (getSlotNumber (State.clock s₀)) / Params.U params) → LastSlotInRound s₀
-        lastSlot x = {!!}
-
         trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) (lastSlot ¬q) {!!} ↣ ∎
+        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound ¬q) {!!} ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree = {!!}
