@@ -279,11 +279,8 @@ certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 
 addVote' : NodeModel → Vote → NodeModel
-addVote' s v =
-  record s
-    { allVotes = v ∷ (allVotes s)
-    ; allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s)
-    }
+addVote' s v = record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
+  where s' = record s { allVotes = v ∷ (allVotes s) }
 
 {-# COMPILE AGDA2HS addVote' #-}
 

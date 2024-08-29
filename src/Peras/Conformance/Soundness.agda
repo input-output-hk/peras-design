@@ -387,7 +387,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              ↣ ∎
 
         tree' : NodeModel
-        tree' = addVote' tree vote
+        tree' = addVote' tree v
 
         bt₀ : AssocList ℕ NodeModel
         bt₀ = State.blockTrees s₀
@@ -439,49 +439,36 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
-          record
-            { clock        = State.clock s₀
-            ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
-            ; allVotes     = vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId))
-            ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
-            }
+          let s = record
+                    { clock        = State.clock s₀
+                    ; protocol     = modelParams
+                    ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+                    ; allVotes     = vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId))
+                    ; allSeenCerts = maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)
+                    }
+          in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
         addVote-modelState
           rewrite get∘set≡id
             {k = sutId}
             {v = tree'}
-            {m = State.blockTrees s₀} = refl
+            {m = State.blockTrees s₀}
+          rewrite correctVote
+          = refl
 
         s₁-agrees :
+          let s = record tree { allVotes = v ∷ (allVotes tree) }
+              s' = record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          in
           modelState
-            (record s₀
-              { blockTrees =
-                  set sutId
-                    (record tree
-                      { allVotes = v ∷ (allVotes tree)
-                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
-                      }
-                    )
-                    (set
-                      (creatorId vote)
-                      (record tree
-                        { allVotes = v ∷ (allVotes tree)
-                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
-                        }
-                      )
-                      bt₀
-                    )
-              }
-            )
+            (record s₀ { blockTrees = set sutId s' (set (creatorId vote) s' bt₀) } )
             sutId
           ≡
-          record tree
-            { allVotes = vote ∷ (allVotes tree)
-            ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
-            }
+          let s = record tree { allVotes = vote ∷ (allVotes tree) }
+          in
+          record { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
         s₁-agrees with creatorId vote ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
-        ... | no q rewrite sym correctVote = trans set-irrelevant addVote-modelState
+        ... | no _ = trans set-irrelevant addVote-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId vote ≟ sutId
@@ -856,7 +843,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   ↣ ∎
 
           tree' : NodeModel
-          tree' = addVote' tree vote
+          tree' = addVote' tree v
 
           bt₀ : AssocList ℕ NodeModel
           bt₀ = State.blockTrees s₀
@@ -894,7 +881,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {m  = set sutId tree' bt₀}
               uniqueIds = refl
 
-
           addVote-modelState :
             let s = tick record s₀
                       { blockTrees =
@@ -919,7 +905,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             rewrite get∘set≡id
               {k = sutId}
               {v = tree'}
-              {m = State.blockTrees s₀} = refl
+              {m = bt₀}
+            rewrite sym correctVote
+            = {!refl!} -- TODO
 
           s₁-agrees :
             modelState s₁ sutId
@@ -932,7 +920,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
               }
           s₁-agrees
-            rewrite sym correctVote
             rewrite xs≡[]
             = trans set-irrelevant addVote-modelState
 
