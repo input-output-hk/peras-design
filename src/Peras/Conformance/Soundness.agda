@@ -386,8 +386,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  )
              ↣ ∎
 
-        newVote : NodeModel
-        newVote = addVote' tree vote
+        tree' : NodeModel
+        tree' = addVote' tree vote
 
         bt₀ : AssocList ℕ NodeModel
         bt₀ = State.blockTrees s₀
@@ -395,8 +395,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         set-irrelevant :
           let s = record s₀
                     { blockTrees =
-                        set sutId newVote
-                          (set (creatorId vote) newVote bt₀) }
+                        set sutId tree'
+                          (set (creatorId vote) tree' bt₀) }
           in
           record
             { clock        = State.clock s
@@ -408,7 +408,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ≡
           let s = record s₀
                     { blockTrees =
-                        set sutId newVote bt₀ }
+                        set sutId tree' bt₀ }
           in
           record
             { clock        = State.clock s
@@ -421,15 +421,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite k'≢k-get∘set∘set
             {k  = sutId}
             {k' = creatorId vote}
-            {v  = addVote' tree vote}
-            {v' = addVote' tree vote}
+            {v  = tree'}
+            {v' = tree'}
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
         addVote-modelState :
           let s = record s₀
                     { blockTrees =
-                        set sutId newVote bt₀ }
+                        set sutId tree' bt₀ }
           in
           record
             { clock        = State.clock s
@@ -449,7 +449,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         addVote-modelState
           rewrite get∘set≡id
             {k = sutId}
-            {v = addVote' tree vote}
+            {v = tree'}
             {m = State.blockTrees s₀} = refl
 
         s₁-agrees :
@@ -764,6 +764,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           v : Vote
           v = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
 
+          xs≡[] : xs ≡ []
+          xs≡[] = {!!}
+
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
@@ -784,7 +787,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           s₁ : State
           s₁ = tick record s₀
-                 { blockTrees = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)
+                 { blockTrees =
+                     set otherId (addVote tree v)
+                       (set sutId (addVote tree v)
+                         blockTrees)
                  ; messages = (msg ++ messages) ─ other∈messages
                  ; history = VoteMsg v ∷ history
                  }
@@ -846,23 +852,95 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   ↣ NextSlot {!!} {!!}
                   ↣ ∎
 
+          tree' : NodeModel
+          tree' = addVote' tree vote
+
+          bt₀ : AssocList ℕ NodeModel
+          bt₀ = State.blockTrees s₀
+
+          set-irrelevant :
+            let s = tick record s₀
+                      { blockTrees =
+                          set otherId tree'
+                            (set sutId tree' bt₀) }
+            in
+            record
+              { clock        = State.clock s
+              ; protocol     = modelParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+              }
+            ≡
+            let s = tick record s₀
+                      { blockTrees =
+                          set sutId tree' bt₀ }
+            in
+            record
+              { clock        = State.clock s
+              ; protocol     = modelParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+              }
+          set-irrelevant
+            rewrite k'≢k-get∘set
+              {k  = sutId}
+              {k' = otherId}
+              {v  = tree'}
+              {m  = set sutId tree' bt₀}
+              uniqueIds = refl
+
+
+          addVote-modelState :
+            let s = tick record s₀
+                      { blockTrees =
+                          set sutId tree' bt₀ }
+            in
+            record
+              { clock        = State.clock s
+              ; protocol     = modelParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+              }
+            ≡
+            record
+              { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
+              ; protocol     = modelParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+              ; allVotes     = vote ∷ (maybe′ votes [] (State.blockTrees s₀ ⁉ sutId))
+              ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
+              }
+          addVote-modelState
+            rewrite get∘set≡id
+              {k = sutId}
+              {v = tree'}
+              {m = State.blockTrees s₀} = refl
+
           s₁-agrees :
             modelState s₁ sutId
             ≡
             record
               { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
               ; protocol = modelParams
-              ; allChains = maybe allChains [] (State.blockTrees s₀ ⁉ sutId)
-              ; allVotes = vote ∷ xs Haskell.++ maybe allVotes [] (State.blockTrees s₀ ⁉ sutId)
+              ; allChains = maybe′ allChains [] (State.blockTrees s₀ ⁉ sutId)
+              ; allVotes = vote ∷ xs Haskell.++ maybe′ allVotes [] (State.blockTrees s₀ ⁉ sutId)
               ; allSeenCerts = foldr insertCert (allSeenCerts tree) (certsFromQuorum tree)
               }
-          s₁-agrees = {!!}
+          s₁-agrees
+            rewrite sym correctVote
+            rewrite xs≡[]
+            = trans set-irrelevant addVote-modelState
 
           votes-agree :
-            (State.clock s₀ ,
-              createVote (State.clock s₀) sutId (proofM vote) (signature vote) (blockHash vote)) ∷ []
-            ≡ (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) xs
-          votes-agree = {!!}
+            (State.clock s₀ , v)  ∷ []
+            ≡
+            (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) xs
+          votes-agree
+            rewrite xs≡[]
+            rewrite correctVote
+            = refl
 
     tick-soundness s₀ inv refl
       | True | vote ∷ xs | _ | _ | _ = {!!}
