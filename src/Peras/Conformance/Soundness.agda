@@ -745,7 +745,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         record
           { s₁ = s₁
           ; invariant₀ = inv
-          ; invariant₁ = {!!}
+          ; invariant₁ = inv₁
           ; trace = trace
           ; s₁-agrees = s₁-agrees
           ; votes-agree = votes-agree
@@ -812,14 +812,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
               Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
 
-          blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-          blockSelection-eq
-            rewrite
-              filter-eq
-                {prefChain tree}
-                {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
-                {getSlotNumber slot}
-             = {!!} -- refl
+          opaque
+            unfolding votingBlockHash
+
+            blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
+            blockSelection-eq
+              rewrite
+                filter-eq
+                  {prefChain tree}
+                  {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
+                  {getSlotNumber slot}
+              = refl
 
           validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
           validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
@@ -941,6 +944,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             rewrite xs≡[]
             rewrite correctVote
             = refl
+
+          inv₁ : Invariant s₁
+          inv₁ =
+            record
+              { invFetched = {!!}
+              ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+              }
 
     tick-soundness s₀ inv refl
       | True | vote ∷ xs | _ | _ | _ = {!!}
