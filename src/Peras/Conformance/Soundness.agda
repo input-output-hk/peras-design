@@ -9,6 +9,7 @@ open import Data.List using (map; mapMaybe; filter; _++_)
 open import Data.List.Membership.Propositional
 open import Data.List.Properties
 import Data.List.Relation.Unary.Any as Any
+import Data.List.Relation.Unary.All as All
 open import Data.List.Relation.Unary.Any.Properties
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_)
 open import Data.Nat.Properties
@@ -831,7 +832,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                         other∈messages
                         VoteReceived
                       )
-                  ↣ NextSlot {!!} {!!}
+                  ↣ NextSlot (invFetched inv) {!!}
                   ↣ ∎
 
           tree' : NodeModel
@@ -941,7 +942,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | True | vote ∷ xs | _ | _ | _ = {!!}
 
     tick-soundness s₀ inv refl
-      | True | [] = {!!}
+      | True | [] = {!!} -- a vote is expected
 
     tick-soundness s₀ inv refl
       | False with NextSlotInSameRound? s₀
@@ -995,8 +996,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite nextSlotNotNewRound = refl
 
+        fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
+        fetched→[] {s} x = {!!}
+
         fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
-        fetched {s} x = {!!}
+        fetched {s} x
+          rewrite fetched→[] {s} x
+          = All.[]
 
         inv₁ : Invariant s₁
         inv₁ =
