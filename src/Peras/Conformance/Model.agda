@@ -506,9 +506,9 @@ checkBlockNotFromSut = not ∘ checkBlockFromSut
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
-  Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
-                             ; allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s)
-                             })
+  Just (sutVotes ,
+    let s'' = record s' { allVotes = sutVotes ++ allVotes s' }
+    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
   where s' = record s { clock = nextSlot (clock s) }
         sutVotes = votesInState s'
 transition s (NewChain []) = Just ([] , s)
