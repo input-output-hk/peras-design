@@ -39,7 +39,7 @@ open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
 
 open import Peras.Conformance.Model as Model
-open Model.TreeInstance using (NodeModelTree'; isTreeType)
+open Model.TreeInstance using (NodeModelTree)
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ params     : Params ⦄
@@ -102,7 +102,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       open Params params
       open Network network
 
-  Tree = NodeModelTree' modelParams
+  Tree = NodeModelTree modelParams
 
   open SmallStep.Message
   open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}

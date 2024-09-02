@@ -294,57 +294,48 @@ module TreeInstance
          ⦃ _ : Postulates ⦄
        where
 
-{-
-  valid-NodeModel : ∀ (m : NodeModel) → ValidChain (pref m)
-  valid-NodeModel m with pref m
-  ... | [] = Genesis
-  ... | x ∷ xxx = Cons {!!} {!!} {!!} {!!} {!!}
--}
-
   open import Peras.SmallStep using (TreeType; IsTreeType)
 
   postulate
-    isTreeType : IsTreeType initialModelState newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
-    isTreeType' : (params : PerasParams) → IsTreeType (initialModelState' params) newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
+    isTreeType : (params : PerasParams)
+      → IsTreeType
+        (initialModelState' params)
+        newChain'
+        allChains
+        pref
+        addVote'
+        allVotes
+        allSeenCerts
+        genesisCert
 
 {-
-  isTreeType = record
-                 { instantiated = refl
-                 ; instantiated-certs = refl
-                 ; instantiated-votes = refl
-                 ; extendable-chain = {!!}
-                 ; valid = valid-NodeModel
-                 ; optimal = {!!}
-                 ; self-contained = {!!}
-                 ; valid-votes = {!!}
-                 ; unique-votes = {!!}
-                 ; no-equivocations = {!!}
-                 ; quorum-cert = {!!}
-                 }
+  isTreeType params =
+    record
+      { instantiated = refl
+      ; instantiated-certs = refl
+      ; instantiated-votes = refl
+      ; extendable-chain = {!!} -- TODO: set union
+      ; valid = {!!} -- does that really hold here?
+      ; optimal = {!!}
+      ; self-contained = {!!} -- TODO: genesis?
+      ; valid-votes = {!!}
+      ; unique-votes = {!!}
+      ; no-equivocations = {!!}
+      ; quorum-cert = {!!}
+      }
 -}
 
-  NodeModelTree : TreeType NodeModel
-  NodeModelTree = record {
-    tree₀ = initialModelState ;
-    allChains = allChains ;
-    votes = allVotes ;
-    certs = allSeenCerts ;
-    newChain = newChain' ;
-    preferredChain = pref;
-    addVote = addVote' ;
-    is-TreeType = isTreeType
-    }
-
-  NodeModelTree' : PerasParams → TreeType NodeModel
-  NodeModelTree' params = record {
-    tree₀ = initialModelState' params ;
-    allChains = allChains ;
-    votes = allVotes ;
-    certs = allSeenCerts ;
-    newChain = newChain' ;
-    preferredChain = pref;
-    addVote = addVote' ;
-    is-TreeType = isTreeType' params
+  NodeModelTree : PerasParams → TreeType NodeModel
+  NodeModelTree params =
+    record
+      { tree₀ = initialModelState' params
+      ; allChains = allChains
+      ; votes = allVotes
+      ; certs = allSeenCerts
+      ; newChain = newChain'
+      ; preferredChain = pref
+      ; addVote = addVote'
+      ; is-TreeType = isTreeType params
     }
 
 postulate -- FIXME
