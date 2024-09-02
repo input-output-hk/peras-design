@@ -187,27 +187,24 @@ open NodeModel public
 
 {-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
 
+testParams : PerasParams
+testParams =
+  record defaultPerasParams
+    { perasU = 5
+    ; perasR = 1
+    ; perasK = 1
+    ; perasL = 1
+    ; perasT = 0
+    ; perasΔ = 0
+    ; perasτ = 1
+    }
+
+{-# COMPILE AGDA2HS testParams #-}
+
 initialModelState : NodeModel
 initialModelState = record
   { clock            = 1
-  ; protocol         = record defaultPerasParams
-                       { perasU = 5
-                       ; perasR = 1
-                       ; perasK = 1
-                       ; perasL = 1
-                       ; perasT = 0
-                       ; perasΔ = 0
-                       ; perasτ = 1
-                       }
-  ; allChains        = genesisChain ∷ []
-  ; allVotes         = []
-  ; allSeenCerts     = genesisCert ∷ []
-  }
-
-initialModelState' : PerasParams → NodeModel
-initialModelState' params = record
-  { clock            = 1
-  ; protocol         = params
+  ; protocol         = testParams
   ; allChains        = genesisChain ∷ []
   ; allVotes         = []
   ; allSeenCerts     = genesisCert ∷ []
@@ -297,9 +294,9 @@ module TreeInstance
   open import Peras.SmallStep using (TreeType; IsTreeType)
 
   postulate
-    isTreeType : (params : PerasParams)
-      → IsTreeType
-        (initialModelState' params)
+    isTreeType :
+      IsTreeType
+        initialModelState
         newChain'
         allChains
         pref
@@ -325,17 +322,17 @@ module TreeInstance
       }
 -}
 
-  NodeModelTree : PerasParams → TreeType NodeModel
-  NodeModelTree params =
+  NodeModelTree : TreeType NodeModel
+  NodeModelTree =
     record
-      { tree₀ = initialModelState' params
+      { tree₀ = initialModelState
       ; allChains = allChains
       ; votes = allVotes
       ; certs = allSeenCerts
       ; newChain = newChain'
       ; preferredChain = pref
       ; addVote = addVote'
-      ; is-TreeType = isTreeType params
+      ; is-TreeType = isTreeType
     }
 
 postulate -- FIXME

@@ -18,7 +18,6 @@ record Params : Set where
         τ : ℕ
         B : ℕ
         T : ℕ
-        W : ℕ
 
         ⦃ U-nonZero ⦄ : NonZero U
         ⦃ K-nonZero ⦄ : NonZero K
@@ -47,6 +46,3 @@ The weight boost per vote
 
 #### T
 Termination bound for block selection, in slots
-
-#### W
-The weight to cut off for common prefix

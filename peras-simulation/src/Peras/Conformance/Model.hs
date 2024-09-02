@@ -139,24 +139,22 @@ certS s =
     (comparing (\r -> round r))
     (mapMaybe (\r -> certificate r) (pref s))
 
+testParams :: PerasParams
+testParams =
+  MkPerasParams
+    5
+    (perasA defaultPerasParams)
+    1
+    1
+    1
+    1
+    (perasB defaultPerasParams)
+    0
+    0
+
 initialModelState :: NodeModel
 initialModelState =
-  NodeModel
-    1
-    ( MkPerasParams
-        5
-        (perasA defaultPerasParams)
-        1
-        1
-        1
-        1
-        (perasB defaultPerasParams)
-        0
-        0
-    )
-    [genesisChain]
-    []
-    [genesisCert]
+  NodeModel 1 testParams [genesisChain] [] [genesisCert]
 
 blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
 blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
@@ -243,21 +241,30 @@ newQuora quorum priorCerts (vote : votes) =
             votes
         )
 
+certsFromQuorum :: NodeModel -> [Certificate]
+certsFromQuorum s =
+  newQuora
+    (fromIntegral (perasτ (protocol s)))
+    (allSeenCerts s)
+    (allVotes s)
+
 addVote' :: NodeModel -> Vote -> NodeModel
 addVote' s v =
   NodeModel
-    (clock s)
-    (protocol s)
-    (allChains s)
-    (v : allVotes s)
-    (foldr insertCert (allSeenCerts s) certsFromQuorum)
+    (clock s')
+    (protocol s')
+    (allChains s')
+    (allVotes s')
+    (foldr insertCert (allSeenCerts s') (certsFromQuorum s'))
  where
-  certsFromQuorum :: [Certificate]
-  certsFromQuorum =
-    newQuora
-      (fromIntegral (perasτ (protocol s)))
+  s' :: NodeModel
+  s' =
+    NodeModel
+      (clock s)
+      (protocol s)
+      (allChains s)
+      (v : allVotes s)
       (allSeenCerts s)
-      (allVotes s)
 
 isYes :: Bool -> Bool
 isYes True = True
@@ -348,7 +355,19 @@ transition s Tick =
         (protocol s')
         (allChains s')
         (sutVotes ++ allVotes s')
-        (foldr insertCert (allSeenCerts s') certsFromQuorum)
+        ( foldr
+            insertCert
+            (allSeenCerts s')
+            ( certsFromQuorum
+                ( NodeModel
+                    (clock s')
+                    (protocol s')
+                    (allChains s')
+                    (sutVotes ++ allVotes s')
+                    (allSeenCerts s')
+                )
+            )
+        )
     )
  where
   s' :: NodeModel
@@ -361,12 +380,6 @@ transition s Tick =
       (allSeenCerts s)
   sutVotes :: [Vote]
   sutVotes = votesInState s'
-  certsFromQuorum :: [Certificate]
-  certsFromQuorum =
-    newQuora
-      (fromIntegral (perasτ (protocol s)))
-      (allSeenCerts s)
-      (allVotes s)
 transition s (NewChain []) = Just ([], s)
 transition s (NewChain (block : rest)) =
   do

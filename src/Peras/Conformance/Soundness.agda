@@ -42,8 +42,6 @@ open import Peras.Conformance.Model as Model
 open Model.TreeInstance using (NodeModelTree)
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ params     : Params ⦄
-         ⦃ network    : Network ⦄
          ⦃ postulates : Postulates ⦄
          {S : Set} {adversarialState₀ : S}
          {txSelection : SlotNumber → PartyId → List Tx}
@@ -87,22 +85,28 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds'
 
   modelParams : PerasParams
-  modelParams = record
-    { perasU = U
-    ; perasA = A
-    ; perasR = R
-    ; perasL = L
-    ; perasτ = τ
-    ; perasB = B
-    ; perasK = K
-    ; perasT = T
-    ; perasΔ = Δ
-    }
-    where
-      open Params params
-      open Network network
+  modelParams = testParams
 
-  Tree = NodeModelTree modelParams
+  Tree = NodeModelTree
+
+  instance
+    network : Network
+    network =
+      record
+        { Δ = perasΔ testParams }
+
+    params : Params
+    params =
+      record
+        { U = perasU testParams
+        ; K = perasK testParams
+        ; R = perasR testParams
+        ; L = perasL testParams
+        ; A = perasA testParams
+        ; τ = perasτ testParams
+        ; B = perasB testParams
+        ; T = perasT testParams
+        }
 
   open SmallStep.Message
   open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
