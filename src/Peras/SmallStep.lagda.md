@@ -173,7 +173,7 @@ Properties that must hold with respect to chains, certificates and votes.
         votes tree₀ ≡ []
 
       extendable-chain : ∀ (t : T) (c : Chain)
-        → certs (newChain t c) ≡ certsFromChain c ++ certs t
+        → certs (newChain t c) ≡ certsFromChain c ++ certs t -- TODO: set union
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)

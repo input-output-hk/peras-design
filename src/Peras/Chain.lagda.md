@@ -5,7 +5,7 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; catMaybes; zip) renaming (length to ∣_∣)
+open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; mapMaybe; zip) renaming (length to ∣_∣)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
 open import Data.List.Relation.Unary.All using (All)
@@ -297,7 +297,7 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 ```agda
   certsFromChain : Chain → List Certificate
-  certsFromChain = catMaybes ∘ map certificate
+  certsFromChain = mapMaybe certificate
 ```
 <!--
 ```agda
