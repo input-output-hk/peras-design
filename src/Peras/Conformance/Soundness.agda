@@ -531,7 +531,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validChain : ValidChain (block ∷ rest)
         validChain = {!!}
 
-        postulate -- TODO: as invariant?
+        postulate -- must be otherId which is a member of the parties
           blockCreator∈parties : creatorId block ∈ map proj₁ parties
 
         blockId : creatorId block ≡ otherId
@@ -720,7 +720,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
            | votingBlockHash (modelState s₀ sutId) == blockHash vote in isValidBlockHash
 
     tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ xs | True | True | True =
+      | True | vote ∷ [] | True | True | True =
 
         record
           { s₁ = s₁
@@ -743,9 +743,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           v : Vote
           v = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
-
-          xs≡[] : xs ≡ []
-          xs≡[] = {!!}
 
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -915,19 +912,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ≡
             let s = record tree
                       { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
-                      ; allVotes = vote ∷ xs Haskell.++ maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
+                      ; allVotes = vote ∷ maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
           s₁-agrees
-            rewrite xs≡[]
             = trans set-irrelevant addVote-modelState
 
           votes-agree :
             (State.clock s₀ , v)  ∷ []
             ≡
-            (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) xs
+            (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) []
           votes-agree
-            rewrite xs≡[]
             rewrite correctVote
             = refl
 
@@ -937,6 +932,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               { invFetched = {!!}
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               }
+
+    tick-soundness {vs} s₀ inv refl
+      | True | vote ∷ (x ∷ xs) | True | True | True = {!!} -- contradiction: length vs ≡ 1
 
     tick-soundness s₀ inv refl
       | True | vote ∷ xs | _ | _ | _ = {!!}
@@ -967,7 +965,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         nextSlotNotNewRound = /-% {n = Params.U params} q isSlotZero
 
         noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noCertsFromQuorum = {!!}
+        noCertsFromQuorum = {!!} -- no new vote has been added
 
         s₁ : State
         s₁ = tick s₀
@@ -997,7 +995,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         votes-agree rewrite nextSlotNotNewRound = refl
 
         fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
-        fetched→[] {s} x = {!!}
+        fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
 
         fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
         fetched {s} x
