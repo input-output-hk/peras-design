@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -8,7 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Peras.Conformance.Test.Prototype where
+module Peras.Conformance.Test.External where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
 import Control.Concurrent.STM.TVar qualified as IO
@@ -20,20 +21,26 @@ import Control.Monad.State (
   modify,
  )
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
+import GHC.Generics (Generic)
+import Peras.Block
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (BadVote, NewChain, NewVote, Tick),
   NodeModel (..),
   transition,
  )
+import Peras.Conformance.Params
 import Peras.Conformance.Test (Action (Step), modelSUT)
-import Peras.Numbering (RoundNumber (getRoundNumber))
+import Peras.Numbering
 import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
+  IsCommitteeMember,
+  IsSlotLeader,
   isCommitteeMember,
   mkCommitteeMember,
  )
@@ -74,6 +81,70 @@ import Text.PrettyPrint (hang, vcat, (<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 import Prelude hiding (round)
 
+class Monad m => NodeApi m where
+  apiinitialize :: SlotNumber -> PerasParams -> [Chain] -> [Vote] -> [Certificate] -> m ()
+  apitick :: m ()
+  apifetching :: [Chain] -> [Vote] -> m ()
+  apiblockCreation :: IsSlotLeader -> m (Maybe Chain)
+  apivoting :: IsCommitteeMember -> m (Maybe Vote)
+  apistep :: IsSlotLeader -> IsCommitteeMember -> [Chain] -> [Vote] -> m (Maybe Chain, Maybe Vote)
+  apistep isSlotLeader isCommitteeMember newChains newVotes =
+    do
+      apitick
+      apifetching newChains newVotes
+      newChain <- apiblockCreation isSlotLeader
+      newVote <- apivoting isCommitteeMember
+      pure (newChain, newVote)
+
+data NodeRequest
+  = Initialize
+      { party :: Party
+      , slotNumber :: SlotNumber
+      , parameters :: PerasParams
+      , chainsSeen :: [Chain]
+      , votesSeen :: [Vote]
+      , certsSeen :: [Certificate]
+      }
+  | Tick
+  | Fetching
+      { newChains :: [Chain]
+      , newVotes :: [Vote]
+      }
+  | BlockCreation
+      { isSlotLeader :: IsSlotLeader
+      }
+  | Voting
+      { isCommitteeMember :: IsCommitteeMember
+      }
+  | Step
+      { isSlotLeader :: IsSlotLeader
+      , isCommitteeMember :: IsCommitteeMember
+      , newChains :: [Chain]
+      , newVotes :: [Vote]
+      }
+  | Stop
+  deriving (Eq, Generic, Show)
+
+instance FromJSON NodeRequest
+instance ToJSON NodeRequest
+
+data NodeResponse
+  = NodeResponse
+      { diffuseChains :: [Chain]
+      , diffuseVotes :: [Vote]
+      }
+  | Failed
+      { failure :: String
+      }
+  | Stopped
+  deriving (Eq, Generic, Show)
+
+instance Default NodeResponse where
+  def = NodeResponse mempty mempty
+
+instance FromJSON NodeResponse
+instance ToJSON NodeResponse
+
 data RunState m = RunState
   { stateVar :: TVar m PerasState
   , diffuserVar :: TVar m Diffuser
@@ -85,19 +156,19 @@ data RunState m = RunState
 type Runtime m = StateT (RunState m) m
 
 instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform NodeModel{..} (Step a) _ = case a of
-    Tick -> do
+  perform NodeModel{..} (Peras.Conformance.Test.Step a) _ = case a of
+    Peras.Conformance.Model.Tick -> do
       RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       lift $ do
         let clock' = clock + 1
         -- TODO: also invoke blockCreation
-        _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
+        _ <- Peras.Prototype.Fetching.fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
         let roundNumber = inRound clock' protocol
-            party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
+            party = mkCommitteeMember modelSUT protocol clock' (Peras.Prototype.Crypto.isCommitteeMember modelSUT roundNumber)
             selectBlock' = selectBlock nullTracer
             diffuser = diffuseVote diffuserVar
-        _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
+        _ <- Peras.Prototype.Voting.voting tracer protocol party stateVar clock' selectBlock' diffuser
         (cs, vs) <- popChainsAndVotes diffuserVar clock'
         pure vs
     NewChain c -> do
@@ -110,12 +181,12 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
-  postcondition (s, s') (Step a) _ r = do
+  postcondition (s, s') (Peras.Conformance.Test.Step a) _ r = do
     let expected = fst (fromJust (transition s a))
     -- let ok = length r == length expected
     let ok = r == expected
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
-    when (a == Tick && newRound (clock s') (protocol s')) $
+    when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
     unless (null r) $ do
