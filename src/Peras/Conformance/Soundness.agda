@@ -282,11 +282,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         σ : Signature
         σ = signature vote
 
-        postulate -- TODO: as invariant?
+        postulate -- TODO: PartyId as Data.Fin
           voter∈parties : creatorId vote ∈ map proj₁ parties
 
-        voterId : creatorId vote ≡ otherId
-        voterId with voter∈parties
+        creatorId≡otherId : creatorId vote ≡ otherId
+        creatorId≡otherId with voter∈parties
         ... | Any.here px = ⊥-elim (notFromSut px)
         ... | Any.there (Any.here px) = px
 
@@ -317,7 +317,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
 
         map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
-        map∘apply-filter rewrite apply-filter rewrite voterId = refl
+        map∘apply-filter rewrite apply-filter rewrite creatorId≡otherId = refl
 
         sut∈messages' : ⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
@@ -383,13 +383,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     axiom-everyoneIsOnTheCommittee
                     validVote
                   )
-             ↣ Fetch {h = sutHonesty} {m = VoteMsg v}
-                 (honest {p = sutId}
-                   sutExists
-                   sut∈messages
-                   VoteReceived
-                 )
-             ↣ ∎
+              ↣ Fetch {h = sutHonesty} {m = VoteMsg v}
+                  (honest {p = sutId}
+                    sutExists
+                    sut∈messages
+                    VoteReceived
+                  )
+              ↣ ∎
 
         tree' : NodeModel
         tree' = addVote' tree v
@@ -748,6 +748,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           v : Vote
           v = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
 
+          postulate
+            creatorId≡sutId : creatorId vote ≡ sutId
+
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
@@ -808,11 +811,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
           validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
 
+          postulate -- TODO: put this as we into the `transition`...?
+            vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+
           correctVote : vote ≡ v
-          correctVote = {!!}
+          correctVote
+            rewrite sym creatorId≡sutId
+            = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
           validSignature : IsVoteSignature v (signature v)
-          validSignature with v ← axiom-checkVoteSignature checkedSig rewrite correctVote = v
+          validSignature with v ← axiom-checkVoteSignature checkedSig
+            rewrite correctVote rewrite (sym creatorId≡sutId) = v
 
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
           otherExists = {!!}
@@ -1040,6 +1049,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           → LastSlotInRound s₀
         lastSlotInRound x = {!!}
 
+        noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noCertsFromQuorum = {!!} -- no new vote has been added
+
+        noVoteInState : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
+        noVoteInState = {!!}
+
         s₁-agrees :
           record
             { clock        = State.clock s₁
@@ -1054,13 +1069,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           in
           record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') }
         s₁-agrees
-          = {!!}
+          rewrite noVoteInState
+          rewrite noCertsFromQuorum
+          = refl
 
         trace : s₀ ↝⋆ s₁
         trace = NextSlotNewRound (invFetched inv) (lastSlotInRound ¬q) {!!} ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
-        votes-agree = {!!}
+        votes-agree rewrite noVoteInState = refl
 
         inv₁ : Invariant s₁
         inv₁ =

@@ -139,7 +139,7 @@ preferredChain params certs =
 makeVote : PerasParams → SlotNumber → Hash Block → Vote
 makeVote params slot h =
   let r = slotToRound params slot
-      party = mkParty 1 [] (r ∷ [])
+      party = mkParty sutId [] (r ∷ [])
       proof = createMembershipProof r (party ∷ [])
   in createSignedVote party r h proof 1
 
