@@ -240,11 +240,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     newVote-soundness s₀ vote inv prf
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
+         | div (getSlotNumber (State.clock s₀)) (Params.U params) == getRoundNumber (votingRound vote) in isVotingRound
          | checkSignedVote vote in checkedSig
          | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀ sutId)) in checkedVRs
          | votingBlockHash (modelState s₀ sutId) == blockHash vote in isValidBlockHash
-    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
+    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True | True =
       record
         { s₁          = s₁
         ; invariant₀  = inv
@@ -262,8 +263,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         r = v-round slot
 
         notFromSut : creatorId vote ≢ sutId
-        notFromSut x =
-          uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
+        notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
 
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
@@ -291,8 +291,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           in
             S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
 
-        postulate -- TODO: put this as we into the `transition`...?
-          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+        vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+        vote-round = sym (eqℕ-sound isVotingRound)
 
         correctVote : vote ≡ v
         correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
@@ -791,8 +791,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
           validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
 
-          postulate -- TODO: put this as we into the `transition`...?
-            vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+          vote-round = {!!}
 
           creatorId≡sutId : creatorId vote ≡ sutId
           creatorId≡sutId = {!!}
