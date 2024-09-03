@@ -204,7 +204,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       field
         invFetched : Fetched s
         sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s)
-        -- allTreesAreEqual : All (λ { bt → (just (proj₂ bt)) ≡ State.blockTrees s ⁉ sutId }) (State.blockTrees s)
+        otherTree : State.blockTrees s ⁉ otherId ≡ just (modelState s)
 
     open Invariant
 
@@ -324,8 +324,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              where
                open State s₀
 
-        creatorExists  : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree -- TODO: always the same tree?
-        creatorExists = {!!}
+        creatorExists : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
+        creatorExists
+          rewrite creatorId≡otherId
+          = otherTree inv
 
         sutExists : set (creatorId vote) (addVote tree v) (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
@@ -468,6 +470,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record
             { invFetched = i
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
     @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
@@ -557,8 +560,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              where
                open State s₀
 
-        creatorExists  : State.blockTrees s₀ ⁉ (creatorId block) ≡ just tree -- TODO: always the same tree?
-        creatorExists = {!!}
+        creatorExists  : State.blockTrees s₀ ⁉ (creatorId block) ≡ just tree
+        creatorExists
+          rewrite creatorId≡otherId
+          = otherTree inv
 
         sutExists : set (creatorId block) (newChain tree chain) (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
@@ -686,6 +691,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record
             { invFetched = i
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
     @0 tick-soundness : ∀ {vs ms₁} s₀
@@ -806,7 +812,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = v
 
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
-          otherExists = {!!}
+          otherExists =
+            trans
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = State.blockTrees s₀} uniqueIds')
+              (otherTree inv)
 
           trace : s₀ ↝⋆ s₁
           trace = CreateVote (invFetched inv)
@@ -925,6 +934,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             record
               { invFetched = {!!}
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+              ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
 
     tick-soundness {vs} s₀ inv refl
@@ -1001,6 +1011,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record
             { invFetched = fetched {s₀} (invFetched inv)
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
 
@@ -1065,6 +1076,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record
             { invFetched = {!!}
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
 
