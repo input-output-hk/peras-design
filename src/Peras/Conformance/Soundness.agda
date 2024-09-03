@@ -966,7 +966,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree = modelState s₀ sutId
 
         nextSlotNotNewRound : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
-        nextSlotNotNewRound = /-% {n = Params.U params} q isSlotZero
+        nextSlotNotNewRound = /-% {x = getSlotNumber (State.clock s₀)} {n = Params.U params} q isSlotZero
 
         noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
         noCertsFromQuorum = {!!} -- no new vote has been added
