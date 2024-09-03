@@ -293,6 +293,14 @@ module TreeInstance
 
   open import Peras.SmallStep using (TreeType; IsTreeType)
 
+{-
+  open import Data.List.Membership.Propositional
+
+  postulate
+    maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
+      → maximumBy d o l ≡ d ⊎ maximumBy d o l ∈ l
+-}
+
   postulate
     isTreeType :
       IsTreeType
@@ -306,7 +314,7 @@ module TreeInstance
         genesisCert
 
 {-
-  isTreeType params =
+  isTreeType =
     record
       { instantiated = refl
       ; instantiated-certs = refl
@@ -314,7 +322,11 @@ module TreeInstance
       ; extendable-chain = {!!} -- TODO: set union
       ; valid = {!!} -- does that really hold here?
       ; optimal = {!!}
-      ; self-contained = {!!} -- TODO: genesis?
+      ; self-contained = λ { t →
+        case (maximumBy-default-or-∈ genesisChain _ (allChains t)) of λ where
+          (inj₁ p) → {!!} -- holds for initialStateModel
+          (inj₂ p) → p
+        }
       ; valid-votes = {!!}
       ; unique-votes = {!!}
       ; no-equivocations = {!!}
