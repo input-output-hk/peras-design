@@ -8,45 +8,56 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.Conformance.Test where
 
-import Control.Concurrent.Class.MonadSTM
-import Control.Concurrent.STM.TVar qualified as IO
-import Control.Monad
-import Control.Monad.State hiding (state)
-import Control.Tracer
-import Data.Default
-import Data.Foldable ()
-import Data.Function
-import Data.IORef
-import Data.Maybe
+import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
-import Data.Set qualified as Set
 import Peras.Arbitraries ()
-import Peras.Block
-import Peras.Chain
-import Peras.Conformance.Model
-import Peras.Crypto
-import Peras.Numbering
-import Peras.Prototype.BlockSelection
-import Peras.Prototype.Crypto
-import Peras.Prototype.Diffusion
-import Peras.Prototype.Fetching
+import Peras.Block (Block (..), Certificate (..), Party (pid))
+import Peras.Chain (Vote (..))
+import Peras.Conformance.Model (
+  EnvAction (..),
+  NodeModel (..),
+  initialModelState,
+  transition,
+ )
+import Peras.Crypto (Hashable (hash))
+import Peras.Numbering (
+  RoundNumber (getRoundNumber),
+  SlotNumber (getSlotNumber),
+ )
+import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Trace qualified as Trace
-import Peras.Prototype.Types
-import Peras.Prototype.Voting
-import Test.QuickCheck
+import Peras.Prototype.Types (hashTip, inRound, newRound)
+import Test.QuickCheck (
+  Arbitrary (arbitrary),
+  choose,
+  elements,
+  frequency,
+  suchThat,
+ )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.Extras
-import Test.QuickCheck.Monadic
-import Test.QuickCheck.StateModel
-import Text.PrettyPrint hiding ((<>))
-import Text.PrettyPrint.HughesPJClass hiding ((<>))
+import Test.QuickCheck.StateModel (
+  Any (Some),
+  HasVariables (..),
+  StateModel (
+    Action,
+    arbitraryAction,
+    initialState,
+    nextState,
+    precondition,
+    shrinkAction
+  ),
+ )
+import Text.PrettyPrint (braces, hang, text, vcat, (<+>))
+import Text.PrettyPrint.HughesPJClass (
+  Pretty (pPrint, pPrintPrec),
+  maybeParens,
+  prettyNormal,
+ )
 import Prelude hiding (round)
 
 instance HasVariables NodeModel where
@@ -220,74 +231,3 @@ instance StateModel NodeModel where
   precondition s (Step a) = isJust (transition s a)
 
   nextState s (Step a) _ = snd . fromJust $ transition s a
-
-data RunState m = RunState
-  { stateVar :: TVar m PerasState
-  , diffuserVar :: TVar m Diffuser
-  , tracer :: Tracer m Trace.PerasLog
-  , unfetchedChains :: [Chain]
-  , unfetchedVotes :: [Vote]
-  }
-
-type Runtime m = StateT (RunState m) m
-
-instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform NodeModel{..} (Step a) _ = case a of
-    Tick -> do
-      RunState{..} <- get
-      modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
-      lift $ do
-        let clock' = clock + 1
-        -- TODO: also invoke blockCreation
-        _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
-        let roundNumber = inRound clock' protocol
-            party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
-            selectBlock' = selectBlock nullTracer
-            diffuser = diffuseVote diffuserVar
-        _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
-        (cs, vs) <- popChainsAndVotes diffuserVar clock'
-        pure vs
-    NewChain c -> do
-      modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
-      pure mempty
-    NewVote v -> do
-      modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
-      pure mempty
-    BadVote v -> do
-      modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
-      pure mempty
-
-  postcondition (s, s') (Step a) _ r = do
-    let expected = fst (fromJust (transition s a))
-    -- let ok = length r == length expected
-    let ok = r == expected
-    monitorPost . counterexample . show $ "  action $" <+> pPrint a
-    when (a == Tick && newRound (clock s') (protocol s')) $
-      monitorPost . counterexample $
-        "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null r) $ do
-      monitorPost . counterexample . show $ "  --      got:" <+> pPrint r
-    counterexamplePost . show $ "  -- expected:" <+> pPrint expected
-    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
-    pure ok
-
-prop_node :: Blind (Actions NodeModel) -> Property
-prop_node (Blind as) = noShrinking $
-  ioProperty $ do
-    stateVar <- IO.newTVarIO initialPerasState
-    diffuserVar <- IO.newTVarIO def
-    traceRef <- newIORef []
-    let unfetchedChains = mempty
-        unfetchedVotes = mempty
-        tracer = Tracer $ emit $ \a -> modifyIORef traceRef (a :)
-        printTrace = do
-          putStrLn "-- Trace from node:"
-          trace <- readIORef traceRef
-          print $ vcat . map pPrint $ reverse trace
-    pure $
-      whenFail printTrace $
-        monadicIO $ do
-          monitor $ counterexample "-- Actions:"
-          monitor $ counterexample "do"
-          _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
-          pure True

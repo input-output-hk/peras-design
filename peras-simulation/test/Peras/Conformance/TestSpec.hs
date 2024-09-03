@@ -3,7 +3,7 @@ module Peras.Conformance.TestSpec where
 import Control.Monad.State (evalStateT)
 import Data.Default (def)
 import Data.Functor (void)
-import Peras.Conformance.Test (prop_node)
+import Peras.Conformance.Test.Prototype (prop_node)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Blind (Blind), Gen, Property, Testable, expectFailure, property)

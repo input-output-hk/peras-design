@@ -45,6 +45,7 @@ library
                      Peras.Conformance.Orphans
                      Peras.Conformance.Params
                      Peras.Conformance.Test
+                     Peras.Conformance.Test.Prototype
                      Peras.Crypto
                      Peras.Event
                      Peras.Foreign
