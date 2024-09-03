@@ -47,9 +47,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {txSelection : SlotNumber → PartyId → List Tx}
     where
 
-  otherId : ℕ
-  otherId = 2
-
   uniqueIds : otherId ≢ sutId
   uniqueIds = λ ()
 
@@ -197,12 +194,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ _ x = x
 
-    creatorId≢sutId : ∀ {vote : Vote} → checkVoteNotFromSut vote ≡ True → creatorId vote ≢ sutId
-    creatorId≢sutId x = not-eqℕ-sound x
-
-    blockCreatorId≢sutId : ∀ {block : Block} → checkBlockNotFromSut block ≡ True → creatorId block ≢ sutId
-    blockCreatorId≢sutId x = not-eqℕ-sound x
-
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
         → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ p)
@@ -250,7 +241,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newVote-soundness s₀ vote inv prf
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
          | checkSignedVote vote in checkedSig
-         | checkVoteNotFromSut vote in checkedSut
+         | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀ sutId)) in checkedVRs
          | votingBlockHash (modelState s₀ sutId) == blockHash vote in isValidBlockHash
     newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True =
@@ -271,7 +262,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         r = v-round slot
 
         notFromSut : creatorId vote ≢ sutId
-        notFromSut = creatorId≢sutId {vote} checkedSut
+        notFromSut x =
+          uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
 
         tree : NodeModel
         tree = modelState s₀ sutId -- we don't track the block trees for the environment nodes in the test model!
@@ -282,13 +274,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         σ : Signature
         σ = signature vote
 
-        postulate -- TODO: PartyId as Data.Fin
-          voter∈parties : creatorId vote ∈ map proj₁ parties
-
         creatorId≡otherId : creatorId vote ≡ otherId
-        creatorId≡otherId with voter∈parties
-        ... | Any.here px = ⊥-elim (notFromSut px)
-        ... | Any.there (Any.here px) = px
+        creatorId≡otherId = eqℕ-sound checkedOther
 
         v : Vote
         v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
@@ -498,7 +485,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; votes-agree = refl
         }
     newChain-soundness s₀ (block ∷ rest) inv prf
-      with checkBlockNotFromSut block in checkedSut
+      with checkBlockFromOther block in checkedOther
     newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
       | True =
       record
@@ -515,7 +502,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         slot = State.clock s₀
 
         notFromSut : creatorId block ≢ sutId
-        notFromSut = blockCreatorId≢sutId {block} checkedSut
+        notFromSut x =
+          uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
 
         tree : NodeModel
         tree = modelState s₀ sutId
@@ -535,13 +523,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validChain : ValidChain (block ∷ rest)
         validChain = {!!}
 
-        postulate -- must be otherId which is a member of the parties
-          blockCreator∈parties : creatorId block ∈ map proj₁ parties
-
-        blockId : creatorId block ≡ otherId
-        blockId with blockCreator∈parties
-        ... | Any.here px = ⊥-elim (notFromSut px)
-        ... | Any.there (Any.here px) = px
+        creatorId≡otherId : creatorId block ≡ otherId
+        creatorId≡otherId = eqℕ-sound checkedOther
 
         msg : List SmallStep.Envelope
         msg =
@@ -550,7 +533,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
 
         map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
-        map∘apply-filter rewrite apply-filter rewrite blockId = refl
+        map∘apply-filter rewrite apply-filter rewrite creatorId≡otherId = refl
 
         sut∈messages' : ⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
@@ -748,9 +731,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           v : Vote
           v = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
 
-          postulate
-            creatorId≡sutId : creatorId vote ≡ sutId
-
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
@@ -814,6 +794,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           postulate -- TODO: put this as we into the `transition`...?
             vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
 
+          creatorId≡sutId : creatorId vote ≡ sutId
+          creatorId≡sutId = {!!}
+
           correctVote : vote ≡ v
           correctVote
             rewrite sym creatorId≡sutId
@@ -821,7 +804,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           validSignature : IsVoteSignature v (signature v)
           validSignature with v ← axiom-checkVoteSignature checkedSig
-            rewrite correctVote rewrite (sym creatorId≡sutId) = v
+            rewrite correctVote rewrite (sym creatorId≡sutId)
+            = v
 
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
           otherExists = {!!}

@@ -71,6 +71,11 @@ sutId = 1
 
 {-# COMPILE AGDA2HS sutId #-}
 
+otherId : PartyId
+otherId = 2
+
+{-# COMPILE AGDA2HS otherId #-}
+
 insertCert : Certificate → List Certificate → List Certificate
 insertCert cert [] = cert ∷ []
 insertCert cert (cert' ∷ certs) =
@@ -293,20 +298,19 @@ module TreeInstance
 
   open import Peras.SmallStep using (TreeType; IsTreeType)
 
-{-
+
   open import Data.List.Membership.Propositional
 
   postulate
     maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
-      → maximumBy d o l ≡ d ⊎ maximumBy d o l ∈ l
--}
+      → maximumBy d o l ∈ d ∷ l
 
   postulate
     isTreeType :
       IsTreeType
         initialModelState
         newChain'
-        allChains
+        allChains -- (λ {t → genesisChain ∷ allChains t})
         pref
         addVote'
         allVotes
@@ -322,11 +326,7 @@ module TreeInstance
       ; extendable-chain = {!!} -- TODO: set union
       ; valid = {!!} -- does that really hold here?
       ; optimal = {!!}
-      ; self-contained = λ { t →
-        case (maximumBy-default-or-∈ genesisChain _ (allChains t)) of λ where
-          (inj₁ p) → {!!} -- holds for initialStateModel
-          (inj₂ p) → p
-        }
+      ; self-contained = λ { t → maximumBy-default-or-∈ genesisChain _ (allChains t) }
       ; valid-votes = {!!}
       ; unique-votes = {!!}
       ; no-equivocations = {!!}
@@ -335,17 +335,7 @@ module TreeInstance
 -}
 
   NodeModelTree : TreeType NodeModel
-  NodeModelTree =
-    record
-      { tree₀ = initialModelState
-      ; allChains = allChains
-      ; votes = allVotes
-      ; certs = allSeenCerts
-      ; newChain = newChain'
-      ; preferredChain = pref
-      ; addVote = addVote'
-      ; is-TreeType = isTreeType
-    }
+  NodeModelTree = record { is-TreeType = isTreeType }
 
 postulate -- FIXME
   instance
@@ -494,6 +484,11 @@ checkVoteNotFromSut = not ∘ checkVoteFromSut
 
 {-# COMPILE AGDA2HS checkVoteNotFromSut #-}
 
+checkVoteFromOther : Vote → Bool
+checkVoteFromOther (MkVote _ c _ _ _) = c == otherId
+
+{-# COMPILE AGDA2HS checkVoteFromOther #-}
+
 checkBlockFromSut : Block → Bool
 checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
 
@@ -504,6 +499,11 @@ checkBlockNotFromSut = not ∘ checkBlockFromSut
 
 {-# COMPILE AGDA2HS checkBlockNotFromSut #-}
 
+checkBlockFromOther : Block → Bool
+checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
+
+{-# COMPILE AGDA2HS checkBlockFromOther #-}
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes ,
@@ -513,7 +513,7 @@ transition s Tick =
         sutVotes = votesInState s'
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
-  guard (checkBlockNotFromSut block)
+  guard (checkBlockFromOther block)
   Just ([] , record s
              { allChains = (block ∷ rest) ∷ allChains s
              ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
@@ -521,7 +521,7 @@ transition s (NewChain (block ∷ rest)) = do
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (checkSignedVote v)
-  guard (checkVoteNotFromSut v)
+  guard (checkVoteFromOther v)
   -- TODO: do we know that the voting rules have been checked
   --       by the vote creator? We don't have all the block-trees in
   --       the test model. The following should use the block-tree of

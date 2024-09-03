@@ -47,6 +47,9 @@ genesisCert = MkCertificate 0 genesisHash
 sutId :: PartyId
 sutId = 1
 
+otherId :: PartyId
+otherId = 2
+
 insertCert :: Certificate -> [Certificate] -> [Certificate]
 insertCert cert [] = [cert]
 insertCert cert (cert' : certs) =
@@ -101,12 +104,12 @@ preferredChain params certs =
 makeVote :: PerasParams -> SlotNumber -> Hash Block -> Vote
 makeVote params slot h =
   createSignedVote
-    (mkParty 1 [] [slotToRound params slot])
+    (mkParty sutId [] [slotToRound params slot])
     (slotToRound params slot)
     h
     ( createMembershipProof
         (slotToRound params slot)
-        [mkParty 1 [] [slotToRound params slot]]
+        [mkParty sutId [] [slotToRound params slot]]
     )
     1
 
@@ -340,11 +343,17 @@ checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 checkVoteNotFromSut :: Vote -> Bool
 checkVoteNotFromSut = not . checkVoteFromSut
 
+checkVoteFromOther :: Vote -> Bool
+checkVoteFromOther (MkVote _ c _ _ _) = c == otherId
+
 checkBlockFromSut :: Block -> Bool
 checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
 
 checkBlockNotFromSut :: Block -> Bool
 checkBlockNotFromSut = not . checkBlockFromSut
+
+checkBlockFromOther :: Block -> Bool
+checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
 
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
@@ -383,7 +392,7 @@ transition s Tick =
 transition s (NewChain []) = Just ([], s)
 transition s (NewChain (block : rest)) =
   do
-    guard (checkBlockNotFromSut block)
+    guard (checkBlockFromOther block)
     Just
       ( []
       , NodeModel
@@ -401,7 +410,7 @@ transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (checkSignedVote v)
-    guard (checkVoteNotFromSut v)
+    guard (checkVoteFromOther v)
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just ([], addVote' s v)
