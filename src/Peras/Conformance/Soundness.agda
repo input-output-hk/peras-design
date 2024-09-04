@@ -32,9 +32,6 @@ open import Prelude.AssocList
 open import Prelude.Default
 open import Prelude.DecEq hiding (_==_; _≟_)
 
-import Peras.SmallStep as SmallStep
-open SmallStep using (⦅_,_,_,_⦆)
-
 open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
 
@@ -105,9 +102,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; T = perasT testParams
         }
 
+  import Peras.SmallStep as SmallStep
+
+  open SmallStep using (⦅_,_,_,_⦆)
   open SmallStep.Message
-  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
-  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
+  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties} public
+  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain) public
 
   private
     instance
@@ -842,8 +842,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = State.blockTrees s₀} uniqueIds')
               (otherTree inv)
 
+          postulate -- TODO
+            -- U = 5
+            noNewRound : rnd (getSlotNumber (State.clock s₀)) ≡ rnd (suc (getSlotNumber (State.clock s₀)))
+
           nextSlotInSameRound : NextSlotInSameRound s₀
-          nextSlotInSameRound = {!!}
+          nextSlotInSameRound = noNewRound
 
           trace : s₀ ↝⋆ s₁
           trace = CreateVote (invFetched inv)
@@ -1063,10 +1067,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ = tick s₀
 
         lastSlotInRound :
-            ¬ (getSlotNumber (State.clock s₀) / Params.U params
-                ≡ suc (getSlotNumber (State.clock s₀)) / Params.U params)
+            ¬ (rnd (getSlotNumber (State.clock s₀))
+                ≡ (rnd (suc (getSlotNumber (State.clock s₀)))))
           → LastSlotInRound s₀
-        lastSlotInRound x = {!!}
+        lastSlotInRound x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
 
         noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
         noCertsFromQuorum = {!!} -- no new vote has been added
@@ -1092,8 +1096,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite noCertsFromQuorum
           = refl
 
+        req : RequiredVotes s₀
+        req = {!!} -- FIXME: ?
+
         trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound ¬q) {!!} ↣ ∎
+        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound ¬q) req ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite noVoteInState = refl
