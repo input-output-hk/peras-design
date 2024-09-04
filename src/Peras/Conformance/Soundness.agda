@@ -125,6 +125,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
            (axiom-checkLeadershipProof : ∀ {block} → checkLeadershipProof (leadershipProof block) ≡ True → IsSlotLeader (creatorId block) (slotNumber block) (leadershipProof block))
 
            (axiom-checkBlockSignature : ∀ {block} → checkSignedBlock block ≡ True → IsBlockSignature block (signature block))
+
+           -- Assume that blocks are created correctly, as the model is not explicit about block creation
+           (axiom-blockCreatedCorrectly : ∀ {block s} → block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
+
          where
 
     modelState : State → NodeModel
@@ -538,11 +542,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = eqBS-sound checkHash
 
         validHead : block ≡ β
-        validHead
-          rewrite block-slotNumber
-          rewrite block-parentBlock
-          rewrite validRest
-          = {!refl!} -- TODO: why not refl? needCert?
+        validHead = axiom-blockCreatedCorrectly {block} {tree}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -735,9 +735,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       with   checkSignedVote vote in checkedSig
            | isYes (checkVotingRules (modelState s₀)) in checkedVRs
            | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
-
+           | div (getSlotNumber (State.clock s₀)) (Params.U params) == getRoundNumber (votingRound vote) in isVotingRound
+           | checkVoteFromSut vote in checkedSut
     tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ [] | True | True | True =
+      | True | vote ∷ [] | True | True | True | True | True =
 
         record
           { s₁ = s₁
@@ -822,19 +823,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
 
           vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
-          vote-round = {!!} -- TODO: refl
+          vote-round = sym (eqℕ-sound isVotingRound)
 
           creatorId≡sutId : creatorId vote ≡ sutId
-          creatorId≡sutId = {!!} -- TODO: refl
+          creatorId≡sutId = eqℕ-sound checkedSut
 
           correctVote : vote ≡ v
-          correctVote
-            rewrite sym creatorId≡sutId
-            = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+          correctVote = {!!} -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
           validSignature : IsVoteSignature v (signature v)
           validSignature with v ← axiom-checkVoteSignature checkedSig
-            rewrite correctVote rewrite (sym creatorId≡sutId)
+            rewrite correctVote rewrite creatorId≡sutId
             = v
 
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
@@ -967,10 +966,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
 
     tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ (x ∷ xs) | True | True | True = {!!} -- contradiction: length vs ≡ 1
+      | True | vote ∷ (x ∷ xs) | True | True | True | True | True = {!!} -- contradiction: length vs ≡ 1
 
     tick-soundness s₀ inv refl
-      | True | vote ∷ xs | _ | _ | _ = {!!}
+      | True | vote ∷ xs | _ | _ | _ | _ | _ = {!!}
 
     tick-soundness s₀ inv refl
       | True | [] = {!!} -- a vote is expected
@@ -1042,7 +1041,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
-
 
     tick-soundness {vs} {ms₁} s₀ inv refl
       | False

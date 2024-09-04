@@ -459,21 +459,6 @@ opaque
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
-makeVote' : NodeModel → Maybe Vote
-makeVote' s = do
-  guard (isYes $ checkVotingRules s)
-  guard (votingBlockHash s /= genesisHash)
-  pure $ makeVote (protocol s) (clock s) (votingBlockHash s)
-
-{-# COMPILE AGDA2HS makeVote' #-}
-
-votesInState : NodeModel → List Vote
-votesInState s = maybeToList do
-  guard (slotInRound (protocol s) (clock s) == 0)
-  makeVote' s
-
-{-# COMPILE AGDA2HS votesInState #-}
-
 checkVoteFromSut : Vote → Bool
 checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 
@@ -503,6 +488,24 @@ checkBlockFromOther : Block → Bool
 checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
 
 {-# COMPILE AGDA2HS checkBlockFromOther #-}
+
+makeVote' : NodeModel → Maybe Vote
+makeVote' s = do
+  guard (isYes $ checkVotingRules s)
+  guard (votingBlockHash s /= genesisHash)
+  let v = makeVote (protocol s) (clock s) (votingBlockHash s)
+  guard (slotToRound (protocol s) (clock s) == votingRound v)
+  guard (checkVoteFromSut v)
+  pure v
+
+{-# COMPILE AGDA2HS makeVote' #-}
+
+votesInState : NodeModel → List Vote
+votesInState s = maybeToList do
+  guard (slotInRound (protocol s) (clock s) == 0)
+  makeVote' s
+
+{-# COMPILE AGDA2HS votesInState #-}
 
 headBlockHash : Chain → Hash Block
 headBlockHash [] = genesisHash

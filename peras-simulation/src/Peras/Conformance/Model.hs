@@ -9,11 +9,11 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, certificate, creatorId, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
+import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
-import Peras.Foreign (checkSignedVote, createMembershipProof, createSignedVote, mkParty)
+import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createMembershipProof, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
 import Peras.Util (comparing, maximumBy, maybeToList)
 
@@ -322,21 +322,6 @@ checkVotingRules :: NodeModel -> Bool
 checkVotingRules s =
   decS (decP (vr1A s) (vr1B s)) (decP (vr2A s) (vr2B s))
 
-makeVote' :: NodeModel -> Maybe Vote
-makeVote' s =
-  do
-    guard (isYes $ checkVotingRules s)
-    guard (votingBlockHash s /= genesisHash)
-    pure $ makeVote (protocol s) (clock s) (votingBlockHash s)
-
-votesInState :: NodeModel -> [Vote]
-votesInState s =
-  maybeToList
-    ( do
-        guard (slotInRound (protocol s) (clock s) == 0)
-        makeVote' s
-    )
-
 checkVoteFromSut :: Vote -> Bool
 checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
 
@@ -354,6 +339,29 @@ checkBlockNotFromSut = not . checkBlockFromSut
 
 checkBlockFromOther :: Block -> Bool
 checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
+
+makeVote' :: NodeModel -> Maybe Vote
+makeVote' s =
+  do
+    guard (isYes $ checkVotingRules s)
+    guard (votingBlockHash s /= genesisHash)
+    guard
+      ( slotToRound (protocol s) (clock s)
+          == votingRound (makeVote (protocol s) (clock s) (votingBlockHash s))
+      )
+    guard
+      ( checkVoteFromSut
+          (makeVote (protocol s) (clock s) (votingBlockHash s))
+      )
+    pure (makeVote (protocol s) (clock s) (votingBlockHash s))
+
+votesInState :: NodeModel -> [Vote]
+votesInState s =
+  maybeToList
+    ( do
+        guard (slotInRound (protocol s) (clock s) == 0)
+        makeVote' s
+    )
 
 headBlockHash :: Chain -> Hash Block
 headBlockHash [] = genesisHash
@@ -400,6 +408,8 @@ transition s (NewChain (block : rest)) =
     guard (checkBlockFromOther block)
     guard (parentBlock block == headBlockHash rest)
     guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
     Just
       ( []
       , NodeModel
