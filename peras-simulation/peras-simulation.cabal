@@ -94,6 +94,7 @@ executable  peras-simulation-pipe
                     , io-classes
                     , mtl
                     , peras-simulation
+                    , text
 
 executable  peras-simulate
     import:           warnings
@@ -150,4 +151,27 @@ test-suite peras-simulation-test
                   , quickcheck-dynamic
     build-tool-depends:
        hspec-discover:hspec-discover
+    ghc-options: -rtsopts -threaded
+
+test-suite peras-conformance-test
+    import:           warnings
+    default-language: Haskell2010
+    other-modules: Peras.Conformance.ExternalSpec
+                   Paths_peras_simulation
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   conformance
+    main-is:          External.hs
+    build-depends:  QuickCheck
+                  , base
+                  , containers
+                  , contra-tracer
+                  , data-default
+                  , hspec
+                  , hspec-golden-aeson
+                  , io-classes
+                  , mtl
+                  , peras-simulation
+                  , quickcheck-classes
+                  , quickcheck-dynamic
+                  , text
     ghc-options: -rtsopts -threaded

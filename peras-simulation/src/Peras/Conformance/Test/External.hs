@@ -2,7 +2,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,16 +24,21 @@ import Control.Monad.State (
  )
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as A
+import Data.ByteString.Lazy.Char8 qualified as LBS8
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
+import Data.Text.Lazy qualified as T
+import Data.Text.Lazy.Encoding qualified as T
 import GHC.Generics (Generic)
 import Peras.Block
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (BadVote, NewChain, NewVote, Tick),
   NodeModel (..),
+  initialModelState,
   transition,
  )
 import Peras.Conformance.Params
@@ -42,6 +49,7 @@ import Peras.Prototype.Crypto (
   IsCommitteeMember,
   IsSlotLeader,
   isCommitteeMember,
+  isSlotLeader,
   mkCommitteeMember,
  )
 import Peras.Prototype.Diffusion (
@@ -58,6 +66,7 @@ import Peras.Prototype.Types (
   newRound,
  )
 import Peras.Prototype.Voting (voting)
+import System.IO
 import Test.QuickCheck (
   Blind (Blind),
   Property,
@@ -81,21 +90,6 @@ import Text.PrettyPrint (hang, vcat, (<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 import Prelude hiding (round)
 
-class Monad m => NodeApi m where
-  apiinitialize :: SlotNumber -> PerasParams -> [Chain] -> [Vote] -> [Certificate] -> m ()
-  apitick :: m ()
-  apifetching :: [Chain] -> [Vote] -> m ()
-  apiblockCreation :: IsSlotLeader -> m (Maybe Chain)
-  apivoting :: IsCommitteeMember -> m (Maybe Vote)
-  apistep :: IsSlotLeader -> IsCommitteeMember -> [Chain] -> [Vote] -> m (Maybe Chain, Maybe Vote)
-  apistep isSlotLeader isCommitteeMember newChains newVotes =
-    do
-      apitick
-      apifetching newChains newVotes
-      newChain <- apiblockCreation isSlotLeader
-      newVote <- apivoting isCommitteeMember
-      pure (newChain, newVote)
-
 data NodeRequest
   = Initialize
       { party :: Party
@@ -116,7 +110,7 @@ data NodeRequest
   | Voting
       { isCommitteeMember :: IsCommitteeMember
       }
-  | Step
+  | NewSlot
       { isSlotLeader :: IsSlotLeader
       , isCommitteeMember :: IsCommitteeMember
       , newChains :: [Chain]
@@ -145,32 +139,42 @@ instance Default NodeResponse where
 instance FromJSON NodeResponse
 instance ToJSON NodeResponse
 
-data RunState m = RunState
-  { stateVar :: TVar m PerasState
-  , diffuserVar :: TVar m Diffuser
-  , tracer :: Tracer m Trace.PerasLog
+data RunState = RunState
+  { hReader :: Handle
+  , hWriter :: Handle
   , unfetchedChains :: [Chain]
   , unfetchedVotes :: [Vote]
   }
 
-type Runtime m = StateT (RunState m) m
+callSUT ::
+  RunState -> NodeRequest -> IO NodeResponse
+callSUT RunState{hReader, hWriter} req =
+  do
+    LBS8.hPutStrLn hWriter $ A.encode req
+    LBS8.putStrLn $ A.encode req
+    either Failed id . A.eitherDecode' . LBS8.pack <$> hGetLine hReader
 
-instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform NodeModel{..} (Peras.Conformance.Test.Step a) _ = case a of
+type Runtime = StateT RunState IO
+
+instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
+  perform NodeModel{..} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
-      RunState{..} <- get
+      rs@RunState{..} <- get
+      let clock' = clock + 1
+      res <-
+        lift $
+          callSUT
+            rs
+            NewSlot
+              { isSlotLeader = Peras.Prototype.Crypto.isSlotLeader modelSUT clock'
+              , isCommitteeMember = Peras.Prototype.Crypto.isCommitteeMember modelSUT (inRound clock' protocol)
+              , newChains = unfetchedChains
+              , newVotes = unfetchedVotes
+              }
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
-      lift $ do
-        let clock' = clock + 1
-        -- TODO: also invoke blockCreation
-        _ <- Peras.Prototype.Fetching.fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
-        let roundNumber = inRound clock' protocol
-            party = mkCommitteeMember modelSUT protocol clock' (Peras.Prototype.Crypto.isCommitteeMember modelSUT roundNumber)
-            selectBlock' = selectBlock nullTracer
-            diffuser = diffuseVote diffuserVar
-        _ <- Peras.Prototype.Voting.voting tracer protocol party stateVar clock' selectBlock' diffuser
-        (cs, vs) <- popChainsAndVotes diffuserVar clock'
-        pure vs
+      case res of
+        NodeResponse{..} -> pure diffuseVotes
+        _ -> pure mempty -- FIXME: The state model should define an error type.
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
       pure mempty
@@ -181,7 +185,7 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
-  postcondition (s, s') (Peras.Conformance.Test.Step a) _ r = do
+  postcondition (s, s') (Step a) _ r = do
     let expected = fst (fromJust (transition s a))
     -- let ok = length r == length expected
     let ok = r == expected
@@ -195,23 +199,27 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
     counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
     pure ok
 
-prop_node :: Blind (Actions NodeModel) -> Property
-prop_node (Blind as) = noShrinking $
+prop_node :: Handle -> Handle -> Blind (Actions NodeModel) -> Property
+prop_node hReader hWriter (Blind as) = noShrinking $
   ioProperty $ do
-    stateVar <- IO.newTVarIO initialPerasState
-    diffuserVar <- IO.newTVarIO def
-    traceRef <- newIORef []
     let unfetchedChains = mempty
         unfetchedVotes = mempty
-        tracer = Tracer $ emit $ \a -> modifyIORef traceRef (a :)
-        printTrace = do
-          putStrLn "-- Trace from node:"
-          trace <- readIORef traceRef
-          print $ vcat . map pPrint $ reverse trace
-    pure $
-      whenFail printTrace $
-        monadicIO $ do
-          monitor $ counterexample "-- Actions:"
-          monitor $ counterexample "do"
-          _ <- runPropertyStateT (runActions @_ @(Runtime IO) as) RunState{..}
-          pure True
+    callSUT
+      RunState{..}
+      Initialize
+        { party = modelSUT
+        , slotNumber = clock initialModelState
+        , parameters = protocol initialModelState
+        , chainsSeen = allChains initialModelState
+        , votesSeen = allVotes initialModelState
+        , certsSeen = allSeenCerts initialModelState
+        }
+      >>= \case
+        NodeResponse{} ->
+          pure $
+            monadicIO $ do
+              monitor $ counterexample "-- Actions:"
+              monitor $ counterexample "do"
+              _ <- runPropertyStateT (runActions @_ @Runtime as) RunState{..}
+              pure True
+        _ -> pure $ monadicIO $ pure False
