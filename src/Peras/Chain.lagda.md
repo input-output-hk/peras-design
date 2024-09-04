@@ -292,13 +292,12 @@ module _ ⦃ _ : Hashable Block ⦄
 
     Genesis : ValidChain []
 
-    Cons : ∀ {c₁ c₂ : Chain} {b₁ b₂ : Block}
-      → IsBlockSignature b₁ (signature b₁)
-      → IsSlotLeader (creatorId b₁) (slotNumber b₁) (leadershipProof b₁)
-      → parentBlock b₁ ≡ hash b₂
-      → c₂ ≡ b₂ ∷ c₁
-      → ValidChain c₂
-      → ValidChain (b₁ ∷ c₂)
+    Cons : ∀ {c : Chain} {b : Block}
+      → IsBlockSignature b (signature b)
+      → IsSlotLeader (creatorId b) (slotNumber b) (leadershipProof b)
+      → parentBlock b ≡ tipHash c
+      → ValidChain c
+      → ValidChain (b ∷ c)
 ```
 <!--
 ```agda

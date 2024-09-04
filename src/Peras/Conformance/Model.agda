@@ -523,6 +523,8 @@ transition s (NewChain (block ∷ rest)) = do
   guard (checkBlockFromOther block)
   guard (parentBlock block == headBlockHash rest)
   guard (rest == pref s)
+  guard (checkSignedBlock block)
+  guard (checkLeadershipProof (leadershipProof block))
   Just ([] , record s
              { allChains = (block ∷ rest) ∷ allChains s
              ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))

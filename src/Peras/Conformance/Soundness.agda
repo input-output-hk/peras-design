@@ -24,7 +24,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; con
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Crypto
-open import Peras.Foreign using (checkSignedVote)
+open import Peras.Foreign using (checkSignedVote; checkSignedBlock; checkLeadershipProof)
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
@@ -107,8 +107,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   open SmallStep.Message
   open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
-
-  open SmallStep.IsTreeType
   open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
 
   private
@@ -123,6 +121,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
            (axiom-everyoneIsOnTheCommittee : ∀ {p slot prf} → IsCommitteeMember p slot prf)
 
            (axiom-checkVoteSignature : ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
+
+           (axiom-checkLeadershipProof : ∀ {block} → checkLeadershipProof (leadershipProof block) ≡ True → IsSlotLeader (creatorId block) (slotNumber block) (leadershipProof block))
+
+           (axiom-checkBlockSignature : ∀ {block} → checkSignedBlock block ≡ True → IsBlockSignature block (signature block))
          where
 
     modelState : State → NodeModel
@@ -488,11 +490,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         }
     newChain-soundness s₀ (block ∷ rest) inv prf
       with (slotNumber block == State.clock s₀) in checkSlot
-      with checkBlockFromOther block in checkedOther
-      with (parentBlock block == headBlockHash rest) in checkHash
-      with (rest == pref (modelState s₀)) in checkRest
+         | checkBlockFromOther block in checkedOther
+         | (parentBlock block == headBlockHash rest) in checkHash
+         | (rest == pref (modelState s₀)) in checkRest
+         | checkSignedBlock block in checkedSig
+         | checkLeadershipProof (leadershipProof block) in checkedLead
     newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
-      | True | True | True | True =
+      | True | True | True | True | True | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
@@ -524,25 +528,27 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validRest : rest ≡ prefChain tree
         validRest = eqList-sound checkRest
 
-{-
-        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
-        block-parentBlock = eqBS-sound {!!} -- checkHash
--}
+        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (headBlockHash rest)
+        block-parentBlock = eqBS-sound checkHash
 
         validHead : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
         validHead
+          rewrite block-parentBlock
           rewrite validRest
-          -- rewrite block-parentBlock
           rewrite sym block-slotNumber
-          = {!!}
+          = {!refl!}
 
-        validChain : ValidChain (block ∷ rest)
-        validChain = {!!}
+        validSignature : IsBlockSignature β (signature β)
+        validSignature with v ← axiom-checkBlockSignature checkedSig
+          rewrite validHead rewrite validRest
+          = v
 
-        validChain' : ValidChain
+        validChain : ValidChain
           (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
             ∷ prefChain tree)
-        validChain' with c ← validChain rewrite validHead rewrite validRest = c
+        validChain
+          = Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
+          where open SmallStep.IsTreeType
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -590,7 +596,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   (invFetched inv)
                   (honest
                     creatorExists
-                    validChain'
+                    validChain
                   )
               ↣ Fetch {h = sutHonesty} {m = ChainMsg chain}
                   (honest {p = sutId}
