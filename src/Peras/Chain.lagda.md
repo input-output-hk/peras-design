@@ -166,6 +166,10 @@ Chain = List Block
 ```
 -->
 
+```agda
+certsFromChain : Chain → List Certificate
+certsFromChain = mapMaybe certificate
+```
 ### Chain prefix
 
 ```agda
@@ -210,6 +214,12 @@ module _ ⦃ _ : Hashable Block ⦄
 
   Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
   Extends? h c = any? (ChainExtends? h c)
+```
+
+```agda
+  tipHash : Chain → Hash Block
+  tipHash [] = record { hashBytes = emptyBS }
+  tipHash (b ∷ _) = hash b
 ```
 
 The weight of a chain is computed wrt to a set of dangling votes
@@ -289,15 +299,6 @@ module _ ⦃ _ : Hashable Block ⦄
       → c₂ ≡ b₂ ∷ c₁
       → ValidChain c₂
       → ValidChain (b₁ ∷ c₂)
-```
-```agda
-  tipHash : ∀ {c : Chain} → ValidChain c → Hash Block
-  tipHash Genesis = record { hashBytes = emptyBS }
-  tipHash (Cons {b₁ = b} _ _ _ _ _) = hash b
-```
-```agda
-  certsFromChain : Chain → List Certificate
-  certsFromChain = mapMaybe certificate
 ```
 <!--
 ```agda

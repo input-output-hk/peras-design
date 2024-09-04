@@ -487,9 +487,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; votes-agree = refl
         }
     newChain-soundness s₀ (block ∷ rest) inv prf
+      with (slotNumber block == State.clock s₀) in checkSlot
       with checkBlockFromOther block in checkedOther
+      with (parentBlock block == headBlockHash rest) in checkHash
+      with (rest == pref (modelState s₀)) in checkRest
     newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
-      | True =
+      | True | True | True | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
@@ -504,8 +507,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         slot = State.clock s₀
 
         notFromSut : creatorId block ≢ sutId
-        notFromSut x =
-          uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
+        notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
 
         tree : NodeModel
         tree = modelState s₀
@@ -516,11 +518,23 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         chain : Chain
         chain = β ∷ prefChain tree
 
-        validHead : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
-        validHead = {!!}
+        block-slotNumber : slotNumber block ≡ State.clock s₀
+        block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
 
         validRest : rest ≡ prefChain tree
-        validRest = {!!}
+        validRest = eqList-sound checkRest
+
+{-
+        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
+        block-parentBlock = eqBS-sound {!!} -- checkHash
+-}
+
+        validHead : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+        validHead
+          rewrite validRest
+          -- rewrite block-parentBlock
+          rewrite sym block-slotNumber
+          = {!!}
 
         validChain : ValidChain (block ∷ rest)
         validChain = {!!}

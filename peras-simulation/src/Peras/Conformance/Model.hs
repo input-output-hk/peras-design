@@ -9,7 +9,7 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, certificate, creatorId, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
+import Peras.Block (Block (MkBlock, certificate, creatorId, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
@@ -355,6 +355,10 @@ checkBlockNotFromSut = not . checkBlockFromSut
 checkBlockFromOther :: Block -> Bool
 checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
 
+headBlockHash :: Chain -> Hash Block
+headBlockHash [] = genesisHash
+headBlockHash (b : _) = hash b
+
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
   Just
@@ -392,7 +396,10 @@ transition s Tick =
 transition s (NewChain []) = Just ([], s)
 transition s (NewChain (block : rest)) =
   do
+    guard (slotNumber block == clock s)
     guard (checkBlockFromOther block)
+    guard (parentBlock block == headBlockHash rest)
+    guard (rest == pref s)
     Just
       ( []
       , NodeModel

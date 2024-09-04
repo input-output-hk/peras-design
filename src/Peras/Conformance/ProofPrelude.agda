@@ -3,7 +3,9 @@ module Peras.Conformance.ProofPrelude where
 
 open import Haskell.Prelude
 open import Haskell.Prim.Tuple
+open import Haskell.Prim.Eq
 open import Haskell.Law.Equality
+open import Haskell.Law.Eq.Instances
 
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_)
@@ -41,6 +43,11 @@ not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
 
     not_b≡True→b≡False : ∀ {b : Bool} → not b ≡ True → b ≡ False
     not_b≡True→b≡False {False} x = refl
+
+postulate
+  eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
+
+  eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem

@@ -504,6 +504,12 @@ checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
 
 {-# COMPILE AGDA2HS checkBlockFromOther #-}
 
+headBlockHash : Chain → Hash Block
+headBlockHash [] = genesisHash
+headBlockHash (b ∷ _) = Hashable.hash hashBlock b
+
+{-# COMPILE AGDA2HS headBlockHash #-}
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   Just (sutVotes ,
@@ -513,7 +519,10 @@ transition s Tick =
         sutVotes = votesInState s'
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
+  guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)
+  guard (parentBlock block == headBlockHash rest)
+  guard (rest == pref s)
   Just ([] , record s
              { allChains = (block ∷ rest) ∷ allChains s
              ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
@@ -523,10 +532,7 @@ transition s (NewVote v) = do
   guard (slotToRound (protocol s) (clock s) == votingRound v)
   guard (checkSignedVote v)
   guard (checkVoteFromOther v)
-  -- TODO: do we know that the voting rules have been checked
-  --       by the vote creator? We don't have all the block-trees in
-  --       the test model. The following should use the block-tree of
-  --       the vote creator for checking the voting rules:
+  -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
   Just ([] , addVote' s v)
