@@ -528,15 +528,21 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validRest : rest ≡ prefChain tree
         validRest = eqList-sound checkRest
 
-        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (headBlockHash rest)
-        block-parentBlock = eqBS-sound checkHash
+        headBlockHash≡tipHash : ∀ {c : Chain} → headBlockHash c ≡ tipHash c
+        headBlockHash≡tipHash {[]} = refl
+        headBlockHash≡tipHash {x ∷ c} = refl
 
-        validHead : block ≡ createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
+        block-parentBlock
+          rewrite sym (headBlockHash≡tipHash {rest})
+          = eqBS-sound checkHash
+
+        validHead : block ≡ β
         validHead
+          rewrite block-slotNumber
           rewrite block-parentBlock
           rewrite validRest
-          rewrite sym block-slotNumber
-          = {!refl!}
+          = {!refl!} -- TODO: why not refl? needCert?
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
