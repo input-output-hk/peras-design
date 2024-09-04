@@ -843,6 +843,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = State.blockTrees s₀} uniqueIds')
               (otherTree inv)
 
+          nextSlotInSameRound : NextSlotInSameRound s₀
+          nextSlotInSameRound = {!!}
+
           trace : s₀ ↝⋆ s₁
           trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀}
@@ -859,7 +862,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       other∈messages
                       VoteReceived
                     )
-                ↣ NextSlot (invFetched inv) {!!}
+                ↣ NextSlot (invFetched inv) nextSlotInSameRound
                 ↣ ∎
 
           tree' : NodeModel
