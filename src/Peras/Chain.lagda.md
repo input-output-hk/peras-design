@@ -5,7 +5,7 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; catMaybes; zip) renaming (length to ∣_∣)
+open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; mapMaybe; zip) renaming (length to ∣_∣)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
 open import Data.List.Relation.Unary.All using (All)
@@ -15,7 +15,7 @@ open import Data.Nat using (_≤_; _<_; _∸_)
 open import Data.Nat.Properties using (n≮n; _≟_)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Function.Base using (_∘_; _$_)
-open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Relation.Nullary using (¬_; Dec; yes; no; ¬?)
 open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
 
@@ -166,6 +166,10 @@ Chain = List Block
 ```
 -->
 
+```agda
+certsFromChain : Chain → List Certificate
+certsFromChain = mapMaybe certificate
+```
 ### Chain prefix
 
 ```agda
@@ -188,6 +192,36 @@ The weight of a chain is defined with respect of the Peras parameters
 ```agda
 open Params ⦃...⦄
 ```
+
+```agda
+module _ ⦃ _ : Hashable Block ⦄
+         where
+
+  open Hashable ⦃...⦄
+
+  ChainExtends : Hash Block → Certificate → Chain → Set
+  ChainExtends h c =
+    Any (λ block → (hash block ≡ blockRef c))
+      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
+
+  ChainExtends? : (h : Hash Block) → (c : Certificate) → (chain : Chain) → Dec (ChainExtends h c chain)
+  ChainExtends? h c =
+    any? (λ block → (hash block ≟-BlockHash blockRef c))
+      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
+
+  Extends : Hash Block → Certificate → List Chain → Set
+  Extends h c = Any (ChainExtends h c)
+
+  Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
+  Extends? h c = any? (ChainExtends? h c)
+```
+
+```agda
+  tipHash : Chain → Hash Block
+  tipHash [] = record { hashBytes = emptyBS }
+  tipHash (b ∷ _) = hash b
+```
+
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
@@ -258,22 +292,12 @@ module _ ⦃ _ : Hashable Block ⦄
 
     Genesis : ValidChain []
 
-    Cons : ∀ {c₁ c₂ : Chain} {b₁ b₂ : Block}
-      → IsBlockSignature b₁ (signature b₁)
-      → IsSlotLeader (creatorId b₁) (slotNumber b₁) (leadershipProof b₁)
-      → parentBlock b₁ ≡ hash b₂
-      → c₂ ≡ b₂ ∷ c₁
-      → ValidChain c₂
-      → ValidChain (b₁ ∷ c₂)
-```
-```agda
-  tipHash : ∀ {c : Chain} → ValidChain c → Hash Block
-  tipHash Genesis = record { hashBytes = emptyBS }
-  tipHash (Cons {b₁ = b} _ _ _ _ _) = hash b
-```
-```agda
-  certsFromChain : Chain → List Certificate
-  certsFromChain = catMaybes ∘ map certificate
+    Cons : ∀ {c : Chain} {b : Block}
+      → IsBlockSignature b (signature b)
+      → IsSlotLeader (creatorId b) (slotNumber b) (leadershipProof b)
+      → parentBlock b ≡ tipHash c
+      → ValidChain c
+      → ValidChain (b ∷ c)
 ```
 <!--
 ```agda

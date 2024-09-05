@@ -7,7 +7,7 @@ module Peras.Block where
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; null; head; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe; maybe′)
+open import Data.Maybe using (Maybe; maybe′; just; nothing)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
@@ -148,7 +148,7 @@ record Certificate where
 
   roundNumber : ℕ
   roundNumber = getRoundNumber round
-  
+
 open Certificate public
 
 latestCert : Certificate → List Certificate → Certificate
@@ -166,7 +166,7 @@ record Block where
 
   slotNumber' : ℕ
   slotNumber' = getSlotNumber slotNumber
-  
+
 open Block public
 
 _≟-BlockHash_ : DecidableEquality (Hash Block)
@@ -214,7 +214,7 @@ instance
 instance
   iCertificateEq : Eq Certificate
   iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
-  
+
 instance
   iBlockEq : Eq Block
   iBlockEq ._==_ x y = slotNumber x == slotNumber y
@@ -229,10 +229,21 @@ instance
 instance
   iBlockBodyEq : Eq BlockBody
   iBlockBodyEq ._==_ x y = blockHash x == blockHash y && payload x == payload y
- 
-open Hashable
+
+module _ {a : Set} ⦃ _ : Hashable a ⦄
+  where
+
+  open Hashable ⦃...⦄
+
+  hashHead : List a → Hash a
+  hashHead Data.List.[] = MkHash emptyBS
+  hashHead (x Data.List.∷ _) = hash x
+
+{-# COMPILE AGDA2HS hashHead #-}
 
 private
+  open Hashable
+
   instance
     hashBlock : Hashable Block
     hashBlock .hash = MkHash ∘ bytesS ∘ signature

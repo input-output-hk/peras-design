@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Block where
 
-import Peras.Crypto (Hash (MkHash), Hashable, LeadershipProof, Signature (bytesS), VerificationKey)
+import Peras.Crypto (Hash (MkHash), Hashable (hash), LeadershipProof, Signature (bytesS), VerificationKey, emptyBS)
 import Peras.Numbering (RoundNumber, SlotNumber)
 
 import GHC.Generics (Generic)
@@ -60,6 +61,10 @@ instance Eq Block where
 
 instance Eq BlockBody where
   x == y = blockHash x == blockHash y && payload x == payload y
+
+hashHead :: forall a. Hashable a => [a] -> Hash a
+hashHead [] = MkHash emptyBS
+hashHead (x : _) = hash x
 
 instance Hashable Block where
   hash = \x -> MkHash (bytesS (signature x))

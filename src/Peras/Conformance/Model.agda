@@ -10,20 +10,20 @@ open import Haskell.Law.Eq.Instances
 open import Haskell.Law.Ord.Def
 
 open import Agda.Builtin.Maybe hiding (Maybe)
-open import Data.Bool using ()
+import Data.Bool
+import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
-open import Data.Product as P using ()
+import Data.Product as P
 
-open import Peras.Block renaming (certificate to blockCert)
+open import Peras.Block
 open import Peras.Chain
 open import Peras.Conformance.Params
 open import Peras.Crypto
 open import Peras.Foreign
 open import Peras.Numbering
-open import Peras.SmallStep
 open import Peras.Util
-open import Protocol.Peras using ()
+import Protocol.Peras
 
 {-# FOREIGN AGDA2HS
   {-# LANGUAGE RecordWildCards #-}
@@ -33,7 +33,6 @@ open import Protocol.Peras using ()
 
   import Prelude hiding (round)
   import Control.Monad.Identity
-  import Peras.Block (certificate, blockRef)
   import Peras.Crypto (hash)
   import Peras.Orphans ()
   import Data.Function (on)
@@ -44,12 +43,6 @@ open import Protocol.Peras using ()
   intToInteger :: Int -> Integer
   intToInteger = fromIntegral
 #-}
-
--- Work around `agda2hs` limitations.
-
-certificate : Block → Maybe Certificate
-certificate record{certificate = just c}  = Just c
-certificate record{certificate = nothing} = Nothing
 
 -- To avoid name clash for Vote.creatorId and Block.creatorId
 voterId : Vote → PartyId
@@ -84,6 +77,11 @@ sutId : PartyId
 sutId = 1
 
 {-# COMPILE AGDA2HS sutId #-}
+
+otherId : PartyId
+otherId = 2
+
+{-# COMPILE AGDA2HS otherId #-}
 
 insertCert : Certificate → List Certificate → List Certificate
 insertCert cert [] = cert ∷ []
@@ -150,12 +148,12 @@ preferredChain params certs =
 
 {-# COMPILE AGDA2HS preferredChain #-}
 
-makeVote : PerasParams → SlotNumber → Block → Vote
-makeVote params slot block =
+makeVote : PerasParams → SlotNumber → Hash Block → Vote
+makeVote params slot h =
   let r = slotToRound params slot
-      party = mkParty 1 [] (r ∷ [])
+      party = mkParty sutId [] (r ∷ [])
       proof = createMembershipProof r (party ∷ [])
-  in createSignedVote party r (Hashable.hash hashBlock block) proof 1
+  in createSignedVote party r h proof 1
 
 {-# COMPILE AGDA2HS makeVote #-}
 
@@ -193,7 +191,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (catMaybes (map certificate (pref s)))
+  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -201,18 +199,24 @@ open NodeModel public
 
 {-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
 
+testParams : PerasParams
+testParams =
+  record defaultPerasParams
+    { perasU = 5
+    ; perasR = 1
+    ; perasK = 1
+    ; perasL = 1
+    ; perasT = 0
+    ; perasΔ = 0
+    ; perasτ = 1
+    }
+
+{-# COMPILE AGDA2HS testParams #-}
+
 initialModelState : NodeModel
 initialModelState = record
   { clock            = 1
-  ; protocol         = record defaultPerasParams
-                       { perasU = 5
-                       ; perasR = 1
-                       ; perasK = 1
-                       ; perasL = 1
-                       ; perasT = 0
-                       ; perasΔ = 0
-                       ; perasτ = 1
-                       }
+  ; protocol         = testParams
   ; allChains        = genesisChain ∷ []
   ; allVotes         = []
   ; allSeenCerts     = genesisCert ∷ []
@@ -226,15 +230,15 @@ blockOldEnough params clock record{slotNumber = slot} =
 
 {-# COMPILE AGDA2HS blockOldEnough #-}
 
-chainExtends : Block → Certificate → Chain → Bool
-chainExtends b c =
+chainExtends : Hash Block → Certificate → Chain → Bool
+chainExtends h c =
   any (λ block → Hashable.hash hashBlock block == blockRef c)
-    ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= Hashable.hash hashBlock b)
+    ∘ dropWhile (λ block' → Hashable.hash hashBlock block' /= h)
 
 {-# COMPILE AGDA2HS chainExtends #-}
 
-extends : Block → Certificate → List Chain → Bool
-extends block cert chains = any (chainExtends block cert) chains
+extends : Hash Block → Certificate → List Chain → Bool
+extends h cert = any (chainExtends h cert)
 
 {-# COMPILE AGDA2HS extends #-}
 
@@ -242,14 +246,53 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
-votingBlock : NodeModel → Maybe Block
-votingBlock s = listToMaybe (dropWhile (not ∘ blockOldEnough (protocol s) (clock s)) (pref s))
+votingBlockHash : NodeModel → Hash Block
+votingBlockHash s =
+  hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
+    $ pref s
+
+{-# COMPILE AGDA2HS votingBlockHash #-}
 
 newChain' : NodeModel → Chain → NodeModel
-newChain' s c = record s { allChains = c ∷ (allChains s) }
+newChain' s c =
+  record s
+    { allChains = c ∷ (allChains s)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
+    }
+
+{-# COMPILE AGDA2HS newChain' #-}
+
+{-# TERMINATING #-}
+newQuora : ℕ → List Certificate → List Vote → List Certificate
+newQuora _ _ [] = []
+newQuora quorum priorCerts (vote ∷ votes) =
+  let
+    sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
+    sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
+    hasCertificate = any sameCert priorCerts
+    voteCount = length (filter sameVote votes) + 1
+    hasQuorum = intToInteger voteCount >= fromNat quorum
+    remainder = filter (not ∘ sameVote) votes
+  in
+    if not hasCertificate && hasQuorum
+      then (
+        let newCert = MkCertificate (votingRound vote) (blockHash vote)
+        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
+      )
+      else newQuora quorum priorCerts remainder
+
+{-# COMPILE AGDA2HS newQuora #-}
+
+certsFromQuorum : NodeModel → List Certificate
+certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
+
+{-# COMPILE AGDA2HS certsFromQuorum #-}
 
 addVote' : NodeModel → Vote → NodeModel
-addVote' s v = record s { allVotes = v ∷ (allVotes s) }
+addVote' s v = record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
+  where s' = record s { allVotes = v ∷ (allVotes s) }
+
+{-# COMPILE AGDA2HS addVote' #-}
 
 hasVoted : PartyId → RoundNumber → NodeModel → Bool
 hasVoted p r s = any (λ v → p == voterId v && r == votingRound v) (allVotes s)
@@ -266,48 +309,50 @@ module TreeInstance
          ⦃ _ : Postulates ⦄
        where
 
-{-
-  valid-NodeModel : ∀ (m : NodeModel) → ValidChain (pref m)
-  valid-NodeModel m with pref m
-  ... | [] = Genesis
-  ... | x ∷ xxx = Cons {!!} {!!} {!!} {!!} {!!}
--}
+  open import Peras.SmallStep using (TreeType; IsTreeType)
+
+
+  open import Data.List.Membership.Propositional
 
   postulate
-    isTreeType : IsTreeType initialModelState newChain' allChains pref addVote' allVotes allSeenCerts genesisCert
+    maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
+      → maximumBy d o l ∈ d ∷ l
+
+  postulate
+    isTreeType :
+      IsTreeType
+        initialModelState
+        newChain'
+        allChains -- (λ t → allChains t ++ genesisChain ∷ [])
+        pref
+        addVote'
+        allVotes
+        allSeenCerts
+        genesisCert
+
 {-
-  isTreeType = record
-                 { instantiated = refl
-                 ; instantiated-certs = refl
-                 ; instantiated-votes = refl
-                 ; extendable-chain = {!!}
-                 ; valid = valid-NodeModel
-                 ; optimal = {!!}
-                 ; self-contained = {!!}
-                 ; valid-votes = {!!}
-                 ; unique-votes = {!!}
-                 ; no-equivocations = {!!}
-                 ; quorum-cert = {!!}
-                 }
+  isTreeType =
+    record
+      { instantiated = refl
+      ; instantiated-certs = refl
+      ; instantiated-votes = refl
+      ; extendable-chain = {!!} -- TODO: set union
+      ; valid = {!!} -- does that really hold here?
+      ; optimal = {!!}
+      ; self-contained = λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
+      ; valid-votes = {!!}
+      ; unique-votes = {!!}
+      ; no-equivocations = {!!}
+      ; quorum-cert = {!!}
+      }
 -}
 
   NodeModelTree : TreeType NodeModel
-  NodeModelTree = record {
-    tree₀ = initialModelState ;
-    allChains = allChains ;
-    votes = allVotes ;
-    certs = allSeenCerts ;
-    newChain = newChain' ;
-    preferredChain = pref;
-    addVote = addVote' ;
-    is-TreeType = isTreeType
-    }
+  NodeModelTree = record { is-TreeType = isTreeType }
 
 postulate -- FIXME
   instance
     iRoundNumber : IsLawfulEq RoundNumber
-
-{-# COMPILE AGDA2HS votingBlock #-}
 
 isYes : ∀ {A : Set} → Dec A → Bool
 isYes (True ⟨ _ ⟩) = True
@@ -381,40 +426,11 @@ vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 {-# COMPILE AGDA2HS vr1A #-}
 
-open import Relation.Nullary.Decidable as D using (¬?)
-open import Data.List as L using ()
-open import Data.List.Relation.Unary.Any as A using ()
-
-Extends : Block → Certificate → List Chain → Set
-Extends b c chains = A.Any (λ { chain →
-  A.Any (λ block → (hash hashBlock block ≡ blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash hash hashBlock b)) chain)
-    }) chains
-  where
-    open Certificate
-    open Hashable
-
-Extends? : (b : Block) → (c : Certificate) → (chains : List Chain) → D.Dec (Extends b c chains)
-Extends? b c chains = A.any? (λ { chain →
-  A.any? (λ block → (hash hashBlock block ≟-BlockHash blockRef c))
-      (L.dropWhile (λ block' → ¬? (hash hashBlock block' ≟-BlockHash hash hashBlock b)) chain)
-    }) chains
-  where
-    open Certificate
-    open Hashable
-
 Vr1B : NodeModel → Set
-Vr1B s
-  with votingBlock s
-... | Nothing = ⊥
-... | Just block = Extends block (cert' s) (allChains s)
+Vr1B s = Extends (votingBlockHash s) (cert' s) (allChains s)
 
 vr1B' : NodeModel → Bool
-vr1B' s =
-  case votingBlock s of
-    λ { Nothing → False
-      ; (Just block) → extends block (cert' s) (allChains s)
-      }
+vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
 
@@ -436,7 +452,7 @@ vr2A s = ge (getRoundNumber (rFromSlot s)) (getRoundNumber (round (cert' s)) + p
 
 Vr2B : NodeModel → Set
 Vr2B s = ((getRoundNumber (rFromSlot s)) Data.Nat.> (getRoundNumber (round (certS s))))
-       P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+    P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
 
 vr2B : (s : NodeModel) → Dec (Vr2B s)
 vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s))))
@@ -447,88 +463,102 @@ vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s
 CheckVotingRules : NodeModel → Set
 CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
-checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
-checkVotingRules s =
-  decS
-    (decP (vr1A s) (vr1B s))
-    (decP (vr2A s) (vr2B s))
+opaque
+  checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
+  checkVotingRules s =
+    decS
+      (decP (vr1A s) (vr1B s))
+      (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
+
+checkVoteFromSut : Vote → Bool
+checkVoteFromSut (MkVote _ c _ _ _) = c == sutId
+
+{-# COMPILE AGDA2HS checkVoteFromSut #-}
+
+checkVoteNotFromSut : Vote → Bool
+checkVoteNotFromSut = not ∘ checkVoteFromSut
+
+{-# COMPILE AGDA2HS checkVoteNotFromSut #-}
+
+checkVoteFromOther : Vote → Bool
+checkVoteFromOther (MkVote _ c _ _ _) = c == otherId
+
+{-# COMPILE AGDA2HS checkVoteFromOther #-}
+
+checkBlockFromSut : Block → Bool
+checkBlockFromSut (MkBlock _ c _ _ _ _ _) = c == sutId
+
+{-# COMPILE AGDA2HS checkBlockFromSut #-}
+
+checkBlockNotFromSut : Block → Bool
+checkBlockNotFromSut = not ∘ checkBlockFromSut
+
+{-# COMPILE AGDA2HS checkBlockNotFromSut #-}
+
+checkBlockFromOther : Block → Bool
+checkBlockFromOther (MkBlock _ c _ _ _ _ _) = c == otherId
+
+{-# COMPILE AGDA2HS checkBlockFromOther #-}
 
 makeVote' : NodeModel → Maybe Vote
 makeVote' s = do
   guard (isYes $ checkVotingRules s)
-  block ← votingBlock s
-  pure $ makeVote (protocol s) (clock s) block
+  guard (votingBlockHash s /= genesisHash)
+  let v = makeVote (protocol s) (clock s) (votingBlockHash s)
+  guard (slotToRound (protocol s) (clock s) == votingRound v)
+  guard (checkVoteFromSut v)
+  pure v
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
-votesInState : NodeModel → List Vote
-votesInState s = maybeToList do
+voteInState : NodeModel → Maybe Vote
+voteInState s = do
   guard (slotInRound (protocol s) (clock s) == 0)
   makeVote' s
 
+{-# COMPILE AGDA2HS voteInState #-}
+
+votesInState : NodeModel → List Vote
+votesInState = maybeToList ∘ voteInState
+
 {-# COMPILE AGDA2HS votesInState #-}
 
-{-# TERMINATING #-}
-newQuora : ℕ → List Certificate → List Vote → List Certificate
-newQuora _ _ [] = []
-newQuora quorum priorCerts (vote ∷ votes) =
-  let
-    sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
-    sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
-    hasCertificate = any sameCert priorCerts
-    voteCount = length (filter sameVote votes) + 1
-    hasQuorum = intToInteger voteCount >= fromNat quorum
-    remainder = filter (not ∘ sameVote) votes
-  in
-    if not hasCertificate && hasQuorum
-      then (
-        let newCert = MkCertificate (votingRound vote) (blockHash vote)
-        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
-      )
-      else newQuora quorum priorCerts remainder
+headBlockHash : Chain → Hash Block
+headBlockHash [] = genesisHash
+headBlockHash (b ∷ _) = Hashable.hash hashBlock b
 
-{-# COMPILE AGDA2HS newQuora #-}
-
-{-
-checkVoteNotFromSut : Vote → Bool
-checkVoteNotFromSut (MkVote _ c _ _ _) = c /= sutId
-
-{-# COMPILE AGDA2HS checkVoteNotFromSut #-}
-
-checkBlockNotFromSut : Block → Bool
-checkBlockNotFromSut (MkBlock _ c _ _ _ _ _) = c /= sutId
-
-{-# COMPILE AGDA2HS checkBlockNotFromSut #-}
--}
+{-# COMPILE AGDA2HS headBlockHash #-}
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
-  Just (sutVotes , record s' { allVotes = sutVotes ++ allVotes s'
-                             ; allSeenCerts = foldr insertCert (allSeenCerts s') certsFromQuorum
-                             })
-  where s' = record s { clock = nextSlot (clock s) }
-        sutVotes = votesInState s'
-        certsFromQuorum = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
-transition s (NewChain chain) = do
-  guard (length chain > 0) -- TODO: use NonEmpty
---  guard (checkBlockNotFromSut (head chain))
-  Just ([] , record s
-             { allChains = chain ∷ allChains s
-             ; allSeenCerts = foldr insertCert (allSeenCerts s) (catMaybes $ map certificate chain)
-             })
+  let s' = record s { clock = nextSlot (clock s) } in
+  Just (votesInState s' ,
+    let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
+    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+transition s (NewChain []) = Just ([] , s)
+transition s (NewChain (block ∷ rest)) = do
+  guard (slotNumber block == clock s)
+  guard (checkBlockFromOther block)
+  guard (parentBlock block == headBlockHash rest)
+  guard (rest == pref s)
+  guard (checkSignedBlock block)
+  guard (checkLeadershipProof (leadershipProof block))
+  Just ([] ,
+    record s
+      { allChains = (block ∷ rest) ∷ allChains s
+      ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
+      })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
+  guard (slotToRound (protocol s) (clock s) == votingRound v)
   guard (checkSignedVote v)
-  guard (not $ hasVoted (voterId v) (votingRound v) s)
-  -- guard (checkVoteNotFromSut v)
-  -- TODO: do we know that the voting rules have been checked
-  --       by the vote creator? We don't have all the block-trees in
-  --       the test model. The following should use the block-tree of
-  --       the vote creator for checking the voting rules:
-  -- guard (isYes $ checkVotingRules s)
-  Just ([] , record s { allVotes = v ∷ allVotes s })
+  guard (checkVoteFromOther v)
+  -- checking voting rules for SUT as both parties have the same block-tree, see invariant
+  guard (isYes $ checkVotingRules s)
+  guard (votingBlockHash s == blockHash v)
+  Just ([] , addVote' s v)
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just ([] , s)

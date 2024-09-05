@@ -173,7 +173,7 @@ Properties that must hold with respect to chains, certificates and votes.
         votes tree₀ ≡ []
 
       extendable-chain : ∀ (t : T) (c : Chain)
-        → certs (newChain t c) ≡ certsFromChain c ++ certs t
+        → certs (newChain t c) ≡ certsFromChain c ++ certs t -- TODO: set union
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
@@ -240,7 +240,7 @@ The block-tree type is defined as follows:
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
-      latestCert cert₀ ∘ catMaybes ∘ map certificate ∘ preferredChain
+      latestCert cert₀ ∘ L.mapMaybe certificate ∘ preferredChain
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
@@ -287,9 +287,10 @@ additionally:
 
     open TreeType blockTree
 
-    instance
-      Default-T : Default T
-      Default-T .def = tree₀
+    private
+      instance
+        Default-T : Default T
+        Default-T .def = tree₀
 ```
 #### Block-tree update
 
@@ -314,29 +315,24 @@ cool-down phase.
 
 #### BlockSelection
 ```agda
-    BlockSelection : SlotNumber → T → Maybe Block
-    BlockSelection (MkSlotNumber s) =
-      head ∘ filter (λ {b → (slotNumber' b) ≤? (s ∸ L)}) ∘ preferredChain
-```
-```agda
-    ChainExtends : Maybe Block → Certificate → Chain → Type
-    ChainExtends nothing _ _ = ⊥
-    ChainExtends (just b) c =
-      Any (λ block → (hash block ≡ blockRef c))
-        ∘ L.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash hash b))
+    BlockSelection' : SlotNumber → Chain → Hash Block
+    BlockSelection' (MkSlotNumber s) =
+      hashHead ∘ filter (λ {b → (slotNumber' b) + L ≤? s})
+
+    BlockSelection : SlotNumber → T → Hash Block
+    BlockSelection s = BlockSelection' s ∘ preferredChain
 ```
 #### Voting rules
 
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
     VotingRule-1A : RoundNumber → T → Type
-    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
+    VotingRule-1A (MkRoundNumber r) t = r ≡ suc (roundNumber (latestCertSeen t))
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
     VotingRule-1B : SlotNumber → T → Type
-    VotingRule-1B s t =
-      Any (ChainExtends (BlockSelection s t) (latestCertSeen t)) (allChains t)
+    VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (allChains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
@@ -556,9 +552,9 @@ is added to be consumed immediately.
             open State
             s = clock M
             r = v-round s
-            v = createVote s p π σ (hash b)
+            v = createVote s p π σ b
           in
-        ∙ BlockSelection s t ≡ just b
+        ∙ BlockSelection s t ≡ b
         ∙ blockTrees M ⁉ p ≡ just t
         ∙ IsVoteSignature v σ
         ∙ StartOfRound s r
@@ -605,7 +601,7 @@ Helper function for creating a block
         ; creatorId = p
         ; parentBlock =
             let open IsTreeType
-            in tipHash (is-TreeType .valid t)
+            in tipHash (preferredChain t)
         ; certificate =
             let r = v-round s
             in needCert r t

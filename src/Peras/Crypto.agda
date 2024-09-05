@@ -5,7 +5,8 @@
 -- one can do when running the protocol
 module Peras.Crypto where
 
-open import Data.Bool using (Bool)
+open import Agda.Builtin.Equality using (_≡_; refl)
+open import Data.Bool using (Bool; true)
 open import Haskell.Prelude using (Eq; Int; _==_; Ord; compare ; Ordering ; ordFromCompare)
 open import Relation.Binary using (DecidableEquality)
 open import Relation.Binary using (StrictTotalOrder)
@@ -20,6 +21,7 @@ postulate
   _≟-BS_ : DecidableEquality ByteString
   compare-BS : ByteString → ByteString → Ordering
 
+  lem-eqBS : ∀ {b₁ b₂} → eqBS b₁ b₂ ≡ true → b₁ ≡ b₂
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -52,6 +54,9 @@ open Hash public
 
 {-# COMPILE AGDA2HS Hash newtype deriving (Generic) #-}
 {-# COMPILE GHC Hash = data G.Hash (G.MkHash) #-}
+
+MkHash-inj : ∀ {a : Set} {b₁ b₂ : Hash a} → hashBytes b₁ ≡ hashBytes b₂ → b₁ ≡ b₂
+MkHash-inj refl = refl
 
 instance
   iHashEq : {a : Set} → Eq (Hash a)

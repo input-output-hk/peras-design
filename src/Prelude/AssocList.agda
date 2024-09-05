@@ -32,10 +32,11 @@ module _ {K V : Type} where
     _‼_ : ∀ {k : K} (m : AssocList K V) → k ∈ᵐ m → V
     m ‼ p = L.First.satisfied p .proj₁ .proj₂
 
-    _⁉_ : AssocList K V → K → Maybe V
-    m ⁉ k with k ∈ᵐ? m
-    ... | yes p = just (m ‼ p)
-    ... | no  _ = nothing
+    opaque
+      _⁉_ : AssocList K V → K → Maybe V
+      m ⁉ k with k ∈ᵐ? m
+      ... | yes p = just (m ‼ p)
+      ... | no  _ = nothing
 
     module _ {k : K} {m : AssocList K V} where
       _∷~_ : k ∈ᵐ m → (V → V) → AssocList K V
@@ -45,15 +46,37 @@ module _ {K V : Type} where
       p ∷= v = p ∷~ const v
 
     module _ ⦃ _ : Default V ⦄ where
-      modify : K → (V → V) → Op₁ (AssocList K V)
-      modify k f m = case k ∈ᵐ? m of λ where
-        (no _)  → (k , f def) ∷ m
-        (yes p) → p ∷= f (m ‼ p)
 
-      set : K → V → Op₁ (AssocList K V)
-      set k v = modify k (const v)
+      modify : K → (V → V) → Op₁ (AssocList K V)
+      modify k f m with k ∈ᵐ? m
+      ... | no _  = (k , f def) ∷ m
+      ... | yes p = p ∷= f (m ‼ p)
+
+      opaque
+        set : K → V → Op₁ (AssocList K V)
+        set k v = modify k (const v)
 
       _‼d_ : AssocList K V → K → V
       m ‼d k with m ⁉ k
       ... | nothing = def
       ... | just v  = v
+
+      postulate -- TODO: proof
+        get∘set≡id : ∀ {k : K} {v : V} {m : AssocList K V}
+          → set k v m ⁉ k ≡ just v
+
+        k'≢k-get∘set : ∀ {k k' : K} {v : V} {m : AssocList K V}
+          → k' ≢ k
+          → set k' v m ⁉ k ≡ m ⁉ k
+
+        k'≢k-set-assoc : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
+          → k' ≢ k
+          → set k v (set k' v' m) ≡ set k' v' (set k v m)
+
+      k'≢k-get∘set∘set : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
+        → k' ≢ k
+        → set k v (set k' v' m) ⁉ k ≡ set k v m ⁉ k
+      k'≢k-get∘set∘set {k} {k'} {v} {v'} {m} p =
+        trans
+          (cong (_⁉ k) (k'≢k-set-assoc {k} {k'} {v} {v'} {m} p))
+          (k'≢k-get∘set {k} {k'} {v'} {m = set k v m} p)

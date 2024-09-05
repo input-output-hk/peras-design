@@ -16,8 +16,8 @@ record Params : Set where
         L : ℕ
         A : ℕ
         τ : ℕ
-        B : ℕ -- FIXME: Float
-        W : ℕ
+        B : ℕ
+        T : ℕ
 
         ⦃ U-nonZero ⦄ : NonZero U
         ⦃ K-nonZero ⦄ : NonZero K
@@ -44,5 +44,5 @@ The Number of votes required for quorum (3/4\*n + 2\*δ for some δ > 0)
 #### B
 The weight boost per vote
 
-#### W
-The weight to cut off for common prefix
+#### T
+Termination bound for block selection, in slots

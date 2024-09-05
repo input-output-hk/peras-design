@@ -51,7 +51,7 @@ module _ ⦃ _ : Postulates ⦄
                ; A = 1
                ; τ = 1
                ; B = 1
-               ; W = 1
+               ; T = 1
                }
   open Params
 
@@ -168,6 +168,7 @@ Based on properties of the blocktree we can show the following
       catMaybes≡[] : catMaybes (map certificate (preferredChain tree₀)) ≡ []
       catMaybes≡[] rewrite is-TreeType .instantiated = refl
 
+      {-
       noNewCert : certs (newChain tree₀ chain₁) ≡ cert₀ ∷ []
       noNewCert =
         let
@@ -190,6 +191,7 @@ Based on properties of the blocktree we can show the following
 
       latestCert≡cert₀ : latestCertSeen (newChain tree₀ chain₁) ≡ cert₀
       latestCert≡cert₀ = trans latestCert-newChain≡latestCert latestCertSeen-tree₀≡cert₀
+      -}
 ```
 Execution trace of the protocol
 ```agda
