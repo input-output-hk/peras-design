@@ -162,16 +162,12 @@ test-suite peras-conformance-test
     hs-source-dirs:   conformance
     main-is:          External.hs
     build-depends:  QuickCheck
+                  , aeson
                   , base
-                  , containers
-                  , contra-tracer
+                  , bytestring
                   , data-default
                   , hspec
-                  , hspec-golden-aeson
-                  , io-classes
                   , mtl
                   , peras-simulation
-                  , quickcheck-classes
                   , quickcheck-dynamic
-                  , text
     ghc-options: -rtsopts -threaded

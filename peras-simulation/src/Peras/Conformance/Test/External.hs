@@ -15,7 +15,8 @@ module Peras.Conformance.Test.External where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
 import Control.Concurrent.STM.TVar qualified as IO
-import Control.Monad (unless, when)
+import Control.Monad (unless, void, when)
+import Control.Monad.IO.Class ()
 import Control.Monad.State (
   MonadState (get),
   MonadTrans (lift),
@@ -25,25 +26,26 @@ import Control.Monad.State (
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as A
+import Data.ByteString.Char8 qualified as BS8
+import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 qualified as LBS8
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
+import Data.List (sort)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
-import Data.Text.Lazy qualified as T
-import Data.Text.Lazy.Encoding qualified as T
 import GHC.Generics (Generic)
-import Peras.Block
-import Peras.Chain (Chain, Vote)
+import Peras.Block (Certificate, Party)
+import Peras.Chain (Chain, Vote (..))
 import Peras.Conformance.Model (
   EnvAction (BadVote, NewChain, NewVote, Tick),
   NodeModel (..),
   initialModelState,
   transition,
  )
-import Peras.Conformance.Params
+import Peras.Conformance.Params (PerasParams)
 import Peras.Conformance.Test (Action (Step), modelSUT)
-import Peras.Numbering
+import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber)
 import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
   IsCommitteeMember,
@@ -66,7 +68,7 @@ import Peras.Prototype.Types (
   newRound,
  )
 import Peras.Prototype.Voting (voting)
-import System.IO
+import System.IO (Handle, IO)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
@@ -150,9 +152,10 @@ callSUT ::
   RunState -> NodeRequest -> IO NodeResponse
 callSUT RunState{hReader, hWriter} req =
   do
+    -- Verified that this writes UTF-8.
     LBS8.hPutStrLn hWriter $ A.encode req
-    LBS8.putStrLn $ A.encode req
-    either Failed id . A.eitherDecode' . LBS8.pack <$> hGetLine hReader
+    -- Verified that this reads UTF-8.
+    either Failed id . A.eitherDecode' . LBS.fromStrict <$> BS8.hGetLine hReader
 
 type Runtime = StateT RunState IO
 
@@ -160,9 +163,9 @@ instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
   perform NodeModel{..} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
+      modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       let clock' = clock + 1
-      res <-
-        lift $
+      ( lift $
           callSUT
             rs
             NewSlot
@@ -171,10 +174,10 @@ instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
               , newChains = unfetchedChains
               , newVotes = unfetchedVotes
               }
-      modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
-      case res of
-        NodeResponse{..} -> pure diffuseVotes
-        _ -> pure mempty -- FIXME: The state model should define an error type.
+        )
+        >>= \case
+          NodeResponse{..} -> pure diffuseVotes
+          _ -> pure mempty -- FIXME: The state model should define an error type.
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
       pure mempty
@@ -187,8 +190,10 @@ instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
 
   postcondition (s, s') (Step a) _ r = do
     let expected = fst (fromJust (transition s a))
-    -- let ok = length r == length expected
-    let ok = r == expected
+    let eqVotes vs vs' =
+          let f MkVote{..} = (votingRound, creatorId, blockHash)
+           in sort (f <$> vs) == sort (f <$> vs')
+    let ok = r `eqVotes` expected
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
