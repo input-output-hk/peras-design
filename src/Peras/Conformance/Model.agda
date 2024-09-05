@@ -500,10 +500,15 @@ makeVote' s = do
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
-votesInState : NodeModel → List Vote
-votesInState s = maybeToList do
+voteInState : NodeModel → Maybe Vote
+voteInState s = do
   guard (slotInRound (protocol s) (clock s) == 0)
   makeVote' s
+
+{-# COMPILE AGDA2HS voteInState #-}
+
+votesInState : NodeModel → List Vote
+votesInState = maybeToList ∘ voteInState
 
 {-# COMPILE AGDA2HS votesInState #-}
 
@@ -515,11 +520,10 @@ headBlockHash (b ∷ _) = Hashable.hash hashBlock b
 
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
-  Just (sutVotes ,
-    let s'' = record s' { allVotes = sutVotes ++ allVotes s' }
+  let s' = record s { clock = nextSlot (clock s) } in
+  Just (votesInState s' ,
+    let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
-  where s' = record s { clock = nextSlot (clock s) }
-        sutVotes = votesInState s'
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)

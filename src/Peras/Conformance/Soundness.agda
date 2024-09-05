@@ -18,7 +18,7 @@ open import Data.Maybe using (maybe; maybe′; nothing; just)
 open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂) renaming (_,_ to _⸴_)
 open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
-open import Relation.Nullary.Negation using (¬_)
+open import Relation.Nullary.Negation using (¬_; contradiction)
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans)
 
 open import Peras.Block
@@ -207,6 +207,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     fetched {s} x
       rewrite fetched→[] {s} x
       = All.[]
+
+    lastSlotInRound : ∀ {s : State} → ¬ (NextSlotInSameRound s) → LastSlotInRound s
+    lastSlotInRound {s} = lastSlotInRound' {s}
+      where
+        lastSlotInRound' : ∀ {s : State} →
+          ¬ (rnd (getSlotNumber (State.clock s))
+                 ≡ (rnd (suc (getSlotNumber (State.clock s)))))
+          → LastSlotInRound s
+        lastSlotInRound' x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
 
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
@@ -736,15 +745,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
 
     tick-soundness {vs} s₀ inv refl
-      | True with vs
+      | True
+      with vs
 
     tick-soundness s₀ inv refl
-      | True | vote ∷ xs
+      | True
+      | vote ∷ xs
       with   checkSignedVote vote in checkedSig
            | isYes (checkVotingRules (modelState s₀)) in checkedVRs
            | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
            | div (getSlotNumber (State.clock s₀)) (Params.U params) == getRoundNumber (votingRound vote) in isVotingRound
            | checkVoteFromSut vote in checkedSut
+
     tick-soundness {vs} s₀ inv refl
       | True | vote ∷ [] | True | True | True | True | True =
 
@@ -993,8 +1005,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {vs} s₀ inv refl
       | True | vote ∷ (x ∷ xs) | True | True | True | True | True = {!!} -- contradiction: length vs ≡ 1
 
-    tick-soundness s₀ inv refl
-      | True | vote ∷ xs | _ | _ | _ | _ | _ = {!!}
+    tick-soundness {vs} s₀ inv refl
+      | True | vote ∷ xs | _ | _ | _ | _ | _ = {!!} -- precondition does not hold for vote
 
     tick-soundness s₀ inv refl
       | True | [] = {!!} -- a vote is expected
@@ -1079,12 +1091,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ : State
         s₁ = tick s₀
 
-        lastSlotInRound :
-            ¬ (rnd (getSlotNumber (State.clock s₀))
-                ≡ (rnd (suc (getSlotNumber (State.clock s₀)))))
-          → LastSlotInRound s₀
-        lastSlotInRound x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
-
         noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
         noCertsFromQuorum = {!!} -- no new vote has been added
 
@@ -1113,7 +1119,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         req = {!!} -- FIXME: ?
 
         trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound ¬q) req ↣ ∎
+        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound {s₀} ¬q) req ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite noVoteInState = refl

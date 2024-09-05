@@ -355,13 +355,14 @@ makeVote' s =
       )
     pure (makeVote (protocol s) (clock s) (votingBlockHash s))
 
+voteInState :: NodeModel -> Maybe Vote
+voteInState s =
+  do
+    guard (slotInRound (protocol s) (clock s) == 0)
+    makeVote' s
+
 votesInState :: NodeModel -> [Vote]
-votesInState s =
-  maybeToList
-    ( do
-        guard (slotInRound (protocol s) (clock s) == 0)
-        makeVote' s
-    )
+votesInState = maybeToList . voteInState
 
 headBlockHash :: Chain -> Hash Block
 headBlockHash [] = genesisHash
@@ -370,37 +371,51 @@ headBlockHash (b : _) = hash b
 transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
 transition s Tick =
   Just
-    ( sutVotes
+    ( votesInState
+        ( NodeModel
+            (nextSlot (clock s))
+            (protocol s)
+            (allChains s)
+            (allVotes s)
+            (allSeenCerts s)
+        )
     , NodeModel
-        (clock s')
-        (protocol s')
-        (allChains s')
-        (sutVotes ++ allVotes s')
+        (nextSlot (clock s))
+        (protocol s)
+        (allChains s)
+        ( votesInState
+            ( NodeModel
+                (nextSlot (clock s))
+                (protocol s)
+                (allChains s)
+                (allVotes s)
+                (allSeenCerts s)
+            )
+            ++ allVotes s
+        )
         ( foldr
             insertCert
-            (allSeenCerts s')
+            (allSeenCerts s)
             ( certsFromQuorum
                 ( NodeModel
-                    (clock s')
-                    (protocol s')
-                    (allChains s')
-                    (sutVotes ++ allVotes s')
-                    (allSeenCerts s')
+                    (nextSlot (clock s))
+                    (protocol s)
+                    (allChains s)
+                    ( votesInState
+                        ( NodeModel
+                            (nextSlot (clock s))
+                            (protocol s)
+                            (allChains s)
+                            (allVotes s)
+                            (allSeenCerts s)
+                        )
+                        ++ allVotes s
+                    )
+                    (allSeenCerts s)
                 )
             )
         )
     )
- where
-  s' :: NodeModel
-  s' =
-    NodeModel
-      (nextSlot (clock s))
-      (protocol s)
-      (allChains s)
-      (allVotes s)
-      (allSeenCerts s)
-  sutVotes :: [Vote]
-  sutVotes = votesInState s'
 transition s (NewChain []) = Just ([], s)
 transition s (NewChain (block : rest)) =
   do
