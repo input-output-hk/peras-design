@@ -217,6 +217,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           → LastSlotInRound s
         lastSlotInRound' x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
 
+    noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
+    noCertsFromQuorum = {!!}
+
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
         → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ)
@@ -1033,11 +1036,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         nextSlotNotNewRound : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
         nextSlotNotNewRound = /-% {x = getSlotNumber (State.clock s₀)} {n = Params.U params} q isSlotZero
 
-        noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noCertsFromQuorum = {!!} -- no new vote has been added
-
         s₁ : State
         s₁ = tick s₀
+
+        invFetched₁ : Fetched s₁
+        invFetched₁ = fetched {s₀} (invFetched inv)
 
         s₁-agrees :
           record
@@ -1054,7 +1057,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') }
         s₁-agrees
           rewrite nextSlotNotNewRound
-          rewrite noCertsFromQuorum
+          rewrite noCertsFromQuorum {s₁} invFetched₁
           = refl
 
         trace : s₀ ↝⋆ s₁
@@ -1066,7 +1069,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         inv₁ : Invariant s₁
         inv₁ =
           record
-            { invFetched = fetched {s₀} (invFetched inv)
+            { invFetched = invFetched₁
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
@@ -1091,8 +1094,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ : State
         s₁ = tick s₀
 
-        noCertsFromQuorum : certsFromQuorum (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noCertsFromQuorum = {!!} -- no new vote has been added
+        invFetched₁ : Fetched s₁
+        invFetched₁ = fetched {s₀} (invFetched inv)
 
         noVoteInState : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
         noVoteInState = {!!}
@@ -1112,7 +1115,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') }
         s₁-agrees
           rewrite noVoteInState
-          rewrite noCertsFromQuorum
+          rewrite noCertsFromQuorum {s₁} invFetched₁
           = refl
 
         req : RequiredVotes s₀
@@ -1127,7 +1130,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         inv₁ : Invariant s₁
         inv₁ =
           record
-            { invFetched = fetched {s₀} (invFetched inv)
+            { invFetched = invFetched₁
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
