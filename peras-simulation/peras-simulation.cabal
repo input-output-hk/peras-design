@@ -154,13 +154,12 @@ test-suite peras-simulation-test
        hspec-discover:hspec-discover
     ghc-options: -rtsopts -threaded
 
-test-suite peras-conformance-test
+executable peras-conformance-test
     import:           warnings
     default-language: Haskell2010
     other-modules: Peras.Conformance.ExternalSpec
                    Paths_peras_simulation
-    type:             exitcode-stdio-1.0
-    hs-source-dirs:   conformance
+    hs-source-dirs:   app
     main-is:          External.hs
     build-depends:  QuickCheck
                   , aeson
