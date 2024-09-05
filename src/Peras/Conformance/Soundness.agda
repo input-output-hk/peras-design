@@ -975,7 +975,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           inv₁ : Invariant s₁
           inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
             record
-              { invFetched = fetched i
+              { invFetched = let open State s₀ in
+                fetched {
+                  record s₀
+                    { blockTrees =
+                        set otherId (addVote tree v)
+                          (set sutId (addVote tree v)
+                            blockTrees)
+                    ; messages = (msg ++ messages) ─ other∈messages
+                    ; history = VoteMsg v ∷ history
+                    }
+                  } i
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
