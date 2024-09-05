@@ -44,6 +44,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          {txSelection : SlotNumber → PartyId → List Tx}
     where
 
+  -- The model introduces two parties, the sut (system under test) and
+  -- an other one. Both are honest and there are no other parties.
+
   uniqueIds : otherId ≢ sutId
   uniqueIds = λ ()
 
@@ -67,16 +70,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   apply-filter : filter (λ x → ¬? (otherId ≟ proj₁ x)) parties ≡ (sutId ⸴ Honest {sutId}) ∷ []
   apply-filter =
-    let
-      f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x))
-             {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds
-      f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId ⸴ Honest {otherId})} {[]} uniqueIds
-    in
-      trans f₁ (cong ((sutId ⸴ Honest {sutId}) ∷_) f₂)
+    let f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds
+        f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId ⸴ Honest {otherId})} {[]} uniqueIds
+    in trans f₁ (cong ((sutId ⸴ Honest {sutId}) ∷_) f₂)
 
   apply-filter' : filter (λ x → ¬? (sutId ≟ proj₁ x)) parties ≡ (otherId ⸴ Honest {otherId}) ∷ []
-  apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId))
-                    {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds'
+  apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds'
+
+  -- The parameters are the ones defined in the test model
 
   modelParams : PerasParams
   modelParams = testParams
@@ -151,54 +152,38 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     ... | (no _)  = []
 
     sutVotesInTrace : ∀ {s₀ s₁} → s₀ ↝⋆ s₁ → List (SlotNumber × Vote)
-    sutVotesInTrace ∎              = []
+    sutVotesInTrace ∎ = []
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
-    vr-1a⇒VotingRule-1A : ∀ (s : State)
-      → let
-          m = modelState s
-          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
-        in
-          nextRound (round cert') ≡ rFromSlot m
-      → VotingRule-1A (v-round (clock m)) m
-    vr-1a⇒VotingRule-1A s x
+    -- Voting rules from the test-model to the small-step semantics
+
+    vr-1a⇒VotingRule-1A : ∀ {s : State}
+      → Vr1A (modelState s)
+      → VotingRule-1A (v-round (State.clock s)) (modelState s)
+    vr-1a⇒VotingRule-1A {s} x = cong getRoundNumber (sym x)
+
+    vr-1b⇒VotingRule-1B : ∀ {s : State}
+      → Vr1B (modelState s)
+      → VotingRule-1B (State.clock s) (modelState s)
+    vr-1b⇒VotingRule-1B {s} x
       rewrite
-        suc-definition
-          {n = getRoundNumber (round (latestCert cert₀ (allSeenCerts (modelState s))))}
-      = cong getRoundNumber (sym x)
+        filter-eq'
+          {prefChain (modelState s)}
+          {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
+          {getSlotNumber (clock (modelState s))}
+      = x
 
-    opaque
-      unfolding votingBlockHash
+    vr-2a⇒VotingRule-2A : ∀ {s : State}
+      → Vr2A (modelState s)
+      → VotingRule-2A (v-round (State.clock s)) (modelState s)
+    vr-2a⇒VotingRule-2A x = x
 
-      vr-1b⇒VotingRule-1B : ∀ (s : State)
-        → let m = modelState s
-          in Vr1B m
-        → VotingRule-1B (clock m) m
-      vr-1b⇒VotingRule-1B s x
-        rewrite
-          filter-eq'
-            {prefChain (modelState s)}
-            {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
-            {getSlotNumber (clock (modelState s))}
-        = x
+    vr-2b⇒VotingRule-2B : ∀ {s : State}
+      → Vr2B (modelState s)
+      → VotingRule-2B (v-round (State.clock s)) (modelState s)
+    vr-2b⇒VotingRule-2B x = x
 
-    vr-2a⇒VotingRule-2A : ∀ (s : State)
-      → let
-          m = modelState s
-          cert' = maximumBy cert₀ (comparing round) (allSeenCerts m)
-        in
-          getRoundNumber (rFromSlot m) ≥ getRoundNumber (round cert') + perasR (protocol m)
-      → VotingRule-2A (v-round (clock m)) m
-    vr-2a⇒VotingRule-2A _ x = x
-
-    vr-2b⇒VotingRule-2B : ∀ (s : State)
-      → let
-          m = modelState s
-        in
-              (getRoundNumber (rFromSlot m) > getRoundNumber (round (certS m)))
-          P.× (mod (getRoundNumber (rFromSlot m)) (perasK (protocol m)) ≡ mod (getRoundNumber (round (certS m))) (perasK (protocol m)))
-      → VotingRule-2B (v-round (clock m)) m
-    vr-2b⇒VotingRule-2B _ x = x
+    -- Some postulates, resp. TODOs
 
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
@@ -290,11 +275,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         }
       where
 
-        slot : SlotNumber
-        slot = State.clock s₀
+        slot₀ : SlotNumber
+        slot₀ = State.clock s₀
 
         r : RoundNumber
-        r = v-round slot
+        r = v-round slot₀
 
         notFromSut : creatorId vote ≢ sutId
         notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
@@ -302,7 +287,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree : NodeModel
         tree = modelState s₀  -- we don't track the block trees for the environment nodes in the test model!
 
-        startOfRound : StartOfRound slot r
+        startOfRound : StartOfRound slot₀ r
         startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
         σ : Signature
@@ -312,20 +297,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorId≡otherId = eqℕ-sound checkedOther
 
         v : Vote
-        v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
+        v = createVote slot₀ (creatorId vote) (proofM vote) σ (blockHash vote)
 
-        validVote : VotingRule slot tree
-        validVote = -- need to check the VR logic also for environment votes
-          let
-            witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-            f₁ = vr-1a⇒VotingRule-1A s₀
-            f₂ = vr-1b⇒VotingRule-1B s₀
-            f₃ = vr-2a⇒VotingRule-2A s₀
-            f₄ = vr-2b⇒VotingRule-2B s₀
-          in
-            S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
+        validVote : VotingRule slot₀ tree
+        validVote =
+          let f₁ = vr-1a⇒VotingRule-1A {s₀}
+              f₂ = vr-1b⇒VotingRule-1B {s₀}
+              f₃ = vr-2a⇒VotingRule-2A {s₀}
+              f₄ = vr-2b⇒VotingRule-2B {s₀}
+          in S.map (P.map f₁ f₂) (P.map f₃ f₄) (toWitness (isYes≡True⇒TTrue checkedVRs))
 
-        vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+        vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
         vote-round = sym (eqℕ-sound isVotingRound)
 
         correctVote : vote ≡ v
@@ -378,17 +360,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
             Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
 
-        opaque
-          unfolding votingBlockHash
-
-          blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-          blockSelection-eq
-            rewrite
-              filter-eq
-                {prefChain tree}
-                {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
-                {getSlotNumber slot}
-             = refl
+        blockSelection-eq : BlockSelection slot₀ tree ≡ votingBlockHash tree
+        blockSelection-eq
+          rewrite
+            filter-eq
+              {prefChain tree}
+              {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
+              {getSlotNumber slot₀}
+           = refl
 
         validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
         validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
@@ -539,8 +518,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         }
       where
 
-        slot : SlotNumber
-        slot = State.clock s₀
+        slot₀ : SlotNumber
+        slot₀ = State.clock s₀
 
         notFromSut : creatorId block ≢ sutId
         notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
@@ -549,12 +528,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree = modelState s₀
 
         β : Block
-        β = createBlock (State.clock s₀) (creatorId block) (leadershipProof block) (signature block) tree
+        β = createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
 
         chain : Chain
         chain = β ∷ prefChain tree
 
-        block-slotNumber : slotNumber block ≡ State.clock s₀
+        block-slotNumber : slotNumber block ≡ slot₀
         block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
 
         validRest : rest ≡ prefChain tree
@@ -578,7 +557,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = v
 
         validChain : ValidChain
-          (createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
+          (createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
             ∷ prefChain tree)
         validChain
           = Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
@@ -709,14 +688,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               { blockTrees =
                   set sutId
                     (record tree
-                      { allChains = chain ∷ (allChains tree)
+                      { allChains = chain ∷ allChains tree
                       ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
                       }
                     )
                     (set
                       (creatorId block)
                       (record tree
-                        { allChains = chain ∷ (allChains tree)
+                        { allChains = chain ∷ allChains tree
                         ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
                         }
                       )
@@ -781,19 +760,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           }
         where
 
-          slot : SlotNumber
-          slot = State.clock s₀
+          slot₀ : SlotNumber
+          slot₀ = State.clock s₀
 
           r : RoundNumber
-          r = v-round slot
+          r = v-round slot₀
 
           tree : NodeModel
           tree = modelState s₀
 
           v : Vote
-          v = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
+          v = createVote slot₀ sutId (proofM vote) (signature vote) (blockHash vote)
 
-          startOfRound : StartOfRound slot r
+          startOfRound : StartOfRound slot₀ r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
           msg : List SmallStep.Envelope
@@ -823,37 +802,31 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                where
                  open State s₀
 
-          validVote : VotingRule slot tree
+          validVote : VotingRule slot₀ tree
           validVote =
-            let
-              witness = toWitness (isYes≡True⇒TTrue checkedVRs)
-              f₁ = vr-1a⇒VotingRule-1A s₀
-              f₂ = vr-1b⇒VotingRule-1B s₀
-              f₃ = vr-2a⇒VotingRule-2A s₀
-              f₄ = vr-2b⇒VotingRule-2B s₀
-            in
-              S.map (P.map f₁ f₂) (P.map f₃ f₄) witness
+            let f₁ = vr-1a⇒VotingRule-1A {s₀}
+                f₂ = vr-1b⇒VotingRule-1B {s₀}
+                f₃ = vr-2a⇒VotingRule-2A {s₀}
+                f₄ = vr-2b⇒VotingRule-2B {s₀}
+            in S.map (P.map f₁ f₂) (P.map f₃ f₄) (toWitness (isYes≡True⇒TTrue checkedVRs))
 
           postulate -- TODO
             filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
               Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
 
-          opaque
-            unfolding votingBlockHash
+          blockSelection-eq : BlockSelection slot₀ tree ≡ votingBlockHash tree
+          blockSelection-eq
+            rewrite
+              filter-eq
+                {prefChain tree}
+                {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
+                {getSlotNumber slot₀}
+            = refl
 
-            blockSelection-eq : BlockSelection slot tree ≡ votingBlockHash tree
-            blockSelection-eq
-              rewrite
-                filter-eq
-                  {prefChain tree}
-                  {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
-                  {getSlotNumber slot}
-              = refl
-
-          validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
+          validBlockHash : BlockSelection slot₀ tree ≡ blockHash vote
           validBlockHash = MkHash-inj $ trans (cong hashBytes blockSelection-eq) (lem-eqBS isValidBlockHash)
 
-          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
           vote-round = sym (eqℕ-sound isVotingRound)
 
           creatorId≡sutId : creatorId vote ≡ sutId
@@ -875,7 +848,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           postulate -- TODO
             -- U = 5
-            noNewRound : rnd (getSlotNumber (State.clock s₀)) ≡ rnd (suc (getSlotNumber (State.clock s₀)))
+            noNewRound : rnd (getSlotNumber slot₀) ≡ rnd (suc (getSlotNumber slot₀))
 
           nextSlotInSameRound : NextSlotInSameRound s₀
           nextSlotInSameRound = noNewRound
@@ -952,7 +925,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
             ≡
             let s = record tree
-                      { clock    = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
+                      { clock    = MkSlotNumber (suc (getSlotNumber slot₀))
                       ; allVotes = vote ∷ maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
@@ -970,27 +943,21 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             in
             modelState
               record s₀
-                 { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
+                 { clock = MkSlotNumber (suc (getSlotNumber slot₀))
                  ; blockTrees =
                      set otherId s'
                        (set sutId s' (State.blockTrees s₀))
                  }
             ≡
             let s = record tree
-                      { clock = MkSlotNumber (suc (getSlotNumber (State.clock s₀)))
-                      ; allVotes = vote ∷ maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-                      }
+                    { clock = MkSlotNumber (suc (getSlotNumber slot₀))
+                    ; allVotes = vote ∷ maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
+                    }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          s₁-agrees
-            = trans set-irrelevant addVote-modelState
+          s₁-agrees = trans set-irrelevant addVote-modelState
 
-          votes-agree :
-            (State.clock s₀ , v)  ∷ []
-            ≡
-            (State.clock s₀ , vote) ∷ map (State.clock s₀ ,_) []
-          votes-agree
-            rewrite correctVote
-            = refl
+          votes-agree : sutVotesInTrace trace ≡ (slot₀ , vote) ∷ map (slot₀ ,_) []
+          votes-agree rewrite correctVote = refl
 
           msg₀≡msg₁ : State.messages s₀ ≡ (msg ++ State.messages s₀) ─ other∈messages
           msg₀≡msg₁ rewrite map∘apply-filter = refl
@@ -1038,11 +1005,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
       where
 
+        slot₀ : SlotNumber
+        slot₀ = State.clock s₀
+
         tree : NodeModel
         tree = modelState s₀
 
-        nextSlotNotNewRound : (suc (getSlotNumber (State.clock s₀)) % Params.U params ≡ᵇ 0) ≡ False
-        nextSlotNotNewRound = /-% {x = getSlotNumber (State.clock s₀)} {n = Params.U params} q isSlotZero
+        nextSlotNotNewRound : (suc (getSlotNumber slot₀) % Params.U params ≡ᵇ 0) ≡ False
+        nextSlotNotNewRound = /-% {x = getSlotNumber slot₀} {n = Params.U params} q isSlotZero
 
         s₁ : State
         s₁ = tick s₀
@@ -1071,7 +1041,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         trace : s₀ ↝⋆ s₁
         trace = NextSlot (invFetched inv) q ↣ ∎
 
-        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
         votes-agree rewrite nextSlotNotNewRound = refl
 
         inv₁ : Invariant s₁
@@ -1095,6 +1065,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           }
 
       where
+
+        slot₀ : SlotNumber
+        slot₀ = State.clock s₀
 
         tree : NodeModel
         tree = modelState s₀
@@ -1138,7 +1111,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite noCertsFromQuorum {s₁} invFetched₁
           = refl
 
-        votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
+        votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
         votes-agree rewrite noVoteInState = refl
 
         inv₁ : Invariant s₁

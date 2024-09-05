@@ -239,9 +239,10 @@ private
   mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
   mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
-opaque
-  votingBlockHash : NodeModel → Hash Block
-  votingBlockHash s = hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))}) $ pref s
+votingBlockHash : NodeModel → Hash Block
+votingBlockHash s =
+  hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
+    $ pref s
 
 {-# COMPILE AGDA2HS votingBlockHash #-}
 
@@ -310,7 +311,7 @@ module TreeInstance
       IsTreeType
         initialModelState
         newChain'
-        allChains -- (λ {t → genesisChain ∷ allChains t})
+        allChains -- (λ t → allChains t ++ genesisChain ∷ [])
         pref
         addVote'
         allVotes
@@ -326,7 +327,7 @@ module TreeInstance
       ; extendable-chain = {!!} -- TODO: set union
       ; valid = {!!} -- does that really hold here?
       ; optimal = {!!}
-      ; self-contained = λ { t → maximumBy-default-or-∈ genesisChain _ (allChains t) }
+      ; self-contained = λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
       ; valid-votes = {!!}
       ; unique-votes = {!!}
       ; no-equivocations = {!!}
@@ -532,10 +533,11 @@ transition s (NewChain (block ∷ rest)) = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
-  Just ([] , record s
-             { allChains = (block ∷ rest) ∷ allChains s
-             ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
-             })
+  Just ([] ,
+    record s
+      { allChains = (block ∷ rest) ∷ allChains s
+      ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
+      })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)

@@ -327,7 +327,7 @@ cool-down phase.
 VR-1A: A party has seen a certificate cert-r−1 for round r−1
 ```agda
     VotingRule-1A : RoundNumber → T → Type
-    VotingRule-1A (MkRoundNumber r) t = r ≡ roundNumber (latestCertSeen t) + 1
+    VotingRule-1A (MkRoundNumber r) t = r ≡ suc (roundNumber (latestCertSeen t))
 ```
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
