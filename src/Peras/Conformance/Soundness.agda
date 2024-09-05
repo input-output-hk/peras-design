@@ -119,16 +119,24 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
            (let open Postulates postulates)
 
            -- Currently we allow anyone to vote
-           (axiom-everyoneIsOnTheCommittee : ∀ {p slot prf} → IsCommitteeMember p slot prf)
+           (axiom-everyoneIsOnTheCommittee :
+             ∀ {p slot prf} → IsCommitteeMember p slot prf)
 
-           (axiom-checkVoteSignature : ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
+           (axiom-checkVoteSignature :
+             ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
 
-           (axiom-checkLeadershipProof : ∀ {block} → checkLeadershipProof (leadershipProof block) ≡ True → IsSlotLeader (creatorId block) (slotNumber block) (leadershipProof block))
+           (axiom-checkLeadershipProof :
+             ∀ {block} → checkLeadershipProof (leadershipProof block) ≡ True
+             → IsSlotLeader (creatorId block) (slotNumber block) (leadershipProof block))
 
-           (axiom-checkBlockSignature : ∀ {block} → checkSignedBlock block ≡ True → IsBlockSignature block (signature block))
+           (axiom-checkBlockSignature :
+             ∀ {block} → checkSignedBlock block ≡ True
+             → IsBlockSignature block (signature block))
 
            -- Assume that blocks are created correctly, as the model is not explicit about block creation
-           (axiom-blockCreatedCorrectly : ∀ {block s} → block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
+           (axiom-blockCreatedCorrectly :
+             ∀ {block s} →
+             block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
 
          where
 
@@ -157,31 +165,35 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     -- Voting rules from the test-model to the small-step semantics
 
-    vr-1a⇒VotingRule-1A : ∀ {s : State}
+    postulate -- TODO
+      filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
+        Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
+
+    f-1a : ∀ {s : State}
       → Vr1A (modelState s)
       → VotingRule-1A (v-round (State.clock s)) (modelState s)
-    vr-1a⇒VotingRule-1A {s} x = cong getRoundNumber (sym x)
+    f-1a {s} x = cong getRoundNumber (sym x)
 
-    vr-1b⇒VotingRule-1B : ∀ {s : State}
+    f-1b : ∀ {s : State}
       → Vr1B (modelState s)
       → VotingRule-1B (State.clock s) (modelState s)
-    vr-1b⇒VotingRule-1B {s} x
+    f-1b {s} x
       rewrite
-        filter-eq'
+        filter-eq
           {prefChain (modelState s)}
           {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
           {getSlotNumber (clock (modelState s))}
       = x
 
-    vr-2a⇒VotingRule-2A : ∀ {s : State}
+    f-2a : ∀ {s : State}
       → Vr2A (modelState s)
       → VotingRule-2A (v-round (State.clock s)) (modelState s)
-    vr-2a⇒VotingRule-2A x = x
+    f-2a x = x
 
-    vr-2b⇒VotingRule-2B : ∀ {s : State}
+    f-2b : ∀ {s : State}
       → Vr2B (modelState s)
       → VotingRule-2B (v-round (State.clock s)) (modelState s)
-    vr-2b⇒VotingRule-2B x = x
+    f-2b x = x
 
     -- Some postulates, resp. TODOs
 
@@ -259,7 +271,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     newVote-soundness s₀ vote inv prf
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
-         | div (getSlotNumber (State.clock s₀)) (Params.U params) == getRoundNumber (votingRound vote) in isVotingRound
+         | div (getSlotNumber (State.clock s₀)) (Params.U params)
+             == getRoundNumber (votingRound vote) in isVotingRound
          | checkSignedVote vote in checkedSig
          | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀)) in checkedVRs
@@ -300,12 +313,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         v = createVote slot₀ (creatorId vote) (proofM vote) σ (blockHash vote)
 
         validVote : VotingRule slot₀ tree
-        validVote =
-          let f₁ = vr-1a⇒VotingRule-1A {s₀}
-              f₂ = vr-1b⇒VotingRule-1B {s₀}
-              f₃ = vr-2a⇒VotingRule-2A {s₀}
-              f₄ = vr-2b⇒VotingRule-2B {s₀}
-          in S.map (P.map f₁ f₂) (P.map f₃ f₄) (toWitness (isYes≡True⇒TTrue checkedVRs))
+        validVote = S.map
+          (P.map (f-1a {s₀}) (f-1b {s₀}))
+          (P.map (f-2a {s₀}) (f-2b {s₀}))
+          (toWitness (isYes≡True⇒TTrue checkedVRs))
 
         vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
         vote-round = sym (eqℕ-sound isVotingRound)
@@ -356,17 +367,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               notFromSut)
             (sutTree inv)
 
-        postulate -- TODO
-          filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-            Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
-
         blockSelection-eq : BlockSelection slot₀ tree ≡ votingBlockHash tree
         blockSelection-eq
           rewrite
-            filter-eq
+            sym (filter-eq
               {prefChain tree}
               {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
-              {getSlotNumber slot₀}
+              {getSlotNumber slot₀})
            = refl
 
         validBlockHash : BlockSelection (State.clock s₀) tree ≡ blockHash vote
@@ -803,24 +810,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  open State s₀
 
           validVote : VotingRule slot₀ tree
-          validVote =
-            let f₁ = vr-1a⇒VotingRule-1A {s₀}
-                f₂ = vr-1b⇒VotingRule-1B {s₀}
-                f₃ = vr-2a⇒VotingRule-2A {s₀}
-                f₄ = vr-2b⇒VotingRule-2B {s₀}
-            in S.map (P.map f₁ f₂) (P.map f₃ f₄) (toWitness (isYes≡True⇒TTrue checkedVRs))
-
-          postulate -- TODO
-            filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-              Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
+          validVote = S.map
+            (P.map (f-1a {s₀}) (f-1b {s₀}))
+            (P.map (f-2a {s₀}) (f-2b {s₀}))
+            (toWitness (isYes≡True⇒TTrue checkedVRs))
 
           blockSelection-eq : BlockSelection slot₀ tree ≡ votingBlockHash tree
           blockSelection-eq
             rewrite
-              filter-eq
+              sym (filter-eq
                 {prefChain tree}
                 {λ {s → getSlotNumber (slotNumber s) + (Params.L params)}}
-                {getSlotNumber slot₀}
+                {getSlotNumber slot₀})
             = refl
 
           validBlockHash : BlockSelection slot₀ tree ≡ blockHash vote

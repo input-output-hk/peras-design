@@ -44,24 +44,15 @@ not_b≡True→b≡False {False} x = refl
 not-eqℕ-sound : ∀ {n m : Nat} → not (n == m) ≡ True → n ≢ m
 not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
 
-postulate
+postulate -- TODO
   eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
-
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
-postulate -- TODO: proof
+postulate -- TODO
   /-% : ∀ {x n : ℕ} → ⦃ _ : NonZero n ⦄
     → x / n ≡ (suc x) / n
     → (x % n ≡ᵇ 0) ≡ False
     → ((suc x) % n ≡ᵇ 0) ≡ False
-
-import Data.List
-open import Peras.Block
-open import Peras.Chain
-
-postulate -- TODO
-  filter-eq' : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-    filter (λ { a → (f a) <= b }) l ≡ Data.List.filter (λ { a → (f a) Data.Nat.≤? b }) l
