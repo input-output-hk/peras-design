@@ -93,6 +93,7 @@ executable  peras-simulation-pipe
                     , data-default
                     , io-classes
                     , mtl
+                    , optparse-applicative
                     , peras-simulation
                     , text
 

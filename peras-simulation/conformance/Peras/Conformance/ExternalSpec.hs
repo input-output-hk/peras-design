@@ -4,7 +4,7 @@ import Control.Monad.State (evalStateT)
 import Data.Default (def)
 import Data.Functor (void)
 import Peras.Conformance.Test.External (prop_node)
-import System.IO
+import System.IO (Handle)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Blind (Blind), Gen, Property, Testable, expectFailure, property)
