@@ -4,7 +4,7 @@
 
 module Peras.Prototype.Trace where
 
-import Control.Tracer (Tracer (..), contramap, stdoutTracer)
+import Control.Tracer (Tracer (..), contramap, debugTracer)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import Data.Set (Set)
@@ -52,4 +52,4 @@ instance FromJSON PerasLog
 instance ToJSON PerasLog
 
 perasTracer :: Tracer IO PerasLog
-perasTracer = contramap (LT.unpack . LE.decodeUtf8 . A.encode) stdoutTracer
+perasTracer = contramap (LT.unpack . LE.decodeUtf8 . A.encode) debugTracer
