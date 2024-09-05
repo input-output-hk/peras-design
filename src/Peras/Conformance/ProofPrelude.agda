@@ -32,17 +32,17 @@ eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _  = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
+not-eqℕ-sound' : ∀ {n m : Nat} → (n == m) ≡ False → n ≢ m
+not-eqℕ-sound' {zero} {zero} ()
+not-eqℕ-sound' {zero} {suc m} x ()
+not-eqℕ-sound' {suc n} {zero} x ()
+not-eqℕ-sound' {suc n} {suc m} x x₁ = not-eqℕ-sound' {n} {m} x (suc-injective x₁)
+
+not_b≡True→b≡False : ∀ {b : Bool} → not b ≡ True → b ≡ False
+not_b≡True→b≡False {False} x = refl
+
 not-eqℕ-sound : ∀ {n m : Nat} → not (n == m) ≡ True → n ≢ m
 not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
-  where
-    not-eqℕ-sound' : ∀ {n m : Nat} → (n == m) ≡ False → n ≢ m
-    not-eqℕ-sound' {zero} {zero} ()
-    not-eqℕ-sound' {zero} {suc m} x ()
-    not-eqℕ-sound' {suc n} {zero} x ()
-    not-eqℕ-sound' {suc n} {suc m} x x₁ = not-eqℕ-sound' {n} {m} x (suc-injective x₁)
-
-    not_b≡True→b≡False : ∀ {b : Bool} → not b ≡ True → b ≡ False
-    not_b≡True→b≡False {False} x = refl
 
 postulate
   eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m

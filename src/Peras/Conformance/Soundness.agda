@@ -200,31 +200,39 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ x = x
 
-    fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
-    fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
-
-    fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
-    fetched {s} x
-      rewrite fetched→[] {s} x
-      = All.[]
-
-    lastSlotInRound : ∀ {s : State} → ¬ (NextSlotInSameRound s) → LastSlotInRound s
-    lastSlotInRound {s} = lastSlotInRound' {s}
-      where
-        lastSlotInRound' : ∀ {s : State} →
-          ¬ (rnd (getSlotNumber (State.clock s))
-                 ≡ (rnd (suc (getSlotNumber (State.clock s)))))
-          → LastSlotInRound s
-        lastSlotInRound' x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
-
-    noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
-    noCertsFromQuorum = {!!}
-
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
         → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ)
         → sᵢ ↝⋆ sⱼ
         → State.blockTrees sⱼ ⁉ p ≡ just (modelState sⱼ)
+
+      fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
+      -- fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
+
+      lastSlotInRound : ∀ {s : State} → ¬ (NextSlotInSameRound s) → LastSlotInRound s
+      {-
+      lastSlotInRound {s} = lastSlotInRound' {s}
+        where
+          lastSlotInRound' : ∀ {s : State} →
+            ¬ (rnd (getSlotNumber (State.clock s))
+                   ≡ (rnd (suc (getSlotNumber (State.clock s)))))
+            → LastSlotInRound s
+          lastSlotInRound' x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
+      -}
+
+      noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
+      -- noCertsFromQuorum = {!!}
+
+      noVotesAfterTick : ∀ {s₀ s₁}
+        → voteInState (modelState s₀) ≡ Nothing
+        → s₀ ↝⋆ s₁
+        → voteInState (modelState s₁) ≡ Nothing
+      -- noVotesAfterTick = {!!}
+
+    fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
+    fetched {s} x
+      rewrite fetched→[] {s} x
+      = All.[]
 
     record Invariant (s : State) : Set where
       field
@@ -1097,8 +1105,20 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         invFetched₁ : Fetched s₁
         invFetched₁ = fetched {s₀} (invFetched inv)
 
-        noVoteInState : votesInState (record tree { clock = nextSlot (clock tree) }) ≡ []
-        noVoteInState = {!!}
+        req : RequiredVotes s₀
+        req = {!!} -- FIXME: ?
+
+        lastInRound : LastSlotInRound s₀
+        lastInRound = lastSlotInRound {s₀} ¬q
+
+        trace : s₀ ↝⋆ s₁
+        trace = NextSlotNewRound (invFetched inv) lastInRound req ↣ ∎
+
+        noVoteInState₀ : voteInState (modelState s₀) ≡ Nothing
+        noVoteInState₀ rewrite isSlotZero = refl
+
+        noVoteInState : voteInState (record tree { clock = nextSlot (clock tree) }) ≡ Nothing
+        noVoteInState = noVotesAfterTick {s₀} {s₁} noVoteInState₀ trace
 
         s₁-agrees :
           record
@@ -1117,12 +1137,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite noVoteInState
           rewrite noCertsFromQuorum {s₁} invFetched₁
           = refl
-
-        req : RequiredVotes s₀
-        req = {!!} -- FIXME: ?
-
-        trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) (lastSlotInRound {s₀} ¬q) req ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite noVoteInState = refl
