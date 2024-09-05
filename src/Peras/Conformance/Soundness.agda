@@ -200,6 +200,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → VotingRule-2B (v-round (clock m)) m
     vr-2b⇒VotingRule-2B _ x = x
 
+    fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
+    fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
+
+    fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
+    fetched {s} x
+      rewrite fetched→[] {s} x
+      = All.[]
+
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
         → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ)
@@ -961,10 +969,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             rewrite correctVote
             = refl
 
+          msg₀≡msg₁ : State.messages s₀ ≡ (msg ++ State.messages s₀) ─ other∈messages
+          msg₀≡msg₁ rewrite map∘apply-filter = refl
+
           inv₁ : Invariant s₁
-          inv₁ =
+          inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
             record
-              { invFetched = {!!}
+              { invFetched = fetched i
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
@@ -1029,14 +1040,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree rewrite nextSlotNotNewRound = refl
-
-        fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
-        fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
-
-        fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
-        fetched {s} x
-          rewrite fetched→[] {s} x
-          = All.[]
 
         inv₁ : Invariant s₁
         inv₁ =
@@ -1108,7 +1111,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         inv₁ : Invariant s₁
         inv₁ =
           record
-            { invFetched = {!!}
+            { invFetched = fetched {s₀} (invFetched inv)
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
