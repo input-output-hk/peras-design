@@ -7,4 +7,5 @@ adverseCertification: PromptVotes
 adverseSplitting:
   tag: NoSplitting
 thresholding:
-  tag: NoThresholding
+  tag: MkThreshold
+  contents: 120

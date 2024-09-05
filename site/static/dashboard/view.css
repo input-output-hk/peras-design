@@ -1,0 +1,80 @@
+
+#uiPanels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#uiTopPanel {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+#uiLeftPanel {
+  width: 600px;
+}
+
+#uiRightPanel {
+  width: 100%;
+  text-align: center;
+}
+
+#uiDiagram {
+  width: 60%;
+}
+
+#uiBottomPanel {
+  width: 100%;
+}
+
+#uiProtocolParameters, #uiScenario, #uiMetrics {
+  display: grid;
+  grid-template-columns: auto auto;
+  padding: 10px
+}
+
+#uiProtocolParameters div, #uiScenario div, #uiMetrics div {
+  width: 400px;
+}
+
+input {
+  width: 75px;
+  text-align: right;
+  font-family: monospace;
+}
+
+.metricOutput {
+  width: 75px;
+  font-family: monospace;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid black;
+  padding: 1px;
+}
+
+th {
+  background-color: #f2f2f2;
+  text-align: center;
+}
+
+td {
+  font-family: monospace;
+  text-align: right;
+}
+
+h1, h2 {
+  margin-block-end: 0;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  font-family: sans-serif;
+}

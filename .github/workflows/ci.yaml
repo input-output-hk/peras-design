@@ -1,8 +1,8 @@
 name: CI
 env:
   ALLOWED_URIS: "https://github.com https://api.github.com"
-  TRUSTED_PUBLIC_KEYS: "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-  SUBSTITUTERS: "https://cache.nixos.org/ https://cache.iog.io"
+  TRUSTED_PUBLIC_KEYS: "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= thelio:KyHAYh2EtAT5skKWlArHRcLhiq3d13u0Pt9BwDJp7UY="
+  SUBSTITUTERS: "https://cache.nixos.org/ https://cache.iog.io http://thelio.functionally.dev:5000"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -14,10 +14,20 @@ on:
 jobs:
   typecheck:
     name: Build libraries
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
+
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
+
+    - name: 💾 Cache Nix store
+      uses: actions/cache@v3.0.8
+      id: nix-cache
+      with:
+        path: /tmp/nixcache
+        key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+        restore-keys: ${{ runner.os }}-nix-
+          
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
       with:
@@ -28,19 +38,40 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+
+    - name: 💾➤ Import Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit == 'true'"
+      run: "nix-store --import < /tmp/nixcache"
+
     - name: 🏗️ Typecheck Agda
       run: |
-        nix build --show-trace --accept-flake-config .#peras
+        nix build --show-trace .#peras
+
     - name: 🏗️ Build `peras-simulation`.
       run: |
-        nix build --show-trace --accept-flake-config .#peras-simulation-test
+        nix build --show-trace .#peras-simulation-test
+
+    - name: ➤💾 Export Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit != 'true'"
+      run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
 
   simulate-hs:
     name: Run simulations
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
+
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
+
+    - name: 💾 Cache Nix store
+      uses: actions/cache@v3.0.8
+      id: nix-cache
+      with:
+        path: /tmp/nixcache
+        key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+        restore-keys: ${{ runner.os }}-nix-
+
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
       with:
@@ -51,22 +82,42 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+
+    - name: 💾➤ Import Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit == 'true'"
+      run: "nix-store --import < /tmp/nixcache"
+
     - name: 🗳️ Simulate Peras
       run: |
-        nix run --accept-flake-config .#peras-simulate -- \
+        nix run .#peras-simulate -- \
           --in-file peras-simulation/example-input.yaml \
           --out-file peras-simulation/tmp-output.yaml \
           --trace-file peras-simulation/tmp-trace.jsonarray
-        nix run --accept-flake-config .#peras-visualize -- \
+        nix run .#peras-visualize -- \
           --trace-file peras-simulation/tmp-trace.jsonarray \
           --dot-file peras-simulation/tmp.dot
+
+    - name: ➤💾 Export Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit != 'true'"
+      run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
+
   tests:
-    if: true
     name: Run tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
+
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
+
+    - name: 💾 Cache Nix store
+      uses: actions/cache@v3.0.8
+      id: nix-cache
+      with:
+        path: /tmp/nixcache
+        key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+        restore-keys: ${{ runner.os }}-nix-
+
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
       with:
@@ -77,16 +128,44 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+
+    - name: 💾➤ Import Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit == 'true'"
+      run: "nix-store --import < /tmp/nixcache"
+
     - name: 🔬 Test with `peras-simulation-test`
       run: |
-        nix run --accept-flake-config .#peras-simulation-test
+        nix run .#peras-simulation-test
+
+    - name: 🔬 Test with `peras-markov-test`
+      run: |
+        nix run .#peras-markov-test
+
+    - name: 🔬 Test with `peras-vote-test`
+      run: |
+        nix run .#peras-vote-test
+
+    - name: ➤💾 Export Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit != 'true'"
+      run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
 
   test-demo:
     name: Test Demo
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
+
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
+
+    - name: 💾 Cache Nix store
+      uses: actions/cache@v3.0.8
+      id: nix-cache
+      with:
+        path: /tmp/nixcache
+        key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+        restore-keys: ${{ runner.os }}-nix-
+
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
       with:
@@ -97,22 +176,40 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+
     - name: 🏗️ Compile Agda
       run: |
-        nix build --accept-flake-config .#test-demo-agda
+        nix build .#test-demo-agda
+
     - name: 🏗️ Compile Haskell Library
       run: |
-        nix build --accept-flake-config .#test-demo
+        nix build .#test-demo
+
     - name: 🏗️ Compile Haskell Executable
       run: |
-        nix build --accept-flake-config .#test-demo-test
+        nix build .#test-demo-test
+
+    - name: ➤💾 Export Nix store cache
+      if: "steps.nix-cache.outputs.cache-hit != 'true'"
+      run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
 
   build-specification:
     name: Build HTML Specification
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # self-hosted
     steps:
+
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
+
+#   - name: 💾 Cache Nix store
+#     uses: actions/cache@v3.0.8
+#     id: nix-cache
+#     with:
+#       path: /tmp/nixcache
+#       key: ${{ runner.os }}-nix-${{ hashFiles('flake.lock') }}
+#       restore-keys: ${{ runner.os }}-nix-
+
     - name: 🛠️ Install Nix
       uses: cachix/install-nix-action@v21
       with:
@@ -123,9 +220,17 @@ jobs:
           trusted-public-keys = ${{ env.TRUSTED_PUBLIC_KEYS }}
           substituters = ${{ env.SUBSTITUTERS }}
           experimental-features = nix-command flakes
+          accept-flake-config = true
+
+#   - name: 💾➤ Import Nix store cache
+#     if: "steps.nix-cache.outputs.cache-hit == 'true'"
+#     run: "nix-store --import < /tmp/nixcache"
+
     - name: 🏗️ Agda-to-HTML
+#     run: |
+#       nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
       run: |
-        nix develop --command bash -c ".github/workflows/scripts/agda-2-html.sh"
+        nix run .#peras-html-spec
 
     - name: Publish Docusaurus build
       uses: actions/upload-artifact@v4
@@ -135,9 +240,14 @@ jobs:
         path: |
           html/*
 
+#   - name: ➤💾 Export Nix store cache
+#     if: "steps.nix-cache.outputs.cache-hit != 'true'"
+#     run: "nix-store --export $(find /nix/store -maxdepth 1 -name '*-*') > /tmp/nixcache"
+
   build-pdf-report:
     runs-on: ubuntu-22.04
     steps:
+
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
@@ -180,6 +290,7 @@ jobs:
       - build-specification
       - build-pdf-report
     steps:
+
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
@@ -225,11 +336,13 @@ jobs:
     needs:
       - build-docusaurus
     steps:
+
       - name: 📥 Download Docusaurus build
         uses: actions/download-artifact@v4
         with:
           name: docusaurus-build
           path: ./github-pages
+
 
       - name: 🚀 Publish GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -248,6 +361,7 @@ jobs:
       id-token: write
       #
     steps:
+
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
@@ -348,6 +462,7 @@ jobs:
       packages: read
 
     steps:
+
     - name: 📥 Checkout repository
       uses: 'actions/checkout@v4'
 

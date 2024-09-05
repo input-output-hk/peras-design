@@ -1106,3 +1106,4 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
     soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
     soundness s₀ Tick = tick-soundness s₀
+    soundness s₀ (BadVote vote) = {!!}

@@ -12,14 +12,6 @@ extra-doc-files:    CHANGELOG.md
 data-dir:           golden
 data-files:         *.json
 
-custom-setup
-  setup-depends: base
-               , directory
-               , filepath
-               , process
-               , Cabal
-
-
 common warnings
     ghc-options: -Wall -Wunused-packages -Werror
                  -fno-warn-missing-pattern-synonym-signatures
@@ -50,8 +42,10 @@ library
                      Peras.Block
                      Peras.Chain
                      Peras.Conformance.Model
+                     Peras.Conformance.Orphans
                      Peras.Conformance.Params
                      Peras.Conformance.Test
+                     Peras.Conformance.Test.Prototype
                      Peras.Crypto
                      Peras.Event
                      Peras.Foreign

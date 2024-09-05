@@ -29,10 +29,14 @@ import Prelude hiding (round)
 intToInteger :: Int -> Integer
 intToInteger = fromIntegral
 
+voterId :: Vote -> PartyId
+voterId (MkVote _ p _ _ _) = p
+
 data EnvAction
   = Tick
   | NewChain Chain
   | NewVote Vote
+  | BadVote Vote
   deriving (Eq, Show)
 
 genesisHash :: Hash Block
@@ -269,6 +273,10 @@ addVote' s v =
       (v : allVotes s)
       (allSeenCerts s)
 
+hasVoted :: PartyId -> RoundNumber -> NodeModel -> Bool
+hasVoted p r s =
+  any (\v -> p == voterId v && r == votingRound v) (allVotes s)
+
 isYes :: Bool -> Bool
 isYes True = True
 isYes False = False
@@ -447,3 +455,7 @@ transition s (NewVote v) =
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just ([], addVote' s v)
+transition s (BadVote v) =
+  do
+    guard (hasVoted (voterId v) (votingRound v) s)
+    Just ([], s)

@@ -21,7 +21,7 @@ import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.Map (Map)
-import qualified Data.Map as Map (insertWith, partitionWithKey, unionWith)
+import qualified Data.Map as Map (elems, insertWith, partitionWithKey, unionWith)
 import Data.Set (Set)
 import qualified Data.Set as Set (singleton, union, unions)
 import GHC.Generics (Generic)
@@ -32,8 +32,8 @@ import Peras.Prototype.Types (PerasResult)
 
 data Diffuser = MkDiffuser
   { delay :: Integer
-  , pendingChains :: Map SlotNumber (Set Chain)
-  , pendingVotes :: Map SlotNumber (Set Vote)
+  , pendingChains :: Map SlotNumber [Chain]
+  , pendingVotes :: Map SlotNumber [Vote]
   }
   deriving (Eq, Generic, Show)
 
@@ -49,23 +49,23 @@ defaultDiffuser delay = MkDiffuser{delay, pendingChains = mempty, pendingVotes =
 mergeDiffusers :: Diffuser -> Diffuser -> Diffuser
 mergeDiffusers x y =
   x
-    { pendingChains = (Map.unionWith Set.union `on` pendingChains) x y
-    , pendingVotes = (Map.unionWith Set.union `on` pendingVotes) x y
+    { pendingChains = (Map.unionWith (<>) `on` pendingChains) x y
+    , pendingVotes = (Map.unionWith (<>) `on` pendingVotes) x y
     }
 
-allPendingChains :: Diffuser -> Set Chain
-allPendingChains = Set.unions . toList . pendingChains
+allPendingChains :: Diffuser -> [Chain]
+allPendingChains = concat . Map.elems . pendingChains
 
-allPendingVotes :: Diffuser -> Set Vote
-allPendingVotes = Set.unions . toList . pendingVotes
+allPendingVotes :: Diffuser -> [Vote]
+allPendingVotes = concat . Map.elems . pendingVotes
 
-insertChains :: SlotNumber -> Set Chain -> Diffuser -> Diffuser
+insertChains :: SlotNumber -> [Chain] -> Diffuser -> Diffuser
 insertChains slot chains diffuser =
-  diffuser{pendingChains = Map.insertWith Set.union slot chains $ pendingChains diffuser}
+  diffuser{pendingChains = Map.insertWith (<>) slot chains $ pendingChains diffuser}
 
-insertVotes :: SlotNumber -> Set Vote -> Diffuser -> Diffuser
+insertVotes :: SlotNumber -> [Vote] -> Diffuser -> Diffuser
 insertVotes slot votes diffuser =
-  diffuser{pendingVotes = Map.insertWith Set.union slot votes $ pendingVotes diffuser}
+  diffuser{pendingVotes = Map.insertWith (<>) slot votes $ pendingVotes diffuser}
 
 diffuseChain :: MonadSTM m => TVar m Diffuser -> SlotNumber -> Chain -> m (PerasResult ())
 diffuseChain diffuserVar slot chain =
@@ -76,9 +76,9 @@ diffuseChain diffuserVar slot chain =
       diffuser
         { pendingChains =
             Map.insertWith
-              Set.union
+              (<>)
               (fromIntegral $ fromIntegral slot + delay diffuser)
-              (Set.singleton chain)
+              (pure chain)
               $ pendingChains diffuser
         }
 
@@ -91,13 +91,13 @@ diffuseVote diffuserVar slot vote =
       diffuser
         { pendingVotes =
             Map.insertWith
-              Set.union
+              (<>)
               (fromIntegral $ fromIntegral slot + delay diffuser)
-              (Set.singleton vote)
+              (pure vote)
               $ pendingVotes diffuser
         }
 
-popChainsAndVotes :: MonadSTM m => TVar m Diffuser -> SlotNumber -> m (Set Chain, Set Vote)
+popChainsAndVotes :: MonadSTM m => TVar m Diffuser -> SlotNumber -> m ([Chain], [Vote])
 popChainsAndVotes diffuserVar slot =
   atomically $
     do
@@ -106,4 +106,4 @@ popChainsAndVotes diffuserVar slot =
         (partition . pendingChains &&& partition . pendingVotes)
           <$> readTVar diffuserVar
       modifyTVar' diffuserVar $ \d -> d{pendingChains = newerChains, pendingVotes = newerVotes}
-      pure (Set.unions $ toList olderChains, Set.unions $ toList olderVotes)
+      pure (concat $ toList olderChains, concat $ toList olderVotes)

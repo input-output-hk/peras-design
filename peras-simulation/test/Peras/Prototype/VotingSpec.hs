@@ -133,7 +133,7 @@ spec = do
           selectBlockSelectsCertifiedBlock
           (diffuseVote diffuser)
 
-      Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+      length . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
     it "only vote at beginning of round" $ do
       let certifiedBlock = head someChain
@@ -168,7 +168,7 @@ spec = do
         selectBlock
         (diffuseVote diffuser)
 
-    Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+    length . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
 
   it "VR2-B - Cooldown periods have ended." $ do
     let cooldownState =
@@ -189,4 +189,4 @@ spec = do
         selectBlock
         (diffuseVote diffuser)
 
-    Set.size . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1
+    length . allPendingVotes <$> readTVarIO diffuser `shouldReturn` 1

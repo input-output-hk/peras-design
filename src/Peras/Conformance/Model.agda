@@ -44,10 +44,17 @@ import Protocol.Peras
   intToInteger = fromIntegral
 #-}
 
+-- To avoid name clash for Vote.creatorId and Block.creatorId
+voterId : Vote → PartyId
+voterId (MkVote _ p _ _ _) = p
+
+{-# COMPILE AGDA2HS voterId #-}
+
 data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
+  BadVote  : Vote → EnvAction
 
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
 
@@ -286,6 +293,11 @@ addVote' s v = record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (ce
   where s' = record s { allVotes = v ∷ (allVotes s) }
 
 {-# COMPILE AGDA2HS addVote' #-}
+
+hasVoted : PartyId → RoundNumber → NodeModel → Bool
+hasVoted p r s = any (λ v → p == voterId v && r == votingRound v) (allVotes s)
+
+{-# COMPILE AGDA2HS hasVoted #-}
 
 open import Peras.Params
 open Hashable
@@ -547,5 +559,8 @@ transition s (NewVote v) = do
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
   Just ([] , addVote' s v)
+transition s (BadVote v) = do
+  guard (hasVoted (voterId v) (votingRound v) s)
+  Just ([] , s)
 
 {-# COMPILE AGDA2HS transition #-}
