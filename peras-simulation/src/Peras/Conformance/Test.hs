@@ -25,7 +25,8 @@ import Peras.Conformance.Model (
   otherId,
   pref,
   transition,
- )
+  checkVotingRules,
+  votingBlockHash)
 import Peras.Crypto (Hashable (hash))
 import Peras.Numbering (
   RoundNumber (getRoundNumber),
@@ -189,10 +190,10 @@ instance StateModel NodeModel where
 
     genVote =
       do
-        block <- elements (concat allChains)
+        blockHash <- pure $ votingBlockHash s
         let unequivocated v@MkVote{votingRound = r, creatorId = p} = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
         flip suchThat unequivocated $
-          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure blockHash <*> arbitrary
 
     badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
     canGenBadVote = canGenVotes && not (null badVoteCandidates)
@@ -201,9 +202,9 @@ instance StateModel NodeModel where
       (r, p) <- elements badVoteCandidates
       MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
-      newRound clock protocol -- Voting is only allowed in the first slot of a round.
-        && not (all null allChains) -- There must be some block to vote for.
+        not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
+        && checkVotingRules s
     genCertificate chain =
       frequency
         [

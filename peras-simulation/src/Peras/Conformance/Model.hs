@@ -448,7 +448,6 @@ transition s (NewChain (block : rest)) =
       )
 transition s (NewVote v) =
   do
-    guard (slotInRound (protocol s) (clock s) == 0)
     guard (slotToRound (protocol s) (clock s) == votingRound v)
     guard (checkSignedVote v)
     guard (checkVoteFromOther v)
