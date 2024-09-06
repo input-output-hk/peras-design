@@ -1,6 +1,11 @@
 # Simulate and visualize the Peras protocol
 
 
+## Conformance tests
+
+See [Conformance.md](Conformance.md)
+
+
 ## Simulation
 
 The `peras-simulate` tool executes a Peras simulation.
