@@ -139,6 +139,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
         → maximumBy d o l ∈ d ∷ l
 
+    valid-chain : ∀ (t : NodeModel) → ValidChain (pref t)
+    valid-chain t = valid-chain' (pref t)
+      where
+        valid-chain' : ∀ (c : Chain) → ValidChain c
+        valid-chain' [] = Genesis
+        valid-chain' (b ∷ bs) =
+          let checked-blockSignature = axiom-checkBlockSignature {b} {!!}
+              checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
+          in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
+
     valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
     valid-votes t = valid-votes' (allVotes t)
       where
@@ -151,7 +161,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   {votingRound v}
                   {proofM v}
               checked-signature = axiom-checkVoteSignature {v} {!!}
-          in (checked-membership P., checked-signature) All.∷ (valid-votes' vs)
+          in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
 
     isTreeType :
       SmallStep.IsTreeType
@@ -170,7 +180,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; instantiated-certs = refl
         ; instantiated-votes = refl
         ; extendable-chain = λ _ _ → refl -- TODO: set union
-        ; valid = {!!} -- ?
+        ; valid = valid-chain -- ?
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; valid-votes = valid-votes
@@ -182,10 +192,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     NodeModelTree : SmallStep.TreeType NodeModel
     NodeModelTree = record { is-TreeType = isTreeType }
 
-    Tree = NodeModelTree
-
-    open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
-    open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
+    open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
+    open SmallStep.TreeType NodeModelTree renaming (allChains to chains; preferredChain to prefChain)
 
     private
       instance
