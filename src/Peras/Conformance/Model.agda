@@ -14,7 +14,7 @@ import Data.Bool
 import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
-import Data.Product as P
+open import Data.Product as P using () renaming (_,_ to _⸴_)
 
 open import Peras.Block
 open import Peras.Chain
@@ -322,21 +322,21 @@ isYes≡True⇒TTrue x = toTT (isYes≡True⇒value≡True x)
 toWitness {a = True ⟨ prf ⟩} _ = prf
 
 _×-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
-_×-reflects_ {True} {True} x y = x P., y
-_×-reflects_ {True} {False} _ y = λ { (_ P., y₁) → y y₁ }
-_×-reflects_ {False} {True} x _ = λ { (x₁ P., _) → x x₁ }
-_×-reflects_ {False} {False} x _ = λ { (x₁ P., _) → x x₁ }
+_×-reflects_ {True} {True} x y = x ⸴ y
+_×-reflects_ {True} {False} _ y = λ { (_ ⸴ y₁) → y y₁ }
+_×-reflects_ {False} {True} x _ = λ { (x₁ ⸴ _) → x x₁ }
+_×-reflects_ {False} {False} x _ = λ { (x₁ ⸴ _) → x x₁ }
+
+decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
+decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
+
+{-# COMPILE AGDA2HS decP #-}
 
 _⊎-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
 _⊎-reflects_ {True} {True} x _ = inj₁ x
 _⊎-reflects_ {True} {False} x _ = inj₁ x
 _⊎-reflects_ {False} {True} _ y = inj₂ y
 _⊎-reflects_ {False} {False} x y = [ x , y ]
-
-decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
-decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
-
-{-# COMPILE AGDA2HS decP #-}
 
 decS : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⊎ B)
 decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
@@ -350,8 +350,8 @@ x === y = (x == y) ⟨ isEquality x y ⟩
 
 postulate
   eq : ∀ (x y : ℕ) → Dec (x ≡ y)
-  ge : ∀ x y → Dec (x ≥ y)
-  gt : ∀ x y → Dec (x Data.Nat.> y)
+  ge : ∀ (x y : ℕ) → Dec (x Data.Nat.≥ y)
+  gt : ∀ (x y : ℕ) → Dec (x Data.Nat.> y)
 
 {-# FOREIGN AGDA2HS
   eq :: Integer -> Integer -> Bool
@@ -409,12 +409,11 @@ vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s
 CheckVotingRules : NodeModel → Set
 CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
-opaque
-  checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
-  checkVotingRules s =
-    decS
-      (decP (vr1A s) (vr1B s))
-      (decP (vr2A s) (vr2B s))
+checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
+checkVotingRules s =
+  decS
+    (decP (vr1A s) (vr1B s))
+    (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 

@@ -185,7 +185,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
-        ; quorum-cert = ?
+        ; quorum-cert = {!!} -- invariants
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
@@ -901,7 +901,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           creatorId≡sutId = eqℕ-sound checkedSut
 
           correctVote : vote ≡ v
-          correctVote = ? -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+          correctVote = {!!} -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
           validSignature : IsVoteSignature v (signature v)
           validSignature with v ← axiom-checkVoteSignature checkedSig
