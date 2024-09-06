@@ -36,7 +36,6 @@ open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
 
 open import Peras.Conformance.Model as Model
-open Model.TreeInstance using (NodeModelTree)
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ postulates : Postulates ⦄
@@ -82,8 +81,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   modelParams : PerasParams
   modelParams = testParams
 
-  Tree = NodeModelTree
-
   instance
     network : Network
     network =
@@ -105,16 +102,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   import Peras.SmallStep as SmallStep
 
-  open SmallStep using (⦅_,_,_,_⦆)
-  open SmallStep.Message
-  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties} public
-  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain) public
-
-  private
-    instance
-      Default-T : Default NodeModel
-      Default-T .def = tree₀
-
   module Assumptions
            (let open Postulates postulates)
 
@@ -133,12 +120,70 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              ∀ {block} → checkSignedBlock block ≡ True
              → IsBlockSignature block (signature block))
 
+{-
            -- Assume that blocks are created correctly, as the model is not explicit about block creation
            (axiom-blockCreatedCorrectly :
              ∀ {block s} →
              block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
+-}
 
          where
+
+    open SmallStep using (⦅_,_,_,_⦆)
+    open SmallStep.Message
+
+    open import Data.List.Membership.Propositional
+    import Data.List.Relation.Unary.All as All
+
+    postulate
+      maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
+        → maximumBy d o l ∈ d ∷ l
+
+    valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
+    valid-votes t = valid-votes' (allVotes t)
+      where
+        valid-votes' : ∀ (l : List Vote) → All.All ValidVote l
+        valid-votes' [] = All.[]
+        valid-votes' (v ∷ vs) = ({!!} P., {!!}) All.∷ (valid-votes' vs)
+
+    isTreeType :
+      SmallStep.IsTreeType
+        initialModelState
+        newChain'
+        allChains -- (λ t → genesisChain ∷ allChains t)
+        pref
+        addVote'
+        allVotes
+        allSeenCerts
+        genesisCert
+
+    isTreeType =
+      record
+        { instantiated = refl
+        ; instantiated-certs = refl
+        ; instantiated-votes = refl
+        ; extendable-chain = λ _ _ → refl -- TODO: set union
+        ; valid = ? -- ?
+        ; optimal = ? -- ok
+        ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
+        ; valid-votes = valid-votes
+        ; unique-votes = {!!}
+        ; no-equivocations = {!!}
+        ; quorum-cert = {!!}
+        }
+
+    NodeModelTree : SmallStep.TreeType NodeModel
+    NodeModelTree = record { is-TreeType = isTreeType }
+
+    Tree = NodeModelTree
+
+    open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties}
+    open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain)
+
+    private
+      instance
+        Default-T : Default NodeModel
+        Default-T .def = tree₀
 
     modelState : State → NodeModel
     modelState s = record
@@ -554,7 +599,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = eqBS-sound checkHash
 
         validHead : block ≡ β
-        validHead = axiom-blockCreatedCorrectly {block} {tree}
+        validHead = {!!} -- axiom-blockCreatedCorrectly {block} {tree}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -565,8 +610,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           (createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
             ∷ prefChain tree)
         validChain
-          = Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
-          where open SmallStep.IsTreeType
+          = let open SmallStep.IsTreeType
+            in Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther

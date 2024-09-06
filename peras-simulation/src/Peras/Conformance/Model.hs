@@ -10,7 +10,7 @@ import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, hashHead)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createMembershipProof, createSignedVote, mkParty)
@@ -53,13 +53,6 @@ sutId = 1
 
 otherId :: PartyId
 otherId = 2
-
-insertCert :: Certificate -> [Certificate] -> [Certificate]
-insertCert cert [] = [cert]
-insertCert cert (cert' : certs) =
-  if cert == cert'
-    then cert' : certs
-    else cert' : insertCert cert certs
 
 seenBeforeStartOfRound ::
   PerasParams -> RoundNumber -> (Certificate, SlotNumber) -> Bool

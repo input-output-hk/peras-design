@@ -3,7 +3,7 @@
 module Peras.Chain where
 
 import Numeric.Natural (Natural)
-import Peras.Block (Block, PartyId)
+import Peras.Block (Block, Certificate, PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
 import Peras.Numbering (RoundNumber)
 
@@ -29,6 +29,13 @@ instance Eq Vote where
       && signature x == signature y
 
 type Chain = [Block]
+
+insertCert :: Certificate -> [Certificate] -> [Certificate]
+insertCert cert [] = [cert]
+insertCert cert (cert' : certs) =
+  if cert == cert'
+    then cert' : certs
+    else cert' : insertCert cert certs
 
 foldl1Maybe :: (a -> a -> a) -> [a] -> Maybe a
 foldl1Maybe f xs =
