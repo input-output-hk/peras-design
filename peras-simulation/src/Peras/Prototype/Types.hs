@@ -91,7 +91,7 @@ systemStart :: SlotNumber
 systemStart = 0
 
 genesisHash :: Hash Block
-genesisHash = MkHash (BS.replicate 8 0)
+genesisHash = MkHash mempty
 
 genesisChain :: Chain
 genesisChain = mempty
