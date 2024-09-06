@@ -18,9 +18,7 @@ open import Function.Base using (_∘_; _$_)
 open import Relation.Nullary using (¬_; Dec; yes; no; ¬?)
 open import Relation.Nullary.Decidable using (_×-dec_)
 open import Relation.Binary using (DecidableEquality)
-
-import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≢_)
+open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Crypto
 open import Peras.Block
@@ -46,7 +44,6 @@ import qualified Peras.Chain as G
 ### Vote
 
 ```agda
-
 VotingWeight = ℕ
 
 record Vote : Set where
@@ -79,32 +76,6 @@ instance
 {-# COMPILE AGDA2HS iVoteEq #-}
 ```
 -->
-
-<!--
-```agda
-{-
-toSignable : ∀{msg} → Vote msg -> ByteString
-toSignable _ = emptyBS -- const ""
--}
-
-{-
-postulate
-  makeVote : ∀{msg} → RoundNumber -> PartyId -> msg -> Vote msg
--}
-```
--->
-
-<!--
-```agda
--- | A vote is valid if the committee-membership proof and the signature are valid.
-{-
-isValid : ∀{msg} → Vote msg -> Bool
-isValid v@(vote _ (MkPartyId vkey) committeeMembershipProof _ signature) =
-  isCommitteeMember vkey committeeMembershipProof
-    ∧ verify vkey signature (toSignable v)
--}
-```
--->
 ```agda
 record Postulates : Set₁ where
   field
@@ -119,7 +90,6 @@ record Network : Set₁ where
 ```
 ```agda
 module _ ⦃ _ : Postulates ⦄
-
          where
 
   open Postulates ⦃...⦄
@@ -146,15 +116,6 @@ data _∻_ : Vote → Vote → Set where
     → v₁ ≢ v₂
     → v₁ ∻ v₂
 ```
-<!--
-```agda
--- NonEquivocation : Vote → Vote → Set
--- NonEquivocation v₁ v₂ = ¬ (v₁ ∻ v₂)
-
--- open import Data.List.Relation.Unary.AllPairs.Core NonEquivocation renaming (AllPairs to NoEquivocations) public
-```
--->
-
 ## Chain
 
 ```agda
@@ -276,14 +237,11 @@ module _ ⦃ _ : Hashable Block ⦄
 
 <!--
 ```agda
+open import Data.List.Membership.Propositional using (_∈_)
 open import Relation.Nullary.Negation using (¬_)
-
-import Relation.Binary.PropositionalEquality as PropEq
-open PropEq using (trans)
+open import Relation.Binary.PropositionalEquality using (trans)
 
 open Block
-
-open import Data.List.Membership.Propositional using (_∈_)
 ```
 -->
 ```agda
@@ -341,24 +299,4 @@ commonPrefix chains =
      listPrefix = foldl1Maybe (prefix []) (map (λ l -> reverse l) chains)
 
 {-# COMPILE AGDA2HS commonPrefix #-}
-
--- I wish I could prove that and translate it to a QC property in Haskell :)
--- commonPrefixEq : {t : Set } -> ⦃ eqt : Eq t ⦄ -> (c₁ c₂ : Chain t) -> (c₁ ≡ c₂) -> (commonPrefix (c₁ ∷ c₂ ∷ []) ≡ c₁)
--- commonPrefixEq = {!!}
-
-{-
-postulate
-  verifyLeadershipProof : Block → Bool
-
-  properlyLinked : Chain → Bool
-  decreasingSlots : Chain → Bool
--}
-
-{-
-correctBlocks : Chain → Bool
-correctBlocks (MkChain blocks _ _) =
-  let bs = toList BlockO blocks
-  in all verifyLeadershipProof bs
--}
-```
 -->

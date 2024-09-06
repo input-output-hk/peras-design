@@ -80,23 +80,6 @@ certificates are not diffused explicitly.
     ChainMsg : Chain → Message
     VoteMsg : Vote → Message
 ```
-<!--
-```agda
-{-
-  Message-injective : ∀ {b₁ b₂}
-    → ChainMsg b₁ ≡ ChainMsg b₂
-    → b₁ ≡ b₂
-  Message-injective refl = refl
--}
-```
-```agda
-{-
-  Message-injective′ : ∀ {b₁ b₂}
-    → b₁ ≢ b₂
-    → ChainMsg b₁ ≢ ChainMsg b₂
-  Message-injective′ = contraposition Message-injective
--}
-```
 Messages can be delayed by a number of slots
 ```agda
   Delay = Fin (suc (suc Δ))
@@ -118,37 +101,10 @@ delayed.
 
   open Envelope
 ```
-<!--
-```agda
-  ⦅⦆-injective : ∀ {e₁ e₂}
-    → e₁ ≡ e₂
-    → partyId e₁ ≡ partyId e₂
-  ⦅⦆-injective refl = refl
-```
-```agda
-  ⦅⦆-injective₃ : ∀ {e₁ e₂}
-    → e₁ ≡ e₂
-    → message e₁ ≡ message e₂
-  ⦅⦆-injective₃ refl = refl
-```
-```agda
-  ⦅⦆-injective′ : ∀ {e₁ e₂}
-    → partyId e₁ ≢ partyId e₂
-    → e₁ ≢ e₂
-  ⦅⦆-injective′ = contraposition ⦅⦆-injective
-```
-```agda
-  ⦅⦆-injective₃′ : ∀ {e₁ e₂}
-    → message e₁ ≢ message e₂
-    → e₁ ≢ e₂
-  ⦅⦆-injective₃′ = contraposition ⦅⦆-injective₃
-```
--->
 #### Block-tree
 
 A block-tree is defined by properties - an implementation of the block-tree
 has to fulfil all the properties mentioned below:
-
 ```agda
   record IsTreeType {T : Type}
                     (tree₀ : T)
@@ -192,6 +148,7 @@ Properties that must hold with respect to chains, certificates and votes.
       self-contained : ∀ (t : T)
         → preferredChain t ∈ allChains t
 
+{-
       valid-votes : ∀ (t : T)
         → All ValidVote (votes t)
 
@@ -206,6 +163,7 @@ Properties that must hold with respect to chains, certificates and votes.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
+-}
 
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
@@ -714,206 +672,6 @@ List-like structure for defining execution paths.
       ∎ : M ↝⋆ M
       _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
 ```
-<!--
-### Composition
-```agda
-{-
-    ↝⋆∘↝⋆ :
-        M ↝⋆ N
-      → N ↝⋆ O
-      → M ↝⋆ O
-    ↝⋆∘↝⋆ ∎ M↝⋆O = M↝⋆O
-    ↝⋆∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝⋆O = M↝M₁ ↣ ↝⋆∘↝⋆ M₁↝⋆N N↝⋆O
--}
-```
-### Post-composition
-```agda
-{-
-    ↝∘↝⋆ :
-        M ↝⋆ N
-      → N ↝ O
-      → M ↝⋆ O
-    ↝∘↝⋆ ∎ N↝O =  N↝O ↣ ∎
-    ↝∘↝⋆ (M↝M₁ ↣ M₁↝⋆N) N↝O = M↝M₁ ↣ ↝∘↝⋆ M₁↝⋆N N↝O
--}
-```
--->
-### Transitions of voting rounds
-Transitioning of voting rounds can be described with respect of the small-step
-semantics.
-```agda
-    data _↦_ : State → State → Type where
-
-      NextRound : let open State in
-          suc (v-rnd' M) ≡ v-rnd' N
-        → M ↝⋆ N
-        → M ↦ N
-```
-#### Reflexive, transitive closure
-List-like structure for executions for voting round transitions
-```agda
-    infix  2 _↦⋆_
-    infixr 2 _⨾_
-    infix  3 ρ
-
-    data _↦⋆_ : State → State → Type where
-      ρ : M ↦⋆ M
-      _⨾_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
-```
-<!--
-## Collision free predicate
-
-```agda
-    open State
-```
-
-Rather than assuming a global axiom on the injectivity of the hash function
-or that any reachable state is collision-free, there is a predicate assuming
-that there are no hash collisions during the execution of the protocol.
-
-```agda
-{-
-    data CollisionFree (N : State) : Type where
-
-      collision-free : ∀ {b₁ b₂ : Block}
-        → All
-          (λ { (m₁ , m₂) → m₁ ≡ BlockMsg b₁ → m₂ ≡ BlockMsg b₂ →
-               (hash b₁ ≡ hash b₂ → b₁ ≡ b₂) })
-          (cartesianProduct (history N) (history N))
-        → CollisionFree N
--}
-```
--->
-<!--
-```agda
-{-
-    open import Data.List.Relation.Binary.Subset.Propositional.Properties
-    open import Data.List.Relation.Binary.Subset.Propositional {A = Message} using (_⊇_) renaming (_⊆_ to _⊆ₘ_)
-    open import Data.List.Relation.Binary.Subset.Propositional {A = Message × Message} renaming (_⊇_ to _⊇ₓ_ ; _⊆_ to _⊆ₘₓ_)
-
-    open import Data.List.Membership.Propositional.Properties
-
-    ⊆→⊆-cartesianProduct : ∀ {a b} → a ⊆ₘ b → cartesianProduct a a ⊆ₘₓ cartesianProduct b b
-    ⊆→⊆-cartesianProduct {a} a⊆b x =
-      let x₁ , x₂ = ∈-cartesianProduct⁻ a a x
-       in ∈-cartesianProduct⁺ (a⊆b x₁) (a⊆b x₂)
-
-    collision-free-resp-⊇ : ∀ {M N}
-      → CollisionFree N
-      → history N ⊇ history M
-      → CollisionFree M
-    collision-free-resp-⊇ (collision-free {b₁} {b₂} cf) x =
-      collision-free {b₁ = b₁} {b₂ = b₂} (All-resp-⊇ (⊆→⊆-cartesianProduct x) cf)
-
-    -- Receive
-
-    []-hist-common-prefix : ∀ {M N p} {h : Honesty p} {m}
-      → h ⊢ M [ m ]⇀ N
-      → history M ⊆ₘ history N
-    []-hist-common-prefix (honest _ _ _) x = x
-    []-hist-common-prefix (corrupt _) x = x
-
-    []⇀-collision-free : ∀ {M N p} {h : Honesty p} {m}
-      → CollisionFree N
-      → h ⊢ M [ m ]⇀ N
-      → CollisionFree M
-    []⇀-collision-free (collision-free {b₁} {b₂} x) (honest _ _ _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-    []⇀-collision-free (collision-free {b₁} {b₂} x) (corrupt _) = collision-free {b₁ = b₁} {b₂ = b₂} x
-
-    -- Create
-
-    []↷-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → h ⊢ M ↷ N
-      → history M ⊆ₘ history N
-    []↷-hist-common-prefix {M} (honest {block = b} refl _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
-    []↷-hist-common-prefix {M} (honest-cooldown {block = b} refl _ _ _ _ _ _) = xs⊆x∷xs (history M) (BlockMsg b)
-
-    []⇉-hist-common-prefix : ∀ {M N p} {h : Honesty p}
-      → h ⊢ M ⇉ N
-      → history M ⊆ₘ history N
-    []⇉-hist-common-prefix {M} (honest {vote = v} refl _ _ _ _ _) = xs⊆x∷xs (history M) (VoteMsg v)
-
-    []↷-collision-free : ∀ {M N p} {h : Honesty p}
-      → CollisionFree N
-      → h ⊢ M ↷ N
-      → CollisionFree M
-    []↷-collision-free cf-N M[]↷N = collision-free-resp-⊇ cf-N ([]↷-hist-common-prefix M[]↷N)
-
-    []⇉-collision-free : ∀ {M N p} {h : Honesty p}
-      → CollisionFree N
-      → h ⊢ M ⇉ N
-      → CollisionFree M
-    []⇉-collision-free cf-N M[]⇉N = collision-free-resp-⊇ cf-N ([]⇉-hist-common-prefix M[]⇉N)
--}
-```
--->
-<!--
-### Properties
-
-When the current state is collision free, the pervious state was so too
-
-```agda
-{-
-    ↝-collision-free :
-        M ↝ N
-      → CollisionFree N
-        ----------------
-      → CollisionFree M
--}
-```
--->
-<!--
-```agda
-{-
-    ↝-collision-free (Fetch x) cf-N = []⇀-collision-free cf-N x
-    ↝-collision-free (CreateVote _ x) cf-N = []⇉-collision-free cf-N x
-    ↝-collision-free (CreateBlock _ x) cf-N =  []↷-collision-free cf-N x
-    ↝-collision-free (NextSlot _ _) (collision-free x) = collision-free x
-    ↝-collision-free (NextSlotNewRound _ _ _) (collision-free x) = collision-free x
--}
-```
--->
-<!--
-When the current state is collision free, previous states were so too
-
-```agda
-{-
-    ↝⋆-collision-free :
-        M ↝⋆ N
-      → CollisionFree N
-        ----------------
-      → CollisionFree M
--}
-```
--->
-<!--
-```agda
-{-
-    ↝⋆-collision-free ∎ N = N
-    ↝⋆-collision-free (M↝N ↣ N↝⋆O) O =
-      ↝-collision-free M↝N (↝⋆-collision-free N↝⋆O O)
--}
-```
--->
-<!--
-## Forging free predicate
-
-Signatures are not modelled explicitly. Instead we assume that the adversary
-cannot send any block with the `creatorId` of an honest party that is not
-already in the block history.
-
-```agda
-{-
-    data ForgingFree (N : State) : Type where
-
-      forging-free : ∀ {M : State} {b} {p}
-        → Corrupt {p} ⊢ M ↷ N
-        → All (λ { m → (m ≡ BlockMsg b × HonestBlock b)
-            → m ∈ history M }) (history N)
-        → ForgingFree N
--}
-```
 ```agda
   open Semantics public
 ```
--->

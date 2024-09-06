@@ -213,7 +213,30 @@ Reflexive, transitive closure
       open IsTreeType
 
       GlobalState = State {T} {blockTree} {S} {adversarialState₀} {txSelection} {parties}
+```
+### Transitions of voting rounds
+Transitioning of voting rounds can be described with respect of the small-step
+semantics.
+```agda
+      data _↦_ : GlobalState → GlobalState → Set where
 
+        NextRound :
+            suc (v-rnd' M) ≡ v-rnd' N
+            → M ↝⋆ N
+            → M ↦ N
+```
+#### Reflexive, transitive closure
+List-like structure for executions for voting round transitions
+```agda
+      infix  2 _↦⋆_
+      infixr 2 _⨾_
+      infix  3 ρ
+
+      data _↦⋆_ : GlobalState → GlobalState → Set where
+        ρ : M ↦⋆ M
+        _⨾_ : M ↦ N → N ↦⋆ O → M ↦⋆ O
+```
+```agda
       states₀ : AssocList PartyId T
       states₀ = map (λ where (p , _) → (p , tree₀)) parties
 

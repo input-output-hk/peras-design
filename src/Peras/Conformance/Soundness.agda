@@ -1,4 +1,3 @@
-
 module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
@@ -149,6 +148,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
           in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
 
+{-
     valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
     valid-votes t = valid-votes' (allVotes t)
       where
@@ -162,6 +162,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   {proofM v}
               checked-signature = axiom-checkVoteSignature {v} {!!}
           in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
+-}
 
     isTreeType :
       SmallStep.IsTreeType
@@ -183,9 +184,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; valid = valid-chain -- ?
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
+{-
         ; valid-votes = valid-votes
         ; unique-votes = {!!}
         ; no-equivocations = {!!}
+-}
         ; quorum-cert = {!!}
         }
 
