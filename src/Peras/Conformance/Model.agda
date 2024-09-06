@@ -290,9 +290,15 @@ hasVoted p r s = any (λ v → p == voterId v && r == votingRound v) (allVotes s
 
 {-# COMPILE AGDA2HS hasVoted #-}
 
-postulate -- FIXME
-  instance
-    iRoundNumber : IsLawfulEq RoundNumber
+instance
+  iRoundNumber : IsLawfulEq RoundNumber
+  iRoundNumber .isEquality (MkRoundNumber r₁) (MkRoundNumber r₂)
+    with r₁ == r₂ in eq
+  ... | True = cong MkRoundNumber (equality r₁ r₂ eq)
+  ... | False = λ x → nequality r₁ r₂ eq (MkRoundNumber-inj x)
+    where
+      MkRoundNumber-inj : ∀ {x y} → MkRoundNumber x ≡ MkRoundNumber y → x ≡ y
+      MkRoundNumber-inj refl = refl
 
 isYes : ∀ {A : Set} → Dec A → Bool
 isYes (True ⟨ _ ⟩) = True
