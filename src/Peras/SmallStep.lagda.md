@@ -148,22 +148,11 @@ Properties that must hold with respect to chains, certificates and votes.
       self-contained : ∀ (t : T)
         → preferredChain t ∈ allChains t
 
-{-
-      valid-votes : ∀ (t : T)
-        → All ValidVote (votes t)
-
       unique-votes : ∀ (t : T) (v : Vote)
         → let vs = votes t
           in
           v ∈ vs
         → vs ≡ votes (addVote t v)
-
-      no-equivocations : ∀ (t : T) (v : Vote)
-        → let vs = votes t
-          in
-          Any (v ∻_) vs
-        → vs ≡ votes (addVote t v)
--}
 
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
@@ -181,13 +170,14 @@ The block-tree type is defined as follows:
 
     field
       tree₀ : T
-      newChain : T → Chain → T
-      allChains : T → List Chain
+
+      addChain : T → Chain → T
+      chains : T → List Chain
       preferredChain : T → Chain
 
       addVote : T → Vote → T
-
       votes : T → List Vote
+
       certs : T → List Certificate
 
     cert₀ : Certificate
@@ -195,7 +185,7 @@ The block-tree type is defined as follows:
 
     field
       is-TreeType : IsTreeType
-                      tree₀ newChain allChains preferredChain
+                      tree₀ addChain chains preferredChain
                       addVote votes certs cert₀
 
     latestCertOnChain : T → Certificate
@@ -223,7 +213,7 @@ The block-tree type is defined as follows:
       in filter cond ∘ preferredChain
 
     allBlocks : T → List Block
-    allBlocks = concat ∘ allChains
+    allBlocks = concat ∘ chains
 ```
 ### Additional parameters
 
@@ -242,7 +232,6 @@ additionally:
            {txSelection : SlotNumber → PartyId → List Tx}
            {parties : Parties} -- TODO: use parties from blockTrees
                                -- i.e. allow dynamic participation
-
            where
 
     open TreeType blockTree
@@ -265,7 +254,7 @@ Updating the block-tree upon receiving a message for vote and block messages.
 
       ChainReceived : ∀ {c t} →
           ──────────────────────────────
-          t [ ChainMsg c ]→ newChain t c
+          t [ ChainMsg c ]→ addChain t c
 ```
 #### Vote in round
 
@@ -292,7 +281,7 @@ VR-1A: A party has seen a certificate cert-r−1 for round r−1
 VR-1B: The  extends the block certified by cert-r−1,
 ```agda
     VotingRule-1B : SlotNumber → T → Type
-    VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (allChains t)
+    VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (chains t)
 ```
 VR-1: Both VR-1A and VR-1B hold
 ```agda
@@ -443,7 +432,7 @@ history
       where open State M
 
     add_to_diffuse_ : (Message × Delay × PartyId) → T → State → State
-    add (m@(ChainMsg x) , d , p) to t diffuse M = m , d , p , newChain t x ⇑ M
+    add (m@(ChainMsg x) , d , p) to t diffuse M = m , d , p , addChain t x ⇑ M
     add (m@(VoteMsg x) , d , p) to t diffuse M = m , d , p , addVote t x ⇑ M
 ```
 ## Fetching

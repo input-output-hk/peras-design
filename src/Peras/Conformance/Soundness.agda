@@ -184,19 +184,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; valid = valid-chain -- ?
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
-{-
-        ; valid-votes = valid-votes
         ; unique-votes = {!!}
-        ; no-equivocations = {!!}
--}
-        ; quorum-cert = {!!}
+        ; quorum-cert = ?
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
     NodeModelTree = record { is-TreeType = isTreeType }
 
     open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
-    open SmallStep.TreeType NodeModelTree renaming (allChains to chains; preferredChain to prefChain)
+    open SmallStep.TreeType NodeModelTree renaming (preferredChain to prefChain)
 
     private
       instance
@@ -310,6 +306,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         invFetched : Fetched s
         sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s)
         otherTree : State.blockTrees s ⁉ otherId ≡ just (modelState s)
+{-
+        valid-votes : All ValidVote (votes t)
+        no-equivocations : ∀ (t : T) (v : Vote)
+          → let vs = votes t
+            in
+            Any (v ∻_) vs
+          → vs ≡ votes (addVote t v)
+-}
 
     open Invariant
 
@@ -652,8 +656,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ : State
         s₁ = record s₀
                { blockTrees =
-                   set sutId (newChain tree chain)
-                     (set (creatorId block) (newChain tree chain)
+                   set sutId (addChain tree chain)
+                     (set (creatorId block) (addChain tree chain)
                        blockTrees)
                ; messages = (msg ++ messages) ─ sut∈messages
                ; history = ChainMsg chain ∷ history
@@ -668,14 +672,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         sutExists :
           set (creatorId block)
-            (newChain tree chain)
+            (addChain tree chain)
               (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
           trans
             (k'≢k-get∘set
               {k = sutId}
               {k' = creatorId block}
-              {v = newChain tree chain}
+              {v = addChain tree chain}
               {m = State.blockTrees s₀}
               notFromSut)
             (sutTree inv)
@@ -698,8 +702,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         set-irrelevant :
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
-                          (set (creatorId block) (newChain tree chain)
+                        set sutId (addChain tree chain)
+                          (set (creatorId block) (addChain tree chain)
                             (State.blockTrees s₀)) }
           in
           record
@@ -712,7 +716,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ≡
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
+                        set sutId (addChain tree chain)
                           (State.blockTrees s₀) }
           in
           record
@@ -726,15 +730,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite k'≢k-get∘set∘set
             {k  = sutId}
             {k' = creatorId block}
-            {v  = newChain tree chain}
-            {v' = newChain tree chain}
+            {v  = addChain tree chain}
+            {v' = addChain tree chain}
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
-        newChain-modelState :
+        addChain-modelState :
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
+                        set sutId (addChain tree chain)
                           (State.blockTrees s₀) }
           in
           record
@@ -750,11 +754,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
             ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain)
             }
-        newChain-modelState
+        addChain-modelState
           rewrite
             get∘set≡id
               {k = sutId}
-              {v = newChain tree chain}
+              {v = addChain tree chain}
               {m = State.blockTrees s₀}
           = refl
 
@@ -783,7 +787,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite validHead
           rewrite validRest
-          = trans set-irrelevant newChain-modelState
+          = trans set-irrelevant addChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId block ≟ sutId
@@ -897,7 +901,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           creatorId≡sutId = eqℕ-sound checkedSut
 
           correctVote : vote ≡ v
-          correctVote = {!!} -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+          correctVote = ? -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
           validSignature : IsVoteSignature v (signature v)
           validSignature with v ← axiom-checkVoteSignature checkedSig
