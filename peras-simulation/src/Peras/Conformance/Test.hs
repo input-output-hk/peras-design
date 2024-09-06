@@ -22,6 +22,8 @@ import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
   initialModelState,
+  otherId,
+  pref,
   transition,
  )
 import Peras.Crypto (Hashable (hash))
@@ -164,7 +166,7 @@ instance StateModel NodeModel where
 
   initialState = initialModelState
 
-  arbitraryAction _ NodeModel{clock, allChains, allVotes, protocol} =
+  arbitraryAction _ s@NodeModel{clock, allChains, allVotes, protocol} =
     fmap (Some . Step) $
       frequency $
         [(1, pure Tick)]
@@ -174,16 +176,10 @@ instance StateModel NodeModel where
    where
     genChain =
       do
-        tip' <- elements allChains
-        n <- choose (0, length tip' - 1)
-        let tip = drop n tip'
-        let minSlot =
-              case tip of
-                [] -> 1
-                MkBlock{slotNumber} : _ -> slotNumber
+        let tip = pref s
         fmap (: tip) $
           MkBlock
-            <$> elements [minSlot .. clock]
+            <$> pure clock
             <*> genPartyId
             <*> pure (hashTip tip)
             <*> genCertificate tip
@@ -220,7 +216,7 @@ instance StateModel NodeModel where
           )
         ]
     validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
-    genPartyId = choose (2, 5_000_000) `suchThat` (/= pid modelSUT)
+    genPartyId = pure otherId
     genRound = elements [1 .. r]
     r = inRound clock protocol
 
