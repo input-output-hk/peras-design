@@ -44,11 +44,6 @@ open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_�
 
 open import Data.List.Relation.Binary.Equality.Propositional using (_≋_; ≡⇒≋; ≋⇒≡)
 
-open import Data.Tree.AVL.Map PartyIdO as M using (Map; lookup; insert; empty; fromList)
-
-open import Data.Tree.AVL.Map.Membership.Propositional PartyIdO
-open import Data.Tree.AVL.Map.Membership.Propositional.Properties PartyIdO
-
 open import Relation.Unary using (Pred)
 open import Level using (Level)
 
