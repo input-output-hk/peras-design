@@ -16,6 +16,6 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 -- | Test an external implementation against the Agda executable specification.
 spec :: Handle -> Handle -> Spec
 spec hReader hWriter =
-  describe "Prototype node"
-    . prop "Simulation respects model"
+  describe "External node"
+    . prop "Implementation respects Peras protocol"
     $ forAllDL anyActions_ (prop_node hReader hWriter . Blind)

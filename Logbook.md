@@ -1,4 +1,14 @@
-## 2027-07-26
+## 2024-09-06
+
+### Conformance testing of external implementations.
+
+The new `peras-conformance-test` executable runs the `quickcheck-dynamic` tests against external (e.g., non-Haskell) implementations of the Peras protocol. It writes JSON requests to a pipe and reads the JSON response from another pipe.
+
+The reference/prototype implementation of Peras has been packaged as `peras-simulation-pipe` for use with this external tester.
+
+See [Conformance](peras-simulation/Conformance.md) for details.
+
+## 2024-07-26
 
 ### Adversarial behaviors for `peras-markov`
 
@@ -25,7 +35,7 @@ Next steps:
 - example scenarios
 - split-brain analysis
 
-## 2027-07-25
+## 2024-07-25
 
 ### Dynamic testing of `peras-markov`
 
