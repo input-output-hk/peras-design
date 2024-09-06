@@ -325,11 +325,22 @@ An optional `Stopped` response is allowed.
 |--------------|---------------------------|----------------------------------------------------------------------------|
 | `tag`        | `"Initialize"`            |                                                                            |
 | `parameters` | `Parameters` object       | The Peras protocol parameters.                                             |
-| `party`      | `Party` object            | The party identifier for the subject under teste.                          |
+| `party`      | `Party` object            | The party identifier for the sytem under test.                             |
 | `slotNumber` | integer                   | The current slot number of the node clock.                                 |
 | `chainsSeen` | array of array of `Block` | The chains the node has already seen; blocks are listed most recent first. |
 | `certsSeen`  | array of `Cert`           | The certificates the node has already seen.                                |
 | `votesSeen`  | arrof of `Vote`           | The votes the node has already seen.                                       |
+
+
+### `NewSlot` object
+
+| Key                 | Value                     | Notes                                                           |
+|---------------------|---------------------------|-----------------------------------------------------------------|
+| `tag`               | `"NewSlot"`               |                                                                 |
+| `isSlotLeader`      | boolean                   | Whether the system under test is a slot leader.                 |
+| `isCommitteeMember` | boolean                   | Whether the system under test is a voting committee member.     |
+| `newChains`         | array of array of `Block` | The chains the node receives over the network from other nodes. |
+| `newVotes`          | array of `Vote`           | The votes the node receives over the network from other nodes.  |
 
 
 ### `NodeResponse` object
