@@ -107,7 +107,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
            -- Currently we allow anyone to vote
            (axiom-everyoneIsOnTheCommittee :
-             ∀ {p slot prf} → IsCommitteeMember p slot prf)
+             ∀ {p r prf} → IsCommitteeMember p r prf)
 
            (axiom-checkVoteSignature :
              ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
@@ -144,7 +144,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       where
         valid-votes' : ∀ (l : List Vote) → All.All ValidVote l
         valid-votes' [] = All.[]
-        valid-votes' (v ∷ vs) = ({!!} P., {!!}) All.∷ (valid-votes' vs)
+        valid-votes' (v ∷ vs) =
+          let checked-membership =
+                axiom-everyoneIsOnTheCommittee
+                  {creatorId v}
+                  {votingRound v}
+                  {proofM v}
+              checked-signature = axiom-checkVoteSignature {v} {!!}
+          in (checked-membership P., checked-signature) All.∷ (valid-votes' vs)
 
     isTreeType :
       SmallStep.IsTreeType
@@ -163,8 +170,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; instantiated-certs = refl
         ; instantiated-votes = refl
         ; extendable-chain = λ _ _ → refl -- TODO: set union
-        ; valid = ? -- ?
-        ; optimal = ? -- ok
+        ; valid = {!!} -- ?
+        ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; valid-votes = valid-votes
         ; unique-votes = {!!}
