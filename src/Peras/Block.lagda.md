@@ -56,13 +56,6 @@ type PartyId = Integer
 ```
 -->
 
-The party identifier needs to be strictly, totally ordered to be used as key
-
-```agda
-PartyIdO : StrictTotalOrder 0ℓ 0ℓ 0ℓ
-PartyIdO = <-strictTotalOrder
-```
-
 ## Party
 
 ```agda

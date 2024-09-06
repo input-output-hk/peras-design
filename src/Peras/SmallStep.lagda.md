@@ -25,6 +25,8 @@ open import Peras.Params
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} renaming (_⊆_ to _⊆ᶜ_)
 
+import Haskell.Prelude as H -- TODO: drop agda2hs Prelude here
+
 open Honesty public
 open MembershipProof public
 open Signature public
@@ -173,7 +175,7 @@ Properties that must hold with respect to chains, certificates and votes.
         votes tree₀ ≡ []
 
       extendable-chain : ∀ (t : T) (c : Chain)
-        → certs (newChain t c) ≡ certsFromChain c ++ certs t -- TODO: set union
+        → certs (newChain t c) ≡ H.foldr insertCert (certs t) (certsFromChain c)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)

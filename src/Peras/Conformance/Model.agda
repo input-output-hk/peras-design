@@ -83,15 +83,6 @@ otherId = 2
 
 {-# COMPILE AGDA2HS otherId #-}
 
-insertCert : Certificate → List Certificate → List Certificate
-insertCert cert [] = cert ∷ []
-insertCert cert (cert' ∷ certs) =
-  if cert == cert'
-  then cert' ∷ certs
-  else cert' ∷ insertCert cert certs
-
-{-# COMPILE AGDA2HS insertCert #-}
-
 seenBeforeStartOfRound : PerasParams → RoundNumber → Certificate × SlotNumber → Bool
 seenBeforeStartOfRound params r (c , s) =
   getSlotNumber s <= getRoundNumber r * perasU params
@@ -318,34 +309,47 @@ module TreeInstance
     maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
       → maximumBy d o l ∈ d ∷ l
 
-  postulate
-    isTreeType :
+  xx : ∀ (t : NodeModel) → ValidChain (pref t)
+  xx t with pref t
+  ... | [] = Genesis
+  ... | x ∷ xxx = Cons {!!} {!!} {!!} {!!}
+
+  yy : ∀ (c : Chain) (t : NodeModel)
+        → let
+            b = pref t
+            cts = allSeenCerts t
+          in
+          ValidChain c
+        → c ∈ genesisChain ∷ allChains t
+        → ∥ c ∥ cts Data.Nat.≤ ∥ b ∥ cts
+  yy c t x x₁ = {!!}
+
+--  postulate
+  isTreeType :
       IsTreeType
         initialModelState
         newChain'
-        allChains -- (λ t → allChains t ++ genesisChain ∷ [])
+        (λ t → genesisChain ∷ allChains t)
         pref
         addVote'
         allVotes
         allSeenCerts
         genesisCert
 
-{-
   isTreeType =
     record
       { instantiated = refl
       ; instantiated-certs = refl
       ; instantiated-votes = refl
-      ; extendable-chain = {!!} -- TODO: set union
-      ; valid = {!!} -- does that really hold here?
-      ; optimal = {!!}
+      ; extendable-chain = λ _ _ → refl -- TODO: set union
+      ; valid = xx -- ?
+      ; optimal = yy -- ok
       ; self-contained = λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
       ; valid-votes = {!!}
       ; unique-votes = {!!}
       ; no-equivocations = {!!}
       ; quorum-cert = {!!}
       }
--}
 
   NodeModelTree : TreeType NodeModel
   NodeModelTree = record { is-TreeType = isTreeType }
@@ -536,7 +540,7 @@ transition s Tick =
   let s' = record s { clock = nextSlot (clock s) } in
   Just (votesInState s' ,
     let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
-    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'')})
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)

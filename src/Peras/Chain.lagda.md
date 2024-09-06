@@ -170,6 +170,16 @@ Chain = List Block
 certsFromChain : Chain → List Certificate
 certsFromChain = mapMaybe certificate
 ```
+```agda
+insertCert : Certificate → List Certificate → List Certificate
+insertCert cert [] = cert ∷ []
+insertCert cert (cert' ∷ certs) =
+  if cert == cert'
+  then cert' ∷ certs
+  else cert' ∷ insertCert cert certs
+
+{-# COMPILE AGDA2HS insertCert #-}
+```
 ### Chain prefix
 
 ```agda
