@@ -661,6 +661,68 @@ List-like structure for defining execution paths.
       ∎ : M ↝⋆ M
       _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
 ```
+## Properties
+```agda
+    open State
+```
+### Validity of votes
+```
+    data ValidVotes (N : State) : Type where
+
+      valid-votes : ∀ {v : Vote}
+        → All
+          (λ { (VoteMsg v) → (ValidVote v)
+             ; _ → ⊤}) (history N)
+        → ValidVotes N
+```
+```agda
+    ⇀-valid-votes : ∀ {M N p} {h : Honesty p} {m}
+      → ValidVotes M
+      → h ⊢ M [ m ]⇀ N
+      → ValidVotes N
+    ⇀-valid-votes (valid-votes {v} x) (honest _ _ _) = valid-votes {v = v} x
+    ⇀-valid-votes (valid-votes {v} x) (corrupt _) = valid-votes {v = v} x
+
+    ↷-valid-votes : ∀ {M N p} {h : Honesty p}
+      → ValidVotes M
+      → h ⊢ M ↷ N
+      → ValidVotes N
+    ↷-valid-votes (valid-votes {v} x) (honest _ _) = valid-votes {v = v} (tt ∷ x)
+
+    ⇉-valid-votes : ∀ {M N p} {h : Honesty p}
+      → ValidVotes M
+      → h ⊢ M ⇉ N
+      → ValidVotes N
+    ⇉-valid-votes (valid-votes {v} x) (honest _ _ x₃ _ x₅ _) = valid-votes {v = v} ((x₅ , x₃) ∷ x)
+
+    tick-valid-votes : ∀ {M}
+      → ValidVotes M
+      → ValidVotes (tick M)
+    tick-valid-votes (valid-votes {v} x) = valid-votes {v = v} x
+```
+A small-step conserves the property that all votes are valid
+```agda
+    ↝-valid-votes :
+      ∙ ValidVotes M
+      ∙ M ↝ N
+        ────────────
+        ValidVotes N
+    ↝-valid-votes y (Fetch x) = ⇀-valid-votes y x
+    ↝-valid-votes y (CreateVote _ x) = ⇉-valid-votes y x
+    ↝-valid-votes y (CreateBlock _ x) = ↷-valid-votes y x
+    ↝-valid-votes y (NextSlot _ _) = tick-valid-votes y
+    ↝-valid-votes y (NextSlotNewRound _ _ _) = tick-valid-votes y
+```
+```agda
+    ↝⋆-valid-votes :
+      ∙ ValidVotes M
+      ∙ M ↝⋆ N
+        ────────────
+        ValidVotes N
+    ↝⋆-valid-votes x ∎ = x
+    ↝⋆-valid-votes x (x₁ ↣ x₂) =
+      ↝⋆-valid-votes (↝-valid-votes x x₁) x₂
+```
 ```agda
   open Semantics public
 ```
