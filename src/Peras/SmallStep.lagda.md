@@ -665,63 +665,62 @@ List-like structure for defining execution paths.
 ```agda
     open State
 ```
-### Validity of votes
+### Valid messages
 ```
-    data ValidVotes (N : State) : Type where
+    data ValidMessages (N : State) : Type where
 
-      valid-votes : ∀ {v : Vote}
-        → All
-          (λ { (VoteMsg v) → (ValidVote v)
-             ; _ → ⊤}) (history N)
-        → ValidVotes N
+      valid-messages :
+          All (λ { (ChainMsg c) → ValidChain c
+                 ; (VoteMsg v) → ValidVote v})
+            (history N)
+        → ValidMessages N
 ```
 ```agda
-    ⇀-valid-votes : ∀ {M N p} {h : Honesty p} {m}
-      → ValidVotes M
+    ⇀-valid-messages : ∀ {M N p} {h : Honesty p} {m}
+      → ValidMessages M
       → h ⊢ M [ m ]⇀ N
-      → ValidVotes N
-    ⇀-valid-votes (valid-votes {v} x) (honest _ _ _) = valid-votes {v = v} x
-    ⇀-valid-votes (valid-votes {v} x) (corrupt _) = valid-votes {v = v} x
+      → ValidMessages N
+    ⇀-valid-messages (valid-messages x) (honest _ _ _) = valid-messages x
+    ⇀-valid-messages (valid-messages x) (corrupt _) = valid-messages x
 
-    ↷-valid-votes : ∀ {M N p} {h : Honesty p}
-      → ValidVotes M
+    ↷-valid-messages : ∀ {M N p} {h : Honesty p}
+      → ValidMessages M
       → h ⊢ M ↷ N
-      → ValidVotes N
-    ↷-valid-votes (valid-votes {v} x) (honest _ _) = valid-votes {v = v} (tt ∷ x)
+      → ValidMessages N
+    ↷-valid-messages (valid-messages x) (honest _ y) = valid-messages (y ∷ x)
 
-    ⇉-valid-votes : ∀ {M N p} {h : Honesty p}
-      → ValidVotes M
+    ⇉-valid-messages : ∀ {M N p} {h : Honesty p}
+      → ValidMessages M
       → h ⊢ M ⇉ N
-      → ValidVotes N
-    ⇉-valid-votes (valid-votes {v} x) (honest _ _ x₃ _ x₅ _) = valid-votes {v = v} ((x₅ , x₃) ∷ x)
+      → ValidMessages N
+    ⇉-valid-messages (valid-messages x) (honest _ _ x₃ _ x₅ _) = valid-messages ((x₅ , x₃) ∷ x)
 
-    tick-valid-votes : ∀ {M}
-      → ValidVotes M
-      → ValidVotes (tick M)
-    tick-valid-votes (valid-votes {v} x) = valid-votes {v = v} x
+    tick-valid-messages : ∀ {M}
+      → ValidMessages M
+      → ValidMessages (tick M)
+    tick-valid-messages (valid-messages x) = valid-messages x
 ```
-A small-step conserves the property that all votes are valid
 ```agda
-    ↝-valid-votes :
-      ∙ ValidVotes M
+    ↝-valid-messages :
+      ∙ ValidMessages M
       ∙ M ↝ N
         ────────────
-        ValidVotes N
-    ↝-valid-votes y (Fetch x) = ⇀-valid-votes y x
-    ↝-valid-votes y (CreateVote _ x) = ⇉-valid-votes y x
-    ↝-valid-votes y (CreateBlock _ x) = ↷-valid-votes y x
-    ↝-valid-votes y (NextSlot _ _) = tick-valid-votes y
-    ↝-valid-votes y (NextSlotNewRound _ _ _) = tick-valid-votes y
+        ValidMessages N
+    ↝-valid-messages x (Fetch y) = ⇀-valid-messages x y
+    ↝-valid-messages x (CreateVote _ y) = ⇉-valid-messages x y
+    ↝-valid-messages x (CreateBlock _ y) = ↷-valid-messages x y
+    ↝-valid-messages x (NextSlot _ _) = tick-valid-messages x
+    ↝-valid-messages x (NextSlotNewRound _ _ _) = tick-valid-messages x
 ```
 ```agda
-    ↝⋆-valid-votes :
-      ∙ ValidVotes M
+    ↝⋆-valid-messages :
+      ∙ ValidMessages M
       ∙ M ↝⋆ N
         ────────────
-        ValidVotes N
-    ↝⋆-valid-votes x ∎ = x
-    ↝⋆-valid-votes x (x₁ ↣ x₂) =
-      ↝⋆-valid-votes (↝-valid-votes x x₁) x₂
+        ValidMessages N
+    ↝⋆-valid-messages x ∎ = x
+    ↝⋆-valid-messages x (x₁ ↣ x₂) =
+      ↝⋆-valid-messages (↝-valid-messages x x₁) x₂
 ```
 ```agda
   open Semantics public
