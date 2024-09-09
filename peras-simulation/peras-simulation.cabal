@@ -41,6 +41,7 @@ library
                      Peras.Arbitraries
                      Peras.Block
                      Peras.Chain
+                     Peras.Conformance.Generators
                      Peras.Conformance.Model
                      Peras.Conformance.Orphans
                      Peras.Conformance.Params
