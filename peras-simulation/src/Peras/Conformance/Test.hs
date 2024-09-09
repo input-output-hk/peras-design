@@ -22,8 +22,11 @@ import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
   initialModelState,
+  otherId,
+  pref,
   transition,
- )
+  checkVotingRules,
+  votingBlockHash)
 import Peras.Crypto (Hashable (hash))
 import Peras.Numbering (
   RoundNumber (getRoundNumber),
@@ -164,7 +167,7 @@ instance StateModel NodeModel where
 
   initialState = initialModelState
 
-  arbitraryAction _ NodeModel{clock, allChains, allVotes, protocol} =
+  arbitraryAction _ s@NodeModel{clock, allChains, allVotes, protocol} =
     fmap (Some . Step) $
       frequency $
         [(1, pure Tick)]
@@ -174,16 +177,10 @@ instance StateModel NodeModel where
    where
     genChain =
       do
-        tip' <- elements allChains
-        n <- choose (0, length tip' - 1)
-        let tip = drop n tip'
-        let minSlot =
-              case tip of
-                [] -> 1
-                MkBlock{slotNumber} : _ -> slotNumber
+        let tip = pref s
         fmap (: tip) $
           MkBlock
-            <$> elements [minSlot .. clock]
+            <$> pure clock
             <*> genPartyId
             <*> pure (hashTip tip)
             <*> genCertificate tip
@@ -193,10 +190,10 @@ instance StateModel NodeModel where
 
     genVote =
       do
-        block <- elements (concat allChains)
+        blockHash <- pure $ votingBlockHash s
         let unequivocated v@MkVote{votingRound = r, creatorId = p} = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
         flip suchThat unequivocated $
-          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure (hash block) <*> arbitrary
+          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure blockHash <*> arbitrary
 
     badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
     canGenBadVote = canGenVotes && not (null badVoteCandidates)
@@ -205,9 +202,9 @@ instance StateModel NodeModel where
       (r, p) <- elements badVoteCandidates
       MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
-      newRound clock protocol -- Voting is only allowed in the first slot of a round.
-        && not (all null allChains) -- There must be some block to vote for.
+        not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
+        && checkVotingRules s
     genCertificate chain =
       frequency
         [
@@ -220,7 +217,7 @@ instance StateModel NodeModel where
           )
         ]
     validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
-    genPartyId = choose (2, 5_000_000) `suchThat` (/= pid modelSUT)
+    genPartyId = pure otherId
     genRound = elements [1 .. r]
     r = inRound clock protocol
 
