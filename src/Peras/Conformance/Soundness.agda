@@ -186,6 +186,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
+        ; valid-votes = ?
         ; no-equivocations = ?
         ; quorum-cert = {!!} -- invariants
         }

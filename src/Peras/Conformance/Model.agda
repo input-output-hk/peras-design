@@ -410,11 +410,12 @@ vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s
 CheckVotingRules : NodeModel → Set
 CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
 
-checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
-checkVotingRules s =
-  decS
-    (decP (vr1A s) (vr1B s))
-    (decP (vr2A s) (vr2B s))
+opaque
+  checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
+  checkVotingRules s =
+    decS
+      (decP (vr1A s) (vr1B s))
+      (decP (vr2A s) (vr2B s))
 
 {-# COMPILE AGDA2HS checkVotingRules #-}
 
