@@ -251,20 +251,23 @@ certsFromQuorum s =
 addVote' :: NodeModel -> Vote -> NodeModel
 addVote' s v =
   NodeModel
-    (clock s')
-    (protocol s')
-    (allChains s')
-    (allVotes s')
-    (foldr insertCert (allSeenCerts s') (certsFromQuorum s'))
- where
-  s' :: NodeModel
-  s' =
-    NodeModel
-      (clock s)
-      (protocol s)
-      (allChains s)
-      (v : allVotes s)
-      (allSeenCerts s)
+    (clock s)
+    (protocol s)
+    (allChains s)
+    (v : allVotes s)
+    ( foldr
+        insertCert
+        (allSeenCerts s)
+        ( certsFromQuorum
+            ( NodeModel
+                (clock s)
+                (protocol s)
+                (allChains s)
+                (v : allVotes s)
+                (allSeenCerts s)
+            )
+        )
+    )
 
 hasVoted :: PartyId -> RoundNumber -> NodeModel -> Bool
 hasVoted p r s =

@@ -138,6 +138,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
         → maximumBy d o l ∈ d ∷ l
 
+{-
     valid-chain : ∀ (t : NodeModel) → ValidChain (pref t)
     valid-chain t = valid-chain' (pref t)
       where
@@ -147,7 +148,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           let checked-blockSignature = axiom-checkBlockSignature {b} {!!}
               checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
           in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
-
+-}
 {-
     valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
     valid-votes t = valid-votes' (allVotes t)
@@ -181,10 +182,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; instantiated-certs = refl
         ; instantiated-votes = refl
         ; extendable-chain = λ _ _ → refl -- TODO: set union
-        ; valid = valid-chain -- ?
+        ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
+        ; no-equivocations = ?
         ; quorum-cert = {!!} -- invariants
         }
 
@@ -307,7 +309,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s)
         otherTree : State.blockTrees s ⁉ otherId ≡ just (modelState s)
 {-
-        valid-votes : All ValidVote (votes t)
         no-equivocations : ∀ (t : T) (v : Vote)
           → let vs = votes t
             in

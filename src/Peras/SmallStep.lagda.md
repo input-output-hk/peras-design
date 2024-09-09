@@ -148,10 +148,19 @@ Properties that must hold with respect to chains, certificates and votes.
       self-contained : ∀ (t : T)
         → preferredChain t ∈ allChains t
 
+      valid-votes : ∀ (t : T)
+        → All ValidVote (votes t)
+
       unique-votes : ∀ (t : T) (v : Vote)
         → let vs = votes t
           in
           v ∈ vs
+        → vs ≡ votes (addVote t v)
+
+      no-equivocations : ∀ (t : T) (v : Vote)
+        → let vs = votes t
+          in
+          Any (v ∻_) vs
         → vs ≡ votes (addVote t v)
 
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
@@ -206,11 +215,6 @@ The block-tree type is defined as follows:
 
     hasVote? : (r : RoundNumber) (t : T) → Dec (hasVote r t)
     hasVote? (MkRoundNumber r) = any? ((r ≟_) ∘ votingRound') ∘ votes
-
-    preferredChain′ : SlotNumber → T → Chain
-    preferredChain′ (MkSlotNumber sl) =
-      let cond = (_≤? sl) ∘ slotNumber'
-      in filter cond ∘ preferredChain
 
     allBlocks : T → List Block
     allBlocks = concat ∘ chains
