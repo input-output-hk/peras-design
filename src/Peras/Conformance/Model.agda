@@ -285,12 +285,9 @@ certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (
 
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 
-addVote' : NodeModel → (v : Vote) → @0 (checkSignedVote v ≡ True) → NodeModel
-addVote' s v prf =
-  let s' = record s
-             { allVotes = v ∷ (allVotes s)
-             ; allVotesChecked = ( v P., prf ) ∷ (allVotesChecked s)
-             }
+addVote' : NodeModel → (v : Vote) → NodeModel
+addVote' s v =
+  let s' = record s { allVotes = v ∷ (allVotes s) }
   in record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
 
 {-# COMPILE AGDA2HS addVote' #-}
@@ -513,7 +510,9 @@ transition s (NewVote v) = do
   -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
-  Just ([] , addVote' s v prf)
+  Just ([] ,
+    let s' = addVote' s v
+    in record s' { allVotesChecked = ( v P., prf ) ∷ (allVotesChecked s')})
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just ([] , s)

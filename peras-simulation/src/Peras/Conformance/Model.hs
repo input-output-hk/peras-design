@@ -449,7 +449,15 @@ transition s (NewVote v) =
     guard (checkVoteFromOther v)
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
-    Just ([], addVote' s v)
+    Just
+      ( []
+      , NodeModel
+          (clock (addVote' s v))
+          (protocol (addVote' s v))
+          (allChains (addVote' s v))
+          (allVotes (addVote' s v))
+          (allSeenCerts (addVote' s v))
+      )
 transition s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)
