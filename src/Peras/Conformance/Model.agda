@@ -150,7 +150,7 @@ makeVote params slot h =
 
 -- The actual model ---
 
-open import Data.Product using (∃; ∃-syntax)
+open import Data.Product using (∃-syntax)
 
 CheckedVote = ∃[ v ] (checkSignedVote v ≡ True)
 
@@ -285,7 +285,7 @@ certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (
 
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 
-addVote' : NodeModel → (v : Vote) → NodeModel
+addVote' : NodeModel → Vote → NodeModel
 addVote' s v =
   let s' = record s { allVotes = v ∷ (allVotes s) }
   in record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
