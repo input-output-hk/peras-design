@@ -208,6 +208,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; protocol     = modelParams
       ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
       ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+      ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
       ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
       }
 
@@ -507,6 +508,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
@@ -528,6 +530,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -713,6 +716,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -726,6 +730,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
@@ -748,6 +753,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -959,6 +965,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
             ≡
@@ -971,6 +978,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
           set-irrelevant
@@ -991,6 +999,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
             ≡
