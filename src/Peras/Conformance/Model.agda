@@ -150,13 +150,18 @@ makeVote params slot h =
 
 -- The actual model ---
 
+open import Data.Product using (∃; ∃-syntax)
+
+CheckedVote = ∃[ v ] (checkSignedVote v ≡ True)
+
 record NodeModel : Set where
   field
-    clock            : SlotNumber
-    protocol         : PerasParams
-    allChains        : List Chain
-    allVotes         : List Vote
-    allSeenCerts     : List Certificate
+    clock              : SlotNumber
+    protocol           : PerasParams
+    allChains          : List Chain
+    allVotes           : List Vote
+    @0 allVotesChecked : List CheckedVote
+    allSeenCerts       : List Certificate
 
 rFromSlot : NodeModel → RoundNumber
 rFromSlot s =
@@ -210,6 +215,7 @@ initialModelState = record
   ; protocol         = testParams
   ; allChains        = genesisChain ∷ []
   ; allVotes         = []
+  ; allVotesChecked  = []
   ; allSeenCerts     = genesisCert ∷ []
   }
 
@@ -279,9 +285,12 @@ certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (
 
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 
-addVote' : NodeModel → Vote → NodeModel
-addVote' s v =
-  let s' = record s { allVotes = v ∷ (allVotes s) }
+addVote' : NodeModel → (v : Vote) → @0 (checkSignedVote v ≡ True) → NodeModel
+addVote' s v prf =
+  let s' = record s
+             { allVotes = v ∷ (allVotes s)
+             ; allVotesChecked = ( v P., prf ) ∷ (allVotesChecked s)
+             }
   in record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
 
 {-# COMPILE AGDA2HS addVote' #-}
@@ -499,12 +508,12 @@ transition s (NewChain (block ∷ rest)) = do
       })
 transition s (NewVote v) = do
   guard (slotToRound (protocol s) (clock s) == votingRound v)
-  guard (checkSignedVote v)
+  prf ← guard (checkSignedVote v)
   guard (checkVoteFromOther v)
   -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
-  Just ([] , addVote' s v)
+  Just ([] , addVote' s v prf)
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just ([] , s)

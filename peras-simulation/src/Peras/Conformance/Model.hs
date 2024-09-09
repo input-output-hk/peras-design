@@ -445,7 +445,7 @@ transition s (NewChain (block : rest)) =
 transition s (NewVote v) =
   do
     guard (slotToRound (protocol s) (clock s) == votingRound v)
-    guard (checkSignedVote v)
+    prf <- guard (checkSignedVote v)
     guard (checkVoteFromOther v)
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
