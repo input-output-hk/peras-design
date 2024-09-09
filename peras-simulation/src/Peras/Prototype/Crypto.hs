@@ -12,7 +12,7 @@ import Data.Foldable (toList)
 import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Serialize as Serialize (decode, encode)
 import Data.Set (Set)
-import qualified Data.Set as S (map)
+import qualified Data.Set as S (map, toList)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
@@ -62,7 +62,8 @@ createLeadershipProof ::
   SlotNumber ->
   Set Party ->
   m (PerasResult LeadershipProof)
-createLeadershipProof = curry $ pure . pure . MkLeadershipProof . Serialize.encode . H.hash
+createLeadershipProof n ps = pure . pure . MkLeadershipProof . Serialize.encode
+                           $ H.hash (n, map pid $ S.toList ps) -- Note: only include the party id in the hash
 
 createMembershipProof ::
   Applicative m =>

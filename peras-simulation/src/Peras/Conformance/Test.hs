@@ -18,7 +18,7 @@ import Data.Set (Set)
 import Debug.Trace
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
-import Peras.Chain (Vote (..))
+import Peras.Chain (Chain, Vote (..))
 import Peras.Conformance.Generators
 import Peras.Conformance.Model (
   EnvAction (..),
@@ -27,6 +27,7 @@ import Peras.Conformance.Model (
   initialModelState,
   otherId,
   pref,
+  sutIsSlotLeader,
   transition,
   votingBlockHash,
  )
@@ -101,15 +102,18 @@ instance Pretty EnvAction where
   pPrint (BadVote vote) = "BadVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where
-  pPrint MkBlock{..} =
+  pPrint b@MkBlock{..} =
     "Block"
       <+> braces
         ( vcat
-            [ "hash    =" <+> text (show signature)
-            , "slot    =" <+> pPrint (getSlotNumber slotNumber)
-            , "creator =" <+> pPrint creatorId
-            , "parent  =" <+> text (show parentBlock)
-            , "cert    =" <+> pPrint certificate
+            [ "hash            =" <+> text (show $ hash b)
+            , "slot            =" <+> pPrint (getSlotNumber slotNumber)
+            , "creator         =" <+> pPrint creatorId
+            , "parent          =" <+> text (show parentBlock)
+            , "leadershipProof =" <+> text (show leadershipProof)
+            , "signature       =" <+> text (show signature)
+            , "cert            =" <+> pPrint certificate
+            , "bodyHash        =" <+> text (show bodyHash)
             ]
         )
 
@@ -165,8 +169,10 @@ instance Pretty Trace.PerasLog where
     Trace.DiffuseVote{vote} ->
       hang "DiffuseVote" 2 $ pPrint vote
 
+-- Slot leader every third slot, always a committee member
+-- FIXME: randomize slot leader slots
 modelSUT :: Party
-modelSUT = mkParty 1 mempty [0 .. 10_000] -- Never the slot leader, always a committee member
+modelSUT = mkParty 1 (filter sutIsSlotLeader [0 .. 10_000]) [0 .. 10_000]
 
 gen :: GenConstraints
 gen =
@@ -176,7 +182,7 @@ gen =
 
 instance StateModel NodeModel where
   data Action NodeModel a where
-    Step :: EnvAction -> Action NodeModel [Vote]
+    Step :: EnvAction -> Action NodeModel ([Chain], [Vote])
 
   initialState = initialModelState
 

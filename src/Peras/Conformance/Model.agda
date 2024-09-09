@@ -10,6 +10,7 @@ open import Haskell.Law.Eq.Instances
 open import Haskell.Law.Ord.Def
 
 open import Agda.Builtin.Maybe hiding (Maybe)
+import Agda.Builtin.Maybe as Maybe
 import Data.Bool
 import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
@@ -467,6 +468,11 @@ voteInState s = do
 
 {-# COMPILE AGDA2HS voteInState #-}
 
+sutIsSlotLeader : SlotNumber → Bool
+sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
+
+{-# COMPILE AGDA2HS sutIsSlotLeader #-}
+
 votesInState : NodeModel → List Vote
 votesInState = maybeToList ∘ voteInState
 
@@ -478,13 +484,35 @@ headBlockHash (b ∷ _) = Hashable.hash hashBlock b
 
 {-# COMPILE AGDA2HS headBlockHash #-}
 
-transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
+chainsInState : NodeModel → List Chain
+chainsInState s =
+  if sutIsSlotLeader (clock s)
+  then (block ∷ rest) ∷ []
+  else []
+  where
+    rest = pref s
+    block = createSignedBlock
+      (mkParty sutId [] [])
+      (clock s)
+      (headBlockHash rest)
+      Nothing
+      (createLeadershipProof (clock s) (mkParty sutId [] [] ∷ []))
+      (MkHash emptyBS)
+
+{-# COMPILE AGDA2HS chainsInState #-}
+
+transition : NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition s Tick =
-  let s' = record s { clock = nextSlot (clock s) } in
-  Just (votesInState s' ,
-    let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
-    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'')})
-transition _ (NewChain []) = Nothing
+  let s' = record s { clock = nextSlot (clock s) }
+      votes = votesInState s'
+      chains = chainsInState s'
+  in
+  Just ((chains , votes) ,
+    let s'' = record s' { allVotes  = votes ++ allVotes s'
+                        ; allChains = chains ++ allChains s'
+                        }
+    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+transition s (NewChain []) = Just (([] , []) , s)
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)
@@ -492,7 +520,7 @@ transition s (NewChain (block ∷ rest)) = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
-  Just ([] ,
+  Just (([] , []) ,
     record s
       { allChains = (block ∷ rest) ∷ allChains s
       ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
@@ -504,9 +532,9 @@ transition s (NewVote v) = do
   -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
-  Just ([] , addVote' s v)
+  Just (([] , []) , addVote' s v)
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
-  Just ([] , s)
+  Just (([] , []) , s)
 
 {-# COMPILE AGDA2HS transition #-}

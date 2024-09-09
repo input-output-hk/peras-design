@@ -33,6 +33,7 @@ import Peras.Conformance.Model (
  )
 import Peras.Conformance.Test (Action (Step), modelSUT)
 import Peras.Numbering (RoundNumber (getRoundNumber))
+import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
   isCommitteeMember,
@@ -40,6 +41,7 @@ import Peras.Prototype.Crypto (
  )
 import Peras.Prototype.Diffusion (
   Diffuser,
+  diffuseChain,
   diffuseVote,
   popChainsAndVotes,
  )
@@ -87,22 +89,22 @@ data RunState m = RunState
 
 type Runtime m = StateT (RunState m) m
 
-instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime m) where
+instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NodeModel (Runtime m) where
   perform NodeModel{..} (Step a) _ = case a of
     Tick -> do
       RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       lift $ do
         let clock' = clock + 1
-        -- TODO: also invoke blockCreation
+            txs = []
+        _ <- blockCreation tracer protocol modelSUT stateVar clock' txs (diffuseChain diffuserVar)
         _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
         let roundNumber = inRound clock' protocol
             party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
             selectBlock' = selectBlock nullTracer
             diffuser = diffuseVote diffuserVar
         _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
-        (cs, vs) <- popChainsAndVotes diffuserVar clock'
-        pure vs
+        popChainsAndVotes diffuserVar clock'
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
       pure mempty
@@ -113,18 +115,25 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
-  postcondition (s, s') (Step a) _ r = do
+  postcondition (s, s') (Step a) _ (gotChains, gotVotes) = do
     monitorPost $ tabulate "votingRules" [show $ checkVotingRules s']
-    let expected = maybe mempty fst (transition s a)
+    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition s a)
     -- let ok = length r == length expected
-    let ok = r == expected
+    let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null r) $ do
-      monitorPost . counterexample . show $ "  --      got:" <+> pPrint r
-    counterexamplePost . show $ "  -- expected:" <+> pPrint expected
+    unless (null gotChains) $ do
+      monitorPost . counterexample . show $ "  --      got chains:" <+> pPrint gotChains
+    when (gotChains /= expectedChains) $
+      counterexamplePost . show $
+        "  -- expected chains:" <+> pPrint expectedChains
+    unless (null gotVotes) $ do
+      monitorPost . counterexample . show $ "  --      got votes:" <+> pPrint gotVotes
+    when (gotVotes /= expectedVotes) $
+      counterexamplePost . show $
+        "  -- expected votes:" <+> pPrint expectedVotes
     counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
     pure ok
 
