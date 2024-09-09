@@ -1,4 +1,3 @@
-
 module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
@@ -36,7 +35,6 @@ open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude
 
 open import Peras.Conformance.Model as Model
-open Model.TreeInstance using (NodeModelTree)
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
          ⦃ postulates : Postulates ⦄
@@ -82,8 +80,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   modelParams : PerasParams
   modelParams = testParams
 
-  Tree = NodeModelTree
-
   instance
     network : Network
     network =
@@ -105,22 +101,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   import Peras.SmallStep as SmallStep
 
-  open SmallStep using (⦅_,_,_,_⦆)
-  open SmallStep.Message
-  open SmallStep.Semantics {NodeModel} {Tree} {S} {adversarialState₀} {txSelection} {parties} public
-  open SmallStep.TreeType Tree renaming (allChains to chains; preferredChain to prefChain) public
-
-  private
-    instance
-      Default-T : Default NodeModel
-      Default-T .def = tree₀
-
   module Assumptions
            (let open Postulates postulates)
 
            -- Currently we allow anyone to vote
            (axiom-everyoneIsOnTheCommittee :
-             ∀ {p slot prf} → IsCommitteeMember p slot prf)
+             ∀ {p r prf} → IsCommitteeMember p r prf)
 
            (axiom-checkVoteSignature :
              ∀ {vote} → checkSignedVote vote ≡ True → IsVoteSignature vote (signature vote))
@@ -133,12 +119,88 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              ∀ {block} → checkSignedBlock block ≡ True
              → IsBlockSignature block (signature block))
 
+{-
            -- Assume that blocks are created correctly, as the model is not explicit about block creation
            (axiom-blockCreatedCorrectly :
              ∀ {block s} →
              block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
+-}
 
          where
+
+    open SmallStep using (⦅_,_,_,_⦆)
+    open SmallStep.Message
+
+    open import Data.List.Membership.Propositional
+    import Data.List.Relation.Unary.All as All
+
+    postulate
+      maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
+        → maximumBy d o l ∈ d ∷ l
+
+{-
+    valid-chain : ∀ (t : NodeModel) → ValidChain (pref t)
+    valid-chain t = valid-chain' (pref t)
+      where
+        valid-chain' : ∀ (c : Chain) → ValidChain c
+        valid-chain' [] = Genesis
+        valid-chain' (b ∷ bs) =
+          let checked-blockSignature = axiom-checkBlockSignature {b} {!!}
+              checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
+          in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
+-}
+{-
+    valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
+    valid-votes t = valid-votes' (allVotes t)
+      where
+        valid-votes' : ∀ (l : List Vote) → All.All ValidVote l
+        valid-votes' [] = All.[]
+        valid-votes' (v ∷ vs) =
+          let checked-membership =
+                axiom-everyoneIsOnTheCommittee
+                  {creatorId v}
+                  {votingRound v}
+                  {proofM v}
+              checked-signature = axiom-checkVoteSignature {v} {!!}
+          in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
+-}
+
+    isTreeType :
+      SmallStep.IsTreeType
+        initialModelState
+        newChain'
+        allChains -- (λ t → genesisChain ∷ allChains t)
+        pref
+        addVote'
+        allVotes
+        allSeenCerts
+        genesisCert
+
+    isTreeType =
+      record
+        { instantiated = refl
+        ; instantiated-certs = refl
+        ; instantiated-votes = refl
+        ; extendable-chain = λ _ _ → refl -- TODO: set union
+        ; valid = {!!}
+        ; optimal = {!!} -- ok
+        ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
+        ; unique-votes = {!!}
+        ; valid-votes = ?
+        ; no-equivocations = ?
+        ; quorum-cert = {!!} -- invariants
+        }
+
+    NodeModelTree : SmallStep.TreeType NodeModel
+    NodeModelTree = record { is-TreeType = isTreeType }
+
+    open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
+    open SmallStep.TreeType NodeModelTree renaming (preferredChain to prefChain)
+
+    private
+      instance
+        Default-T : Default NodeModel
+        Default-T .def = tree₀
 
     modelState : State → NodeModel
     modelState s = record
@@ -247,6 +309,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         invFetched : Fetched s
         sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s)
         otherTree : State.blockTrees s ⁉ otherId ≡ just (modelState s)
+{-
+        no-equivocations : ∀ (t : T) (v : Vote)
+          → let vs = votes t
+            in
+            Any (v ∻_) vs
+          → vs ≡ votes (addVote t v)
+-}
 
     open Invariant
 
@@ -554,7 +623,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = eqBS-sound checkHash
 
         validHead : block ≡ β
-        validHead = axiom-blockCreatedCorrectly {block} {tree}
+        validHead = {!!} -- axiom-blockCreatedCorrectly {block} {tree}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -565,8 +634,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           (createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
             ∷ prefChain tree)
         validChain
-          = Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
-          where open SmallStep.IsTreeType
+          = let open SmallStep.IsTreeType
+            in Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -589,8 +658,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁ : State
         s₁ = record s₀
                { blockTrees =
-                   set sutId (newChain tree chain)
-                     (set (creatorId block) (newChain tree chain)
+                   set sutId (addChain tree chain)
+                     (set (creatorId block) (addChain tree chain)
                        blockTrees)
                ; messages = (msg ++ messages) ─ sut∈messages
                ; history = ChainMsg chain ∷ history
@@ -605,14 +674,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         sutExists :
           set (creatorId block)
-            (newChain tree chain)
+            (addChain tree chain)
               (State.blockTrees s₀) ⁉ sutId ≡ just tree
         sutExists =
           trans
             (k'≢k-get∘set
               {k = sutId}
               {k' = creatorId block}
-              {v = newChain tree chain}
+              {v = addChain tree chain}
               {m = State.blockTrees s₀}
               notFromSut)
             (sutTree inv)
@@ -635,8 +704,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         set-irrelevant :
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
-                          (set (creatorId block) (newChain tree chain)
+                        set sutId (addChain tree chain)
+                          (set (creatorId block) (addChain tree chain)
                             (State.blockTrees s₀)) }
           in
           record
@@ -649,7 +718,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ≡
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
+                        set sutId (addChain tree chain)
                           (State.blockTrees s₀) }
           in
           record
@@ -663,15 +732,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite k'≢k-get∘set∘set
             {k  = sutId}
             {k' = creatorId block}
-            {v  = newChain tree chain}
-            {v' = newChain tree chain}
+            {v  = addChain tree chain}
+            {v' = addChain tree chain}
             {m  = State.blockTrees s₀}
             notFromSut = refl
 
-        newChain-modelState :
+        addChain-modelState :
           let s = record s₀
                     { blockTrees =
-                        set sutId (newChain tree chain)
+                        set sutId (addChain tree chain)
                           (State.blockTrees s₀) }
           in
           record
@@ -687,11 +756,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
             ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain)
             }
-        newChain-modelState
+        addChain-modelState
           rewrite
             get∘set≡id
               {k = sutId}
-              {v = newChain tree chain}
+              {v = addChain tree chain}
               {m = State.blockTrees s₀}
           = refl
 
@@ -720,7 +789,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite validHead
           rewrite validRest
-          = trans set-irrelevant newChain-modelState
+          = trans set-irrelevant addChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId block ≟ sutId

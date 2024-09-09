@@ -14,7 +14,7 @@ import Data.Bool
 import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
-import Data.Product as P
+open import Data.Product as P using () renaming (_,_ to _⸴_)
 
 open import Peras.Block
 open import Peras.Chain
@@ -82,15 +82,6 @@ otherId : PartyId
 otherId = 2
 
 {-# COMPILE AGDA2HS otherId #-}
-
-insertCert : Certificate → List Certificate → List Certificate
-insertCert cert [] = cert ∷ []
-insertCert cert (cert' ∷ certs) =
-  if cert == cert'
-  then cert' ∷ certs
-  else cert' ∷ insertCert cert certs
-
-{-# COMPILE AGDA2HS insertCert #-}
 
 seenBeforeStartOfRound : PerasParams → RoundNumber → Certificate × SlotNumber → Bool
 seenBeforeStartOfRound params r (c , s) =
@@ -289,8 +280,9 @@ certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 
 addVote' : NodeModel → Vote → NodeModel
-addVote' s v = record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
-  where s' = record s { allVotes = v ∷ (allVotes s) }
+addVote' s v =
+  let s' = record s { allVotes = v ∷ (allVotes s) }
+  in record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
 
 {-# COMPILE AGDA2HS addVote' #-}
 
@@ -299,60 +291,15 @@ hasVoted p r s = any (λ v → p == voterId v && r == votingRound v) (allVotes s
 
 {-# COMPILE AGDA2HS hasVoted #-}
 
-open import Peras.Params
-open Hashable
-
-module TreeInstance
-         ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ _ : Params ⦄
-         ⦃ _ : Network ⦄
-         ⦃ _ : Postulates ⦄
-       where
-
-  open import Peras.SmallStep using (TreeType; IsTreeType)
-
-
-  open import Data.List.Membership.Propositional
-
-  postulate
-    maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
-      → maximumBy d o l ∈ d ∷ l
-
-  postulate
-    isTreeType :
-      IsTreeType
-        initialModelState
-        newChain'
-        allChains -- (λ t → allChains t ++ genesisChain ∷ [])
-        pref
-        addVote'
-        allVotes
-        allSeenCerts
-        genesisCert
-
-{-
-  isTreeType =
-    record
-      { instantiated = refl
-      ; instantiated-certs = refl
-      ; instantiated-votes = refl
-      ; extendable-chain = {!!} -- TODO: set union
-      ; valid = {!!} -- does that really hold here?
-      ; optimal = {!!}
-      ; self-contained = λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
-      ; valid-votes = {!!}
-      ; unique-votes = {!!}
-      ; no-equivocations = {!!}
-      ; quorum-cert = {!!}
-      }
--}
-
-  NodeModelTree : TreeType NodeModel
-  NodeModelTree = record { is-TreeType = isTreeType }
-
-postulate -- FIXME
-  instance
-    iRoundNumber : IsLawfulEq RoundNumber
+instance
+  iRoundNumber : IsLawfulEq RoundNumber
+  iRoundNumber .isEquality (MkRoundNumber r₁) (MkRoundNumber r₂)
+    with r₁ == r₂ in eq
+  ... | True = cong MkRoundNumber (equality r₁ r₂ eq)
+  ... | False = λ x → nequality r₁ r₂ eq (MkRoundNumber-inj x)
+    where
+      MkRoundNumber-inj : ∀ {x y} → MkRoundNumber x ≡ MkRoundNumber y → x ≡ y
+      MkRoundNumber-inj refl = refl
 
 isYes : ∀ {A : Set} → Dec A → Bool
 isYes (True ⟨ _ ⟩) = True
@@ -376,21 +323,21 @@ isYes≡True⇒TTrue x = toTT (isYes≡True⇒value≡True x)
 toWitness {a = True ⟨ prf ⟩} _ = prf
 
 _×-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
-_×-reflects_ {True} {True} x y = x P., y
-_×-reflects_ {True} {False} _ y = λ { (_ P., y₁) → y y₁ }
-_×-reflects_ {False} {True} x _ = λ { (x₁ P., _) → x x₁ }
-_×-reflects_ {False} {False} x _ = λ { (x₁ P., _) → x x₁ }
+_×-reflects_ {True} {True} x y = x ⸴ y
+_×-reflects_ {True} {False} _ y = λ { (_ ⸴ y₁) → y y₁ }
+_×-reflects_ {False} {True} x _ = λ { (x₁ ⸴ _) → x x₁ }
+_×-reflects_ {False} {False} x _ = λ { (x₁ ⸴ _) → x x₁ }
+
+decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
+decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
+
+{-# COMPILE AGDA2HS decP #-}
 
 _⊎-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
 _⊎-reflects_ {True} {True} x _ = inj₁ x
 _⊎-reflects_ {True} {False} x _ = inj₁ x
 _⊎-reflects_ {False} {True} _ y = inj₂ y
 _⊎-reflects_ {False} {False} x y = [ x , y ]
-
-decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
-decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
-
-{-# COMPILE AGDA2HS decP #-}
 
 decS : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⊎ B)
 decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
@@ -404,8 +351,8 @@ x === y = (x == y) ⟨ isEquality x y ⟩
 
 postulate
   eq : ∀ (x y : ℕ) → Dec (x ≡ y)
-  ge : ∀ x y → Dec (x ≥ y)
-  gt : ∀ x y → Dec (x Data.Nat.> y)
+  ge : ∀ (x y : ℕ) → Dec (x Data.Nat.≥ y)
+  gt : ∀ (x y : ℕ) → Dec (x Data.Nat.> y)
 
 {-# FOREIGN AGDA2HS
   eq :: Integer -> Integer -> Bool
@@ -536,7 +483,7 @@ transition s Tick =
   let s' = record s { clock = nextSlot (clock s) } in
   Just (votesInState s' ,
     let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
-    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'')})
 transition s (NewChain []) = Just ([] , s)
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
