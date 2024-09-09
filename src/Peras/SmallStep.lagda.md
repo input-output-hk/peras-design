@@ -464,7 +464,7 @@ An adversarial party might delay a message
       corrupt : ∀ {p} {as} {m} {N} → let open State N in
           (m∈ms : ⦅ p , Corrupt , m , 𝟘 ⦆ ∈ messages)
           ----------------------------------------------
-        →  Corrupt {p} ⊢
+        → Corrupt {p} ⊢
           N [ m ]⇀ record N
             { messages = m∈ms ∷ˡ= ⦅ p , Corrupt , m , 𝟙 ⦆
             ; adversarialState = as
