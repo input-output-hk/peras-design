@@ -15,7 +15,6 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 -- | Test the prototype against the Agda executable specification.
 spec :: Spec
 spec =
-  modifyMaxSuccess (const 1000)
-    $ describe "Prototype node"
-      . prop "Simulation respects model"
+  describe "Prototype node"
+    . prop "Simulation respects model"
     $ forAllDL anyActions_ (prop_node . Blind)

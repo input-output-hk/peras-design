@@ -7,6 +7,7 @@ module Peras.Conformance.Generators where
 import Control.Applicative
 import Control.Arrow
 import Data.Maybe
+import Debug.Trace
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
 import Peras.Block
@@ -35,6 +36,8 @@ data GenConstraints
     , selectionObeyChain :: Bool
     -- ^ Obey the pre-agreement block-selection rule to use an old enough block.
     , selectionObeyAge :: Bool
+    -- ^ Vote in the current round.
+    , voteCurrent :: Bool
     -- ^ Obey the VR-1A voting rule.
     , voteObeyVR1A :: Bool
     -- ^ Obey the VR-1B voting rule.
@@ -56,11 +59,13 @@ data GenConstraints
     }
   deriving (Eq, Generic, Ord, Read, Show)
 
+-- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints True True True True True True True True True True True True True True True True
+strictGenConstraints = MkGenConstraints True True True True True True True True True True True True True True True True True
 
+-- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
-lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False
+lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
 
 genProtocol :: GenConstraints -> NodeModel -> Gen PerasParams
 genProtocol MkGenConstraints{realisticProtocol, twoParties} _
@@ -94,13 +99,13 @@ genSelection MkGenConstraints{selectionObeyChain, selectionObeyAge} NodeModel{cl
   do
     chain <- if selectionObeyChain then pure prefChain else elements allChains
     if selectionObeyAge
-      then pure $ case dropWhile ((< (fromIntegral clock - perasL protocol)) . fromIntegral . slotNumber) chain of
+      then pure $ case dropWhile ((> (fromIntegral clock - perasL protocol)) . fromIntegral . slotNumber) chain of
         block : _ -> (hash block, slotNumber block)
         [] -> (genesisHash, 0)
       else elements $ (genesisHash, 0) : fmap (hash &&& slotNumber) chain
 
 genVote :: GenConstraints -> NodeModel -> Gen (Maybe Vote)
-genVote gc@MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} node@NodeModel{clock, protocol} =
+genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} node@NodeModel{clock, protocol} =
   do
     prefChain <- genPrefChain gc node
     (block, blockSlot) <- genSelection gc node prefChain
@@ -118,7 +123,7 @@ genVote gc@MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR
       then
         fmap Just $
           MkVote
-            <$> genRoundNumber gc node
+            <$> (if voteCurrent then pure r else genRoundNumber gc node)
             <*> pure party
             <*> arbitrary
             <*> pure block
@@ -126,14 +131,15 @@ genVote gc@MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR
       else pure Nothing
 
 genNewChain :: GenConstraints -> NodeModel -> Gen Chain
-genNewChain gc node@NodeModel{clock} =
+genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
   do
     prefChain <- genPrefChain gc node
     cert1 <- genCertForBlock gc node prefChain
     cert2 <- genCert gc node prefChain
     fmap (: prefChain) $
-      MkBlock clock
-        <$> genPartyId gc node
+      MkBlock
+        <$> (if blockCurrent then pure clock else genSlotNumber gc node)
+        <*> genPartyId gc node
         <*> pure (hashTip prefChain)
         <*> pure (cert1 <|> cert2)
         <*> arbitrary
@@ -150,8 +156,11 @@ genPrefChain gc@MkGenConstraints{blockWeightiest} node@NodeModel{protocol, allCh
     prefChains = snd <$> filter ((== maxWeight) . fst) weights
    in
     if blockWeightiest
-      then elements $ mempty : prefChains
-      else sublistOf =<< elements (mempty : allChains)
+      then
+        if null prefChains
+          then pure mempty
+          else elements prefChains
+      else sublistOf =<< elements allChains
 
 getCertPrimes :: NodeModel -> [Certificate]
 getCertPrimes NodeModel{clock, protocol, allSeenCerts} =
@@ -212,5 +221,5 @@ genRoundNumber _ NodeModel{clock, protocol} =
 genPartyId :: GenConstraints -> NodeModel -> Gen PartyId
 genPartyId MkGenConstraints{twoParties} _ =
   if twoParties
-    then (max sutId otherId +) . getPositive <$> arbitrary
-    else pure otherId
+    then pure otherId
+    else (max sutId otherId +) . getPositive <$> arbitrary
