@@ -223,25 +223,25 @@ self-contained and verifiable by any node.</p>
 
   <a id="5448" class="Keyword">open</a> <a id="5453" href="Peras.Crypto.html#1994" class="Module">Hashable</a> <a id="5462" class="Symbol">⦃...⦄</a>
 
-  <a id="5471" href="Peras.Block.html#5471" class="Function">hashHead</a> <a id="5480" class="Symbol">:</a> <a id="5482" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="5487" href="Peras.Block.html#5409" class="Bound">a</a> <a id="5489" class="Symbol">→</a> <a id="5491" href="Peras.Crypto.html#1542" class="Record">Hash</a> <a id="5496" href="Peras.Block.html#5409" class="Bound">a</a>
-  <a id="5500" href="Peras.Block.html#5471" class="Function">hashHead</a> <a id="5509" href="Agda.Builtin.List.html#184" class="InductiveConstructor">Data.List.[]</a> <a id="5522" class="Symbol">=</a> <a id="5524" href="Peras.Crypto.html#1583" class="InductiveConstructor">MkHash</a> <a id="5531" href="Peras.Crypto.html#676" class="Postulate">emptyBS</a>
-  <a id="5541" href="Peras.Block.html#5471" class="Function">hashHead</a> <a id="5550" class="Symbol">(</a><a id="5551" href="Peras.Block.html#5551" class="Bound">x</a> <a id="5553" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">Data.List.∷</a> <a id="5565" class="Symbol">_)</a> <a id="5568" class="Symbol">=</a> <a id="5570" href="Peras.Crypto.html#2033" class="Field">hash</a> <a id="5575" href="Peras.Block.html#5551" class="Bound">x</a>
+  <a id="5471" href="Peras.Block.html#5471" class="Function">tipHash</a> <a id="5479" class="Symbol">:</a> <a id="5481" href="Agda.Builtin.List.html#147" class="Datatype">List</a> <a id="5486" href="Peras.Block.html#5409" class="Bound">a</a> <a id="5488" class="Symbol">→</a> <a id="5490" href="Peras.Crypto.html#1542" class="Record">Hash</a> <a id="5495" href="Peras.Block.html#5409" class="Bound">a</a>
+  <a id="5499" href="Peras.Block.html#5471" class="Function">tipHash</a> <a id="5507" href="Agda.Builtin.List.html#184" class="InductiveConstructor">Data.List.[]</a> <a id="5520" class="Symbol">=</a> <a id="5522" href="Peras.Crypto.html#1583" class="InductiveConstructor">MkHash</a> <a id="5529" href="Peras.Crypto.html#676" class="Postulate">emptyBS</a>
+  <a id="5539" href="Peras.Block.html#5471" class="Function">tipHash</a> <a id="5547" class="Symbol">(</a><a id="5548" href="Peras.Block.html#5548" class="Bound">x</a> <a id="5550" href="Agda.Builtin.List.html#199" class="InductiveConstructor Operator">Data.List.∷</a> <a id="5562" class="Symbol">_)</a> <a id="5565" class="Symbol">=</a> <a id="5567" href="Peras.Crypto.html#2033" class="Field">hash</a> <a id="5572" href="Peras.Block.html#5548" class="Bound">x</a>
 
-<a id="5578" class="Symbol">{-#</a> <a id="5582" class="Keyword">COMPILE</a> <a id="5590" class="Keyword">AGDA2HS</a> <a id="5598" href="Peras.Block.html#5471" class="Function">hashHead</a> <a id="5607" class="Symbol">#-}</a>
+<a id="5575" class="Symbol">{-#</a> <a id="5579" class="Keyword">COMPILE</a> <a id="5587" class="Keyword">AGDA2HS</a> <a id="5595" href="Peras.Block.html#5471" class="Function">tipHash</a> <a id="5603" class="Symbol">#-}</a>
 
-<a id="5612" class="Keyword">private</a>
-  <a id="5622" class="Keyword">open</a> <a id="5627" href="Peras.Crypto.html#1994" class="Module">Hashable</a>
+<a id="5608" class="Keyword">private</a>
+  <a id="5618" class="Keyword">open</a> <a id="5623" href="Peras.Crypto.html#1994" class="Module">Hashable</a>
 
-  <a id="5639" class="Keyword">instance</a>
-    <a id="hashBlock"></a><a id="5652" href="Peras.Block.html#5652" class="Function">hashBlock</a> <a id="5662" class="Symbol">:</a> <a id="5664" href="Peras.Crypto.html#1994" class="Record">Hashable</a> <a id="5673" href="Peras.Block.html#2807" class="Record">Block</a>
-    <a id="5683" href="Peras.Block.html#5652" class="Function">hashBlock</a> <a id="5693" class="Symbol">.</a><a id="5694" href="Peras.Crypto.html#2033" class="Field">hash</a> <a id="5699" class="Symbol">=</a> <a id="5701" href="Peras.Crypto.html#1583" class="InductiveConstructor">MkHash</a> <a id="5708" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="5710" href="Peras.Crypto.html#3171" class="Field">bytesS</a> <a id="5717" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="5719" href="Peras.Block.html#3408" class="Field">signature</a>
+  <a id="5635" class="Keyword">instance</a>
+    <a id="hashBlock"></a><a id="5648" href="Peras.Block.html#5648" class="Function">hashBlock</a> <a id="5658" class="Symbol">:</a> <a id="5660" href="Peras.Crypto.html#1994" class="Record">Hashable</a> <a id="5669" href="Peras.Block.html#2807" class="Record">Block</a>
+    <a id="5679" href="Peras.Block.html#5648" class="Function">hashBlock</a> <a id="5689" class="Symbol">.</a><a id="5690" href="Peras.Crypto.html#2033" class="Field">hash</a> <a id="5695" class="Symbol">=</a> <a id="5697" href="Peras.Crypto.html#1583" class="InductiveConstructor">MkHash</a> <a id="5704" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="5706" href="Peras.Crypto.html#3171" class="Field">bytesS</a> <a id="5713" href="Function.Base.html#1115" class="Function Operator">∘</a> <a id="5715" href="Peras.Block.html#3408" class="Field">signature</a>
 </pre>
 <!--
-<pre class="Agda"><a id="5747" class="Symbol">{-#</a> <a id="5751" class="Keyword">COMPILE</a> <a id="5759" class="Keyword">AGDA2HS</a> <a id="5767" href="Peras.Block.html#4639" class="Function">iCertificateEq</a> <a id="5782" class="Symbol">#-}</a>
-<a id="5786" class="Symbol">{-#</a> <a id="5790" class="Keyword">COMPILE</a> <a id="5798" class="Keyword">AGDA2HS</a> <a id="5806" href="Peras.Block.html#4759" class="Function">iBlockEq</a> <a id="5815" class="Symbol">#-}</a>
-<a id="5819" class="Symbol">{-#</a> <a id="5823" class="Keyword">COMPILE</a> <a id="5831" class="Keyword">AGDA2HS</a> <a id="5839" href="Peras.Block.html#5290" class="Function">iBlockBodyEq</a> <a id="5852" class="Symbol">#-}</a>
+<pre class="Agda"><a id="5743" class="Symbol">{-#</a> <a id="5747" class="Keyword">COMPILE</a> <a id="5755" class="Keyword">AGDA2HS</a> <a id="5763" href="Peras.Block.html#4639" class="Function">iCertificateEq</a> <a id="5778" class="Symbol">#-}</a>
+<a id="5782" class="Symbol">{-#</a> <a id="5786" class="Keyword">COMPILE</a> <a id="5794" class="Keyword">AGDA2HS</a> <a id="5802" href="Peras.Block.html#4759" class="Function">iBlockEq</a> <a id="5811" class="Symbol">#-}</a>
+<a id="5815" class="Symbol">{-#</a> <a id="5819" class="Keyword">COMPILE</a> <a id="5827" class="Keyword">AGDA2HS</a> <a id="5835" href="Peras.Block.html#5290" class="Function">iBlockBodyEq</a> <a id="5848" class="Symbol">#-}</a>
 
-<a id="5857" class="Symbol">{-#</a> <a id="5861" class="Keyword">COMPILE</a> <a id="5869" class="Keyword">AGDA2HS</a> <a id="5877" href="Peras.Block.html#5652" class="Function">hashBlock</a> <a id="5887" class="Symbol">#-}</a>
+<a id="5853" class="Symbol">{-#</a> <a id="5857" class="Keyword">COMPILE</a> <a id="5865" class="Keyword">AGDA2HS</a> <a id="5873" href="Peras.Block.html#5648" class="Function">hashBlock</a> <a id="5883" class="Symbol">#-}</a>
 </pre>-->
 </body>
 </html>
