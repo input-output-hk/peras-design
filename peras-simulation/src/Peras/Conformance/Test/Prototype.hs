@@ -97,8 +97,8 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
       lift $ do
         let clock' = clock + 1
             txs = []
-        _ <- blockCreation tracer protocol modelSUT stateVar clock' txs (diffuseChain diffuserVar)
         _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
+        _ <- blockCreation tracer protocol modelSUT stateVar clock' txs (diffuseChain diffuserVar)
         let roundNumber = inRound clock' protocol
             party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
             selectBlock' = selectBlock nullTracer
