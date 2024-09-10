@@ -29,7 +29,9 @@ import Peras.Conformance.Model (
   transition,
   votingBlockHash,
  )
+import Peras.Conformance.Model qualified as Model
 import Peras.Crypto (Hashable (hash))
+import Peras.Foreign qualified as Foreign
 import Peras.Numbering (
   RoundNumber (getRoundNumber),
   SlotNumber (getSlotNumber),
@@ -164,6 +166,12 @@ instance Pretty Trace.PerasLog where
 modelSUT :: Party
 modelSUT = mkParty 1 mempty [0 .. 10_000] -- Never the slot leader, always a committee member
 
+gen :: GenConstraints
+gen =
+  if False
+    then strictGenConstraints
+    else lenientGenConstraints
+
 instance StateModel NodeModel where
   data Action NodeModel a where
     Step :: EnvAction -> Action NodeModel [Vote]
@@ -178,7 +186,6 @@ instance StateModel NodeModel where
           ++ [(8, maybe Tick NewVote <$> suchThat (genVote gen s) unequivocated) | canGenVotes]
           ++ [(2, BadVote <$> genBadVote) | canGenBadVote]
    where
-    gen = lenientGenConstraints
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
     unequivocated Nothing = True
     badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
@@ -197,6 +204,18 @@ instance StateModel NodeModel where
   shrinkAction _ _ (Step (NewChain (_ : chain))) = map (Some . Step) [Tick, NewChain chain]
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
 
+  -- Copied from `Peras.Conformance.Model.Transition`.
+  precondition s (Step (NewChain [])) = True
+  precondition s (Step (NewChain (block : rest))) =
+    blockCurrent gen `implies` (slotNumber block == clock s)
+      && twoParties gen `implies` Model.checkBlockFromOther block
+      && (parentBlock block == Model.headBlockHash rest)
+      && blockWeightiest gen `implies` (rest == pref s)
+      && Foreign.checkSignedBlock block
+      && Foreign.checkLeadershipProof (leadershipProof block)
   precondition s (Step a) = isJust (transition s a)
 
-  nextState s (Step a) _ = snd . fromJust $ transition s a
+  nextState s (Step a) _ = maybe s snd $ transition s a
+
+implies :: Bool -> Bool -> Bool
+implies x y = not x || y

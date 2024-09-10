@@ -7,7 +7,6 @@ module Peras.Conformance.Generators where
 import Control.Applicative
 import Control.Arrow
 import Data.Maybe
-import Debug.Trace
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
 import Peras.Block
@@ -130,7 +129,7 @@ genVote gc@MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR
 
 genNewChain :: GenConstraints -> NodeModel -> Gen Chain
 genNewChain gc node@NodeModel{clock} =
-  traceShow "HERE" $ do
+  do
     prefChain <- genPrefChain gc node
     cert1 <- genCertForBlock gc node prefChain
     cert2 <- genCert gc node prefChain
