@@ -484,6 +484,10 @@ headBlockHash (b ∷ _) = Hashable.hash hashBlock b
 
 {-# COMPILE AGDA2HS headBlockHash #-}
 
+opaque
+  makeCheckedVote : (v : Vote) → checkSignedVote v ≡ True → CheckedVote
+  makeCheckedVote v prf = v P., prf
+
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   let s' = record s { clock = nextSlot (clock s) } in
@@ -513,7 +517,7 @@ transition s (NewVote v) = do
   guard (votingBlockHash s == blockHash v)
   Just ([] ,
     let s' = addVote' s v
-    in record s' { allVotesChecked = ( v P., prf ) ∷ (allVotesChecked s')})
+    in record s' { allVotesChecked = makeCheckedVote v prf ∷ (allVotesChecked s')})
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just ([] , s)
