@@ -15,6 +15,7 @@ module Peras.Conformance.Test where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
+import Debug.Trace
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Vote (..))
@@ -35,6 +36,7 @@ import Peras.Foreign qualified as Foreign
 import Peras.Numbering (
   RoundNumber (getRoundNumber),
   SlotNumber (getSlotNumber),
+  slotToRound,
  )
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Trace qualified as Trace
@@ -168,7 +170,7 @@ modelSUT = mkParty 1 mempty [0 .. 10_000] -- Never the slot leader, always a com
 
 gen :: GenConstraints
 gen =
-  if False
+  if True
     then strictGenConstraints
     else lenientGenConstraints
 
@@ -184,7 +186,7 @@ instance StateModel NodeModel where
         [(1, pure Tick)]
           ++ [(1, NewChain <$> genNewChain gen s)]
           ++ [(8, maybe Tick NewVote <$> suchThat (genVote gen s) unequivocated) | canGenVotes]
-          ++ [(2, BadVote <$> genBadVote) | canGenBadVote]
+          ++ [(0, BadVote <$> genBadVote) | canGenBadVote]
    where
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
     unequivocated Nothing = True
@@ -213,6 +215,16 @@ instance StateModel NodeModel where
       && blockWeightiest gen `implies` (rest == pref s)
       && Foreign.checkSignedBlock block
       && Foreign.checkLeadershipProof (leadershipProof block)
+  precondition s (Step (NewVote v)) =
+    voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
+      && Foreign.checkSignedVote v
+      && twoParties gen `implies` Model.checkVoteFromOther v
+      && ( voteObeyVR1A gen `implies` Model.vr1A s
+            && voteObeyVR1B gen `implies` Model.vr1B s
+            || voteObeyVR2A gen `implies` Model.vr2A s
+              && voteObeyVR2B gen `implies` Model.vr2B s
+         )
+      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
   precondition s (Step a) = isJust (transition s a)
 
   nextState s (Step a) _ = maybe s snd $ transition s a
