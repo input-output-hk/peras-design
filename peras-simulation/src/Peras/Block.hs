@@ -62,9 +62,9 @@ instance Eq Block where
 instance Eq BlockBody where
   x == y = blockHash x == blockHash y && payload x == payload y
 
-hashHead :: forall a. Hashable a => [a] -> Hash a
-hashHead [] = MkHash emptyBS
-hashHead (x : _) = hash x
+tipHash :: forall a. Hashable a => [a] -> Hash a
+tipHash [] = MkHash emptyBS
+tipHash (x : _) = hash x
 
 instance Hashable Block where
   hash = \x -> MkHash (bytesS (signature x))

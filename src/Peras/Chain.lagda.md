@@ -186,13 +186,6 @@ module _ ⦃ _ : Hashable Block ⦄
   Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
   Extends? h c = any? (ChainExtends? h c)
 ```
-
-```agda
-  tipHash : Chain → Hash Block
-  tipHash [] = record { hashBytes = emptyBS }
-  tipHash (b ∷ _) = hash b
-```
-
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
 module _ ⦃ _ : Hashable Block ⦄

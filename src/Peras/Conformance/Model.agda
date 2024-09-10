@@ -239,7 +239,7 @@ private
 
 votingBlockHash : NodeModel → Hash Block
 votingBlockHash s =
-  hashHead ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
+  tipHash ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
     $ pref s
 
 {-# COMPILE AGDA2HS votingBlockHash #-}
