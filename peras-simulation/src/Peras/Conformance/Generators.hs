@@ -7,6 +7,7 @@ module Peras.Conformance.Generators where
 import Control.Applicative
 import Control.Arrow
 import Data.Maybe
+import Debug.Trace
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
 import Peras.Block
@@ -56,9 +57,11 @@ data GenConstraints
     }
   deriving (Eq, Generic, Ord, Read, Show)
 
+-- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
 strictGenConstraints = MkGenConstraints True True True True True True True True True True True True True True True True
 
+-- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
 lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False
 
@@ -127,7 +130,7 @@ genVote gc@MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR
 
 genNewChain :: GenConstraints -> NodeModel -> Gen Chain
 genNewChain gc node@NodeModel{clock} =
-  do
+  traceShow "HERE" $ do
     prefChain <- genPrefChain gc node
     cert1 <- genCertForBlock gc node prefChain
     cert2 <- genCert gc node prefChain
@@ -212,5 +215,5 @@ genRoundNumber _ NodeModel{clock, protocol} =
 genPartyId :: GenConstraints -> NodeModel -> Gen PartyId
 genPartyId MkGenConstraints{twoParties} _ =
   if twoParties
-    then (max sutId otherId +) . getPositive <$> arbitrary
-    else pure otherId
+    then pure otherId
+    else (max sutId otherId +) . getPositive <$> arbitrary
