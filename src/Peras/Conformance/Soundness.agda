@@ -149,7 +149,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
           in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
 -}
-{-
+
     valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
     valid-votes t = valid-votes' (allVotes t)
       where
@@ -163,7 +163,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   {proofM v}
               checked-signature = axiom-checkVoteSignature {v} {!!}
           in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
--}
 
     isTreeType :
       SmallStep.IsTreeType
@@ -186,7 +185,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
-        ; valid-votes = {!!}
+        ; valid-votes = valid-votes
         ; no-equivocations = {!!}
         ; quorum-cert = {!!} -- invariants
         }
