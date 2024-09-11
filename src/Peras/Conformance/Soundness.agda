@@ -600,7 +600,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         chain : ValidChain (β ∷ prefChain tree)
         chain
           = let open SmallStep.IsTreeType
-            in Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl {!!} -- (is-TreeType .valid tree)
+            in Cons {prefChain tree} {β} validSignature (axiom-checkLeadershipProof {β} checkedLead) refl {!!} -- (is-TreeType .valid tree)
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -818,8 +818,22 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           w : Vote
           w = createVote slot₀ sutId (proofM vote) (signature vote) (blockHash vote)
 
+          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
+          vote-round = sym (eqℕ-sound isVotingRound)
+
+          creatorId≡sutId : creatorId vote ≡ sutId
+          creatorId≡sutId = eqℕ-sound checkedSut
+
+          correctVote : vote ≡ w
+          correctVote = {!!}
+
+          validSignature : IsVoteSignature w (signature w)
+          validSignature with v ← axiom-checkVoteSignature checkedSig
+            rewrite correctVote rewrite creatorId≡sutId
+            = v
+
           v : ValidVote w
-          v = {!!}
+          v = axiom-everyoneIsOnTheCommittee ⸴ validSignature
 
           startOfRound : StartOfRound slot₀ r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -864,22 +878,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                 (cong hashBytes (blockSelection-eq {s₀}))
                 (lem-eqBS isValidBlockHash)
 
-          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
-          vote-round = sym (eqℕ-sound isVotingRound)
-
-          creatorId≡sutId : creatorId vote ≡ sutId
-          creatorId≡sutId = eqℕ-sound checkedSut
-
-          correctVote : vote ≡ w
-          correctVote = {!!} -- cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
-
-{-
-          validSignature : IsVoteSignature v (signature v)
-          validSignature with v ← axiom-checkVoteSignature checkedSig
-            rewrite correctVote rewrite creatorId≡sutId
-            = v
--}
-
           otherExists : set sutId (addVote tree v) (State.blockTrees s₀) ⁉ otherId ≡ just tree
           otherExists =
             trans
@@ -898,7 +896,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       (honest {p = sutId} {t = modelState s₀}
                         validBlockHash
                         (sutTree inv)
-                        {!!} -- validSignature
+                        validSignature
                         startOfRound
                         axiom-everyoneIsOnTheCommittee
                         validVote
