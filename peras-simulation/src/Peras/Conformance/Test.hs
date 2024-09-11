@@ -191,12 +191,12 @@ instance StateModel NodeModel where
         if canGenVotes && newRound clock protocol
           then genVote gen s
           else pure Nothing
-      let mustGenVote = isJust v
+      let didGenVote = isJust v
       fmap (Some . Step) $
         frequency $
           [(3, pure Tick)]
             ++ [(1, NewChain <$> genNewChain gen s)]
-            ++ [(8, pure $ NewVote $ fromJust v) | mustGenVote && unequivocated v]
+            ++ [(100, pure $ NewVote $ fromJust v) | didGenVote && unequivocated v]
             ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
    where
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
@@ -234,6 +234,14 @@ instance StateModel NodeModel where
       && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
   precondition s (Step a) = isJust (transition s a)
 
+  nextState s (Step (NewVote v)) _ =
+    if voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
+      && Foreign.checkSignedVote v
+      && twoParties gen `implies` Model.checkVoteFromOther v
+      && checkVotingRules' gen s
+      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
+      then Model.addVote' s v
+      else s
   nextState s (Step a) _ = maybe s snd $ transition s a
 
 backoff :: NodeModel -> NodeModel
