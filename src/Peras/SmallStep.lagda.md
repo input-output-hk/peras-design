@@ -77,7 +77,7 @@ Messages for sending and receiving chains and votes. Note, in the *Peras* protoc
 certificates are not diffused explicitly.
 ```agda
   data Message : Type where
-    ChainMsg : Chain → Message
+    ChainMsg : {c : Chain} → ValidChain c → Message
     VoteMsg : {v : Vote} → ValidVote v → Message
 ```
 Messages can be delayed by a number of slots
@@ -108,8 +108,8 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Type}
                     (tree₀ : T)
-                    (addChain : T → Chain → T)
-                    (allChains : T → List Chain)
+                    (addChain : T → {c : Chain} → ValidChain c → T)
+                    (chains : T → List Chain)
                     (preferredChain : T → Chain)
                     (addVote : T → {v : Vote} → ValidVote v → T)
                     (votes : T → List Vote)
@@ -130,8 +130,8 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
-      extendable-chain : ∀ (t : T) (c : Chain)
-        → certs (addChain t c) ≡ H.foldr insertCert (certs t) (certsFromChain c)
+      extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
+        → certs (addChain t vc) ≡ H.foldr insertCert (certs t) (certsFromChain c)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
@@ -142,11 +142,11 @@ Properties that must hold with respect to chains, certificates and votes.
             cts = certs t
           in
           ValidChain c
-        → c ∈ allChains t
+        → c ∈ chains t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
       self-contained : ∀ (t : T)
-        → preferredChain t ∈ allChains t
+        → preferredChain t ∈ chains t
 
 {-
       valid-votes : ∀ (t : T)
@@ -182,7 +182,7 @@ The block-tree type is defined as follows:
     field
       tree₀ : T
 
-      addChain : T → Chain → T
+      addChain : T → {c : Chain} → ValidChain c → T
       chains : T → List Chain
       preferredChain : T → Chain
 
@@ -258,9 +258,9 @@ Updating the block-tree upon receiving a message for vote and block messages.
           ────────────────────────────
           t [ VoteMsg {v} vv ]→ addVote t vv
 
-      ChainReceived : ∀ {c t} →
+      ChainReceived : ∀ {c vc t} →
           ──────────────────────────────
-          t [ ChainMsg c ]→ addChain t c
+          t [ ChainMsg {c} vc ]→ addChain t vc
 ```
 #### Vote in round
 
@@ -592,12 +592,12 @@ message is added to the message buffer
             b = createBlock s p π σ t
             pref = preferredChain t
           in
-        ∙ blockTrees M ⁉ p ≡ just t
-        ∙ ValidChain (b ∷ pref)
-          ───────────────────────────
-          Honest {p} ⊢
+          blockTrees M ⁉ p ≡ just t
+        → (vc : ValidChain (b ∷ pref))
+          ----------------------------
+        → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (b ∷ pref)
+                  ChainMsg vc
                 , 𝟘
                 , p) to t
                 diffuse M

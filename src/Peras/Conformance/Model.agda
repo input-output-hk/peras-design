@@ -257,7 +257,7 @@ addChain' s c =
     ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
     }
 
-{-# COMPILE AGDA2HS newChain' #-}
+{-# COMPILE AGDA2HS addChain' #-}
 
 {-# TERMINATING #-}
 newQuora : ℕ → List Certificate → List Vote → List Certificate

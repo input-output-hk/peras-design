@@ -166,13 +166,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
 -}
 
+    addChain'' : NodeModel → {c : Chain} → ValidChain c → NodeModel
+    addChain'' s {c} _ = addChain' s c
+
     addVote'' : NodeModel → {v : Vote} → ValidVote v → NodeModel
     addVote'' s {v} _ = addVote' s v
 
     isTreeType :
       SmallStep.IsTreeType
         initialModelState
-        addChain'
+        addChain''
         allChains -- (λ t → genesisChain ∷ allChains t)
         pref
         addVote''
@@ -610,8 +613,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         β : Block
         β = createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
 
-        chain : Chain
-        chain = β ∷ prefChain tree
+        chain : ValidChain (block ∷ rest)
+        chain = ? -- β ∷ prefChain tree
 
         block-slotNumber : slotNumber block ≡ slot₀
         block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
@@ -700,11 +703,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     validChain
                   )
               ↣ Fetch {h = sutHonesty} {m = ChainMsg chain}
+                   ? {-
                   (honest {p = sutId}
                     sutExists
                     sut∈messages
                     ChainReceived
-                  )
+                  ) -}
               ↣ ∎
 
         set-irrelevant :
@@ -761,9 +765,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
           ≡
           record tree
-            { allChains    = chain ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+            { allChains    = (block ∷ rest) ∷ maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
             ; allVotes     = maybe′ votes [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate chain)
+            ; allSeenCerts = foldr insertCert (maybe′ certs [] (State.blockTrees s₀ ⁉ sutId)) (mapMaybe certificate (block ∷ rest))
             }
         addChain-modelState
           rewrite
@@ -779,15 +783,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               { blockTrees =
                   set sutId
                     (record tree
-                      { allChains = chain ∷ allChains tree
-                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
+                      { allChains = (block ∷ rest) ∷ allChains tree
+                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate (block ∷ rest))
                       }
                     )
                     (set
                       (creatorId block)
                       (record tree
-                        { allChains = chain ∷ allChains tree
-                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate chain)
+                        { allChains = (block ∷ rest) ∷ allChains tree
+                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate (block ∷ rest))
                         }
                       )
                       (State.blockTrees s₀)
@@ -798,7 +802,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite validHead
           rewrite validRest
-          = trans set-irrelevant addChain-modelState
+          = ? -- trans set-irrelevant addChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId block ≟ sutId
