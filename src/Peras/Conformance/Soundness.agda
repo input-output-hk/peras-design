@@ -215,7 +215,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       ; protocol     = modelParams
       ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
       ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-      ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
       ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
       }
 
@@ -362,7 +361,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | div (getSlotNumber (State.clock s₀)) (Params.U params)
              == getRoundNumber (votingRound vote) in isVotingRound
          | checkSignedVote vote in checkedSig
---         | makeCheckedVote vote
          | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀)) in checkedVRs
          | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
@@ -510,7 +508,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -523,7 +520,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
@@ -545,7 +541,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -614,7 +609,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         β = createBlock slot₀ (creatorId block) (leadershipProof block) (signature block) tree
 
         chain : ValidChain (block ∷ rest)
-        chain = ? -- β ∷ prefChain tree
+        chain = {!!} -- β ∷ prefChain tree
 
         block-slotNumber : slotNumber block ≡ slot₀
         block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
@@ -703,7 +698,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     validChain
                   )
               ↣ Fetch {h = sutHonesty} {m = ChainMsg chain}
-                   ? {-
+                   {!!} {-
                   (honest {p = sutId}
                     sutExists
                     sut∈messages
@@ -723,7 +718,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -737,7 +731,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
         set-irrelevant
@@ -760,7 +753,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; protocol     = modelParams
             ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
           ≡
@@ -802,7 +794,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite validHead
           rewrite validRest
-          = ? -- trans set-irrelevant addChain-modelState
+          = {!!} -- trans set-irrelevant addChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
         votes-agree with creatorId block ≟ sutId
@@ -977,7 +969,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
             ≡
@@ -990,7 +981,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
           set-irrelevant
@@ -1011,7 +1001,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; protocol     = modelParams
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-              ; allVotesChecked = maybe′ allVotesChecked [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
             ≡

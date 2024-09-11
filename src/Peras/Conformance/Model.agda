@@ -150,17 +150,12 @@ makeVote params slot h =
 
 -- The actual model ---
 
-open import Data.Product using (∃-syntax)
-
-CheckedVote = ∃[ v ] (checkSignedVote v ≡ True)
-
 record NodeModel : Set where
   field
     clock              : SlotNumber
     protocol           : PerasParams
     allChains          : List Chain
     allVotes           : List Vote
-    @0 allVotesChecked : List CheckedVote
     allSeenCerts       : List Certificate
 
 rFromSlot : NodeModel → RoundNumber
@@ -215,7 +210,6 @@ initialModelState = record
   ; protocol         = testParams
   ; allChains        = genesisChain ∷ []
   ; allVotes         = []
-  ; allVotesChecked  = []
   ; allSeenCerts     = genesisCert ∷ []
   }
 
