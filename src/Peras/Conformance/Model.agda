@@ -484,7 +484,7 @@ transition s Tick =
   Just (votesInState s' ,
     let s'' = record s' { allVotes = votesInState s' ++ allVotes s' }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'')})
-transition s (NewChain []) = Just ([] , s)
+transition _ (NewChain []) = Nothing
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)

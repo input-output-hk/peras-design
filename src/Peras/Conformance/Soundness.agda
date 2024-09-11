@@ -564,15 +564,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition (modelState s₀) (NewChain chain) ≡ Just (vs , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s₀ [] inv refl =
-      record
-        { s₁ = s₀
-        ; invariant₀ = inv
-        ; invariant₁ = inv
-        ; trace = ∎
-        ; s₁-agrees = refl
-        ; votes-agree = refl
-        }
     newChain-soundness s₀ (block ∷ rest) inv prf
       with (slotNumber block == State.clock s₀) in checkSlot
          | checkBlockFromOther block in checkedOther

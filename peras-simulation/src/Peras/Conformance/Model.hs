@@ -420,7 +420,7 @@ transition s Tick =
             )
         )
     )
-transition s (NewChain []) = Just ([], s)
+transition _ (NewChain []) = Nothing
 transition s (NewChain (block : rest)) =
   do
     guard (slotNumber block == clock s)
