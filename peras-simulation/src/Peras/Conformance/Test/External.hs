@@ -159,7 +159,7 @@ callSUT RunState{hReader, hWriter} req =
 
 type Runtime = StateT RunState IO
 
-instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
+instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel Runtime where
   perform NodeModel{..} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
@@ -176,31 +176,32 @@ instance Realized IO [Vote] ~ [Vote] => RunModel NodeModel Runtime where
               }
         )
         >>= \case
-          NodeResponse{..} -> pure diffuseVotes
-          _ -> pure mempty -- FIXME: The state model should define an error type.
+          NodeResponse{..} -> pure ([], diffuseVotes)
+          _ -> pure (mempty, mempty) -- FIXME: The state model should define an error type.
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
-      pure mempty
+      pure (mempty, mempty)
     NewVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
-      pure mempty
+      pure (mempty, mempty)
     BadVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
-      pure mempty
+      pure (mempty, mempty)
 
-  postcondition (s, s') (Step a) _ r = do
-    let expected = fst (fromJust (transition s a))
+  postcondition (s, s') (Step a) _ (cs, vs) = do
+    let (expectedChains, expectedVotes) = fst (fromJust (transition s a))
     let eqVotes vs vs' =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
            in sort (f <$> vs) == sort (f <$> vs')
-    let ok = r `eqVotes` expected
+        eqChains cs cs' = cs == cs'
+    let ok = eqChains cs expectedChains && eqVotes vs expectedVotes
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null r) $ do
-      monitorPost . counterexample . show $ "  --      got:" <+> pPrint r
-    counterexamplePost . show $ "  -- expected:" <+> pPrint expected
+    unless (null vs) $ do
+      monitorPost . counterexample . show $ "  --      got:" <+> pPrint vs
+    counterexamplePost . show $ "  -- expected:" <+> pPrint expectedVotes
     counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
     pure ok
 

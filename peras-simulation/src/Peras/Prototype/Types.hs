@@ -12,7 +12,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString as BS
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
-import Data.Set (Set, singleton)
+import qualified Data.Map.Strict as Map (singleton)
+import Data.Set (Set)
+import qualified Data.Set as Set (singleton)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate (MkCertificate), Party, Tx)
@@ -43,9 +45,9 @@ initialPerasState :: PerasState
 initialPerasState =
   MkPerasState
     { chainPref = genesisChain
-    , chains = singleton genesisChain
+    , chains = Set.singleton genesisChain
     , votes = mempty
-    , certs = mempty -- FIXME: Should this be `singleton genesisCert`?
+    , certs = Map.singleton genesisCert 0
     , certPrime = genesisCert
     , certStar = genesisCert
     }

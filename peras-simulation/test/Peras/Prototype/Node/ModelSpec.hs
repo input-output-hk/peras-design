@@ -15,9 +15,8 @@ import Test.QuickCheck.StateModel (Actions, runActions)
 -- | Test against the Agda executable specification.
 spec :: Spec
 spec =
-  modifyMaxSuccess (const 1000)
-    $ describe "Prototype node"
-      . prop "Simulation respects model"
+  describe "Prototype node"
+    . prop "Simulation respects model"
     $ propSimulate propPrototypeNode
 
 -- | Test whether the simulation conforms to the model.

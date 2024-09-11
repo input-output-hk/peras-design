@@ -344,9 +344,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees   : modelState s₁ ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs
 
-    @0 newVote-soundness : ∀ {vs ms₁} s₀ vote
+    @0 newVote-soundness : ∀ {cs vs ms₁} s₀ vote
                           → Invariant s₀
-                          → transition (modelState s₀) (NewVote vote) ≡ Just (vs , ms₁)
+                          → transition (modelState s₀) (NewVote vote) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
     newVote-soundness s₀ vote inv prf
@@ -357,7 +357,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀)) in checkedVRs
          | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
-    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True | True =
+    newVote-soundness {cs} {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True | True =
       record
         { s₁          = s₁
         ; invariant₀  = inv
@@ -560,9 +560,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
-    @0 newChain-soundness : ∀ {vs ms₁} s₀ chain
+    @0 newChain-soundness : ∀ {cs vs ms₁} s₀ chain
                           → Invariant s₀
-                          → transition (modelState s₀) (NewChain chain) ≡ Just (vs , ms₁)
+                          → transition (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     newChain-soundness s₀ (block ∷ rest) inv prf
       with (slotNumber block == State.clock s₀) in checkSlot
@@ -571,7 +571,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | (rest == pref (modelState s₀)) in checkRest
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
-    newChain-soundness {vs} {ms₁} s₀ (block ∷ rest) inv refl
+    newChain-soundness {cs} {vs} {ms₁} s₀ (block ∷ rest) inv refl
       | True | True | True | True | True | True =
       record
         { s₁ = s₁
@@ -798,14 +798,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
-    @0 tick-soundness : ∀ {vs ms₁} s₀
+    @0 tick-soundness : ∀ {cs vs ms₁} s₀
                           → Invariant s₀
-                          → transition (modelState s₀) Tick ≡ Just (vs , ms₁)
+                          → transition (modelState s₀) Tick ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     tick-soundness s₀ inv refl
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
 
-    tick-soundness {vs} s₀ inv refl
+    tick-soundness {cs} {vs} s₀ inv refl
       | True
       with vs
 
@@ -1042,7 +1042,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     tick-soundness s₀ inv refl
       | False with NextSlotInSameRound? s₀
-    tick-soundness {vs} {ms₁} s₀ inv refl
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
       | yes q =
         record
@@ -1099,7 +1099,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
-    tick-soundness {vs} {ms₁} s₀ inv refl
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
       | no ¬q =
         record
@@ -1158,9 +1158,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
 
 
-    @0 soundness : ∀ {ms₁ vs} (s₀ : State) (a : EnvAction)
+    @0 soundness : ∀ {ms₁ cs vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
-              → transition (modelState s₀) a ≡ Just (vs , ms₁)
+              → transition (modelState s₀) a ≡ Just ((cs , vs) , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote

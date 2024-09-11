@@ -15,10 +15,9 @@ module Peras.Conformance.Test where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
-import Debug.Trace
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
-import Peras.Chain (Vote (..))
+import Peras.Chain (Chain, Vote (..))
 import Peras.Conformance.Generators
 import Peras.Conformance.Model (
   EnvAction (..),
@@ -27,6 +26,7 @@ import Peras.Conformance.Model (
   initialModelState,
   otherId,
   pref,
+  sutIsSlotLeader,
   transition,
   votingBlockHash,
  )
@@ -101,15 +101,18 @@ instance Pretty EnvAction where
   pPrint (BadVote vote) = "BadVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where
-  pPrint MkBlock{..} =
+  pPrint b@MkBlock{..} =
     "Block"
       <+> braces
         ( vcat
-            [ "hash    =" <+> text (show signature)
-            , "slot    =" <+> pPrint (getSlotNumber slotNumber)
-            , "creator =" <+> pPrint creatorId
-            , "parent  =" <+> text (show parentBlock)
-            , "cert    =" <+> pPrint certificate
+            [ "hash            =" <+> text (show $ hash b)
+            , "slot            =" <+> pPrint (getSlotNumber slotNumber)
+            , "creator         =" <+> pPrint creatorId
+            , "parent          =" <+> text (show parentBlock)
+            , "leadershipProof =" <+> text (show leadershipProof)
+            , "signature       =" <+> text (show signature)
+            , "cert            =" <+> pPrint certificate
+            , "bodyHash        =" <+> text (show bodyHash)
             ]
         )
 
@@ -165,8 +168,10 @@ instance Pretty Trace.PerasLog where
     Trace.DiffuseVote{vote} ->
       hang "DiffuseVote" 2 $ pPrint vote
 
+-- Slot leader every third slot, always a committee member
+-- FIXME: randomize slot leader slots
 modelSUT :: Party
-modelSUT = mkParty 1 mempty [0 .. 10_000] -- Never the slot leader, always a committee member
+modelSUT = mkParty 1 (filter sutIsSlotLeader [0 .. 10_000]) [0 .. 10_000]
 
 gen :: GenConstraints
 gen =
@@ -176,17 +181,23 @@ gen =
 
 instance StateModel NodeModel where
   data Action NodeModel a where
-    Step :: EnvAction -> Action NodeModel [Vote]
+    Step :: EnvAction -> Action NodeModel ([Chain], [Vote])
 
   initialState = initialModelState
 
   arbitraryAction _ s@NodeModel{clock, allChains, allVotes, protocol} =
-    fmap (Some . Step) $
-      frequency $
-        [(1, pure Tick)]
-          ++ [(1, NewChain <$> genNewChain gen s)]
-          ++ [(8, maybe Tick NewVote <$> suchThat (genVote gen s) unequivocated) | canGenVotes]
-          ++ [(0, BadVote <$> genBadVote) | canGenBadVote]
+    do
+      v <-
+        if canGenVotes
+          then genVote gen s
+          else pure Nothing
+      let mustGenVote = isJust v
+      fmap (Some . Step) $
+        frequency $
+          [(2, pure Tick) | not mustGenVote]
+            ++ [(1, NewChain <$> genNewChain gen s) | not mustGenVote]
+            ++ [(4, pure $ NewVote $ fromJust v) | mustGenVote && unequivocated v]
+            ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
    where
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
     unequivocated Nothing = True
@@ -199,7 +210,7 @@ instance StateModel NodeModel where
     canGenVotes =
       not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
-        && checkVotingRules s
+        && checkVotingRules' gen s
     r = inRound clock protocol
 
   shrinkAction _ _ (Step Tick) = []
@@ -207,7 +218,7 @@ instance StateModel NodeModel where
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
 
   -- Copied from `Peras.Conformance.Model.Transition`.
-  precondition s (Step (NewChain [])) = True
+  precondition s (Step (NewChain [])) = False
   precondition s (Step (NewChain (block : rest))) =
     blockCurrent gen `implies` (slotNumber block == clock s)
       && twoParties gen `implies` Model.checkBlockFromOther block
@@ -219,15 +230,18 @@ instance StateModel NodeModel where
     voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
       && Foreign.checkSignedVote v
       && twoParties gen `implies` Model.checkVoteFromOther v
-      && ( voteObeyVR1A gen `implies` Model.vr1A s
-            && voteObeyVR1B gen `implies` Model.vr1B s
-            || voteObeyVR2A gen `implies` Model.vr2A s
-              && voteObeyVR2B gen `implies` Model.vr2B s
-         )
+      && checkVotingRules' gen s
       && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
   precondition s (Step a) = isJust (transition s a)
 
   nextState s (Step a) _ = maybe s snd $ transition s a
+
+checkVotingRules' :: GenConstraints -> NodeModel -> Bool
+checkVotingRules' MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} s =
+  voteObeyVR1A `implies` Model.vr1A s
+    && voteObeyVR1B `implies` Model.vr1B s
+    || voteObeyVR2A `implies` Model.vr2A s
+      && voteObeyVR2B `implies` Model.vr2B s
 
 implies :: Bool -> Bool -> Bool
 implies x y = not x || y
