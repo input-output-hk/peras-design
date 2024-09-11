@@ -354,10 +354,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | div (getSlotNumber (State.clock s₀)) (Params.U params)
              == getRoundNumber (votingRound vote) in isVotingRound
          | checkSignedVote vote in checkedSig
+         | makeCheckedVote vote
          | checkVoteFromOther vote in checkedOther
          | isYes (checkVotingRules (modelState s₀)) in checkedVRs
          | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
-    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | True | True | True =
+    newVote-soundness {vs} {ms₁} s₀ vote inv refl | True | True | True | makeChecked | True | True | True =
       record
         { s₁          = s₁
         ; invariant₀  = inv
