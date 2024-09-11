@@ -512,7 +512,7 @@ transition s Tick =
                         ; allChains = chains ++ allChains s'
                         }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
-transition s (NewChain []) = Just (([] , []) , s)
+transition _ (NewChain []) = Nothing
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)
