@@ -180,8 +180,8 @@ votingBlockHash s =
       )
     $ pref s
 
-newChain' :: NodeModel -> Chain -> NodeModel
-newChain' s c =
+addChain' :: NodeModel -> Chain -> NodeModel
+addChain' s c =
   NodeModel
     (clock s)
     (protocol s)
@@ -444,20 +444,13 @@ transition s (NewChain (block : rest)) =
       )
 transition s (NewVote v) =
   do
+    guard (slotInRound (protocol s) (clock s) == 0)
     guard (slotToRound (protocol s) (clock s) == votingRound v)
     prf <- guard (checkSignedVote v)
     guard (checkVoteFromOther v)
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
-    Just
-      ( []
-      , NodeModel
-          (clock (addVote' s v))
-          (protocol (addVote' s v))
-          (allChains (addVote' s v))
-          (allVotes (addVote' s v))
-          (allSeenCerts (addVote' s v))
-      )
+    Just ([], addVote' s v)
 transition s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)
