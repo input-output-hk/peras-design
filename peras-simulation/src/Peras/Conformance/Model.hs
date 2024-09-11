@@ -8,6 +8,7 @@ module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
+import Debug.Trace
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
@@ -381,13 +382,28 @@ chainsInState s =
  where
   rest :: Chain
   rest = pref s
+  notPenultimateCert :: Certificate -> Bool
+  notPenultimateCert cert =
+    getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
+  noPenultimateCert :: Bool
+  noPenultimateCert = all notPenultimateCert (allSeenCerts s)
+  unexpiredCert' :: Bool
+  unexpiredCert' =
+    getRoundNumber (round (cert' s)) + perasA (protocol s)
+      >= getRoundNumber (rFromSlot s)
+  newerCert' :: Bool
+  newerCert' =
+    getRoundNumber (round (cert' s))
+      > getRoundNumber (round (certS s))
+  includeCert' :: Bool
+  includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
   block :: Block
   block =
     createSignedBlock
       (mkParty sutId [] [])
       (clock s)
       (headBlockHash rest)
-      Nothing
+      (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) [mkParty sutId [] []])
       (MkHash emptyBS)
 

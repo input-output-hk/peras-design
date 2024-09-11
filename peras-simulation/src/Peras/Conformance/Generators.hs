@@ -135,13 +135,13 @@ genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
   do
     prefChain <- genPrefChain gc node
     cert1 <- genCertForBlock gc node prefChain
-    cert2 <- genCert gc node prefChain
+    cert2 <- genCert gc node prefChain -- FIXME: Guard this with a setting.
     fmap (: prefChain) $
       MkBlock
         <$> (if blockCurrent then pure clock else genSlotNumber gc node)
         <*> genPartyId gc node
         <*> pure (hashTip prefChain)
-        <*> pure (cert1 <|> cert2)
+        <*> pure Nothing -- FIXME (cert1 <|> cert2)
         <*> arbitrary
         <*> arbitrary
         <*> arbitrary

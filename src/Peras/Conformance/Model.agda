@@ -491,11 +491,17 @@ chainsInState s =
   else []
   where
     rest = pref s
+    notPenultimateCert : Certificate → Bool
+    notPenultimateCert cert = getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
+    noPenultimateCert = all notPenultimateCert (allSeenCerts s)
+    unexpiredCert' = getRoundNumber (round (cert' s)) + perasA (protocol s) >= getRoundNumber (rFromSlot s)
+    newerCert' = getRoundNumber (round (cert' s)) > getRoundNumber (round (certS s))
+    includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
     block = createSignedBlock
       (mkParty sutId [] [])
       (clock s)
       (headBlockHash rest)
-      Nothing
+      (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) (mkParty sutId [] [] ∷ []))
       (MkHash emptyBS)
 
