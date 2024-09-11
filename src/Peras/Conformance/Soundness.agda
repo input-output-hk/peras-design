@@ -365,11 +365,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
         vote-round = sym (eqℕ-sound isVotingRound)
 
-        correctVote : vote ≡ w
-        correctVote = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+        vote≡w : vote ≡ w
+        vote≡w = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
 
         validSignature : IsVoteSignature w σ
-        validSignature with v ← axiom-checkVoteSignature checkedSig rewrite correctVote = v
+        validSignature with v ← axiom-checkVoteSignature checkedSig rewrite vote≡w = v
 
         v : ValidVote w
         v = axiom-everyoneIsOnTheCommittee ⸴ validSignature
@@ -514,7 +514,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             {k = sutId}
             {v = tree⁺}
             {m = State.blockTrees s₀}
-          rewrite correctVote
+          rewrite vote≡w
           = refl
 
         s₁-agrees : modelState s₁ ≡ ms₁
@@ -815,21 +815,30 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           tree : NodeModel
           tree = modelState s₀
 
+          w' : Vote
+          w' = createVote slot₀ (creatorId vote) (proofM vote) (signature vote) (blockHash vote)
+
           w : Vote
           w = createVote slot₀ sutId (proofM vote) (signature vote) (blockHash vote)
 
           vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot₀)
           vote-round = sym (eqℕ-sound isVotingRound)
 
+          vote≡w' : vote ≡ w'
+          vote≡w' = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+
           creatorId≡sutId : creatorId vote ≡ sutId
           creatorId≡sutId = eqℕ-sound checkedSut
 
-          correctVote : vote ≡ w
-          correctVote = {!!}
+          w≡w' : w ≡ w'
+          w≡w' = cong (λ {r → record w' { creatorId = r}}) (sym creatorId≡sutId)
+
+          vote≡w : vote ≡ w
+          vote≡w = trans vote≡w' (sym w≡w')
 
           validSignature : IsVoteSignature w (signature w)
           validSignature with v ← axiom-checkVoteSignature checkedSig
-            rewrite correctVote rewrite creatorId≡sutId
+            rewrite vote≡w
             = v
 
           v : ValidVote w
@@ -972,7 +981,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k = sutId}
               {v = tree⁺}
               {m = blockTrees₀}
-            rewrite correctVote
+            rewrite vote≡w
             = refl
 
           s₁-agrees :
@@ -985,7 +994,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           s₁-agrees = trans set-irrelevant addVote-modelState
 
           votes-agree : sutVotesInTrace trace ≡ (slot₀ , vote) ∷ map (slot₀ ,_) []
-          votes-agree rewrite correctVote = refl
+          votes-agree rewrite vote≡w = refl
 
           msg₀≡msg₁ : State.messages s₀ ≡ (msg ++ State.messages s₀) ─ other∈messages
           msg₀≡msg₁ rewrite map∘apply-filter = refl
