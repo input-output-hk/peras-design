@@ -506,7 +506,7 @@ transition s (NewChain (block ∷ rest)) = do
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
-  prf ← guard (checkSignedVote v)
+  guard (checkSignedVote v)
   guard (checkVoteFromOther v)
   -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
