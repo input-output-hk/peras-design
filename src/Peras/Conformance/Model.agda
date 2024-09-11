@@ -250,8 +250,8 @@ votingBlockHash s =
 
 {-# COMPILE AGDA2HS votingBlockHash #-}
 
-newChain' : NodeModel → Chain → NodeModel
-newChain' s c =
+addChain' : NodeModel → Chain → NodeModel
+addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
     ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
@@ -484,10 +484,6 @@ headBlockHash (b ∷ _) = Hashable.hash hashBlock b
 
 {-# COMPILE AGDA2HS headBlockHash #-}
 
-opaque
-  makeCheckedVote : (v : Vote) → checkSignedVote v ≡ True → CheckedVote
-  makeCheckedVote v prf = v P., prf
-
 transition : NodeModel → EnvAction → Maybe (List Vote × NodeModel)
 transition s Tick =
   let s' = record s { clock = nextSlot (clock s) } in
@@ -515,9 +511,7 @@ transition s (NewVote v) = do
   -- checking voting rules for SUT as both parties have the same block-tree, see invariant
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
-  Just ([] ,
-    let s' = addVote' s v
-    in record s' { allVotesChecked = makeCheckedVote v prf ∷ (allVotesChecked s')})
+  Just ([] , addVote' s v)
 transition s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just ([] , s)
