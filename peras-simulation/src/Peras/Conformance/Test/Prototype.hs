@@ -28,8 +28,9 @@ import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (BadVote, NewChain, NewVote, Tick),
   NodeModel (..),
+  checkVotingRules,
   transition,
-  checkVotingRules,)
+ )
 import Peras.Conformance.Test (Action (Step), modelSUT)
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -54,12 +55,13 @@ import Peras.Prototype.Voting (voting)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
+  classify,
   counterexample,
   ioProperty,
   noShrinking,
+  tabulate,
   whenFail,
-  classify,
-  tabulate,)
+ )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras (runPropertyStateT)
 import Test.QuickCheck.Monadic (monadicIO, monitor)
@@ -113,7 +115,7 @@ instance (Realized m [Vote] ~ [Vote], MonadSTM m) => RunModel NodeModel (Runtime
 
   postcondition (s, s') (Step a) _ r = do
     monitorPost $ tabulate "votingRules" [show $ checkVotingRules s']
-    let expected = fst (fromJust (transition s a))
+    let expected = maybe mempty fst (transition s a)
     -- let ok = length r == length expected
     let ok = r == expected
     monitorPost . counterexample . show $ "  action $" <+> pPrint a

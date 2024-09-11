@@ -228,11 +228,11 @@ module _ {a : Set} ⦃ _ : Hashable a ⦄
 
   open Hashable ⦃...⦄
 
-  hashHead : List a → Hash a
-  hashHead Data.List.[] = MkHash emptyBS
-  hashHead (x Data.List.∷ _) = hash x
+  tipHash : List a → Hash a
+  tipHash Data.List.[] = MkHash emptyBS
+  tipHash (x Data.List.∷ _) = hash x
 
-{-# COMPILE AGDA2HS hashHead #-}
+{-# COMPILE AGDA2HS tipHash #-}
 
 private
   open Hashable

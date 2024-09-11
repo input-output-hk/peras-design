@@ -15,22 +15,28 @@ module Peras.Conformance.Test where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
+import Debug.Trace
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Vote (..))
+import Peras.Conformance.Generators
 import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
+  checkVotingRules,
   initialModelState,
   otherId,
   pref,
   transition,
-  checkVotingRules,
-  votingBlockHash)
+  votingBlockHash,
+ )
+import Peras.Conformance.Model qualified as Model
 import Peras.Crypto (Hashable (hash))
+import Peras.Foreign qualified as Foreign
 import Peras.Numbering (
   RoundNumber (getRoundNumber),
   SlotNumber (getSlotNumber),
+  slotToRound,
  )
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Trace qualified as Trace
@@ -43,6 +49,7 @@ import Test.QuickCheck (
   suchThat,
  )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
+import Test.QuickCheck.Gen
 import Test.QuickCheck.StateModel (
   Any (Some),
   HasVariables (..),
@@ -161,6 +168,12 @@ instance Pretty Trace.PerasLog where
 modelSUT :: Party
 modelSUT = mkParty 1 mempty [0 .. 10_000] -- Never the slot leader, always a committee member
 
+gen :: GenConstraints
+gen =
+  if True
+    then strictGenConstraints
+    else lenientGenConstraints
+
 instance StateModel NodeModel where
   data Action NodeModel a where
     Step :: EnvAction -> Action NodeModel [Vote]
@@ -171,30 +184,12 @@ instance StateModel NodeModel where
     fmap (Some . Step) $
       frequency $
         [(1, pure Tick)]
-          ++ [(1, NewChain <$> genChain)]
-          ++ [(8, NewVote <$> genVote) | canGenVotes]
-          ++ [(2, BadVote <$> genBadVote) | canGenBadVote]
+          ++ [(1, NewChain <$> genNewChain gen s)]
+          ++ [(8, maybe Tick NewVote <$> suchThat (genVote gen s) unequivocated) | canGenVotes]
+          ++ [(0, BadVote <$> genBadVote) | canGenBadVote]
    where
-    genChain =
-      do
-        let tip = pref s
-        fmap (: tip) $
-          MkBlock
-            <$> pure clock
-            <*> genPartyId
-            <*> pure (hashTip tip)
-            <*> genCertificate tip
-            <*> arbitrary
-            <*> arbitrary
-            <*> arbitrary
-
-    genVote =
-      do
-        blockHash <- pure $ votingBlockHash s
-        let unequivocated v@MkVote{votingRound = r, creatorId = p} = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
-        flip suchThat unequivocated $
-          MkVote <$> genRound <*> genPartyId <*> arbitrary <*> pure blockHash <*> arbitrary
-
+    unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
+    unequivocated Nothing = True
     badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
     canGenBadVote = canGenVotes && not (null badVoteCandidates)
     genBadVote = do
@@ -202,29 +197,37 @@ instance StateModel NodeModel where
       (r, p) <- elements badVoteCandidates
       MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
-        not (all null allChains) -- There must be some block to vote for.
+      not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
         && checkVotingRules s
-    genCertificate chain =
-      frequency
-        [
-          ( 9
-          , pure Nothing
-          )
-        ,
-          ( if null chain || null validCertRounds then 0 else 1
-          , fmap Just . MkCertificate <$> elements validCertRounds <*> (hash <$> elements chain)
-          )
-        ]
-    validCertRounds = [1 .. r] -- \\ (round <$> Map.keys certs)
-    genPartyId = pure otherId
-    genRound = elements [1 .. r]
     r = inRound clock protocol
 
   shrinkAction _ _ (Step Tick) = []
   shrinkAction _ _ (Step (NewChain (_ : chain))) = map (Some . Step) [Tick, NewChain chain]
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
 
+  -- Copied from `Peras.Conformance.Model.Transition`.
+  precondition s (Step (NewChain [])) = True
+  precondition s (Step (NewChain (block : rest))) =
+    blockCurrent gen `implies` (slotNumber block == clock s)
+      && twoParties gen `implies` Model.checkBlockFromOther block
+      && (parentBlock block == Model.headBlockHash rest)
+      && blockWeightiest gen `implies` (rest == pref s)
+      && Foreign.checkSignedBlock block
+      && Foreign.checkLeadershipProof (leadershipProof block)
+  precondition s (Step (NewVote v)) =
+    voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
+      && Foreign.checkSignedVote v
+      && twoParties gen `implies` Model.checkVoteFromOther v
+      && ( voteObeyVR1A gen `implies` Model.vr1A s
+            && voteObeyVR1B gen `implies` Model.vr1B s
+            || voteObeyVR2A gen `implies` Model.vr2A s
+              && voteObeyVR2B gen `implies` Model.vr2B s
+         )
+      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
   precondition s (Step a) = isJust (transition s a)
 
-  nextState s (Step a) _ = snd . fromJust $ transition s a
+  nextState s (Step a) _ = maybe s snd $ transition s a
+
+implies :: Bool -> Bool -> Bool
+implies x y = not x || y
