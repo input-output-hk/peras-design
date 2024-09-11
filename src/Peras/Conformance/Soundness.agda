@@ -119,13 +119,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
              ∀ {block} → checkSignedBlock block ≡ True
              → IsBlockSignature block (signature block))
 
-{-
-           -- Assume that blocks are created correctly, as the model is not explicit about block creation
-           (axiom-blockCreatedCorrectly :
-             ∀ {block s} →
-             block ≡ createBlock (clock s) (creatorId block) (leadershipProof block) (signature block) s)
--}
-
          where
 
     open SmallStep using (⦅_,_,_,_⦆)
@@ -137,34 +130,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     postulate
       maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
         → maximumBy d o l ∈ d ∷ l
-
-{-
-    valid-chain : ∀ (t : NodeModel) → ValidChain (pref t)
-    valid-chain t = valid-chain' (pref t)
-      where
-        valid-chain' : ∀ (c : Chain) → ValidChain c
-        valid-chain' [] = Genesis
-        valid-chain' (b ∷ bs) =
-          let checked-blockSignature = axiom-checkBlockSignature {b} {!!}
-              checked-slotLeader = axiom-checkLeadershipProof {b} {!!}
-          in Cons checked-blockSignature checked-slotLeader {!!} (valid-chain' bs)
--}
-
-{-
-    valid-votes : ∀ (t : NodeModel) → All.All ValidVote (allVotes t)
-    valid-votes t = valid-votes' (allVotes t)
-      where
-        valid-votes' : ∀ (l : List Vote) → All.All ValidVote l
-        valid-votes' [] = All.[]
-        valid-votes' (v ∷ vs) =
-          let checked-membership =
-                axiom-everyoneIsOnTheCommittee
-                  {creatorId v}
-                  {votingRound v}
-                  {proofM v}
-              checked-signature = axiom-checkVoteSignature {v} {!!}
-          in (checked-membership ⸴ checked-signature) All.∷ (valid-votes' vs)
--}
 
     addChain'' : NodeModel → {c : Chain} → ValidChain c → NodeModel
     addChain'' s {c} _ = addChain' s c
@@ -189,11 +154,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; instantiated-certs = refl
         ; instantiated-votes = refl
         ; extendable-chain = λ _ _ → refl -- TODO: set union
-        ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
---        ; valid-votes = valid-votes
         ; no-equivocations = {!!}
         ; quorum-cert = {!!} -- invariants
         }
@@ -627,7 +590,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = eqBS-sound checkHash
 
         validHead : block ≡ β
-        validHead = {!!} -- axiom-blockCreatedCorrectly {block} {tree}
+        validHead = {!!}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -639,7 +602,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ∷ prefChain tree)
         validChain
           = let open SmallStep.IsTreeType
-            in Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl (is-TreeType .valid tree)
+            in Cons validSignature (axiom-checkLeadershipProof {β} checkedLead) refl {!!} -- (is-TreeType .valid tree)
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -697,7 +660,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     creatorExists
                     validChain
                   )
-              ↣ Fetch {h = sutHonesty} {m = ChainMsg chain}
+              ↣ Fetch {h = sutHonesty} {m = ChainMsg validChain}
                    {!!} {-
                   (honest {p = sutId}
                     sutExists

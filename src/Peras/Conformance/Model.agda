@@ -152,11 +152,11 @@ makeVote params slot h =
 
 record NodeModel : Set where
   field
-    clock              : SlotNumber
-    protocol           : PerasParams
-    allChains          : List Chain
-    allVotes           : List Vote
-    allSeenCerts       : List Certificate
+    clock        : SlotNumber
+    protocol     : PerasParams
+    allChains    : List Chain
+    allVotes     : List Vote
+    allSeenCerts : List Certificate
 
 rFromSlot : NodeModel → RoundNumber
 rFromSlot s =
