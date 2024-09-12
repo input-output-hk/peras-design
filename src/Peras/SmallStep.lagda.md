@@ -133,10 +133,8 @@ Properties that must hold with respect to chains, certificates and votes.
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ H.foldr insertCert (certs t) (certsFromChain c)
 
-{-
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
--}
 
       optimal : ∀ (c : Chain) (t : T)
         → let

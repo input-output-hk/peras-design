@@ -161,6 +161,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; instantiated-certs = refl
         ; instantiated-votes = refl
         ; extendable-chain = λ _ _ → refl -- TODO: set union
+        ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
@@ -639,7 +640,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         chain : ValidChain (β ∷ prefChain tree)
         chain
           = let open SmallStep.IsTreeType
-            in Cons {prefChain tree} {β} validSignature (axiom-checkLeadershipProof {β} checkedLead) refl {!!} -- (is-TreeType .valid tree)
+            in Cons {prefChain tree} {β}
+              validSignature
+              (axiom-checkLeadershipProof {β} checkedLead)
+              refl
+              (is-TreeType .valid tree)
 
         msg : List SmallStep.Envelope
         msg = envelopes (ChainMsg chain) (creatorId block)
@@ -932,10 +937,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = State.blockTrees s₀} uniqueIds')
               (otherTree inv)
 
-          postulate -- TODO
-            -- U = 5
-            noNewRound : rnd (getSlotNumber slot₀) ≡ rnd (suc (getSlotNumber slot₀))
-
           trace : s₀ ↝⋆ s₁
           trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀}
@@ -1053,16 +1054,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
 
-    tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ (x ∷ xs) | [] | True | True | True | True | True = {!!} -- contradiction: length vs ≡ 1
-
-    tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ xs | [] | _ | _ | _ | _ | _ = {!!} -- precondition does not hold for vote
-
     tick-soundness s₀ inv refl
       | True | _ | _ = {!!} -- a vote is expected
 
-    tick-soundness {cs} s₀ inv refl
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
       with cs
 
