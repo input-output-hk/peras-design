@@ -175,9 +175,9 @@ modelSUT = mkParty 1 (filter sutIsSlotLeader [0 .. 10_000]) [0 .. 10_000]
 
 gen :: GenConstraints
 gen =
-  if True
+  if False
     then strictGenConstraints
-    else lenientGenConstraints
+    else votingGenConstraints
 
 instance StateModel NodeModel where
   data Action NodeModel a where
@@ -188,15 +188,15 @@ instance StateModel NodeModel where
   arbitraryAction _ s@NodeModel{clock, allChains, allVotes, protocol} =
     do
       v <-
-        if canGenVotes
+        if canGenVotes && newRound clock protocol
           then genVote gen s
           else pure Nothing
-      let mustGenVote = isJust v
+      let didGenVote = isJust v
       fmap (Some . Step) $
         frequency $
-          [(2, pure Tick) | not mustGenVote]
-            ++ [(1, NewChain <$> genNewChain gen s) | not mustGenVote]
-            ++ [(4, pure $ NewVote $ fromJust v) | mustGenVote && unequivocated v]
+          [(3, pure Tick)]
+            ++ [(1, NewChain <$> genNewChain gen s)]
+            ++ [(100, pure $ NewVote $ fromJust v) | didGenVote && unequivocated v]
             ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
    where
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
@@ -234,14 +234,42 @@ instance StateModel NodeModel where
       && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
   precondition s (Step a) = isJust (transition s a)
 
+  nextState s (Step (NewVote v)) _ =
+    if voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
+      && Foreign.checkSignedVote v
+      && twoParties gen `implies` Model.checkVoteFromOther v
+      && checkVotingRules' gen s
+      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
+      then Model.addVote' s v
+      else s
   nextState s (Step a) _ = maybe s snd $ transition s a
 
+backoff :: NodeModel -> NodeModel
+backoff node@NodeModel{clock, protocol, allChains, allVotes, allSeenCerts} =
+  let
+    isNewRound = newRound clock protocol
+    r = inRound clock protocol
+    isNewChain [] = False
+    isNewChain (MkBlock{slotNumber} : _) = slotNumber == clock
+    isNewVote MkVote{votingRound} = isNewRound && r == votingRound
+    isNewCert MkCertificate{round} = isNewRound && r == round
+   in
+    node
+      { allChains = filter (not . isNewChain) allChains
+      , allVotes = filter (not . isNewVote) allVotes
+      , allSeenCerts = filter (not . isNewCert) allSeenCerts
+      }
+
 checkVotingRules' :: GenConstraints -> NodeModel -> Bool
-checkVotingRules' MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} s =
-  voteObeyVR1A `implies` Model.vr1A s
-    && voteObeyVR1B `implies` Model.vr1B s
-    || voteObeyVR2A `implies` Model.vr2A s
-      && voteObeyVR2B `implies` Model.vr2B s
+checkVotingRules' MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} s' =
+  let
+    -- FIXME: Evaluate whether we need this.
+    s = backoff s'
+   in
+    voteObeyVR1A `implies` Model.vr1A s
+      && voteObeyVR1B `implies` Model.vr1B s
+      || voteObeyVR2A `implies` Model.vr2A s
+        && voteObeyVR2B `implies` Model.vr2B s
 
 implies :: Bool -> Bool -> Bool
 implies x y = not x || y

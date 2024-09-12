@@ -61,7 +61,11 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints True True True True True True True True True True True True True True True True True
+strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+
+-- | Do not enforce Peras protocol rules when generating arbitrary instances.
+votingGenConstraints :: GenConstraints
+votingGenConstraints = MkGenConstraints True True True True True True True True False False False False True True True True True
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
