@@ -61,7 +61,11 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints True True True True True True True True True True True True True True True True True
+strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+
+-- | Do not enforce Peras protocol rules when generating arbitrary instances.
+votingGenConstraints :: GenConstraints
+votingGenConstraints = MkGenConstraints True True True True True True True True False False False False True True True True True
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
@@ -135,13 +139,13 @@ genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
   do
     prefChain <- genPrefChain gc node
     cert1 <- genCertForBlock gc node prefChain
-    cert2 <- genCert gc node prefChain
+    cert2 <- genCert gc node prefChain -- FIXME: Guard this with a setting.
     fmap (: prefChain) $
       MkBlock
         <$> (if blockCurrent then pure clock else genSlotNumber gc node)
         <*> genPartyId gc node
         <*> pure (hashTip prefChain)
-        <*> pure (cert1 <|> cert2)
+        <*> pure Nothing -- FIXME (cert1 <|> cert2)
         <*> arbitrary
         <*> arbitrary
         <*> arbitrary

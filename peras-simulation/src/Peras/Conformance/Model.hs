@@ -13,7 +13,7 @@ import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, par
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
-import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createMembershipProof, createSignedVote, mkParty)
+import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
 import Peras.Util (comparing, maximumBy, maybeToList)
 
@@ -365,6 +365,9 @@ voteInState s =
     guard (slotInRound (protocol s) (clock s) == 0)
     makeVote' s
 
+sutIsSlotLeader :: SlotNumber -> Bool
+sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
+
 votesInState :: NodeModel -> [Vote]
 votesInState = maybeToList . voteInState
 
@@ -372,21 +375,72 @@ headBlockHash :: Chain -> Hash Block
 headBlockHash [] = genesisHash
 headBlockHash (b : _) = hash b
 
-transition :: NodeModel -> EnvAction -> Maybe ([Vote], NodeModel)
+chainsInState :: NodeModel -> [Chain]
+chainsInState s =
+  if sutIsSlotLeader (clock s) then [block : rest] else []
+ where
+  rest :: Chain
+  rest = pref s
+  notPenultimateCert :: Certificate -> Bool
+  notPenultimateCert cert =
+    getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
+  noPenultimateCert :: Bool
+  noPenultimateCert = all notPenultimateCert (allSeenCerts s)
+  unexpiredCert' :: Bool
+  unexpiredCert' =
+    getRoundNumber (round (cert' s)) + perasA (protocol s)
+      >= getRoundNumber (rFromSlot s)
+  newerCert' :: Bool
+  newerCert' =
+    getRoundNumber (round (cert' s))
+      > getRoundNumber (round (certS s))
+  includeCert' :: Bool
+  includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
+  block :: Block
+  block =
+    createSignedBlock
+      (mkParty sutId [] [])
+      (clock s)
+      (headBlockHash rest)
+      (if includeCert' then Just (cert' s) else Nothing)
+      (createLeadershipProof (clock s) [mkParty sutId [] []])
+      (MkHash emptyBS)
+
+transition ::
+  NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
 transition s Tick =
   Just
-    ( votesInState
-        ( NodeModel
-            (nextSlot (clock s))
-            (protocol s)
-            (allChains s)
-            (allVotes s)
-            (allSeenCerts s)
-        )
+    (
+      ( chainsInState
+          ( NodeModel
+              (nextSlot (clock s))
+              (protocol s)
+              (allChains s)
+              (allVotes s)
+              (allSeenCerts s)
+          )
+      , votesInState
+          ( NodeModel
+              (nextSlot (clock s))
+              (protocol s)
+              (allChains s)
+              (allVotes s)
+              (allSeenCerts s)
+          )
+      )
     , NodeModel
         (nextSlot (clock s))
         (protocol s)
-        (allChains s)
+        ( chainsInState
+            ( NodeModel
+                (nextSlot (clock s))
+                (protocol s)
+                (allChains s)
+                (allVotes s)
+                (allSeenCerts s)
+            )
+            ++ allChains s
+        )
         ( votesInState
             ( NodeModel
                 (nextSlot (clock s))
@@ -404,7 +458,16 @@ transition s Tick =
                 ( NodeModel
                     (nextSlot (clock s))
                     (protocol s)
-                    (allChains s)
+                    ( chainsInState
+                        ( NodeModel
+                            (nextSlot (clock s))
+                            (protocol s)
+                            (allChains s)
+                            (allVotes s)
+                            (allSeenCerts s)
+                        )
+                        ++ allChains s
+                    )
                     ( votesInState
                         ( NodeModel
                             (nextSlot (clock s))
@@ -430,7 +493,7 @@ transition s (NewChain (block : rest)) =
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
     Just
-      ( []
+      ( ([], [])
       , NodeModel
           (clock s)
           (protocol s)
@@ -450,8 +513,8 @@ transition s (NewVote v) =
     guard (checkVoteFromOther v)
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
-    Just ([], addVote' s v)
+    Just (([], []), addVote' s v)
 transition s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)
-    Just ([], s)
+    Just (([], []), s)
