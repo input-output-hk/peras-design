@@ -22,16 +22,22 @@ import Control.Monad.State (
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import Data.Set (Set)
+import Peras.Block (Block (certificate))
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (BadVote, NewChain, NewVote, Tick),
   NodeModel (..),
   checkVotingRules,
+  pref,
   transition,
+  vr1A,
+  vr1B,
+  vr2A,
+  vr2B,
  )
-import Peras.Conformance.Test (Action (Step), modelSUT)
+import Peras.Conformance.Test (Action (Step), backoff, modelSUT)
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -116,7 +122,11 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
       pure mempty
 
   postcondition (s, s') (Step a) _ (gotChains, gotVotes) = do
-    monitorPost $ tabulate "votingRules" [show $ checkVotingRules s']
+    monitorPost $ tabulate "Voting rules" [show $ checkVotingRules $ backoff s]
+    monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (vr1A s'', vr1B s'', vr2A s'', vr2B s'') | let s'' = backoff s]
+    monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
+    monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
+    monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition s a)
     -- let ok = length r == length expected
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
