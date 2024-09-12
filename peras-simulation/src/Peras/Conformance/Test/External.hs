@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Peras.Block (Certificate, Party)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Conformance.Model (
-  EnvAction (BadVote, NewChain, NewVote, Tick),
+  EnvAction (..),
   NodeModel (..),
   initialModelState,
   transition,
@@ -161,6 +161,19 @@ type Runtime = StateT RunState IO
 
 instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel Runtime where
   perform NodeModel{..} (Step a) _ = case a of
+    Peras.Conformance.Model.Initial p -> do
+      rs <- get
+      void . lift $
+        callSUT rs $
+          Initialize
+            { party = modelSUT
+            , slotNumber = clock
+            , parameters = p
+            , chainsSeen = allChains
+            , votesSeen = allVotes
+            , certsSeen = allSeenCerts
+            }
+      pure (mempty, mempty)
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}

@@ -27,7 +27,7 @@ import Data.Set (Set)
 import Peras.Block (Block (certificate))
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
-  EnvAction (BadVote, NewChain, NewVote, Tick),
+  EnvAction (..),
   NodeModel (..),
   checkVotingRules,
   pref,
@@ -97,6 +97,7 @@ type Runtime m = StateT (RunState m) m
 
 instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NodeModel (Runtime m) where
   perform NodeModel{..} (Step a) _ = case a of
+    Initial p -> pure mempty
     Tick -> do
       RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}

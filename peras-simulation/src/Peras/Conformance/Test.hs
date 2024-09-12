@@ -15,6 +15,7 @@ module Peras.Conformance.Test where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
+import Debug.Trace (traceShow)
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (..))
@@ -27,6 +28,7 @@ import Peras.Conformance.Model (
   otherId,
   pref,
   sutIsSlotLeader,
+  testParams,
   transition,
   votingBlockHash,
  )
@@ -94,6 +96,7 @@ instance Pretty NodeModel where
           ]
 
 instance Pretty EnvAction where
+  pPrint (Initial p) = "Initial" <+> pPrint (show p)
   pPrint Tick = "Tick"
   pPrint (NewChain chain) =
     "NewChain" <+> pPrint chain
@@ -177,7 +180,7 @@ gen :: GenConstraints
 gen =
   if False
     then strictGenConstraints
-    else votingGenConstraints
+    else votingGenConstraints{useTestParams = True} -- FIXME: Relax this after further testing.
 
 instance StateModel NodeModel where
   data Action NodeModel a where
@@ -192,12 +195,15 @@ instance StateModel NodeModel where
           then genVote gen s
           else pure Nothing
       let didGenVote = isJust v
-      fmap (Some . Step) $
-        frequency $
-          [(3, pure Tick)]
-            ++ [(1, NewChain <$> genNewChain gen s)]
-            ++ [(100, pure $ NewVote $ fromJust v) | didGenVote && unequivocated v]
-            ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
+      if not (useTestParams gen) && protocol == testParams
+        then Some . Step . Initial <$> genProtocol gen
+        else
+          fmap (Some . Step) $
+            frequency $
+              [(3, pure Tick)]
+                ++ [(1, NewChain <$> genNewChain gen s)]
+                ++ [(100, pure $ NewVote $ fromJust v) | didGenVote && unequivocated v]
+                ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
    where
     unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
     unequivocated Nothing = True
