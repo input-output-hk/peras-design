@@ -18,6 +18,4 @@ spec :: Spec
 spec =
   describe "Prototype node"
     . prop "Simulation respects model"
-    $ forAllDL anyActions_ (prop_node . Blind)
-
---  $ forAllDL (replicateM_ 20 anyAction >> anyActions_) (prop_node . Blind)
+    $ forAllDL (replicateM_ 20 anyAction >> anyActions_) (prop_node . Blind)
