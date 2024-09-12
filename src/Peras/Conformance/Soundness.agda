@@ -554,7 +554,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     newChain-soundness s₀ (block ∷ rest) inv prf
       with (slotNumber block == State.clock s₀) in checkSlot
          | checkBlockFromOther block in checkedOther
-         | (parentBlock block == headBlockHash rest) in checkHash
+         | (parentBlock block == tipHash rest) in checkHash
          | (rest == pref (modelState s₀)) in checkRest
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
@@ -576,6 +576,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         notFromSut : creatorId block ≢ sutId
         notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
 
+        creatorId≡otherId : creatorId block ≡ otherId
+        creatorId≡otherId = eqℕ-sound checkedOther
+
         tree : NodeModel
         tree = modelState s₀
 
@@ -588,20 +591,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         rest≡pref : rest ≡ prefChain tree
         rest≡pref = eqList-sound checkRest
 
-        headBlockHash≡tipHash : ∀ {c : Chain} → headBlockHash c ≡ tipHash c
-        headBlockHash≡tipHash {[]} = refl
-        headBlockHash≡tipHash {x ∷ c} = refl
-
         block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
-        block-parentBlock
-          rewrite sym (headBlockHash≡tipHash {rest})
-          = eqBS-sound checkHash
+        block-parentBlock = eqBS-sound checkHash
 
         block≡β : block ≡ β
-        block≡β
-          rewrite sym block-slotNumber
-          rewrite block-parentBlock
-          = {!!}
+        block≡β = {!!} {-
+          with v ←
+          cong
+            (λ i → createBlock i (creatorId block) (leadershipProof block) (signature block) tree)
+            block-slotNumber
+          rewrite rest≡pref
+          rewrite sym block-parentBlock
+          = v -}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -612,9 +613,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         chain
           = let open SmallStep.IsTreeType
             in Cons {prefChain tree} {β} validSignature (axiom-checkLeadershipProof {β} checkedLead) refl {!!} -- (is-TreeType .valid tree)
-
-        creatorId≡otherId : creatorId block ≡ otherId
-        creatorId≡otherId = eqℕ-sound checkedOther
 
         msg : List SmallStep.Envelope
         msg = envelopes (ChainMsg chain) (creatorId block)
@@ -650,9 +648,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                open State s₀
 
         creatorExists  : State.blockTrees s₀ ⁉ (creatorId block) ≡ just tree
-        creatorExists
-          rewrite creatorId≡otherId
-          = otherTree inv
+        creatorExists rewrite creatorId≡otherId = otherTree inv
 
         sutExists :
           set (creatorId block)

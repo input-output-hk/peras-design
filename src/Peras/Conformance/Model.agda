@@ -478,12 +478,6 @@ votesInState = maybeToList ∘ voteInState
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-headBlockHash : Chain → Hash Block
-headBlockHash [] = genesisHash
-headBlockHash (b ∷ _) = Hashable.hash hashBlock b
-
-{-# COMPILE AGDA2HS headBlockHash #-}
-
 chainsInState : NodeModel → List Chain
 chainsInState s =
   if sutIsSlotLeader (clock s)
@@ -500,7 +494,7 @@ chainsInState s =
     block = createSignedBlock
       (mkParty sutId [] [])
       (clock s)
-      (headBlockHash rest)
+      (tipHash rest)
       (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) (mkParty sutId [] [] ∷ []))
       (MkHash emptyBS)
@@ -522,7 +516,7 @@ transition _ (NewChain []) = Nothing
 transition s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)
-  guard (parentBlock block == headBlockHash rest)
+  guard (parentBlock block == tipHash rest)
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
