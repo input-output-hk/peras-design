@@ -385,11 +385,25 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
             (filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
 
-        map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
-        map∘apply-filter
-          -- rewrite creatorId≡otherId
+        msg' : List SmallStep.Envelope
+        msg' =
+          map
+            (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
+            (filter (λ x → ¬? (otherId ≟ proj₁ x)) parties)
+
+        msg≡msg' : msg ≡ msg'
+        msg≡msg' = cong (λ { i → map
+                                   (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
+                                   (filter (λ x → ¬? (i ≟ proj₁ x)) parties)
+                           }) creatorId≡otherId
+
+        map∘apply-filter' : msg' ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
+        map∘apply-filter'
           rewrite apply-filter
-          = {!!} -- refl
+          = refl
+
+        map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
+        map∘apply-filter = trans msg≡msg' map∘apply-filter'
 
         sut∈messages' : ⦅ sutId , Honest , VoteMsg v , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
@@ -1037,7 +1051,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; invariant₀ = inv
           ; invariant₁ = inv₁
           ; trace = trace
-          ; s₁-agrees = {!!} -- s₁-agrees
+          ; s₁-agrees = {!s₁-agrees!} -- s₁-agrees
           ; votes-agree = votes-agree
           }
 
@@ -1072,7 +1086,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         trace = NextSlot (invFetched inv) ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
-        votes-agree = {!!} -- refl
+        votes-agree = {!refl!} -- isSlotZero ≡ False → no vote
 
         inv₁ : Invariant s₁
         inv₁ =
