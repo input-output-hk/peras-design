@@ -184,8 +184,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
     sutVotesInStep (Fetch _) = []
     sutVotesInStep (CreateBlock _ _) = []
-    sutVotesInStep (NextSlot _ _) = []
-    sutVotesInStep (NextSlotNewRound _ _ _) = []
+    sutVotesInStep (NextSlot _) = []
     sutVotesInStep {s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _))
       with p ≟ sutId
     ... | (yes _) = (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
@@ -899,9 +898,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             -- U = 5
             noNewRound : rnd (getSlotNumber slot₀) ≡ rnd (suc (getSlotNumber slot₀))
 
-          nextSlotInSameRound : NextSlotInSameRound s₀
-          nextSlotInSameRound = noNewRound
-
           trace : s₀ ↝⋆ s₁
           trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀}
@@ -918,7 +914,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       other∈messages
                       VoteReceived
                     )
-                ↣ NextSlot (invFetched inv) nextSlotInSameRound
+                ↣ NextSlot (invFetched inv)
                 ↣ ∎
 
           tree⁺ : NodeModel
@@ -1031,12 +1027,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {cs} s₀ inv refl
       | False
       with cs
-      with NextSlotInSameRound? s₀
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
       | []
-      | yes q =
+      =
         record
           { s₁ = s₁
           ; invariant₀ = inv
@@ -1053,9 +1048,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
         tree : NodeModel
         tree = modelState s₀
-
-        nextSlotNotNewRound : (suc (getSlotNumber slot₀) % Params.U params ≡ᵇ 0) ≡ False
-        nextSlotNotNewRound = /-% {x = getSlotNumber slot₀} {n = Params.U params} q isSlotZero
 
         s₁ : State
         s₁ = tick s₀
@@ -1073,74 +1065,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
           ≡ ms₁
         s₁-agrees
-          rewrite nextSlotNotNewRound
           rewrite noCertsFromQuorum {s₁} invFetched₁
           = {!!} -- refl
 
         trace : s₀ ↝⋆ s₁
-        trace = NextSlot (invFetched inv) q ↣ ∎
+        trace = NextSlot (invFetched inv) ↣ ∎
 
         votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
-        votes-agree rewrite nextSlotNotNewRound = refl
-
-        inv₁ : Invariant s₁
-        inv₁ =
-          record
-            { invFetched = invFetched₁
-            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
-            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
-            }
-
-    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | False
-      | []
-      | no ¬q =
-        record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = {!!} -- s₁-agrees
-          ; votes-agree = votes-agree
-          }
-
-      where
-
-        slot₀ : SlotNumber
-        slot₀ = State.clock s₀
-
-        tree : NodeModel
-        tree = modelState s₀
-
-        s₁ : State
-        s₁ = tick s₀
-
-        invFetched₁ : Fetched s₁
-        invFetched₁ = fetched {s₀} (invFetched inv)
-
-        req : RequiredVotes s₀
-        req = {!!} -- FIXME: ?
-
-        lastInRound : LastSlotInRound s₀
-        lastInRound = lastSlotInRound {s₀} ¬q
-
-        trace : s₀ ↝⋆ s₁
-        trace = NextSlotNewRound (invFetched inv) lastInRound req ↣ ∎
-
-        noVoteInState₀ : voteInState (modelState s₀) ≡ Nothing
-        noVoteInState₀ rewrite isSlotZero = refl
-
-        noVoteInState : voteInState (record tree { clock = nextSlot (clock tree) }) ≡ Nothing
-        noVoteInState = noVotesAfterTick {s₀} {s₁} noVoteInState₀ trace
-
-        s₁-agrees : modelState s₁ ≡ ms₁
-        s₁-agrees
-          rewrite noVoteInState
-          rewrite noCertsFromQuorum {s₁} invFetched₁
-          = {!!} -- refl
-
-        votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
-        votes-agree rewrite noVoteInState = refl
+        votes-agree = {!!} -- refl
 
         inv₁ : Invariant s₁
         inv₁ =
@@ -1151,7 +1083,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
 
     tick-soundness s₀ inv refl
-      | False | _ | _ = {!!}
+      | False | _ = {!!}
 
 
     @0 soundness : ∀ {ms₁ cs vs} (s₀ : State) (a : EnvAction)
