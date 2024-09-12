@@ -594,15 +594,42 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
         block-parentBlock = eqBS-sound checkHash
 
+        parent≡tip : parentBlock block ≡ tipHash rest
+        parent≡tip = MkHash-inj block-parentBlock
+
+        cert≡needCert : certificate block ≡ needCert (v-round slot₀) tree
+        cert≡needCert = {!!}
+
+        bodyHash≡txsHash :
+          bodyHash block ≡
+            let txs = txSelection slot₀ (creatorId block)
+                open Hashable ⦃...⦄
+            in blockHash
+                 record
+                   { blockHash = hash txs
+                   ; payload = txs
+                   }
+        bodyHash≡txsHash = {!!}
+
         block≡β : block ≡ β
-        block≡β = {!!} {-
+        block≡β
           with v ←
           cong
-            (λ i → createBlock i (creatorId block) (leadershipProof block) (signature block) tree)
+            (λ i →  record
+                      { slotNumber = i
+                      ; creatorId = creatorId block
+                      ; parentBlock = parentBlock block
+                      ; certificate = certificate block
+                      ; leadershipProof = leadershipProof block
+                      ; bodyHash = bodyHash block
+                      ; signature = signature block
+                      })
             block-slotNumber
+          rewrite parent≡tip
+          rewrite cert≡needCert
+          rewrite bodyHash≡txsHash
           rewrite rest≡pref
-          rewrite sym block-parentBlock
-          = v -}
+          = v
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
