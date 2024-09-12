@@ -52,6 +52,7 @@ voterId (MkVote _ p _ _ _) = p
 {-# COMPILE AGDA2HS voterId #-}
 
 data EnvAction : Set where
+  Initial  : PerasParams → EnvAction
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
@@ -508,6 +509,7 @@ chainsInState s =
 {-# COMPILE AGDA2HS chainsInState #-}
 
 transition : NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
+transition s (Initial p) = Just (([] , []) , record s { protocol = p })
 transition s Tick =
   let s' = record s { clock = nextSlot (clock s) }
       votes = votesInState s'
