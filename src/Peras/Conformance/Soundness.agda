@@ -137,6 +137,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     addVote'' : NodeModel → {v : Vote} → ValidVote v → NodeModel
     addVote'' s {v} _ = addVote' s v
 
+    {-
+    allChains' : NodeModel → List Chain
+    allChains' t with (allChains t) == []
+    ... | True = genesisChain ∷ []
+    ... | False = allChains t
+    -}
+
     isTreeType :
       SmallStep.IsTreeType
         initialModelState
@@ -236,6 +243,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       → Vr2B (modelState s)
       → VotingRule-2B (v-round (State.clock s)) (modelState s)
     f-2b x = x
+
+    envelopes : SmallStep.Message → PartyId → List SmallStep.Envelope
+    envelopes m p =
+      map (P.uncurry ⦅_,_, m , fzero ⦆) (filter (λ x → ¬? (p ≟ proj₁ x)) parties)
 
     -- Some postulates, resp. TODOs
 
@@ -380,27 +391,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           (toWitness (isYes≡True⇒TTrue checkedVRs))
 
         msg : List SmallStep.Envelope
-        msg =
-          map
-            (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
-            (filter (λ x → ¬? (creatorId vote ≟ proj₁ x)) parties)
+        msg = envelopes (VoteMsg v) (creatorId vote)
 
         msg' : List SmallStep.Envelope
-        msg' =
-          map
-            (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
-            (filter (λ x → ¬? (otherId ≟ proj₁ x)) parties)
+        msg' = envelopes (VoteMsg v) otherId
 
         msg≡msg' : msg ≡ msg'
-        msg≡msg' = cong (λ { i → map
-                                   (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
-                                   (filter (λ x → ¬? (i ≟ proj₁ x)) parties)
-                           }) creatorId≡otherId
+        msg≡msg' = cong (envelopes (VoteMsg v)) creatorId≡otherId
 
         map∘apply-filter' : msg' ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
-        map∘apply-filter'
-          rewrite apply-filter
-          = refl
+        map∘apply-filter' rewrite apply-filter = refl
 
         map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , VoteMsg v , fzero ⦆ ∷ []
         map∘apply-filter = trans msg≡msg' map∘apply-filter'
@@ -424,9 +424,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                open State s₀
 
         creatorExists : State.blockTrees s₀ ⁉ (creatorId vote) ≡ just tree
-        creatorExists
-          rewrite creatorId≡otherId
-          = otherTree inv
+        creatorExists rewrite creatorId≡otherId = otherTree inv
 
         sutExists :
           set (creatorId vote)
@@ -587,8 +585,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         block-slotNumber : slotNumber block ≡ slot₀
         block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
 
-        validRest : rest ≡ prefChain tree
-        validRest = eqList-sound checkRest
+        rest≡pref : rest ≡ prefChain tree
+        rest≡pref = eqList-sound checkRest
 
         headBlockHash≡tipHash : ∀ {c : Chain} → headBlockHash c ≡ tipHash c
         headBlockHash≡tipHash {[]} = refl
@@ -599,15 +597,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite sym (headBlockHash≡tipHash {rest})
           = eqBS-sound checkHash
 
-        validHead : block ≡ β
-        validHead
+        block≡β : block ≡ β
+        block≡β
           rewrite sym block-slotNumber
           rewrite block-parentBlock
           = {!!}
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
-          rewrite validHead rewrite validRest
+          rewrite block≡β rewrite rest≡pref
           = v
 
         chain : ValidChain (β ∷ prefChain tree)
@@ -619,13 +617,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         creatorId≡otherId = eqℕ-sound checkedOther
 
         msg : List SmallStep.Envelope
-        msg =
-          map
-            (P.uncurry ⦅_,_, ChainMsg chain , fzero ⦆)
-            (filter (λ x → ¬? (creatorId block ≟ proj₁ x)) parties)
+        msg = envelopes (ChainMsg chain) (creatorId block)
+
+        msg' : List SmallStep.Envelope
+        msg' = envelopes (ChainMsg chain) otherId
+
+        msg≡msg' : msg ≡ msg'
+        msg≡msg' = cong (envelopes (ChainMsg chain)) creatorId≡otherId
+
+        map∘apply-filter' : msg' ≡ ⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
+        map∘apply-filter' rewrite apply-filter = refl
 
         map∘apply-filter : msg ≡ ⦅ sutId , Honest { sutId } , ChainMsg chain , fzero ⦆ ∷ []
-        map∘apply-filter = {!!} -- rewrite apply-filter rewrite creatorId≡otherId = refl
+        map∘apply-filter = trans msg≡msg' map∘apply-filter'
 
         sut∈messages' : ⦅ sutId , Honest , ChainMsg chain , fzero ⦆ ∈ msg
         sut∈messages' rewrite map∘apply-filter = singleton⁺ refl
@@ -765,8 +769,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             )
             ≡ ms₁
         s₁-agrees
-          rewrite validHead
-          rewrite validRest
+          rewrite block≡β
+          rewrite rest≡pref
           = trans set-irrelevant addChain-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (State.clock s₀ ,_) vs
@@ -863,10 +867,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
           msg : List SmallStep.Envelope
-          msg =
-            map
-              (P.uncurry ⦅_,_, VoteMsg v , fzero ⦆)
-              (filter (λ x → ¬? (sutId ≟ proj₁ x)) parties)
+          msg = envelopes (VoteMsg v) sutId
 
           map∘apply-filter : msg ≡ ⦅ otherId , Honest { otherId } , VoteMsg v , fzero ⦆ ∷ []
           map∘apply-filter rewrite apply-filter' = refl
