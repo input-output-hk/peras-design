@@ -782,10 +782,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {cs} {vs} s₀ inv refl
       | True
       with vs
+      with cs
 
     tick-soundness s₀ inv refl
       | True
       | vote ∷ xs
+      | []
       with   checkSignedVote vote in checkedSig
            | isYes (checkVotingRules (modelState s₀)) in checkedVRs
            | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
@@ -793,8 +795,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                == getRoundNumber (votingRound vote) in isVotingRound
            | checkVoteFromSut vote in checkedSut
 
-    tick-soundness {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | True | True | True | True | True =
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
+      | True | vote ∷ [] | [] | True | True | True | True | True =
 
         record
           { s₁ = s₁
@@ -1018,25 +1020,29 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
 
     tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ (x ∷ xs) | True | True | True | True | True = {!!} -- contradiction: length vs ≡ 1
+      | True | vote ∷ (x ∷ xs) | [] | True | True | True | True | True = {!!} -- contradiction: length vs ≡ 1
 
     tick-soundness {vs} s₀ inv refl
-      | True | vote ∷ xs | _ | _ | _ | _ | _ = {!!} -- precondition does not hold for vote
+      | True | vote ∷ xs | [] | _ | _ | _ | _ | _ = {!!} -- precondition does not hold for vote
 
     tick-soundness s₀ inv refl
-      | True | [] = {!!} -- a vote is expected
+      | True | _ | _ = {!!} -- a vote is expected
 
-    tick-soundness s₀ inv refl
-      | False with NextSlotInSameRound? s₀
+    tick-soundness {cs} s₀ inv refl
+      | False
+      with cs
+      with NextSlotInSameRound? s₀
+
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
+      | []
       | yes q =
         record
           { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = inv₁
           ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          ; s₁-agrees = {!!} -- s₁-agrees
           ; votes-agree = votes-agree
           }
 
@@ -1069,7 +1075,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite nextSlotNotNewRound
           rewrite noCertsFromQuorum {s₁} invFetched₁
-          = refl
+          = {!!} -- refl
 
         trace : s₀ ↝⋆ s₁
         trace = NextSlot (invFetched inv) q ↣ ∎
@@ -1087,13 +1093,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
+      | []
       | no ¬q =
         record
           { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = inv₁
           ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          ; s₁-agrees = {!!} -- s₁-agrees
           ; votes-agree = votes-agree
           }
 
@@ -1130,7 +1137,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees
           rewrite noVoteInState
           rewrite noCertsFromQuorum {s₁} invFetched₁
-          = refl
+          = {!!} -- refl
 
         votes-agree : sutVotesInTrace trace ≡ map (slot₀ ,_) vs
         votes-agree rewrite noVoteInState = refl
@@ -1142,6 +1149,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
+
+    tick-soundness s₀ inv refl
+      | False | _ | _ = {!!}
 
 
     @0 soundness : ∀ {ms₁ cs vs} (s₀ : State) (a : EnvAction)
