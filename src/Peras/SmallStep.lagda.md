@@ -77,8 +77,8 @@ Messages for sending and receiving chains and votes. Note, in the *Peras* protoc
 certificates are not diffused explicitly.
 ```agda
   data Message : Type where
-    ChainMsg : Chain → Message
-    VoteMsg : Vote → Message
+    ChainMsg : {c : Chain} → ValidChain c → Message
+    VoteMsg : {v : Vote} → ValidVote v → Message
 ```
 Messages can be delayed by a number of slots
 ```agda
@@ -108,10 +108,10 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Type}
                     (tree₀ : T)
-                    (newChain : T → Chain → T)
-                    (allChains : T → List Chain)
+                    (addChain : T → {c : Chain} → ValidChain c → T)
+                    (chains : T → List Chain)
                     (preferredChain : T → Chain)
-                    (addVote : T → Vote → T)
+                    (addVote : T → {v : Vote} → ValidVote v → T)
                     (votes : T → List Vote)
                     (certs : T → List Certificate)
                     (cert₀ : Certificate)
@@ -130,11 +130,13 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
-      extendable-chain : ∀ (t : T) (c : Chain)
-        → certs (newChain t c) ≡ H.foldr insertCert (certs t) (certsFromChain c)
+      extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
+        → certs (addChain t vc) ≡ H.foldr insertCert (certs t) (certsFromChain c)
 
+{-
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
+-}
 
       optimal : ∀ (c : Chain) (t : T)
         → let
@@ -142,26 +144,28 @@ Properties that must hold with respect to chains, certificates and votes.
             cts = certs t
           in
           ValidChain c
-        → c ∈ allChains t
+        → c ∈ chains t
         → ∥ c ∥ cts ≤ ∥ b ∥ cts
 
       self-contained : ∀ (t : T)
-        → preferredChain t ∈ allChains t
+        → preferredChain t ∈ chains t
 
+{-
       valid-votes : ∀ (t : T)
         → All ValidVote (votes t)
+-}
 
-      unique-votes : ∀ (t : T) (v : Vote)
+      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → let vs = votes t
           in
           v ∈ vs
-        → vs ≡ votes (addVote t v)
+        → vs ≡ votes (addVote t vv)
 
-      no-equivocations : ∀ (t : T) (v : Vote)
+      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → let vs = votes t
           in
           Any (v ∻_) vs
-        → vs ≡ votes (addVote t v)
+        → vs ≡ votes (addVote t vv)
 
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
@@ -180,11 +184,11 @@ The block-tree type is defined as follows:
     field
       tree₀ : T
 
-      addChain : T → Chain → T
+      addChain : T → {c : Chain} → ValidChain c → T
       chains : T → List Chain
       preferredChain : T → Chain
 
-      addVote : T → Vote → T
+      addVote : T → {v : Vote} → ValidVote v → T
       votes : T → List Vote
 
       certs : T → List Certificate
@@ -252,13 +256,13 @@ Updating the block-tree upon receiving a message for vote and block messages.
 ```agda
     data _[_]→_ : T → Message → T → Type where
 
-      VoteReceived : ∀ {v t} →
+      VoteReceived : ∀ {v vv t} →
           ────────────────────────────
-          t [ VoteMsg v ]→ addVote t v
+          t [ VoteMsg {v} vv ]→ addVote t vv
 
-      ChainReceived : ∀ {c t} →
+      ChainReceived : ∀ {c vc t} →
           ──────────────────────────────
-          t [ ChainMsg c ]→ addChain t c
+          t [ ChainMsg {c} vc ]→ addChain t vc
 ```
 #### Vote in round
 
@@ -507,15 +511,15 @@ is added to be consumed immediately.
             r = v-round s
             v = createVote s p π σ b
           in
-        ∙ BlockSelection s t ≡ b
-        ∙ blockTrees M ⁉ p ≡ just t
-        ∙ IsVoteSignature v σ
-        ∙ StartOfRound s r
-        ∙ IsCommitteeMember p r π
-        ∙ VotingRule s t
-          ───────────────────────────────────
-          Honest {p} ⊢
-            M ⇉ add (VoteMsg v , 𝟘 , p) to t
+          BlockSelection s t ≡ b
+        → blockTrees M ⁉ p ≡ just t
+        → (sig : IsVoteSignature v σ)
+        → StartOfRound s r
+        → (mem : IsCommitteeMember p r π)
+        → VotingRule s t
+          ----------------------------------------------
+        → Honest {p} ⊢
+            M ⇉ add (VoteMsg (mem , sig) , 𝟘 , p) to t
                 diffuse M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
@@ -590,12 +594,12 @@ message is added to the message buffer
             b = createBlock s p π σ t
             pref = preferredChain t
           in
-        ∙ blockTrees M ⁉ p ≡ just t
-        ∙ ValidChain (b ∷ pref)
-          ───────────────────────────
-          Honest {p} ⊢
+          blockTrees M ⁉ p ≡ just t
+        → (vc : ValidChain (b ∷ pref))
+          ----------------------------
+        → Honest {p} ⊢
             M ↷ add (
-                  ChainMsg (b ∷ pref)
+                  ChainMsg vc
                 , 𝟘
                 , p) to t
                 diffuse M
@@ -664,67 +668,6 @@ List-like structure for defining execution paths.
     data _↝⋆_ : State → State → Type where
       ∎ : M ↝⋆ M
       _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
-```
-## Properties
-```agda
-    open State
-```
-### Valid messages
-```
-    data ValidMessages (N : State) : Type where
-
-      valid-messages :
-          All (λ { (ChainMsg c) → ValidChain c
-                 ; (VoteMsg v) → ValidVote v})
-            (history N)
-        → ValidMessages N
-```
-```agda
-    ⇀-valid-messages : ∀ {M N p} {h : Honesty p} {m}
-      → ValidMessages M
-      → h ⊢ M [ m ]⇀ N
-      → ValidMessages N
-    ⇀-valid-messages (valid-messages x) (honest _ _ _) = valid-messages x
-    ⇀-valid-messages (valid-messages x) (corrupt _) = valid-messages x
-
-    ↷-valid-messages : ∀ {M N p} {h : Honesty p}
-      → ValidMessages M
-      → h ⊢ M ↷ N
-      → ValidMessages N
-    ↷-valid-messages (valid-messages x) (honest _ y) = valid-messages (y ∷ x)
-
-    ⇉-valid-messages : ∀ {M N p} {h : Honesty p}
-      → ValidMessages M
-      → h ⊢ M ⇉ N
-      → ValidMessages N
-    ⇉-valid-messages (valid-messages x) (honest _ _ x₃ _ x₅ _) = valid-messages ((x₅ , x₃) ∷ x)
-
-    tick-valid-messages : ∀ {M}
-      → ValidMessages M
-      → ValidMessages (tick M)
-    tick-valid-messages (valid-messages x) = valid-messages x
-```
-```agda
-    ↝-valid-messages :
-      ∙ ValidMessages M
-      ∙ M ↝ N
-        ────────────
-        ValidMessages N
-    ↝-valid-messages x (Fetch y) = ⇀-valid-messages x y
-    ↝-valid-messages x (CreateVote _ y) = ⇉-valid-messages x y
-    ↝-valid-messages x (CreateBlock _ y) = ↷-valid-messages x y
-    ↝-valid-messages x (NextSlot _ _) = tick-valid-messages x
-    ↝-valid-messages x (NextSlotNewRound _ _ _) = tick-valid-messages x
-```
-```agda
-    ↝⋆-valid-messages :
-      ∙ ValidMessages M
-      ∙ M ↝⋆ N
-        ────────────
-        ValidMessages N
-    ↝⋆-valid-messages x ∎ = x
-    ↝⋆-valid-messages x (x₁ ↣ x₂) =
-      ↝⋆-valid-messages (↝-valid-messages x x₁) x₂
 ```
 ```agda
   open Semantics public

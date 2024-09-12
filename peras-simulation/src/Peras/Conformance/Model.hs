@@ -180,8 +180,8 @@ votingBlockHash s =
       )
     $ pref s
 
-newChain' :: NodeModel -> Chain -> NodeModel
-newChain' s c =
+addChain' :: NodeModel -> Chain -> NodeModel
+addChain' s c =
   NodeModel
     (clock s)
     (protocol s)
@@ -507,6 +507,7 @@ transition s (NewChain (block : rest)) =
       )
 transition s (NewVote v) =
   do
+    guard (slotInRound (protocol s) (clock s) == 0)
     guard (slotToRound (protocol s) (clock s) == votingRound v)
     guard (checkSignedVote v)
     guard (checkVoteFromOther v)

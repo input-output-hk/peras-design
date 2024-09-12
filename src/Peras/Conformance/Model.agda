@@ -153,11 +153,11 @@ makeVote params slot h =
 
 record NodeModel : Set where
   field
-    clock            : SlotNumber
-    protocol         : PerasParams
-    allChains        : List Chain
-    allVotes         : List Vote
-    allSeenCerts     : List Certificate
+    clock        : SlotNumber
+    protocol     : PerasParams
+    allChains    : List Chain
+    allVotes     : List Vote
+    allSeenCerts : List Certificate
 
 rFromSlot : NodeModel → RoundNumber
 rFromSlot s =
@@ -245,14 +245,14 @@ votingBlockHash s =
 
 {-# COMPILE AGDA2HS votingBlockHash #-}
 
-newChain' : NodeModel → Chain → NodeModel
-newChain' s c =
+addChain' : NodeModel → Chain → NodeModel
+addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
     ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
     }
 
-{-# COMPILE AGDA2HS newChain' #-}
+{-# COMPILE AGDA2HS addChain' #-}
 
 {-# TERMINATING #-}
 newQuora : ℕ → List Certificate → List Vote → List Certificate
@@ -532,6 +532,7 @@ transition s (NewChain (block ∷ rest)) = do
       ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
       })
 transition s (NewVote v) = do
+  guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
   guard (checkSignedVote v)
   guard (checkVoteFromOther v)
