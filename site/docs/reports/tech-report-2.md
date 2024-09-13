@@ -247,7 +247,7 @@ A vote is _cast_ by a node using the following process which paraphrases the [ac
 
 #### Leader-election like voting
 
-The first algorithm is basically identical to the one used for [Mithril](https://mithril.network) signatures, and is also the one envisioned for [Leios](https://leios.cardano-scaling.org) (see Appendix D of the recent Leios paper). It is based on the following principles:
+The first algorithm is basically identical to the one used for [Mithril](https://mithril.network) signatures, and is also the one envisioned for [Leios](https://leios.cardano-scaling.org) (see Appendix D of the recent [Leios paper](https://iohk.io/en/research/library/papers/high-throughput-blockchain-consensus-under-realistic-network-assumptions/)). It is based on the following principles:
 
 * The goal of the algorithm is to produce a number of votes targeting a certain threshold such that each voter receives a number of vote proportionate to $\sigma$, their fraction of total stake, according to the basic probability function $\phi(\sigma) = 1 - (1 - f)^\sigma$,
 * There are various parameters to the algorithm:
@@ -302,25 +302,40 @@ Mithril certificates have the following features:
 
 #### ALBA
 
-[Approximate Lower Bound Arguments](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) or _ALBAs_ in short, are a novel cryptographic algorithm based on a _telescope_ construction providing a fast way to build compact certificates out of a large number of _unique_ items. A lot more details are provided in the paper, on the [website](https://alba.cardano-scaling.org) and the [GitHub repository](https://github.com/cardano-scaling/alba) where implementation is being developed, we only provide here some key information relevant to the use of ALBAs in Peras.
+[Approximate Lower Bound Arguments](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) or _ALBAs_ in short, are a novel cryptographic algorithm based on a _telescope_ construction providing a fast way to build compact certificates out of a large number of _unique_ items. A lot more details are provided in the paper, and on the [website](https://alba.cardano-scaling.org) and the [GitHub repository](https://github.com/cardano-scaling/alba) where implementation is being developed, we only provide here some key information relevant to the use of ALBAs in Peras.
 
 ##### Proving & verification time
 
-ALBA's expected proving time is benchmarked in the following picture which shows mean execution time for generating a proof depending on: The _total_ number of votes, the actual number of votes ($s_p$), the honest ratio ($n_p$). Note that as proving time increases exponentially when $s_p \rightarrow total \cdot n_p$, we only show here the situation when $s_p = total$ and $s_p = total - total \cdot n_p / 2$ to ensure graph stays legible.
+ALBA's expected _proving time_ is benchmarked in the following picture which shows mean execution time for generating a proof depending on:
+* the actual number of votes available($s_p$),
+* the honest threshold parameter ($n_p$),
+* the faulty threshold parameter ($n_f$).
+
 ![ALBA Proving Time](/img/alba-proving.png)
 
 The following diagram is an excerpt from the ALBA benchmarks highlighting verification. Note these numbers do not take into account the time for verifying individual votes. As one can observe directly from these graphs, verification time is independent from the number of items and only depends on the $n_p/n_f$ ratio.
+
 ![ALBA Verification Time](/img/alba-verifying.png)
 
 In practice, as the number of votes is expected to be in the 1000-2000 range, and there is ample time in a round to guarantee those votes are properly delivered to all potential voting nodes (see below), we can safely assume proving time of about 5 ms, and verification time under a millisecond.
 
 ##### Certificate size
 
-For a given set of parameters, namely fixed values for $\lambda_{sec}$, $\lambda_{rel}$, and $n_p/n_f$, the proof size is perfectly linear and only depends on the size of each vote.
+For a given set of parameters, namely fixed values for $\lambda_{sec}$, $\lambda_{rel}$, $n_p$, and $n_f$, the proof size is perfectly linear and only depends on the size of each vote.
 
-Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 200 yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
+Varying the security parameter and the honest votes ratio for a fixed set of 1000 votes of size 710 (see [above](#structure-of-votes)) yields the following diagram, showing the critical factor in proof size increase is the $n_p/n_f$ ratio: As this ratio decreases, the number of votes to include in proof grows superlinearly.
 
 ![Proof size vs. λ and honest votes ratio](/img/alba-proof-size-lambda.svg)
+
+##### Chosing ALBA parameters for Peras
+
+ALBA provides the following strong security guarantees, assuming $n_ p > n_f$ and given some actual votes ($S_p$):
+
+* A honest prover with $S_p > n_p$ votes fails to build a proof with probability lower than $2^{-λ}$,
+* A dishonest prover with $S_p < n_f$ votes succeeds in building a proof with probability lower than $2^{-λ}$,
+* In between those bounds, the probability of successfully building a proof drops exponentially.
+
+
 
 #### Benchmarks
 
@@ -335,7 +350,7 @@ For Mithril certificates, assuming parameters similar to mainnet's ($k=2422, m=2
 | Aggregation time                | 1.2 s  |
 | Verification time (certificate) | 17 ms  |
 
-For ALBA certificates, assuming 1000 votes, a honest to faulty ratio of 80/20, and security parameter $λ=128$. Note the proving time _does not_ take into account individual vote verification time, whereas certificate's verification time _includes_ votes verification time.
+For ALBA certificates, assuming 1000 votes, $n_p = 80$, $n_f = 20$, and security parameter $λ=128$. Note the proving time _does not_ take into account individual vote verification time, whereas certificate's verification time _includes_ votes verification time.
 
 | Feature                         | Metric  |
 | ------------------------------- | ------- |
