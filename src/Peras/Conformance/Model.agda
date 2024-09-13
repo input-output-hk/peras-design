@@ -231,7 +231,10 @@ chainExtends h c =
 {-# COMPILE AGDA2HS chainExtends #-}
 
 extends : Hash Block → Certificate → List Chain → Bool
-extends h cert = any (chainExtends h cert)
+extends h cert chain =
+  if cert == genesisCert
+    then True
+    else any (chainExtends h cert) chain
 
 {-# COMPILE AGDA2HS extends #-}
 

@@ -8,7 +8,6 @@ import Control.Applicative
 import Control.Arrow
 import Data.Maybe
 import Debug.Trace
-import Debug.Trace (traceShow)
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
 import Peras.Block

@@ -168,7 +168,10 @@ chainExtends h c =
     . dropWhile (\block' -> hash block' /= h)
 
 extends :: Hash Block -> Certificate -> [Chain] -> Bool
-extends h cert = any (chainExtends h cert)
+extends h cert chain =
+  if cert == genesisCert
+    then True
+    else any (chainExtends h cert) chain
 
 votingBlockHash :: NodeModel -> Hash Block
 votingBlockHash s =
