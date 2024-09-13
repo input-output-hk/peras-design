@@ -834,8 +834,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           ; invariant₀ = inv
           ; invariant₁ = inv₁
           ; trace = trace
-          ; s₁-agrees = {!!} -- s₁-agrees
-          ; votes-agree = {!!} -- votes-agree
+          ; s₁-agrees = s₁-agrees
+          ; votes-agree = votes-agree
           }
         where
           open State s₀ renaming (clock to slot)
