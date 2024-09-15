@@ -23,7 +23,9 @@ import Prelude hiding (round)
 data GenConstraints
   = -- | Whether to use consistent and semi-realistic protocol parameters.
     MkGenConstraints
-    { realisticProtocol :: Bool
+    { useTestParams :: Bool
+    -- ^ Don't generate protocol parameters.
+    , realisticProtocol :: Bool
     -- ^ Generated parties may not be other than `sutId` and `otherId`.
     , twoParties :: Bool
     -- ^ New blocks are generated at the current slot.
@@ -61,24 +63,24 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False False
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 votingGenConstraints :: GenConstraints
-votingGenConstraints = MkGenConstraints True True True True True True True True False False False False True True True True True
+votingGenConstraints = MkGenConstraints False True True True True True True True True False False False False True True True True True
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
-lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False False
 
-genProtocol :: GenConstraints -> NodeModel -> Gen PerasParams
-genProtocol MkGenConstraints{realisticProtocol, twoParties} _
+genProtocol :: GenConstraints -> Gen PerasParams
+genProtocol MkGenConstraints{realisticProtocol, twoParties}
   | realisticProtocol =
       do
         perasB <- chooseInteger (0, 20)
         perasΔ <- chooseInteger (0, 5)
-        perasU <- chooseInteger (3 * perasΔ, 120)
-        perasL <- chooseInteger (perasΔ, perasU)
+        perasU <- chooseInteger (60 + 3 * perasΔ, 120)
+        perasL <- chooseInteger (20 + perasΔ, perasU)
         perasR <- chooseInteger (1, 10)
         let perasA = perasR * perasU
         perasK <- (perasR +) <$> chooseInteger (0, 2)
@@ -89,8 +91,8 @@ genProtocol MkGenConstraints{realisticProtocol, twoParties} _
       do
         perasB <- chooseInteger (0, 100)
         perasΔ <- chooseInteger (0, 10)
-        perasU <- chooseInteger (perasΔ, 500)
-        perasL <- chooseInteger (perasΔ, perasU)
+        perasU <- chooseInteger (10 + perasΔ, 500)
+        perasL <- chooseInteger (1 + perasΔ, perasU)
         perasR <- chooseInteger (1, 100)
         perasA <- ((perasR * perasU) +) <$> chooseInteger (-10, 30)
         perasK <- (perasR +) <$> chooseInteger (0, 10)

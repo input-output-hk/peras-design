@@ -33,7 +33,8 @@ voterId :: Vote -> PartyId
 voterId (MkVote _ p _ _ _) = p
 
 data EnvAction
-  = Tick
+  = Initial PerasParams
+  | Tick
   | NewChain Chain
   | NewVote Vote
   | BadVote Vote
@@ -167,7 +168,10 @@ chainExtends h c =
     . dropWhile (\block' -> hash block' /= h)
 
 extends :: Hash Block -> Certificate -> [Chain] -> Bool
-extends h cert = any (chainExtends h cert)
+extends h cert chain =
+  if cert == genesisCert
+    then True
+    else any (chainExtends h cert) chain
 
 votingBlockHash :: NodeModel -> Hash Block
 votingBlockHash s =
@@ -404,6 +408,11 @@ chainsInState s =
 
 transition ::
   NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
+transition s (Initial p) =
+  Just
+    ( ([], [])
+    , NodeModel (clock s) p (allChains s) (allVotes s) (allSeenCerts s)
+    )
 transition s Tick =
   Just
     (
