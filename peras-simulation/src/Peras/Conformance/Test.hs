@@ -15,7 +15,6 @@ module Peras.Conformance.Test where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
-import Debug.Trace (traceShow)
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid))
 import Peras.Chain (Chain, Vote (..))
@@ -180,7 +179,7 @@ gen :: GenConstraints
 gen =
   if False
     then strictGenConstraints
-    else votingGenConstraints{useTestParams = True} -- FIXME: Relax this after further testing.
+    else votingGenConstraints
 
 instance StateModel NodeModel where
   data Action NodeModel a where
