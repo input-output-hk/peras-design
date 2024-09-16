@@ -45,11 +45,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   -- The model introduces two parties, the sut (system under test) and
   -- an other one. Both are honest and there are no other parties.
 
-  uniqueIds : otherId ≢ sutId
-  uniqueIds = λ ()
+  otherId≢sutId : otherId ≢ sutId
+  otherId≢sutId = λ ()
 
-  uniqueIds' : sutId ≢ otherId
-  uniqueIds' = λ ()
+  sutId≢otherId : sutId ≢ otherId
+  sutId≢otherId = λ ()
 
   parties : Parties
   parties = (sutId ⸴ Honest {sutId}) ∷ (otherId ⸴ Honest {otherId}) ∷ [] -- wlog
@@ -68,12 +68,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
   apply-filter : filter (λ x → ¬? (otherId ≟ proj₁ x)) parties ≡ (sutId ⸴ Honest {sutId}) ∷ []
   apply-filter =
-    let f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds
-        f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId ⸴ Honest {otherId})} {[]} uniqueIds
+    let f₁ = filter-accept (λ x → ¬? (otherId ≟ proj₁ x)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} otherId≢sutId
+        f₂ = filter-reject (λ x → (proj₁ x ≟ sutId)) {(otherId ⸴ Honest {otherId})} {[]} otherId≢sutId
     in trans f₁ (cong ((sutId ⸴ Honest {sutId}) ∷_) f₂)
 
   apply-filter' : filter (λ x → ¬? (sutId ≟ proj₁ x)) parties ≡ (otherId ⸴ Honest {otherId}) ∷ []
-  apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} uniqueIds'
+  apply-filter' = filter-reject (λ x → (proj₁ x ≟ otherId)) {sutId ⸴ Honest {sutId}} {(otherId ⸴ Honest {otherId}) ∷ []} sutId≢otherId
 
   -- The parameters are the ones defined in the test model
 
@@ -357,7 +357,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
         notFromSut : creatorId vote ≢ sutId
-        notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
+        notFromSut x = otherId≢sutId (trans (sym (eqℕ-sound checkedOther)) x)
 
         creatorId≡otherId : creatorId vote ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -368,11 +368,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         v : Vote
         v = createVote slot (creatorId vote) (proofM vote) σ (blockHash vote)
 
-        vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
-        vote-round = sym (eqℕ-sound isVotingRound)
+        votingRound≡rnd-slot : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+        votingRound≡rnd-slot = sym (eqℕ-sound isVotingRound)
 
         vote≡v : vote ≡ v
-        vote≡v = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+        vote≡v = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) votingRound≡rnd-slot
 
         validSignature : IsVoteSignature v σ
         validSignature with v' ← axiom-checkVoteSignature checkedSig rewrite vote≡v = v'
@@ -566,7 +566,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree = modelState s₀
 
         notFromSut : creatorId block ≢ sutId
-        notFromSut x = uniqueIds (trans (sym (eqℕ-sound checkedOther)) x)
+        notFromSut x = otherId≢sutId (trans (sym (eqℕ-sound checkedOther)) x)
 
         creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
@@ -852,11 +852,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           w : Vote
           w = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
 
-          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
-          vote-round = sym (eqℕ-sound isVotingRound)
+          votingRound≡rnd-slot : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+          votingRound≡rnd-slot = sym (eqℕ-sound isVotingRound)
 
           vote≡w' : vote ≡ w'
-          vote≡w' = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+          vote≡w' = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) votingRound≡rnd-slot
 
           creatorId≡sutId : creatorId vote ≡ sutId
           creatorId≡sutId = eqℕ-sound checkedSut
@@ -916,7 +916,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
           otherExists =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} uniqueIds')
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
               (otherTree inv)
 
           trace : s₀ ↝⋆ s₁
@@ -972,7 +972,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k' = otherId}
               {v  = tree⁺}
               {m  = set sutId tree⁺ blockTrees}
-              uniqueIds = refl
+              otherId≢sutId = refl
 
           addVote-modelState :
             let s = record s₀
@@ -1071,11 +1071,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           w : Vote
           w = createVote slot sutId (proofM vote) (signature vote) (blockHash vote)
 
-          vote-round : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
-          vote-round = sym (eqℕ-sound isVotingRound)
+          votingRound≡rnd-slot : getRoundNumber (votingRound vote) ≡ rnd (getSlotNumber slot)
+          votingRound≡rnd-slot = sym (eqℕ-sound isVotingRound)
 
           vote≡w' : vote ≡ w'
-          vote≡w' = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) vote-round
+          vote≡w' = cong (λ {r → record vote { votingRound = MkRoundNumber r}}) votingRound≡rnd-slot
 
           creatorId≡sutId : creatorId vote ≡ sutId
           creatorId≡sutId = eqℕ-sound checkedSut
@@ -1169,8 +1169,32 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
           otherExists =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} uniqueIds')
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
               (otherTree inv)
+
+          xx :
+            addVote (modelState s₀) v
+            ≡
+            let bt = set otherId (addVote tree v)
+                       (set sutId (addVote tree v)
+                         blockTrees)
+            in
+            record
+              { clock        = State.clock s'
+              ; protocol     = modelParams
+              ; allChains    = maybe′ chains [] (bt ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (bt ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (bt ⁉ sutId)
+              }
+          xx
+            rewrite (k'≢k-get∘set {k = sutId} {k' = otherId} {v = addVote tree v} {m = set sutId (addVote tree v) blockTrees} otherId≢sutId)
+            = {!!}
+
+          otherExists' : set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees) ⁉ otherId ≡ just (modelState s')
+          otherExists' =
+            trans
+              (k'≢k-get∘set∘set {k = otherId} {k' = sutId} {v = addVote tree v} {v' = addVote tree v} {m = blockTrees} sutId≢otherId)
+              (trans (get∘set≡id {k = otherId} {v = addVote tree v} {m = blockTrees}) (cong just xx))
 
           otherExists2 :
             set sutId (addChain (modelState s') chain)
@@ -1178,7 +1202,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                 (set sutId (addVote tree v) blockTrees))
                   ⁉ otherId
             ≡ just (modelState s')
-          otherExists2 = {!!}
+          otherExists2 =
+            trans
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addChain (modelState s') chain} {m = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)} sutId≢otherId)
+              otherExists'
 
           trace₁ : s₀ ↝⋆ s'
           trace₁ = CreateVote (invFetched inv)
@@ -1219,7 +1246,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           trace = trace₁ ++' trace₂ ++' trace₃
 
           tree⁺ : NodeModel
-          tree⁺ = addChain (addVote tree v) chain
+          tree⁺ = addChain (modelState s') chain
 
           set-irrelevant :
             let s = record s₀
@@ -1252,7 +1279,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k' = otherId}
               {v  = tree⁺}
               {m  = set sutId tree⁺ blockTrees}
-              uniqueIds = refl
+              otherId≢sutId = refl
 
           addVote-modelState :
             let s = record s₀
@@ -1289,31 +1316,34 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                     }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          s₁-agrees = {!!} -- trans set-irrelevant {!!} -- addVote-modelState
+          s₁-agrees = trans {!!} addVote-modelState
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
-          votes-agree = {!!} -- rewrite vote≡w = refl
+          votes-agree rewrite vote≡w = refl
 
-          msg₀≡msg₁ : messages ≡ (vote-msgs ++ messages) ─ other∈messages
-          msg₀≡msg₁ rewrite msg≡⦅∙⦆∷[] = refl
+          msg₀≡msg₁ : messages ≡ (chain-msgs ++ State.messages s') ─ other∈messages2
+          msg₀≡msg₁
+            rewrite msg≡⦅∙⦆∷[]
+            rewrite msg≡⦅∙⦆∷[]
+            = refl
 
           inv₁ : Invariant s₁
-          inv₁ = {!!} {- with i ← invFetched inv rewrite msg₀≡msg₁ =
+          inv₁ with i ← invFetched inv rewrite msg₀≡msg₁ =
             record
-              { invFetched = let open State s₀ in
+              { invFetched =
                 fetched {
                   record s₀
                     { blockTrees =
                         set otherId (addVote tree v)
                           (set sutId (addVote tree v)
                             blockTrees)
-                    ; messages = (msg ++ messages) ─ other∈messages
-                    ; history = VoteMsg v ∷ history
+                    ; messages = (chain-msgs ++ State.messages s') ─ other∈messages2
+                    ; history = ChainMsg chain ∷ State.history s'
                     }
                   } i
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
-              } -}
+              }
 
     tick-soundness s₀ inv refl
       | True | _ | _ = {!!} -- a vote is expected
@@ -1397,7 +1427,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → transition (modelState s₀) (BadVote vote) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     badVote-soundness s₀ vote inv prf
-      with hasVoted (voterId vote) (votingRound vote) (modelState s₀) in voted?
+      with hasVoted (voterId vote) (votingRound vote) (modelState s₀)
     badVote-soundness {cs} {vs} {ms₁} s₀ vote inv refl | True =
       record
         { s₁ = s₀
