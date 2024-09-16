@@ -648,5 +648,15 @@ List-like structure for defining execution paths.
       _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
 ```
 ```agda
+    infixr 2 _++'_
+
+    _++'_ :
+        M ↝⋆ N
+      → N ↝⋆ O
+      → M ↝⋆ O
+    ∎ ++' M↝⋆O = M↝⋆O
+    (M↝M₁ ↣ M₁↝⋆N) ++' N↝⋆O = M↝M₁ ↣ M₁↝⋆N ++' N↝⋆O
+```
+```agda
   open Semantics public
 ```
