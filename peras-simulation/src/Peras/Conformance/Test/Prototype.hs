@@ -123,12 +123,16 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
       pure mempty
 
   postcondition (s, s') (Step a) _ (gotChains, gotVotes) = do
-    monitorPost $ tabulate "Voting rules" [show $ checkVotingRules $ backoff s]
-    monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (vr1A s'', vr1B s'', vr2A s'', vr2B s'') | let s'' = backoff s]
+    when (newRound (clock s') (protocol s')) $
+      do
+        monitorPost $ tabulate "Voting rules" [show $ checkVotingRules $ backoff s]
+        monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (vr1A s'', vr1B s'', vr2A s'', vr2B s'') | let s'' = if a == Tick then s' else backoff s]
     monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
     monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
     monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition s a)
+    monitorPost $ tabulate "Expected chains" [show $ length expectedChains]
+    monitorPost $ tabulate "Expected votes" [show $ length expectedVotes]
     -- let ok = length r == length expected
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
