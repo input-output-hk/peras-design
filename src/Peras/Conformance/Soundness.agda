@@ -1135,7 +1135,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           chain-msgs = ¬p-messages (ChainMsg chain) sutId
 
           other∈messages2 : chain-msg ∈ chain-msgs ++ ((vote-msgs ++ messages) ─ other∈messages)
-          other∈messages2 = {!!} -- ++⁺ˡ other∈messages'
+          other∈messages2 = ++⁺ˡ other∈messages'
+            where
+              other∈messages' : chain-msg ∈ chain-msgs
+              other∈messages' rewrite msg≡⦅∙⦆∷[] = singleton⁺ refl
 
           s'' : State
           s'' = record s'
@@ -1376,6 +1379,36 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | False | _ = {!!}
 
 
+    @0 initial-soundness : ∀ {cs vs ms₁} s₀ p
+                          → Invariant s₀
+                          → transition (modelState s₀) (Initial p) ≡ Just ((cs , vs) , ms₁)
+                          → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+    initial-soundness s₀ p inv refl =
+      record
+        { s₁ = s₀
+        ; invariant₀ = inv
+        ; invariant₁ = inv
+        ; trace = ∎
+        ; s₁-agrees = {!!}
+        ; votes-agree = refl
+        }
+
+    @0 badVote-soundness : ∀ {cs vs ms₁} s₀ vote
+                          → Invariant s₀
+                          → transition (modelState s₀) (BadVote vote) ≡ Just ((cs , vs) , ms₁)
+                          → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
+    badVote-soundness s₀ vote inv prf
+      with hasVoted (voterId vote) (votingRound vote) (modelState s₀) in voted?
+    badVote-soundness {cs} {vs} {ms₁} s₀ vote inv refl | True =
+      record
+        { s₁ = s₀
+        ; invariant₀ = inv
+        ; invariant₁ = inv
+        ; trace = ∎
+        ; s₁-agrees = refl
+        ; votes-agree = refl
+        }
+
     @0 soundness : ∀ {ms₁ cs vs} (s₀ : State) (a : EnvAction)
               → Invariant s₀
               → transition (modelState s₀) a ≡ Just ((cs , vs) , ms₁)
@@ -1384,4 +1417,5 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
     soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
     soundness s₀ Tick = tick-soundness s₀
-    soundness s₀ (BadVote vote) = {!!}
+    soundness s₀ (BadVote vote) = badVote-soundness s₀ vote
+    soundness s₀ (Initial p) = initial-soundness s₀ p
