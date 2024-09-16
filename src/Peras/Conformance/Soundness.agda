@@ -1172,30 +1172,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
               (otherTree inv)
 
-          xx :
-            addVote (modelState s₀) v
-            ≡
-            let bt = set otherId (addVote tree v)
-                       (set sutId (addVote tree v)
-                         blockTrees)
-            in
-            record
-              { clock        = State.clock s'
-              ; protocol     = modelParams
-              ; allChains    = maybe′ chains [] (bt ⁉ sutId)
-              ; allVotes     = maybe′ votes  [] (bt ⁉ sutId)
-              ; allSeenCerts = maybe′ certs  [] (bt ⁉ sutId)
-              }
-          xx
-            rewrite (k'≢k-get∘set {k = sutId} {k' = otherId} {v = addVote tree v} {m = set sutId (addVote tree v) blockTrees} otherId≢sutId)
-            = {!!}
-
-          otherExists' : set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees) ⁉ otherId ≡ just (modelState s')
-          otherExists' =
-            trans
-              (k'≢k-get∘set∘set {k = otherId} {k' = sutId} {v = addVote tree v} {v' = addVote tree v} {m = blockTrees} sutId≢otherId)
-              (trans (get∘set≡id {k = otherId} {v = addVote tree v} {m = blockTrees}) (cong just xx))
-
           otherExists2 :
             set sutId (addChain (modelState s') chain)
               (set otherId (addVote tree v)
@@ -1204,8 +1180,53 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ≡ just (modelState s')
           otherExists2 =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addChain (modelState s') chain} {m = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)} sutId≢otherId)
+              (k'≢k-get∘set
+                {k = otherId}
+                {k' = sutId}
+                {v = addChain (modelState s') chain}
+                {m = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)}
+                sutId≢otherId)
               otherExists'
+            where
+              otherExists'' : addVote (modelState s₀) v ≡
+                 let bt = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)
+                 in record
+                      { clock        = State.clock s'
+                      ; protocol     = modelParams
+                      ; allChains    = maybe′ chains [] (bt ⁉ sutId)
+                      ; allVotes     = maybe′ votes  [] (bt ⁉ sutId)
+                      ; allSeenCerts = maybe′ certs  [] (bt ⁉ sutId)
+                      }
+              otherExists''
+                rewrite k'≢k-get∘set
+                          {k = sutId}
+                          {k' = otherId}
+                          {v = addVote tree v}
+                          {m = set sutId (addVote tree v) blockTrees}
+                          otherId≢sutId
+                rewrite get∘set≡id
+                          {k = sutId}
+                          {v = addVote tree v}
+                          {m = blockTrees}
+                = refl
+
+              otherExists' :
+                set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees) ⁉ otherId
+                  ≡ just (modelState s')
+              otherExists' =
+                trans
+                  (k'≢k-get∘set∘set
+                    {k = otherId}
+                    {k' = sutId}
+                    {v = addVote tree v}
+                    {v' = addVote tree v}
+                    {m = blockTrees}
+                    sutId≢otherId)
+                  (trans (get∘set≡id
+                           {k = otherId}
+                           {v = addVote tree v}
+                           {m = blockTrees})
+                             (cong just otherExists''))
 
           trace₁ : s₀ ↝⋆ s'
           trace₁ = CreateVote (invFetched inv)
