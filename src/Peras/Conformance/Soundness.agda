@@ -1177,8 +1177,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (set otherId (addVote tree v)
                 (set sutId (addVote tree v) blockTrees))
                   ⁉ otherId
-            ≡ just (addVote tree v)
-
+            ≡ just (modelState s')
           otherExists2 = {!!}
 
           trace₁ : s₀ ↝⋆ s'
@@ -1200,21 +1199,21 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                 ↣ ∎
 
           trace₂ : s' ↝⋆ s''
-          trace₂ = CreateBlock {!!}
+          trace₂ = CreateBlock (invFetched inv)
                     (honest {p = sutId}
                       (existsTrees (sutTree inv) trace₁)
                       chain
                     )
                 ↣ Fetch {m = ChainMsg chain}
                     (honest {p = otherId}
-                      {!!} -- otherExists2
+                      otherExists2
                       other∈messages2
                       ChainReceived
                     )
                 ↣ ∎
 
           trace₃ : s'' ↝⋆ s₁
-          trace₃ = NextSlot {!!} ↣ ∎
+          trace₃ = NextSlot (invFetched inv) ↣ ∎
 
           trace : s₀ ↝⋆ s₁
           trace = trace₁ ++' trace₂ ++' trace₃
