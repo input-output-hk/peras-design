@@ -884,7 +884,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           msgs≡⦅∙⦆∷[] : msgs ≡ ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∷ []
           msgs≡⦅∙⦆∷[] rewrite apply-filter' = refl
 
-          other∈messages : ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msgs ++ State.messages s₀
+          other∈messages : ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msgs ++ messages
           other∈messages = ++⁺ˡ other∈messages'
             where
               other∈messages' : ⦅ otherId , Honest , VoteMsg v , fzero ⦆ ∈ msgs
@@ -1012,7 +1012,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
           votes-agree rewrite vote≡w = refl
 
-          msgs₀≡msgs₁ : State.messages s₀ ≡ (msgs ++ State.messages s₀) ─ other∈messages
+          msgs₀≡msgs₁ : messages ≡ (msgs ++ messages) ─ other∈messages
           msgs₀≡msgs₁ rewrite msgs≡⦅∙⦆∷[] = refl
 
           inv₁ : Invariant s₁
