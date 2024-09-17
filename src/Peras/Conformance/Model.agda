@@ -381,26 +381,22 @@ vr1B' : NodeModel → Bool
 vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
-
-{-
-xx : ∀ {s} → vr1B' s ≡ True → Vr1B s
-xx {s} p = {!!}
-
-yy : ∀ {s} → vr1B' s ≡ False → (Vr1B s → ⊥)
-yy {s} ¬p = {!!}
--}
-
-zz : ∀ {s} → if vr1B' s then (λ ⦃ @0 _ ⦄ → Vr1B s) else (λ ⦃ @0 _ ⦄ → Vr1B s → ⊥)
-zz {s} with vr1B' s -- in eq
-... | False = {!!} -- yy {s} eq
-... | True with allChains s
-... | [] = {!!} -- xx {s} eq
-... | (c ∷ cs) with c
-... | [] = {!!}
-... | (b ∷ bs) = {!!}
-
+ 
 @0 vr1B-prf : ∀ {s} → Reflects (Vr1B s) (vr1B' s)
-vr1B-prf {s} = of {P = Vr1B s} {b = vr1B' s} (zz {s})
+vr1B-prf {s} = of {P = Vr1B s} {b = vr1B' s} (ite {s})
+  where
+    ite : ∀ {s} → if vr1B' s then (λ ⦃ @0 _ ⦄ → Vr1B s) else (λ ⦃ @0 _ ⦄ → Vr1B s → ⊥)
+    ite {s}
+      with vr1B' s in eq
+    ite {s} | False = {!!}
+
+    ite {s} | True
+      with allChains s
+    ite {s} | True | [] = {!!}
+    ite {s} | True | (c ∷ cs)
+      with c
+    ite {s} | True | (c ∷ cs) | [] = {!!}
+    ite {s} | True | (c ∷ cs) | (b ∷ bs) = {!!}
 
 vr1B : (s : NodeModel) → Dec (Vr1B s)
 vr1B s = vr1B' s ⟨ vr1B-prf {s} ⟩
