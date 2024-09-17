@@ -33,8 +33,7 @@ voterId :: Vote -> PartyId
 voterId (MkVote _ p _ _ _) = p
 
 data EnvAction
-  = Initial PerasParams
-  | Tick
+  = Tick
   | NewChain Chain
   | NewVote Vote
   | BadVote Vote
@@ -408,11 +407,6 @@ chainsInState = maybeToList . chainInState
 
 transition ::
   NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
-transition s (Initial p) =
-  Just
-    ( ([], [])
-    , NodeModel (clock s) p (allChains s) (allVotes s) (allSeenCerts s)
-    )
 transition s Tick =
   Just
     (

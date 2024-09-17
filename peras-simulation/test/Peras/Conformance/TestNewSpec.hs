@@ -1,4 +1,4 @@
-module Peras.Conformance.TestSpec where
+module Peras.Conformance.TestNewSpec where
 
 import Control.Monad (replicateM_, (>>))
 import Control.Monad.State (evalStateT)

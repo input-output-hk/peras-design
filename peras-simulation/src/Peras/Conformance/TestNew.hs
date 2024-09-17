@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Peras.Conformance.Test where
+module Peras.Conformance.TestNew where
 
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
