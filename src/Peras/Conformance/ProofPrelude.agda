@@ -50,9 +50,3 @@ postulate -- TODO
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
-
-postulate -- TODO
-  /-% : ∀ {x n : ℕ} → ⦃ _ : NonZero n ⦄
-    → x / n ≡ (suc x) / n
-    → (x % n ≡ᵇ 0) ≡ False
-    → ((suc x) % n ≡ᵇ 0) ≡ False

@@ -133,10 +133,8 @@ Properties that must hold with respect to chains, certificates and votes.
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ H.foldr insertCert (certs t) (certsFromChain c)
 
-{-
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
--}
 
       optimal : ∀ (c : Chain) (t : T)
         → let
@@ -398,18 +396,6 @@ round.
       rnd (getSlotNumber clock) ≟ rnd (suc (getSlotNumber clock))
       where open State M
 ```
-Predicate for a global state asserting that parties of the voting committee for
-a the current voting round have voted. This is needed as a condition when
-transitioning from one voting round to another.
-
-**TODO**: Properly define the condition for required votes
-```agda
-    RequiredVotes : State → Type
-    RequiredVotes M =
-         Any (VotingRule clock ∘ proj₂) blockTrees
-       → Any (hasVote (v-round clock) ∘ proj₂) blockTrees
-      where open State M
-```
 Ticking the global clock increments the slot number and decrements the delay of
 all the messages in the message buffer.
 ```agda
@@ -647,15 +633,7 @@ in a voting round)
 
       NextSlot :
         ∙ Fetched M
-        ∙ NextSlotInSameRound M
-          ─────────────────────
-          M ↝ tick M
-
-      NextSlotNewRound :
-        ∙ Fetched M
-        ∙ LastSlotInRound M
-        ∙ RequiredVotes M
-          ─────────────────
+          ──────────
           M ↝ tick M
 ```
 #### Reflexive, transitive closure
@@ -668,6 +646,16 @@ List-like structure for defining execution paths.
     data _↝⋆_ : State → State → Type where
       ∎ : M ↝⋆ M
       _↣_ : M ↝ N → N ↝⋆ O → M ↝⋆ O
+```
+```agda
+    infixr 2 _++'_
+
+    _++'_ :
+        M ↝⋆ N
+      → N ↝⋆ O
+      → M ↝⋆ O
+    ∎ ++' M↝⋆O = M↝⋆O
+    (M↝M₁ ↣ M₁↝⋆N) ++' N↝⋆O = M↝M₁ ↣ M₁↝⋆N ++' N↝⋆O
 ```
 ```agda
   open Semantics public

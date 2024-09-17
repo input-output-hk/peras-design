@@ -375,10 +375,6 @@ sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
 votesInState :: NodeModel -> [Vote]
 votesInState = maybeToList . voteInState
 
-headBlockHash :: Chain -> Hash Block
-headBlockHash [] = genesisHash
-headBlockHash (b : _) = hash b
-
 chainsInState :: NodeModel -> [Chain]
 chainsInState s =
   if sutIsSlotLeader (clock s) then [block : rest] else []
@@ -405,7 +401,7 @@ chainsInState s =
     createSignedBlock
       (mkParty sutId [] [])
       (clock s)
-      (headBlockHash rest)
+      (tipHash rest)
       (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) [mkParty sutId [] []])
       (MkHash emptyBS)
@@ -497,7 +493,7 @@ transition s (NewChain (block : rest)) =
   do
     guard (slotNumber block == clock s)
     guard (checkBlockFromOther block)
-    guard (parentBlock block == headBlockHash rest)
+    guard (parentBlock block == tipHash rest)
     guard (rest == pref s)
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))

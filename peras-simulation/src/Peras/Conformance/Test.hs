@@ -16,7 +16,7 @@ module Peras.Conformance.Test where
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
 import Peras.Arbitraries ()
-import Peras.Block (Block (..), Certificate (..), Party (pid))
+import Peras.Block (Block (..), Certificate (..), Party (pid), tipHash)
 import Peras.Chain (Chain, Vote (..))
 import Peras.Conformance.Generators
 import Peras.Conformance.Model (
@@ -227,7 +227,7 @@ instance StateModel NodeModel where
   precondition s (Step (NewChain (block : rest))) =
     blockCurrent gen `implies` (slotNumber block == clock s)
       && twoParties gen `implies` Model.checkBlockFromOther block
-      && (parentBlock block == Model.headBlockHash rest)
+      && (parentBlock block == tipHash rest)
       && blockWeightiest gen `implies` (rest == pref s)
       && Foreign.checkSignedBlock block
       && Foreign.checkLeadershipProof (leadershipProof block)
