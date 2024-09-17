@@ -476,11 +476,10 @@ votesInState = maybeToList ∘ voteInState
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-chainsInState : NodeModel → List Chain
-chainsInState s =
-  if sutIsSlotLeader (clock s)
-  then (block ∷ rest) ∷ []
-  else []
+chainInState : NodeModel → Maybe Chain
+chainInState s = do
+  guard (sutIsSlotLeader (clock s))
+  pure (block ∷ rest)
   where
     rest = pref s
     notPenultimateCert : Certificate → Bool
@@ -496,6 +495,11 @@ chainsInState s =
       (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) (mkParty sutId [] [] ∷ []))
       (MkHash emptyBS)
+
+{-# COMPILE AGDA2HS chainInState #-}
+
+chainsInState : NodeModel → List Chain
+chainsInState = maybeToList ∘ chainInState
 
 {-# COMPILE AGDA2HS chainsInState #-}
 

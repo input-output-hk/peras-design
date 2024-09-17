@@ -11,7 +11,7 @@ import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
-import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
+import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
@@ -156,11 +156,6 @@ testParams =
 initialModelState :: NodeModel
 initialModelState =
   NodeModel 1 testParams [genesisChain] [] [genesisCert]
-
-blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
-blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
-  getSlotNumber slot + perasL params + perasT params
-    <= getSlotNumber clock
 
 chainExtends :: Hash Block -> Certificate -> Chain -> Bool
 chainExtends h c =
@@ -375,9 +370,11 @@ sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
 votesInState :: NodeModel -> [Vote]
 votesInState = maybeToList . voteInState
 
-chainsInState :: NodeModel -> [Chain]
-chainsInState s =
-  if sutIsSlotLeader (clock s) then [block : rest] else []
+chainInState :: NodeModel -> Maybe Chain
+chainInState s =
+  do
+    guard (sutIsSlotLeader (clock s))
+    pure (block : rest)
  where
   rest :: Chain
   rest = pref s
@@ -405,6 +402,9 @@ chainsInState s =
       (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) [mkParty sutId [] []])
       (MkHash emptyBS)
+
+chainsInState :: NodeModel -> [Chain]
+chainsInState = maybeToList . chainInState
 
 transition ::
   NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
