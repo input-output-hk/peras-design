@@ -1129,7 +1129,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           block≡β = {!!}
 
           rest≡pref : rest ≡ prefChain tree
-          rest≡pref = eqList-sound checkRest
+          rest≡pref = ? -- eqList-sound checkRest
 
           chain : ValidChain (β ∷ prefChain (modelState s'))
           chain = {!!}
@@ -1455,21 +1455,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness s₀ inv refl
       | False | _ = {!!}
 
-
-    @0 initial-soundness : ∀ {cs vs ms₁} s₀ p
-                          → Invariant s₀
-                          → transition (modelState s₀) (Initial p) ≡ Just ((cs , vs) , ms₁)
-                          → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    initial-soundness s₀ p inv refl =
-      record
-        { s₁ = s₀
-        ; invariant₀ = inv
-        ; invariant₁ = inv
-        ; trace = ∎
-        ; s₁-agrees = {!!}
-        ; votes-agree = refl
-        }
-
     @0 badVote-soundness : ∀ {cs vs ms₁} s₀ vote
                           → Invariant s₀
                           → transition (modelState s₀) (BadVote vote) ≡ Just ((cs , vs) , ms₁)
@@ -1495,4 +1480,3 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
     soundness s₀ Tick = tick-soundness s₀
     soundness s₀ (BadVote vote) = badVote-soundness s₀ vote
-    soundness s₀ (Initial p) = initial-soundness s₀ p
