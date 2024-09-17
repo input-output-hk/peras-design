@@ -574,8 +574,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         β : Block
         β = createBlock slot (creatorId block) (leadershipProof block) (signature block) tree
 
-        block-slotNumber : slotNumber block ≡ slot
-        block-slotNumber = cong MkSlotNumber (eqℕ-sound checkSlot)
+        slotNumber≡slot : slotNumber block ≡ slot
+        slotNumber≡slot = cong MkSlotNumber (eqℕ-sound checkSlot)
 
         rest≡pref : rest ≡ prefChain tree
         rest≡pref = eqList-sound checkRest
@@ -613,7 +613,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       ; bodyHash = bodyHash block
                       ; signature = signature block
                       })
-            block-slotNumber
+            slotNumber≡slot
           rewrite parent≡tip
           rewrite cert≡needCert
           rewrite bodyHash≡txsHash
@@ -1045,8 +1045,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                == getRoundNumber (votingRound vote) in isVotingRound
            | checkVoteFromSut vote in checkedSut
 
+           | (slotNumber block == State.clock s₀) in checkSlot
+           | checkBlockFromSut block in checkedBlockSut
+           | (parentBlock block == tipHash rest) in checkHash
+           | (rest == pref (modelState s₀)) in checkRest -- FIXME: modelState s'
+           | checkSignedBlock block in checkedBlockSig
+           | checkLeadershipProof (leadershipProof block) in checkedLead
+
+
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | (block ∷ rest) ∷ [] | True | True | True | True | True =
+      | True | vote ∷ [] | (block ∷ rest) ∷ []
+      | True | True | True | True | True
+      | True | True | True | True | True | True =
 
         record
           { s₁ = s₁
@@ -1064,6 +1074,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           tree : NodeModel
           tree = modelState s₀
+
+          -- NewVote
 
           w' : Vote
           w' = createVote slot (creatorId vote) (proofM vote) (signature vote) (blockHash vote)
@@ -1122,17 +1134,78 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  ; history = VoteMsg v ∷ history
                  }
 
+          -- NewChain
+
           β : Block
           β = createBlock slot sutId (leadershipProof block) (signature block) (modelState s')
 
-          block≡β : block ≡ β
-          block≡β = {!!}
+          creatorId≡sutId-block : creatorId block ≡ sutId
+          creatorId≡sutId-block = eqℕ-sound checkedBlockSut
 
-          rest≡pref : rest ≡ prefChain tree
-          rest≡pref = ? -- eqList-sound checkRest
+          slotNumber≡slot : slotNumber block ≡ slot
+          slotNumber≡slot = cong MkSlotNumber (eqℕ-sound checkSlot)
+
+          parent≡tip : parentBlock block ≡ tipHash rest
+          parent≡tip = MkHash-inj block-parentBlock
+            where
+              block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
+              block-parentBlock = eqBS-sound checkHash
+
+          cert≡needCert : certificate block ≡ needCert (v-round slot) (modelState s')
+          cert≡needCert = {!!}
+
+          bodyHash≡txsHash :
+            bodyHash block ≡
+              let txs = txSelection slot (creatorId block)
+                  open Hashable ⦃...⦄
+              in blockHash
+                 record
+                   { blockHash = hash txs
+                   ; payload = txs
+                   }
+          bodyHash≡txsHash = {!!}
+
+          rest≡pref : rest ≡ prefChain (modelState s')
+          rest≡pref = {!!} -- eqList-sound checkRest
+
+          pref≡rest : prefChain (modelState s') ≡ rest
+          pref≡rest = sym rest≡pref
+
+          block≡β : block ≡ β
+          block≡β
+            with v ←
+            cong
+              (λ i →  record
+                      { slotNumber = i
+                      ; creatorId = creatorId block
+                      ; parentBlock = parentBlock block
+                      ; certificate = certificate block
+                      ; leadershipProof = leadershipProof block
+                      ; bodyHash = bodyHash block
+                      ; signature = signature block
+                      })
+              slotNumber≡slot
+            rewrite creatorId≡sutId-block
+            rewrite parent≡tip
+            rewrite cert≡needCert
+            rewrite bodyHash≡txsHash
+            rewrite pref≡rest
+            = {!v!}
+
+          validBlockSignature : IsBlockSignature β (signature β)
+          validBlockSignature with v ← axiom-checkBlockSignature checkedBlockSig
+            rewrite sym block≡β
+            rewrite rest≡pref
+            = v
 
           chain : ValidChain (β ∷ prefChain (modelState s'))
-          chain = {!!}
+          chain
+            = let open SmallStep.IsTreeType
+              in Cons {prefChain (modelState s')} {β}
+                validBlockSignature
+                (axiom-checkLeadershipProof {β} checkedLead)
+                refl
+                (is-TreeType .valid (modelState s'))
 
           chain-msg : SmallStep.Envelope
           chain-msg = ⦅ otherId , Honest , ChainMsg chain , fzero ⦆
@@ -1338,7 +1411,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          addVote-modelState
+          addVote-modelState = {!!} {-
             rewrite get∘set≡id
               {k = sutId}
               {v = addChain (modelState s') chain}
@@ -1350,7 +1423,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           --  rewrite (vote≡w)
             rewrite (block≡β)
             rewrite (rest≡pref)
-            = {!refl!} -- refl
+            = {!refl!} -- refl -}
 
           s₁-agrees :
             modelState s₁ ≡
