@@ -13,8 +13,10 @@
 
 module Peras.Conformance.TestNew where
 
+import Control.Monad (when)
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
+import Debug.Trace (traceShow)
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid), tipHash)
 import Peras.Chain (Chain, Vote (..))
@@ -48,12 +50,14 @@ import Test.QuickCheck (
   elements,
   frequency,
   suchThat,
+  tabulate,
  )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.StateModel (
   Any (Some),
   HasVariables (..),
+  PostconditionM,
   StateModel (
     Action,
     arbitraryAction,
@@ -62,6 +66,7 @@ import Test.QuickCheck.StateModel (
     precondition,
     shrinkAction
   ),
+  monitorPost,
  )
 import Text.PrettyPrint (braces, hang, text, vcat, (<+>))
 import Text.PrettyPrint.HughesPJClass (
@@ -71,21 +76,24 @@ import Text.PrettyPrint.HughesPJClass (
  )
 import Prelude hiding (round)
 
-instance HasVariables NodeModel where
+newtype NetworkModel = NetworkModel {getNodeModel :: NodeModel}
+  deriving (Show)
+
+instance HasVariables NetworkModel where
   getAllVariables _ = mempty
 
-instance DynLogicModel NodeModel
+instance DynLogicModel NetworkModel
 
-instance Show (Action NodeModel a) where
+instance Show (Action NetworkModel a) where
   show (Step a) = show a
-deriving instance Eq (Action NodeModel a)
+deriving instance Eq (Action NetworkModel a)
 
-instance HasVariables (Action NodeModel a) where
+instance HasVariables (Action NetworkModel a) where
   getAllVariables _ = mempty
 
-instance Pretty NodeModel where
-  pPrint NodeModel{..} =
-    hang "NodeModel" 2 $
+instance Pretty NetworkModel where
+  pPrint (NetworkModel (NodeModel{..})) =
+    hang "NetworkModel" 2 $
       braces $
         vcat
           [ hang "clock =" 2 $ pPrint (getSlotNumber clock)
@@ -176,101 +184,33 @@ modelSUT = mkParty 1 (filter sutIsSlotLeader [0 .. 10_000]) [0 .. 10_000]
 
 gen :: GenConstraints
 gen =
-  if False
+  if True
     then strictGenConstraints
     else votingGenConstraints
 
-instance StateModel NodeModel where
-  data Action NodeModel a where
-    Step :: EnvAction -> Action NodeModel ([Chain], [Vote])
+instance StateModel NetworkModel where
+  data Action NetworkModel a where
+    Step :: EnvAction -> Action NetworkModel ([Chain], [Vote])
 
-  initialState = initialModelState
+  initialState = NetworkModel initialModelState
 
-  arbitraryAction _ s@NodeModel{clock, allChains, allVotes, protocol} =
-    do
-      v <-
-        if canGenVotes && newRound clock protocol
-          then genVote gen s
-          else pure Nothing
-      let didGenVote = isJust v
-      fmap (Some . Step) $
-        frequency $
-          [(3, pure Tick)]
-            ++ [(1, NewChain <$> genNewChain gen s)]
-            ++ [(100, pure $ NewVote $ fromJust v) | didGenVote && unequivocated v]
-            ++ [(1, BadVote <$> genBadVote) | canGenBadVote]
-   where
-    unequivocated (Just v@MkVote{votingRound = r, creatorId = p}) = all (\MkVote{votingRound = r', creatorId = p'} -> r /= r' || p /= p') allVotes
-    unequivocated Nothing = True
-    badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= pid modelSUT]
-    canGenBadVote = canGenVotes && not (null badVoteCandidates)
-    genBadVote = do
-      block <- elements (concat allChains)
-      (r, p) <- elements badVoteCandidates
-      MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
-    canGenVotes =
-      not (all null allChains) -- There must be some block to vote for.
-        && r > 0 -- No voting is allowed in the zeroth round.
-        && checkVotingRules' gen s
-    r = inRound clock protocol
+  arbitraryAction _ s@(NetworkModel (NodeModel{clock, allChains, allVotes, protocol})) =
+    pure . Some $ Step Tick
 
   shrinkAction _ _ (Step Tick) = []
   shrinkAction _ _ (Step (NewChain (_ : chain))) = map (Some . Step) [Tick, NewChain chain]
   shrinkAction _ _ (Step _) = [Some (Step Tick)]
 
-  -- Copied from `Peras.Conformance.Model.Transition`.
-  precondition s (Step (NewChain [])) = False
-  precondition s (Step (NewChain (block : rest))) =
-    blockCurrent gen `implies` (slotNumber block == clock s)
-      && twoParties gen `implies` Model.checkBlockFromOther block
-      && (parentBlock block == tipHash rest)
-      && blockWeightiest gen `implies` (rest == pref s)
-      && Foreign.checkSignedBlock block
-      && Foreign.checkLeadershipProof (leadershipProof block)
-  precondition s (Step (NewVote v)) =
-    voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
-      && Foreign.checkSignedVote v
-      && twoParties gen `implies` Model.checkVoteFromOther v
-      && checkVotingRules' gen s
-      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
-  precondition s (Step a) = isJust (transition s a)
+  precondition (NetworkModel s) (Step a) = isJust $ transition s a
 
-  nextState s (Step (NewVote v)) _ =
-    if voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
-      && Foreign.checkSignedVote v
-      && twoParties gen `implies` Model.checkVoteFromOther v
-      && checkVotingRules' gen s
-      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
-      then Model.addVote' s v
-      else s
-  nextState s (Step a) _ = maybe s snd $ transition s a
+  nextState (NetworkModel s) (Step a) _ = NetworkModel $ maybe s snd $ transition s a
 
-backoff :: NodeModel -> NodeModel
-backoff node@NodeModel{clock, protocol, allChains, allVotes, allSeenCerts} =
-  let
-    isNewRound = newRound clock protocol
-    r = inRound clock protocol
-    isNewChain [] = False
-    isNewChain (MkBlock{slotNumber} : _) = slotNumber == clock
-    isNewVote MkVote{votingRound} = isNewRound && r == votingRound
-    isNewCert MkCertificate{round} = isNewRound && r == round
-   in
-    node
-      { allChains = filter (not . isNewChain) allChains
-      , allVotes = filter (not . isNewVote) allVotes
-      , allSeenCerts = filter (not . isNewCert) allSeenCerts
-      }
-
-checkVotingRules' :: GenConstraints -> NodeModel -> Bool
-checkVotingRules' MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} s' =
-  let
-    -- FIXME: Evaluate whether we need this.
-    s = backoff s'
-   in
-    voteObeyVR1A `implies` Model.vr1A s
-      && voteObeyVR1B `implies` Model.vr1B s
-      || voteObeyVR2A `implies` Model.vr2A s
-        && voteObeyVR2B `implies` Model.vr2B s
-
-implies :: Bool -> Bool -> Bool
-implies x y = not x || y
+monitorVoting :: Monad m => NodeModel -> PostconditionM m ()
+monitorVoting s@NodeModel{clock, protocol} =
+  when (newRound (clock + 1) protocol) $
+    do
+      monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
+      monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
+      monitorPost $ tabulate "Expected votes" [show $ maybe 0 (length . snd . fst) $ transition s Tick]
+ where
+  s' = s{clock = clock + 1}

@@ -8,6 +8,7 @@ module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Data.Maybe (mapMaybe)
+import Debug.Trace (traceShow)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)

@@ -37,7 +37,7 @@ import Peras.Conformance.Model (
   vr2A,
   vr2B,
  )
-import Peras.Conformance.Test (Action (Step), backoff, modelSUT)
+import Peras.Conformance.TestNew
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -95,8 +95,8 @@ data RunState m = RunState
 
 type Runtime m = StateT (RunState m) m
 
-instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform NodeModel{..} (Step a) _ = case a of
+instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NetworkModel (Runtime m) where
+  perform (NetworkModel NodeModel{..}) (Step a) _ = case a of
     Tick -> do
       RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
@@ -121,17 +121,13 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
-  postcondition (s, s') (Step a) _ (gotChains, gotVotes) = do
-    when (newRound (clock s') (protocol s')) $
-      do
-        monitorPost $ tabulate "Voting rules" [show $ checkVotingRules $ backoff s]
-        monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (vr1A s'', vr1B s'', vr2A s'', vr2B s'') | let s'' = if a == Tick then s' else backoff s]
+  postcondition (NetworkModel s, NetworkModel s') (Step a) _ (gotChains, gotVotes) = do
+    monitorVoting s
     monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
     monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
     monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition s a)
     monitorPost $ tabulate "Expected chains" [show $ length expectedChains]
-    monitorPost $ tabulate "Expected votes" [show $ length expectedVotes]
     -- let ok = length r == length expected
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
@@ -148,10 +144,10 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
     when (gotVotes /= expectedVotes) $
       counterexamplePost . show $
         "  -- expected votes:" <+> pPrint expectedVotes
-    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
+    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint $ NetworkModel s)
     pure ok
 
-prop_node :: Blind (Actions NodeModel) -> Property
+prop_node :: Blind (Actions NetworkModel) -> Property
 prop_node (Blind as) = noShrinking $
   ioProperty $ do
     stateVar <- IO.newTVarIO initialPerasState
