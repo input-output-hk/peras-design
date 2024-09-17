@@ -381,7 +381,14 @@ vr1B' : NodeModel → Bool
 vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
- 
+
+open import Data.Bool.Properties
+open import Relation.Nullary.Negation using (¬_; contradiction)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans)
+
+import Relation.Nullary.Decidable as D -- using (Dec; yes; no; ¬?)
+import Data.List.Relation.Unary.Any as Any
+
 @0 vr1B-prf : ∀ {s} → Reflects (Vr1B s) (vr1B' s)
 vr1B-prf {s} = of {P = Vr1B s} {b = vr1B' s} (ite {s})
   where
@@ -392,11 +399,11 @@ vr1B-prf {s} = of {P = Vr1B s} {b = vr1B' s} (ite {s})
 
     ite {s} | True
       with allChains s
-    ite {s} | True | [] = {!!}
-    ite {s} | True | (c ∷ cs)
-      with c
-    ite {s} | True | (c ∷ cs) | [] = {!!}
-    ite {s} | True | (c ∷ cs) | (b ∷ bs) = {!!}
+    ite {s} | True | [] = contradiction refl (not-¬ eq)
+    ite {s} | True | c ∷ cs
+      with ChainExtends? (votingBlockHash s) (cert' s) c
+    ite {s} | True | c ∷ cs | D.yes p = Any.here {!p!}
+    ite {s} | True | c ∷ cs | D.no p = Any.there {!!}
 
 vr1B : (s : NodeModel) → Dec (Vr1B s)
 vr1B s = vr1B' s ⟨ vr1B-prf {s} ⟩
