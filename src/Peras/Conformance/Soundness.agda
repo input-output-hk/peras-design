@@ -1269,7 +1269,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           tree⁺ : NodeModel
           tree⁺ = addChain (modelState s') chain
 
-          set-irrelevant :
+          set-irrelevant : {-
             let s = record s₀
                       { blockTrees =
                           set otherId tree⁺
@@ -1281,7 +1281,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
               ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
-              }
+              } -}
+            modelState s₁
             ≡
             let s = record s₀
                       { blockTrees =
@@ -1300,7 +1301,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k' = otherId}
               {v  = tree⁺}
               {m  = set sutId tree⁺ blockTrees}
-              otherId≢sutId = refl
+              otherId≢sutId = {!refl!}
 
           addVote-modelState :
             let s = record s₀
@@ -1321,13 +1322,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                       ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          addVote-modelState = {!!} {-
+          addVote-modelState
             rewrite get∘set≡id
               {k = sutId}
               {v = tree⁺}
               {m = blockTrees}
-            rewrite vote≡w
-            = {!!} -- refl -}
+            -- rewrite vote≡w
+            = {!!} -- refl
 
           s₁-agrees :
             modelState s₁ ≡
@@ -1337,7 +1338,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                     }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          s₁-agrees = trans {!!} addVote-modelState
+          s₁-agrees = trans set-irrelevant addVote-modelState
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
           votes-agree rewrite vote≡w = refl
@@ -1376,6 +1377,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | False
       | []
+      rewrite isSlotZero
       =
         record
           { s₁ = s₁
@@ -1399,14 +1401,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         invFetched₁ = fetched {s₀} (invFetched inv)
 
         s₁-agrees :
+          modelState s₁ ≡ ms₁
+          {-
+          modelState (tick s₀)
+          ≡
           record
-            { clock        = State.clock s₁
+            { clock        = MkSlotNumber (suc (getSlotNumber slot))
             ; protocol     = modelParams
-            ; allChains    = maybe′ chains [] (State.blockTrees s₁ ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees s₁ ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₁ ⁉ sutId)
-            }
-          ≡ ms₁
+            ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s₀ ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₀ ⁉ sutId)
+            } -}
         s₁-agrees
           rewrite noCertsFromQuorum {s₁} invFetched₁
           = {!!} -- refl
