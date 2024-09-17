@@ -217,12 +217,6 @@ initialModelState = record
 
 {-# COMPILE AGDA2HS initialModelState #-}
 
-blockOldEnough : PerasParams → SlotNumber → Block → Bool
-blockOldEnough params clock record{slotNumber = slot} =
-  getSlotNumber slot + perasL params + perasT params <= getSlotNumber clock
-
-{-# COMPILE AGDA2HS blockOldEnough #-}
-
 chainExtends : Hash Block → Certificate → Chain → Bool
 chainExtends h c =
   any (λ block → Hashable.hash hashBlock block == blockRef c)
