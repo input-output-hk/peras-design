@@ -11,7 +11,7 @@ import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
-import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasT, perasU, perasτ), defaultPerasParams)
+import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
@@ -33,8 +33,7 @@ voterId :: Vote -> PartyId
 voterId (MkVote _ p _ _ _) = p
 
 data EnvAction
-  = Initial PerasParams
-  | Tick
+  = Tick
   | NewChain Chain
   | NewVote Vote
   | BadVote Vote
@@ -156,11 +155,6 @@ testParams =
 initialModelState :: NodeModel
 initialModelState =
   NodeModel 1 testParams [genesisChain] [] [genesisCert]
-
-blockOldEnough :: PerasParams -> SlotNumber -> Block -> Bool
-blockOldEnough params clock (MkBlock slot _ _ _ _ _ _) =
-  getSlotNumber slot + perasL params + perasT params
-    <= getSlotNumber clock
 
 chainExtends :: Hash Block -> Certificate -> Chain -> Bool
 chainExtends h c =
@@ -408,11 +402,6 @@ chainsInState s =
 
 transition ::
   NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
-transition s (Initial p) =
-  Just
-    ( ([], [])
-    , NodeModel (clock s) p (allChains s) (allVotes s) (allSeenCerts s)
-    )
 transition s Tick =
   Just
     (

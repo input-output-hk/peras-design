@@ -48,6 +48,8 @@ library
                      Peras.Conformance.Test
                      Peras.Conformance.Test.External
                      Peras.Conformance.Test.Prototype
+                     Peras.Conformance.TestNew
+                     Peras.Conformance.TestNew.Prototype
                      Peras.Crypto
                      Peras.Event
                      Peras.Foreign
@@ -129,6 +131,7 @@ test-suite peras-simulation-test
     import:           warnings
     default-language: Haskell2010
     other-modules: Peras.Conformance.TestSpec
+                   Peras.Conformance.TestNewSpec
                    Peras.Prototype.BlockCreationSpec
                    Peras.Prototype.Node.ModelSpec
                    Peras.Prototype.NodeSpec
