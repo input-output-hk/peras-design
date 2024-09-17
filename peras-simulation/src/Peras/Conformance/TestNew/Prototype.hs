@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Peras.Conformance.Test.Prototype where
+module Peras.Conformance.TestNew.Prototype where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
 import Control.Concurrent.STM.TVar qualified as IO
