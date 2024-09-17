@@ -170,6 +170,9 @@ module _ ⦃ _ : Hashable Block ⦄
 
   open Hashable ⦃...⦄
 
+  cert₀ : Certificate
+  cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
+
   ChainExtends : Hash Block → Certificate → Chain → Set
   ChainExtends h c =
     Any (λ block → (hash block ≡ blockRef c))
@@ -182,9 +185,14 @@ module _ ⦃ _ : Hashable Block ⦄
 
   Extends : Hash Block → Certificate → List Chain → Set
   Extends h c = Any (ChainExtends h c)
+  {-
+  Extends h c with c ≟-Certificate cert₀
+  ... | yes _ = λ _ → ⊤
+  ... | no _  = Any (ChainExtends h c)
+  -}
 
-  Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
-  Extends? h c = any? (ChainExtends? h c)
+--  Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
+--  Extends? h c = any? (ChainExtends? h c)
 ```
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda

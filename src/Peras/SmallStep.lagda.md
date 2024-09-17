@@ -191,10 +191,6 @@ The block-tree type is defined as follows:
 
       certs : T → List Certificate
 
-    cert₀ : Certificate
-    cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
-
-    field
       is-TreeType : IsTreeType
                       tree₀ addChain chains preferredChain
                       addVote votes certs cert₀

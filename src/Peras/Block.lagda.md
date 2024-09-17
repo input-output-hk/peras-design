@@ -21,8 +21,7 @@ open import Relation.Nullary using (yes; no; ¬_)
 open import Data.Nat.Properties using (≤-totalOrder)
 open import Data.List.Extrema (≤-totalOrder) using (argmax)
 
-import Relation.Binary.PropositionalEquality as Equ
-open Equ using (_≡_; _≢_; cong)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; cong; cong₂)
 
 open import Peras.Crypto
 open import Peras.Numbering
@@ -136,6 +135,7 @@ Payload = List Tx
 
 record Certificate where
   constructor MkCertificate
+  pattern
   field round : RoundNumber
         blockRef : Hash Block
 
@@ -166,6 +166,14 @@ _≟-BlockHash_ : DecidableEquality (Hash Block)
 (MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟-BS b₂
 ... | yes p = yes (cong MkHash p)
 ... | no ¬p =  no (¬p ∘ cong hashBytes)
+
+_≟-Certificate_ : DecidableEquality Certificate
+(MkCertificate r₁ b₁) ≟-Certificate (MkCertificate r₂ b₂)
+  with r₁ ≟-RoundNumber r₂
+  with b₁ ≟-BlockHash b₂
+... | yes p | yes q = yes (cong₂ MkCertificate p q)
+... | _ | no ¬q = no (¬q ∘ cong blockRef)
+... | no ¬p | _ = no (¬p ∘ cong round)
 
 record BlockBody where
   constructor MkBlockBody
