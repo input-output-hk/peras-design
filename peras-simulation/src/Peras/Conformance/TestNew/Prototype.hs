@@ -125,13 +125,11 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
       pure mempty
 
   postcondition _ Initial{} _ () = pure True
-  postcondition (net@NetworkModel{nodeModel = s}, NetworkModel{nodeModel = s'}) (Step a) _ (gotChains, gotVotes) = do
+  postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (gotChains, gotVotes) = do
+    monitorChain net net'
+    monitorCerts net net'
     monitorVoting net
-    monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
-    monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
-    monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition (sortition net) s a)
-    monitorPost $ tabulate "Expected chains" [show $ length expectedChains]
     -- let ok = length r == length expected
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a

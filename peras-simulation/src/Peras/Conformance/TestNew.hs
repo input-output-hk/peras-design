@@ -14,6 +14,7 @@
 module Peras.Conformance.TestNew where
 
 import Control.Monad (when)
+import Data.Function (on)
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
 import Debug.Trace (traceShow)
@@ -28,6 +29,7 @@ import Peras.Conformance.Model (
   SutIsVoter,
   checkVotingRules,
   initialModelState,
+  newQuora,
   otherId,
   pref,
   testParams,
@@ -231,13 +233,28 @@ instance StateModel NetworkModel where
   nextState net@NetworkModel{nodeModel = s} (Step a) _ =
     net{nodeModel = maybe s snd $ transition (sortition net) s a}
 
+monitorChain :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
+monitorChain net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@NodeModel{clock}} =
+  do
+    monitorPost $ tabulate "Slot leader" [show $ fst (sortition net) clock]
+    monitorPost $ tabulate "Preferred chain length (cumulative, rounded down)" [show $ (* 10) . (`div` 10) $ length $ pref s']
+    monitorPost $ tabulate "Preferred chain lengthens" [show $ on (>) (length . pref) s' s]
+
+monitorCerts :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
+monitorCerts net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@NodeModel{clock}} =
+  do
+    monitorPost $ tabulate "Certs found or created during fetching" [show $ on (-) (length . allSeenCerts) s' s]
+    monitorPost $ tabulate "New quora" [show $ length $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')]
+    monitorPost $ tabulate "Certs on preferred chain (cumulative)" [show $ length $ filter (isJust . certificate) $ pref s']
+    monitorPost $ tabulate "Certs created (cumulative, rounded down)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s']
+
 monitorVoting :: Monad m => NetworkModel -> PostconditionM m ()
 monitorVoting net@NetworkModel{nodeModel = s@NodeModel{clock, protocol}} =
   when (newRound (clock + 1) protocol) $
     do
-      monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
-      monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
       monitorPost $ tabulate "Committee member" [show $ snd (sortition net) r | let r = inRound (clock + 1) protocol]
+      monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
+      monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
       monitorPost $ tabulate "Does vote" [show $ maybe 0 (length . snd . fst) $ transition (sortition net) s Tick]
  where
   s' = s{clock = clock + 1}
