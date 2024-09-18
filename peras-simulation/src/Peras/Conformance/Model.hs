@@ -373,6 +373,12 @@ chainInState :: NodeModel -> Maybe Chain
 chainInState s =
   do
     guard (sutIsSlotLeader (clock s))
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromSut block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
     pure (block : rest)
  where
   rest :: Chain
