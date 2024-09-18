@@ -617,13 +617,11 @@ in a voting round)
           M ↝ N
 
       CreateVote :
-        ∙ Fetched M
         ∙ h ⊢ M ⇉ N
           ─────────
           M ↝ N
 
       CreateBlock :
-        ∙ Fetched M
         ∙ h ⊢ M ↷ N
           ─────────
           M ↝ N
