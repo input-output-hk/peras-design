@@ -369,9 +369,17 @@ sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
 votesInState :: NodeModel -> [Vote]
 votesInState = maybeToList . voteInState
 
-chainsInState :: NodeModel -> [Chain]
-chainsInState s =
-  if sutIsSlotLeader (clock s) then [block : rest] else []
+chainInState :: NodeModel -> Maybe Chain
+chainInState s =
+  do
+    guard (sutIsSlotLeader (clock s))
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromSut block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
+    pure (block : rest)
  where
   rest :: Chain
   rest = pref s
@@ -399,6 +407,9 @@ chainsInState s =
       (if includeCert' then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) [mkParty sutId [] []])
       (MkHash emptyBS)
+
+chainsInState :: NodeModel -> [Chain]
+chainsInState = maybeToList . chainInState
 
 transition ::
   NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
