@@ -209,12 +209,14 @@ instance StateModel NetworkModel where
   arbitraryAction _ s@NetworkModel{nodeModel = NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
     if initialized
       then pure . Some $ Step Tick
-      else
-        fmap Some $
-          Initial
-            <$> genProtocol gen
-            <*> pure (leadershipSlots initialState)
-            <*> pure (voterRounds initialState)
+      else fmap Some $
+        do
+          params <- genProtocol gen
+          let slotLimit = 10_000
+              roundLimit = fromIntegral $ fromIntegral slotLimit `div` perasU params
+          Initial params
+            <$> genSlotLeadership 0.30 slotLimit
+            <*> genCommitteeMembership 0.95 roundLimit
 
   shrinkAction _ _ Initial{} = []
   shrinkAction _ _ (Step Tick) = []
@@ -235,6 +237,7 @@ monitorVoting net@NetworkModel{nodeModel = s@NodeModel{clock, protocol}} =
     do
       monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
       monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
-      monitorPost $ tabulate "Expected votes" [show $ maybe 0 (length . snd . fst) $ transition (sortition net) s Tick]
+      monitorPost $ tabulate "Committee member" [show $ snd (sortition net) r | let r = inRound (clock + 1) protocol]
+      monitorPost $ tabulate "Does vote" [show $ maybe 0 (length . snd . fst) $ transition (sortition net) s Tick]
  where
   s' = s{clock = clock + 1}
