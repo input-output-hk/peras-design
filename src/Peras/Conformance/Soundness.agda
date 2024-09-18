@@ -428,7 +428,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         tree⁺ : NodeModel
         tree⁺ = addVote tree ν
 
-        set-irrelevant :
+        s₁-agrees :
           let s = record s₀
                     { blockTrees =
                         set otherId tree⁺
@@ -441,19 +441,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
-          ≡
-          let s = record s₀
-                    { blockTrees =
-                        set sutId tree⁺ blockTrees }
-          in
-          record
-            { clock        = State.clock s
-            ; protocol     = testParams
-            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
-            }
-        set-irrelevant
+          ≡ ms₁
+        s₁-agrees
           rewrite
             k'≢k-get∘set
               {k = sutId}
@@ -461,33 +450,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {v = tree⁺}
               {m = set sutId tree⁺ blockTrees}
               otherId≢sutId
-          = refl
-
-        addVote-modelState :
-          let s = record s₀
-                    { blockTrees =
-                        set sutId tree⁺ blockTrees }
-          in
-          record
-            { clock        = State.clock s
-            ; protocol     = testParams
-            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
-            }
-          ≡
-          let s = record tree { allVotes = vote ∷ (maybe′ votes [] (blockTrees ⁉ sutId)) }
-          in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-        addVote-modelState
           rewrite get∘set≡id
             {k = sutId}
             {v = tree⁺}
             {m = blockTrees}
           rewrite vote≡v
           = refl
-
-        s₁-agrees : modelState s₁ ≡ ms₁
-        s₁-agrees = trans set-irrelevant addVote-modelState
 
         votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
         votes-agree with creatorId vote ≟ sutId
@@ -643,7 +611,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   )
               ↣ ∎
 
-        addChain-modelState :
+        s₁-agrees :
           let s = record s₀
                     { blockTrees =
                         set otherId (addChain tree chain)
@@ -657,13 +625,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
             ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
             }
-          ≡
-          record tree
-            { allChains    = (β ∷ prefChain tree) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
-            ; allVotes     = maybe′ votes [] (blockTrees ⁉ sutId)
-            ; allSeenCerts = foldr insertCert (maybe′ certs [] (blockTrees ⁉ sutId)) (mapMaybe certificate (β ∷ prefChain tree))
-            }
-        addChain-modelState
+          ≡ ms₁
+        s₁-agrees
           rewrite
             k'≢k-get∘set
               {k = sutId}
@@ -676,34 +639,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k = sutId}
               {v = addChain tree chain}
               {m = blockTrees}
-          = refl
-
-        s₁-agrees :
-          modelState
-            (record s₀
-              { blockTrees =
-                  set otherId
-                    (record tree
-                      { allChains = (β ∷ prefChain tree) ∷ allChains tree
-                      ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate (β ∷ prefChain tree))
-                      }
-                    )
-                    (set
-                      sutId
-                      (record tree
-                        { allChains = (β ∷ prefChain tree) ∷ allChains tree
-                        ; allSeenCerts = foldr insertCert (allSeenCerts tree) (mapMaybe certificate (β ∷ prefChain tree))
-                        }
-                      )
-                      blockTrees
-                    )
-              }
-            )
-            ≡ ms₁
-        s₁-agrees
           rewrite block≡β
           rewrite rest≡pref
-          = addChain-modelState
+          = refl
 
         votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
         votes-agree with creatorId block ≟ sutId
@@ -850,7 +788,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           tree⁺ : NodeModel
           tree⁺ = addVote tree v
 
-          set-irrelevant :
+          s₁-agrees :
             let s = record s₀
                       { blockTrees =
                           set otherId tree⁺
@@ -864,59 +802,24 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
               }
             ≡
-            let s = record s₀
-                      { blockTrees =
-                          set sutId tree⁺ blockTrees }
-            in
-            record
-              { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
-              ; protocol     = testParams
-              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
-              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
-              }
-          set-irrelevant
+            let s = record tree
+                    { clock = MkSlotNumber (suc (getSlotNumber slot))
+                    ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                    }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          s₁-agrees
             rewrite k'≢k-get∘set
               {k  = sutId}
               {k' = otherId}
               {v  = tree⁺}
               {m  = set sutId tree⁺ blockTrees}
-              otherId≢sutId = refl
-
-          addVote-modelState :
-            let s = record s₀
-                      { blockTrees =
-                          set sutId tree⁺ blockTrees }
-            in
-            record
-              { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
-              ; protocol     = testParams
-              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
-              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
-              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
-              }
-            ≡
-            let s = record tree
-                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
-                      ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
-                      }
-            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          addVote-modelState
+              otherId≢sutId
             rewrite get∘set≡id
               {k = sutId}
               {v = tree⁺}
               {m = blockTrees}
             rewrite vote≡w
             = refl
-
-          s₁-agrees :
-            modelState s₁ ≡
-            let s = record tree
-                    { clock = MkSlotNumber (suc (getSlotNumber slot))
-                    ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
-                    }
-            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          s₁-agrees = trans set-irrelevant addVote-modelState
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
           votes-agree rewrite vote≡w = refl
