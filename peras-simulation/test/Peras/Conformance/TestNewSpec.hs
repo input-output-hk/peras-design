@@ -4,7 +4,7 @@ import Control.Monad (replicateM_, (>>))
 import Control.Monad.State (evalStateT)
 import Data.Default (def)
 import Data.Functor (void)
-import Peras.Conformance.Test.Prototype (prop_node)
+import Peras.Conformance.TestNew.Prototype (prop_node)
 import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (modifyMaxSuccess, prop)
 import Test.QuickCheck (Blind (Blind), Gen, Property, Testable, arbitrary, expectFailure, forAll, property, resize)
@@ -18,4 +18,5 @@ spec :: Spec
 spec =
   describe "Prototype node"
     . prop "Simulation respects model"
-    $ forAll arbitrary prop_node
+    $ (if True then forAllDL anyActions_ else forAll arbitrary)
+      (prop_node . Blind)

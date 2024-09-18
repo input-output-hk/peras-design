@@ -44,7 +44,7 @@ import Peras.Conformance.Model (
   transition,
  )
 import Peras.Conformance.Params (PerasParams)
-import Peras.Conformance.Test (Action (Step), modelSUT)
+import Peras.Conformance.Test (Action (Step), modelSUT, sortition)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber)
 import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
@@ -189,7 +189,7 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel
       pure (mempty, mempty)
 
   postcondition (s, s') (Step a) _ (cs, vs) = do
-    let (expectedChains, expectedVotes) = fst (fromJust (transition s a))
+    let (expectedChains, expectedVotes) = fst (fromJust (transition sortition s a))
     let eqVotes vs vs' =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
            in sort (f <$> vs) == sort (f <$> vs')

@@ -6,6 +6,7 @@ module Peras.Conformance.Generators where
 
 import Control.Applicative
 import Control.Arrow
+import Control.Monad
 import Data.Maybe
 import Debug.Trace
 import GHC.Generics (Generic)
@@ -229,3 +230,14 @@ genPartyId MkGenConstraints{twoParties} _ =
   if twoParties
     then pure otherId
     else (max sutId otherId +) . getPositive <$> arbitrary
+
+genSlotLeadership :: Double -> SlotNumber -> Gen [SlotNumber]
+genSlotLeadership fraction limit =
+  filterM (const $ chooseFraction fraction) [1 .. limit]
+
+genCommitteeMembership :: Double -> RoundNumber -> Gen [RoundNumber]
+genCommitteeMembership fraction limit =
+  filterM (const $ chooseFraction fraction) [1 .. limit]
+
+chooseFraction :: Double -> Gen Bool
+chooseFraction fraction = (<= fraction) <$> choose (0, 1)
