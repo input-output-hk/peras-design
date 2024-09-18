@@ -416,8 +416,7 @@ history
     _,_⇑_ : Message → Delay → State → State
     m , d ⇑ M =
       record M
-        { blockTrees = blockTrees
-        ; messages =
+        { messages =
             map (uncurry ⦅_,_, m , d ⦆) parties
             ++ messages
         ; history = m ∷ history
@@ -617,11 +616,13 @@ in a voting round)
           M ↝ N
 
       CreateVote :
+        ∙ Fetched M
         ∙ h ⊢ M ⇉ N
           ─────────
           M ↝ N
 
       CreateBlock :
+        ∙ Fetched M
         ∙ h ⊢ M ↷ N
           ─────────
           M ↝ N

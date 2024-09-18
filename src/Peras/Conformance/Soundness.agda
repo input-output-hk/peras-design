@@ -179,9 +179,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     sutVotesInStep : ∀ {s₀ s₁} → s₀ ↝ s₁ → List (SlotNumber × Vote)
     sutVotesInStep (Fetch _) = []
-    sutVotesInStep (CreateBlock _) = []
+    sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _) = []
-    sutVotesInStep {s₀} (CreateVote (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _))
+    sutVotesInStep {s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _))
       with p ≟ sutId
     ... | (yes _) = (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
     ... | (no _)  = []
@@ -402,7 +402,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (lem-eqBS isValidBlockHash)
 
         trace : s₀ ↝⋆ s₁
-        trace = CreateVote
+        trace = CreateVote (invFetched inv)
                   (honest {σ = Vote.signature vote}
                     validBlockHash
                     creatorExists
@@ -624,7 +624,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             (otherTree inv)
 
         trace : s₀ ↝⋆ s₁
-        trace = CreateBlock
+        trace = CreateBlock (invFetched inv)
                   (honest
                     (otherTree inv)
                     chain
@@ -823,7 +823,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (otherTree inv)
 
           trace : s₀ ↝⋆ s₁
-          trace = CreateVote
+          trace = CreateVote (invFetched inv)
                       (honest {p = sutId} {t = modelState s₀}
                         validBlockHash
                         (sutTree inv)
@@ -1045,7 +1045,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               (otherTree inv)
 
           trace₁ : s₀ ↝⋆ s'
-          trace₁ = CreateVote
+          trace₁ = CreateVote (invFetched inv)
                     (honest {p = sutId}
                       validBlockHash
                       (sutTree inv)
@@ -1210,7 +1210,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                              (cong just otherExists''))
 
           trace₂ : s' ↝⋆ s''
-          trace₂ = CreateBlock
+          trace₂ = CreateBlock (invFetched inv)
                     (honest {p = sutId}
                       (existsTrees (sutTree inv) trace₁)
                       chain
