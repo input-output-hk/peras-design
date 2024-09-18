@@ -587,7 +587,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         parent≡tip = MkHash-inj block-parentBlock
 
         cert≡needCert : certificate block ≡ needCert (v-round slot) tree
-        cert≡needCert = {!!}
+        cert≡needCert = {!!} -- TODO: guards in transition
 
         bodyHash≡txsHash :
           bodyHash block ≡
@@ -598,7 +598,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                    { blockHash = hash txs
                    ; payload = txs
                    }
-        bodyHash≡txsHash = {!!}
+        bodyHash≡txsHash = {!!} -- TODO: txSelection/hash from model
 
         block≡β : block ≡ β
         block≡β
@@ -1033,6 +1033,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
 
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
+      | True | vote ∷ [] | [] | _ | _ | _ | _ | _ = {!!}
 
     tick-soundness s₀ inv refl
       | True
@@ -1134,6 +1136,43 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  ; history = VoteMsg v ∷ history
                  }
 
+          validVote : VotingRule slot tree
+          validVote = S.map
+            (P.map (f-1a {s₀}) (f-1b {s₀}))
+            (P.map (f-2a {s₀}) (f-2b {s₀}))
+            (toWitness (isYes≡True⇒TTrue checkedVRs))
+
+          validBlockHash : BlockSelection slot tree ≡ blockHash vote
+          validBlockHash =
+            MkHash-inj $
+              trans
+                (cong hashBytes (blockSelection-eq {s₀}))
+                (lem-eqBS isValidBlockHash)
+
+          otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
+          otherExists =
+            trans
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
+              (otherTree inv)
+
+          trace₁ : s₀ ↝⋆ s'
+          trace₁ = CreateVote (invFetched inv)
+                    (honest {p = sutId}
+                      validBlockHash
+                      (sutTree inv)
+                      validSignature
+                      startOfRound
+                      axiom-everyoneIsOnTheCommittee
+                      validVote
+                    )
+                ↣ Fetch {m = VoteMsg v}
+                    (honest {p = otherId}
+                      otherExists
+                      other∈messages
+                      VoteReceived
+                    )
+                ↣ ∎
+
           -- NewChain
 
           β : Block
@@ -1152,7 +1191,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               block-parentBlock = eqBS-sound checkHash
 
           cert≡needCert : certificate block ≡ needCert (v-round slot) (modelState s')
-          cert≡needCert = {!!}
+          cert≡needCert = {!!} -- TODO: see ↑
 
           bodyHash≡txsHash :
             bodyHash block ≡
@@ -1163,7 +1202,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                    { blockHash = hash txs
                    ; payload = txs
                    }
-          bodyHash≡txsHash = {!!}
+          bodyHash≡txsHash = {!!} -- TODO: see ↑
 
           rest≡pref : rest ≡ prefChain (modelState s')
           rest≡pref = {!!} -- eqList-sound checkRest
@@ -1232,25 +1271,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           s₁ : State
           s₁ = tick s''
 
-          validVote : VotingRule slot tree
-          validVote = S.map
-            (P.map (f-1a {s₀}) (f-1b {s₀}))
-            (P.map (f-2a {s₀}) (f-2b {s₀}))
-            (toWitness (isYes≡True⇒TTrue checkedVRs))
-
-          validBlockHash : BlockSelection slot tree ≡ blockHash vote
-          validBlockHash =
-            MkHash-inj $
-              trans
-                (cong hashBytes (blockSelection-eq {s₀}))
-                (lem-eqBS isValidBlockHash)
-
-          otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
-          otherExists =
-            trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
-              (otherTree inv)
-
           otherExists2 :
             set sutId (addChain (modelState s') chain)
               (set otherId (addVote tree v)
@@ -1306,24 +1326,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                            {v = addVote tree v}
                            {m = blockTrees})
                              (cong just otherExists''))
-
-          trace₁ : s₀ ↝⋆ s'
-          trace₁ = CreateVote (invFetched inv)
-                    (honest {p = sutId}
-                      validBlockHash
-                      (sutTree inv)
-                      validSignature
-                      startOfRound
-                      axiom-everyoneIsOnTheCommittee
-                      validVote
-                    )
-                ↣ Fetch {m = VoteMsg v}
-                    (honest {p = otherId}
-                      otherExists
-                      other∈messages
-                      VoteReceived
-                    )
-                ↣ ∎
 
           trace₂ : s' ↝⋆ s''
           trace₂ = CreateBlock (invFetched inv)
@@ -1407,11 +1409,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ≡
             let s = record tree
                       { clock    = MkSlotNumber (suc (getSlotNumber slot))
-                      ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
-                      ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+                      ; allVotes = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          addVote-modelState = {!!} {-
+          addVote-modelState
             rewrite get∘set≡id
               {k = sutId}
               {v = addChain (modelState s') chain}
@@ -1420,10 +1422,28 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k = sutId}
               {v = addVote (modelState s₀) v}
               {m = blockTrees}
-          --  rewrite (vote≡w)
-            rewrite (block≡β)
-            rewrite (rest≡pref)
-            = {!refl!} -- refl -}
+            = {!refl!}
+
+          substitute :
+            let s = record tree
+                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+            ≡
+            let s = record tree
+                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          substitute
+            rewrite sym vote≡w
+            rewrite sym block≡β
+            rewrite sym rest≡pref
+            rewrite votingRound≡rnd-slot
+            = {!refl!}
 
           s₁-agrees :
             modelState s₁ ≡
@@ -1433,7 +1453,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                     }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          s₁-agrees = trans set-irrelevant addVote-modelState
+          s₁-agrees = trans set-irrelevant (trans addVote-modelState substitute)
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
           votes-agree rewrite vote≡w = refl
@@ -1461,6 +1481,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
+
+
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
+      | True | vote ∷ [] | (block ∷ rest) ∷ []
+      | _ | _ | _ | _ | _
+      | _ | _ | _ | _ | _ | _ = {!!}
+
 
     tick-soundness s₀ inv refl
       | True | _ | _ = {!!} -- a vote is expected
