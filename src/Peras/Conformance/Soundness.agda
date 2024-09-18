@@ -944,32 +944,37 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
           otherExists =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
+              (k'≢k-get∘set
+                {k = otherId}
+                {k' = sutId}
+                {v = addVote tree v}
+                {m = blockTrees}
+                sutId≢otherId)
               (otherTree inv)
 
           trace₁ : s₀ ↝⋆ s'
           trace₁ = CreateVote (invFetched inv)
-                    (honest {p = sutId}
-                      validBlockHash
-                      (sutTree inv)
-                      validSignature
-                      startOfRound
-                      axiom-everyoneIsOnTheCommittee
-                      validVote
-                    )
-                ↣ Fetch {m = VoteMsg v}
-                    (honest {p = sutId}
-                      (sutTree inv)
-                      (Any.here refl)
-                      VoteReceived
-                    )
-                ↣ Fetch {m = VoteMsg v}
-                    (honest {p = otherId}
-                      otherExists
-                      (Any.here refl)
-                      VoteReceived
-                    )
-                ↣ ∎
+                     (honest {p = sutId}
+                       validBlockHash
+                       (sutTree inv)
+                       validSignature
+                       startOfRound
+                       axiom-everyoneIsOnTheCommittee
+                       validVote
+                     )
+                 ↣ Fetch {m = VoteMsg v}
+                     (honest {p = sutId}
+                       (sutTree inv)
+                       (Any.here refl)
+                       VoteReceived
+                     )
+                 ↣ Fetch {m = VoteMsg v}
+                     (honest {p = otherId}
+                       otherExists
+                       (Any.here refl)
+                       VoteReceived
+                     )
+                 ↣ ∎
 
           -- NewChain
 
@@ -1114,23 +1119,23 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
           trace₂ : s' ↝⋆ s''
           trace₂ = CreateBlock (invFetched inv)
-                    (honest {p = sutId}
-                      (existsTrees (sutTree inv) trace₁)
-                      chain
-                    )
-                ↣ Fetch {m = ChainMsg chain}
-                    (honest {p = sutId}
-                      {!!} -- otherExists2
-                      (Any.here refl)
-                      ChainReceived
-                    )
-                ↣ Fetch {m = ChainMsg chain}
-                    (honest {p = otherId}
-                      otherExists2
-                      (Any.here refl)
-                      ChainReceived
-                    )
-                ↣ ∎
+                     (honest {p = sutId}
+                       (existsTrees (sutTree inv) trace₁)
+                       chain
+                     )
+                 ↣ Fetch {m = ChainMsg chain}
+                     (honest {p = sutId}
+                       {!!} -- otherExists2
+                       (Any.here refl)
+                       ChainReceived
+                     )
+                 ↣ Fetch {m = ChainMsg chain}
+                     (honest {p = otherId}
+                       otherExists2
+                       (Any.here refl)
+                       ChainReceived
+                     )
+                 ↣ ∎
 
           trace₃ : s'' ↝⋆ s₁
           trace₃ = NextSlot (invFetched inv) ↣ ∎
@@ -1272,7 +1277,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | _ | _ | _ | _ | _
       | _ | _ | _ | _ | _ | _ = {!!}
 
-
     tick-soundness s₀ inv refl
       | True | _ | _ = {!!} -- a vote is expected
 
@@ -1284,8 +1288,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | False
       | []
       rewrite isSlotZero
-      =
-        record
+      = record
           { s₁ = s₁
           ; invariant₀ = inv
           ; invariant₁ = inv₁
@@ -1338,7 +1341,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     tick-soundness s₀ inv refl
       | False | _ = {!!}
-
 
     @0 badVote-soundness : ∀ {cs vs ms₁} s₀ vote
                           → Invariant s₀
