@@ -17,3 +17,10 @@ maximumBy candidate f (x : xs) =
 
 comparing :: Ord b => (a -> b) -> a -> a -> Ordering
 comparing f x y = compare (f x) (f y)
+
+mapMaybe :: (a -> Maybe b) -> [a] -> [b]
+mapMaybe p [] = []
+mapMaybe p (x : xs) =
+  case p x of
+    Just y -> y : mapMaybe p xs
+    Nothing -> mapMaybe p xs
