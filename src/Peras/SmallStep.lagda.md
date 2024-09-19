@@ -9,7 +9,7 @@ open import Prelude.Default using (Default)
 open Default ⦃...⦄
 
 open import Prelude.InferenceRules
-open import Prelude.Init hiding (_⊆_)
+open import Prelude.Init hiding (_⊆_; mapMaybe; Maybe)
 
 open Nat using (_≟_; _≤?_; _≤ᵇ_; _≥?_; _%_; _>?_; NonZero)
 open L using (concat)
@@ -21,11 +21,13 @@ open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Params
+open import Peras.Util
 
 open import Data.List.Relation.Binary.Subset.Propositional {A = Block} using (_⊆_)
 open import Data.List.Relation.Binary.Subset.Propositional {A = Certificate} renaming (_⊆_ to _⊆ᶜ_)
 
 import Haskell.Prelude as H -- TODO: drop agda2hs Prelude here
+open H using (Maybe; Just; Nothing)
 
 open Honesty public
 open MembershipProof public
@@ -201,7 +203,7 @@ The block-tree type is defined as follows:
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
-      latestCert cert₀ ∘ L.mapMaybe certificate ∘ preferredChain
+      latestCert cert₀ ∘ mapMaybe certificate ∘ preferredChain
 
     latestCertSeen : T → Certificate
     latestCertSeen = latestCert cert₀ ∘ certs
@@ -529,8 +531,8 @@ c) The last seen certificate is from a later round than
         if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
            ∧ (r ≤ᵇ A + roundNumber cert′)                          -- (b)
            ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)              -- (c)
-        then just cert′
-        else nothing
+        then Just cert′
+        else Nothing
 ```
 Helper function for creating a block
 ```agda

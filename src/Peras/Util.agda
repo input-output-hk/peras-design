@@ -31,3 +31,11 @@ maximumBy {a} candidate f (x ∷ xs) =
 comparing : ⦃ Ord b ⦄ → (a → b) → a → a → Ordering
 comparing f x y = compare (f x) (f y)
 {-# COMPILE AGDA2HS comparing #-}
+
+mapMaybe : ∀ {a b : Set} → (a → Maybe b) → List a → List b
+mapMaybe p []       = []
+mapMaybe p (x ∷ xs) =
+  case p x of λ where
+    (Just y) → y ∷ mapMaybe p xs
+    Nothing → mapMaybe p xs
+{-# COMPILE AGDA2HS mapMaybe #-}

@@ -7,7 +7,6 @@
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
-import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
@@ -15,7 +14,7 @@ import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, per
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (comparing, maximumBy, maybeToList)
+import Peras.Util (comparing, mapMaybe, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -357,20 +356,22 @@ makeVote' s =
       )
     pure (makeVote (protocol s) (clock s) (votingBlockHash s))
 
-voteInState :: NodeModel -> Maybe Vote
-voteInState s =
+type SutIsVoter = RoundNumber -> Bool
+
+voteInState :: SutIsVoter -> NodeModel -> Maybe Vote
+voteInState sutIsVoter s =
   do
+    guard (sutIsVoter (rFromSlot s))
     guard (slotInRound (protocol s) (clock s) == 0)
     makeVote' s
 
-sutIsSlotLeader :: SlotNumber -> Bool
-sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
+votesInState :: SutIsVoter -> NodeModel -> [Vote]
+votesInState sutIsVoter = maybeToList . voteInState sutIsVoter
 
-votesInState :: NodeModel -> [Vote]
-votesInState = maybeToList . voteInState
+type SutIsSlotLeader = SlotNumber -> Bool
 
-chainInState :: NodeModel -> Maybe Chain
-chainInState s =
+chainInState :: SutIsSlotLeader -> NodeModel -> Maybe Chain
+chainInState sutIsSlotLeader s =
   do
     guard (sutIsSlotLeader (clock s))
     guard (slotNumber block == clock s)
@@ -408,15 +409,20 @@ chainInState s =
       (createLeadershipProof (clock s) [mkParty sutId [] []])
       (MkHash emptyBS)
 
-chainsInState :: NodeModel -> [Chain]
-chainsInState = maybeToList . chainInState
+chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
+chainsInState sutIsSlotLeader =
+  maybeToList . chainInState sutIsSlotLeader
 
 transition ::
-  NodeModel -> EnvAction -> Maybe (([Chain], [Vote]), NodeModel)
-transition s Tick =
+  (SutIsSlotLeader, SutIsVoter) ->
+  NodeModel ->
+  EnvAction ->
+  Maybe (([Chain], [Vote]), NodeModel)
+transition (sutIsSlotLeader, sutIsVoter) s Tick =
   Just
     (
       ( chainsInState
+          sutIsSlotLeader
           ( NodeModel
               (nextSlot (clock s))
               (protocol s)
@@ -425,6 +431,7 @@ transition s Tick =
               (allSeenCerts s)
           )
       , votesInState
+          sutIsVoter
           ( NodeModel
               (nextSlot (clock s))
               (protocol s)
@@ -437,6 +444,7 @@ transition s Tick =
         (nextSlot (clock s))
         (protocol s)
         ( chainsInState
+            sutIsSlotLeader
             ( NodeModel
                 (nextSlot (clock s))
                 (protocol s)
@@ -447,6 +455,7 @@ transition s Tick =
             ++ allChains s
         )
         ( votesInState
+            sutIsVoter
             ( NodeModel
                 (nextSlot (clock s))
                 (protocol s)
@@ -464,6 +473,7 @@ transition s Tick =
                     (nextSlot (clock s))
                     (protocol s)
                     ( chainsInState
+                        sutIsSlotLeader
                         ( NodeModel
                             (nextSlot (clock s))
                             (protocol s)
@@ -474,6 +484,7 @@ transition s Tick =
                         ++ allChains s
                     )
                     ( votesInState
+                        sutIsVoter
                         ( NodeModel
                             (nextSlot (clock s))
                             (protocol s)
@@ -488,10 +499,10 @@ transition s Tick =
             )
         )
     )
-transition _ (NewChain []) = Nothing
-transition s (NewChain (block : rest)) =
+transition _ _ (NewChain []) = Nothing
+transition _ s (NewChain (block : rest)) =
   case certificate block of
-    Just cert -> do
+    Just _ -> do
       guard
         ( ( not $
               any
@@ -532,7 +543,7 @@ transition s (NewChain (block : rest)) =
                 (mapMaybe (\r -> certificate r) (block : rest))
             )
         )
-transition s (NewVote v) =
+transition _ s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
     guard (slotToRound (protocol s) (clock s) == votingRound v)
@@ -541,7 +552,7 @@ transition s (NewVote v) =
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just (([], []), addVote' s v)
-transition s (BadVote v) =
+transition _ s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)
     Just (([], []), s)

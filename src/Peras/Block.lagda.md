@@ -7,13 +7,12 @@ module Peras.Block where
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; null; head; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe; maybe′; just; nothing)
 open import Data.Nat using (ℕ)
 open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Unit using (⊤)
 open import Function using (_∘_)
-open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_)
+open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_; Maybe; maybe)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 open import Relation.Nullary using (yes; no; ¬_)
@@ -191,14 +190,6 @@ data HonestBlock : Block → Set where
 {-# COMPILE GHC BlockBody = data G.BlockBody (G.MkBlockBody) #-}
 {-# COMPILE AGDA2HS Certificate deriving (Generic) #-}
 {-# COMPILE GHC Certificate = data G.Certificate (G.MkCertificate) #-}
-
-instance
-  iMaybeEq : {a : Set} → ⦃ i : Eq a ⦄ → Eq (Maybe a)
-  iMaybeEq {{i}} ._==_ x y =
-    maybe′
-      (λ x' → maybe′ (λ y' → x' == y') False y)
-      (maybe′ (λ _ → False) True y)
-      x
 ```
 -->
 
