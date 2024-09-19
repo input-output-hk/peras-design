@@ -258,12 +258,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
       -- noCertsFromQuorum = {!!}
 
-      noVotesAfterTick : ∀ {s₀ s₁}
-        → voteInState (modelState s₀) ≡ Nothing
-        → s₀ ↝⋆ s₁
-        → voteInState (modelState s₁) ≡ Nothing
-      -- noVotesAfterTick = {!!}
-
     fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
     fetched {s} x
       rewrite fetched→[] {s} x
@@ -309,9 +303,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         s₁-agrees   : modelState s₁ ≡ ms₁
         votes-agree : sutVotesInTrace trace ≡ vs
 
-    @0 newVote-soundness : ∀ {cs vs ms₁} s₀ vote
+    @0 newVote-soundness : ∀ {cs vs ms₁ p} s₀ vote
                           → Invariant s₀
-                          → transition (modelState s₀) (NewVote vote) ≡ Just ((cs , vs) , ms₁)
+                          → transition p (modelState s₀) (NewVote vote) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
     newVote-soundness s₀ vote inv prf
@@ -470,9 +464,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
             }
 
-    @0 newChain-soundness : ∀ {cs vs ms₁} s₀ chain
+    @0 newChain-soundness : ∀ {cs vs ms₁ p} s₀ chain
                           → Invariant s₀
-                          → transition (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
+                          → transition p (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     newChain-soundness s₀ (block ∷ rest) inv prf
       with (slotNumber block == State.clock s₀) in checkSlot
@@ -657,9 +651,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
 
 
-    @0 tick-soundness : ∀ {cs vs ms₁} s₀
+    @0 tick-soundness : ∀ {cs vs ms₁ p} s₀
                           → Invariant s₀
-                          → transition (modelState s₀) Tick ≡ Just ((cs , vs) , ms₁)
+                          → transition p (modelState s₀) Tick ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     tick-soundness s₀ inv refl
       with mod (getSlotNumber (State.clock s₀)) (Params.U params) == 0 in isSlotZero
@@ -1339,10 +1333,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness s₀ inv refl
       | False | _ = {!!}
 
-
-    @0 badVote-soundness : ∀ {cs vs ms₁} s₀ vote
+    @0 badVote-soundness : ∀ {cs vs ms₁ p} s₀ vote
                           → Invariant s₀
-                          → transition (modelState s₀) (BadVote vote) ≡ Just ((cs , vs) , ms₁)
+                          → transition p (modelState s₀) (BadVote vote) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     badVote-soundness s₀ vote inv prf
       with hasVoted (voterId vote) (votingRound vote) (modelState s₀)
@@ -1356,9 +1349,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; votes-agree = refl
         }
 
-    @0 soundness : ∀ {ms₁ cs vs} (s₀ : State) (a : EnvAction)
+    @0 soundness : ∀ {ms₁ cs vs p} (s₀ : State) (a : EnvAction)
               → Invariant s₀
-              → transition (modelState s₀) a ≡ Just ((cs , vs) , ms₁)
+              → transition p (modelState s₀) a ≡ Just ((cs , vs) , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
     soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
