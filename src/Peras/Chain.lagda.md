@@ -5,7 +5,7 @@ module Peras.Chain where
 <!--
 ```agda
 open import Data.Bool using (_∧_; true; false)
-open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; mapMaybe; zip) renaming (length to ∣_∣)
+open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; zip) renaming (length to ∣_∣)
 open import Data.List.Membership.Propositional using (_∈_)
 open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
 open import Data.List.Relation.Unary.All using (All)
@@ -24,6 +24,7 @@ open import Peras.Crypto
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
+open import Peras.Util
 
 open import Haskell.Prelude hiding (length; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; Any; _,_; _×_)
 open import Haskell.Law.Equality using (cong)

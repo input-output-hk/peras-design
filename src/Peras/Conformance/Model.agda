@@ -183,7 +183,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe certificate (pref s))
+  in maximumBy genesisCert (comparing round) (mapMaybe certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -246,7 +246,7 @@ addChain' : NodeModel → Chain → NodeModel
 addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
-    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate c)
     }
 
 {-# COMPILE AGDA2HS addChain' #-}
@@ -534,7 +534,7 @@ transition _ s (NewChain (block ∷ rest)) = do
   Just (([] , []) ,
     record s
       { allChains = (block ∷ rest) ∷ allChains s
-      ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
+      ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate (block ∷ rest))
       })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
