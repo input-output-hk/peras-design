@@ -17,7 +17,7 @@ open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
 open import Data.Product as P using () renaming (_,_ to _⸴_)
 
-open import Peras.Block
+open import Peras.Block hiding (certificate) -- workaround for agda2hs, see `certficiate` belowe
 open import Peras.Chain
 open import Peras.Conformance.Params
 open import Peras.Crypto
@@ -183,7 +183,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe certificate (pref s))
+  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe Block.certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -246,7 +246,7 @@ addChain' : NodeModel → Chain → NodeModel
 addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
-    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe Block.certificate c)
     }
 
 {-# COMPILE AGDA2HS addChain' #-}
@@ -508,6 +508,12 @@ chainsInState = maybeToList ∘ chainInState
 
 {-# COMPILE AGDA2HS chainsInState #-}
 
+-- Workaround for agda2hs
+-- The function mimics the Block.certificate but with agda2hs Maybe
+certificate : Block → Maybe Certificate
+certificate record{certificate = just c}  = Just c
+certificate record{certificate = nothing} = Nothing
+
 transition : NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition s Tick =
   let s' = record s { clock = nextSlot (clock s) }
@@ -518,20 +524,34 @@ transition s Tick =
     let s'' = record s' { allVotes  = votes ++ allVotes s'
                         ; allChains = chains ++ allChains s'
                         }
-    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+    in record s'' { allSeenCerts =
+                      foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ (NewChain []) = Nothing
-transition s (NewChain (block ∷ rest)) = do
-  guard (slotNumber block == clock s)
-  guard (checkBlockFromOther block)
-  guard (parentBlock block == tipHash rest)
-  guard (rest == pref s)
-  guard (checkSignedBlock block)
-  guard (checkLeadershipProof (leadershipProof block))
-  Just (([] , []) ,
-    record s
-      { allChains = (block ∷ rest) ∷ allChains s
-      ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
-      })
+transition s (NewChain (block ∷ rest)) =
+  case certificate block of λ where
+    (Just _) →
+      let r = getRoundNumber (slotToRound (protocol s) (clock s))
+          a = not $ any (λ {c → (getRoundNumber (round c)) + 2 == r }) (allSeenCerts s)
+          b = r <= (perasA (protocol s)) + getRoundNumber (round (cert' s))
+          c = getRoundNumber (round (certS s)) < getRoundNumber (round (cert' s))
+      in do guard (a && b && c)
+            transition'
+    Nothing → transition'
+  where
+    transition' = do
+      guard (slotNumber block == clock s)
+      guard (checkBlockFromOther block)
+      guard (parentBlock block == tipHash rest)
+      guard (rest == pref s)
+      guard (checkSignedBlock block)
+      guard (checkLeadershipProof (leadershipProof block))
+      Just (([] , []) ,
+        record s
+          { allChains = (block ∷ rest) ∷ allChains s
+          ; allSeenCerts =
+              foldr insertCert (allSeenCerts s)
+                (Data.List.mapMaybe Block.certificate (block ∷ rest))
+          })
 transition s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)

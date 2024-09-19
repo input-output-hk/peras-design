@@ -490,26 +490,48 @@ transition s Tick =
     )
 transition _ (NewChain []) = Nothing
 transition s (NewChain (block : rest)) =
-  do
-    guard (slotNumber block == clock s)
-    guard (checkBlockFromOther block)
-    guard (parentBlock block == tipHash rest)
-    guard (rest == pref s)
-    guard (checkSignedBlock block)
-    guard (checkLeadershipProof (leadershipProof block))
-    Just
-      ( ([], [])
-      , NodeModel
-          (clock s)
-          (protocol s)
-          ((block : rest) : allChains s)
-          (allVotes s)
-          ( foldr
-              insertCert
-              (allSeenCerts s)
-              (mapMaybe (\r -> certificate r) (block : rest))
+  case certificate block of
+    Just cert -> do
+      guard
+        ( ( not $
+              any
+                ( \case
+                    c ->
+                      getRoundNumber (round c) + 2
+                        == getRoundNumber (slotToRound (protocol s) (clock s))
+                )
+                (allSeenCerts s)
           )
-      )
+            && getRoundNumber (slotToRound (protocol s) (clock s))
+              <= perasA (protocol s) + getRoundNumber (round (cert' s))
+            && getRoundNumber (round (certS s))
+              < getRoundNumber (round (cert' s))
+        )
+      transition'
+    Nothing -> transition'
+ where
+  transition' :: Maybe (([Chain], [Vote]), NodeModel)
+  transition' =
+    do
+      guard (slotNumber block == clock s)
+      guard (checkBlockFromOther block)
+      guard (parentBlock block == tipHash rest)
+      guard (rest == pref s)
+      guard (checkSignedBlock block)
+      guard (checkLeadershipProof (leadershipProof block))
+      Just
+        ( ([], [])
+        , NodeModel
+            (clock s)
+            (protocol s)
+            ((block : rest) : allChains s)
+            (allVotes s)
+            ( foldr
+                insertCert
+                (allSeenCerts s)
+                (mapMaybe (\r -> certificate r) (block : rest))
+            )
+        )
 transition s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)
