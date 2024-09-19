@@ -17,7 +17,7 @@ open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
 open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
 open import Data.Product as P using () renaming (_,_ to _⸴_)
 
-open import Peras.Block hiding (certificate) -- workaround for agda2hs, see `certficiate` belowe
+open import Peras.Block hiding (certificate) -- workaround for agda2hs, see `certficiate` below
 open import Peras.Chain
 open import Peras.Conformance.Params
 open import Peras.Crypto
