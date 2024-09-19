@@ -512,28 +512,6 @@ delay the message.
 
 ## Block creation
 
-Certificates are conditionally added to a block. The following function determines
-if there needs to be a certificate provided for a given voting round and a local
-block-tree. The conditions are as follows
-
-a) There is no certificate from 2 rounds ago in certs
-b) The last seen certificate is not expired
-c) The last seen certificate is from a later round than
-   the last certificate on chain
-
-```agda
-    needCert : RoundNumber → T → Maybe Certificate
-    needCert (MkRoundNumber r) t =
-      let
-        cert⋆ = latestCertOnChain t
-        cert′ = latestCertSeen t
-      in
-        if not (any (λ {c → ⌊ roundNumber c + 2 ≟ r ⌋}) (certs t)) -- (a)
-           ∧ (r ≤ᵇ A + roundNumber cert′)                          -- (b)
-           ∧ (roundNumber cert⋆ <ᵇ roundNumber cert′)              -- (c)
-        then Just cert′
-        else Nothing
-```
 Helper function for creating a block
 ```agda
     createBlock : SlotNumber → PartyId → LeadershipProof → Signature → T → Block
@@ -546,7 +524,7 @@ Helper function for creating a block
             in tipHash (preferredChain t)
         ; certificate =
             let r = v-round s
-            in needCert r t
+            in needCert r (latestCertSeen t) (latestCertOnChain t) (certs t) A
         ; leadershipProof = π
         ; bodyHash =
             let txs = txSelection s p

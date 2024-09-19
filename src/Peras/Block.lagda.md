@@ -4,6 +4,7 @@ module Peras.Block where
 
 <!--
 ```agda
+open import Agda.Builtin.Nat using (Nat)
 open import Data.Bool using (Bool; true; false)
 open import Data.List using (List; null; head; filter)
 open import Data.List.Membership.Propositional using (_∈_; _∉_)
@@ -12,7 +13,7 @@ open import Data.Nat.Properties using (<-strictTotalOrder)
 open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
 open import Data.Unit using (⊤)
 open import Function using (_∘_)
-open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_; Maybe; maybe)
+open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_; Maybe; maybe; if_then_else_; not; any; Just; Nothing)
 open import Level using (0ℓ)
 open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
 open import Relation.Nullary using (yes; no; ¬_)
@@ -181,6 +182,23 @@ data HonestBlock : Block → Set where
     → h ≡ Honest {p}
     → HonestBlock b
 ```
+Certificates are conditionally added to a block. The following function determines
+if there needs to be a certificate provided for a given voting round and a local
+block-tree. The conditions are as follows
+
+a) There is no certificate from 2 rounds ago in certs
+b) The last seen certificate is not expired
+c) The last seen certificate is from a later round than
+   the last certificate on chain
+```agda
+needCert : RoundNumber → Certificate → Certificate → List Certificate → Nat → Maybe Certificate
+needCert (MkRoundNumber r) cert' certS allCerts a =
+   if not (any (λ {c → getRoundNumber (round c) Haskell.+ 2 == r }) allCerts)  -- (a)
+      && (r Haskell.<= (Haskell.fromNat a) Haskell.+ getRoundNumber (round cert'))               -- (b)
+      && (getRoundNumber (round certS) Haskell.< getRoundNumber (round cert')) -- (c)
+   then Just cert'
+   else Nothing
+```
 <!--
 ```agda
 {-# COMPILE AGDA2HS Payload #-}
@@ -190,6 +208,7 @@ data HonestBlock : Block → Set where
 {-# COMPILE GHC BlockBody = data G.BlockBody (G.MkBlockBody) #-}
 {-# COMPILE AGDA2HS Certificate deriving (Generic) #-}
 {-# COMPILE GHC Certificate = data G.Certificate (G.MkCertificate) #-}
+{-# COMPILE AGDA2HS needCert #-}
 ```
 -->
 

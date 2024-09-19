@@ -8,7 +8,7 @@ module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
+import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, needCert, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
@@ -391,7 +391,8 @@ chainInState sutIsSlotLeader s =
   noPenultimateCert = all notPenultimateCert (allSeenCerts s)
   unexpiredCert' :: Bool
   unexpiredCert' =
-    getRoundNumber (round (cert' s)) + perasA (protocol s)
+    getRoundNumber (round (cert' s))
+      + fromIntegral (perasA (protocol s))
       >= getRoundNumber (rFromSlot s)
   newerCert' :: Bool
   newerCert' =
@@ -500,47 +501,182 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
         )
     )
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain (block : rest)) =
-  case certificate block of
-    Just _ -> do
-      guard
-        ( ( not $
-              any
-                ( \case
-                    c ->
-                      getRoundNumber (round c) + 2
-                        == getRoundNumber (slotToRound (protocol s) (clock s))
-                )
-                (allSeenCerts s)
-          )
-            && getRoundNumber (slotToRound (protocol s) (clock s))
-              <= perasA (protocol s) + getRoundNumber (round (cert' s))
-            && getRoundNumber (round (certS s))
-              < getRoundNumber (round (cert' s))
+transition
+  _
+  s
+  ( NewChain
+      ( MkBlock
+          slotNumber
+          creatorId
+          parentBlock
+          Nothing
+          leadershipProof
+          signature
+          bodyHash
+          : rest
         )
-      transition'
-    Nothing -> transition'
- where
-  transition' :: Maybe (([Chain], [Vote]), NodeModel)
-  transition' =
+    ) =
     do
-      guard (slotNumber block == clock s)
-      guard (checkBlockFromOther block)
-      guard (parentBlock block == tipHash rest)
+      guard
+        ( needCert
+            (slotToRound (protocol s) (clock s))
+            (cert' s)
+            (certS s)
+            (allSeenCerts s)
+            (fromIntegral (perasA (protocol s)))
+            == Nothing
+        )
+      guard (slotNumber == clock s)
+      guard
+        ( checkBlockFromOther
+            ( MkBlock
+                slotNumber
+                creatorId
+                parentBlock
+                Nothing
+                leadershipProof
+                signature
+                bodyHash
+            )
+        )
+      guard (parentBlock == tipHash rest)
       guard (rest == pref s)
-      guard (checkSignedBlock block)
-      guard (checkLeadershipProof (leadershipProof block))
+      guard
+        ( checkSignedBlock
+            ( MkBlock
+                slotNumber
+                creatorId
+                parentBlock
+                Nothing
+                leadershipProof
+                signature
+                bodyHash
+            )
+        )
+      guard (checkLeadershipProof leadershipProof)
       Just
         ( ([], [])
         , NodeModel
             (clock s)
             (protocol s)
-            ((block : rest) : allChains s)
+            ( ( MkBlock
+                  slotNumber
+                  creatorId
+                  parentBlock
+                  Nothing
+                  leadershipProof
+                  signature
+                  bodyHash
+                  : rest
+              )
+                : allChains s
+            )
             (allVotes s)
             ( foldr
                 insertCert
                 (allSeenCerts s)
-                (mapMaybe (\r -> certificate r) (block : rest))
+                ( mapMaybe
+                    (\r -> certificate r)
+                    ( MkBlock
+                        slotNumber
+                        creatorId
+                        parentBlock
+                        Nothing
+                        leadershipProof
+                        signature
+                        bodyHash
+                        : rest
+                    )
+                )
+            )
+        )
+transition
+  _
+  s
+  ( NewChain
+      ( MkBlock
+          slotNumber
+          creatorId
+          parentBlock
+          (Just cert)
+          leadershipProof
+          signature
+          bodyHash
+          : rest
+        )
+    ) =
+    do
+      guard
+        ( needCert
+            (slotToRound (protocol s) (clock s))
+            (cert' s)
+            (certS s)
+            (allSeenCerts s)
+            (fromIntegral (perasA (protocol s)))
+            == Just (cert' s)
+        )
+      guard (slotNumber == clock s)
+      guard
+        ( checkBlockFromOther
+            ( MkBlock
+                slotNumber
+                creatorId
+                parentBlock
+                (Just cert)
+                leadershipProof
+                signature
+                bodyHash
+            )
+        )
+      guard (parentBlock == tipHash rest)
+      guard (rest == pref s)
+      guard
+        ( checkSignedBlock
+            ( MkBlock
+                slotNumber
+                creatorId
+                parentBlock
+                (Just cert)
+                leadershipProof
+                signature
+                bodyHash
+            )
+        )
+      guard (checkLeadershipProof leadershipProof)
+      Just
+        ( ([], [])
+        , NodeModel
+            (clock s)
+            (protocol s)
+            ( ( MkBlock
+                  slotNumber
+                  creatorId
+                  parentBlock
+                  (Just cert)
+                  leadershipProof
+                  signature
+                  bodyHash
+                  : rest
+              )
+                : allChains s
+            )
+            (allVotes s)
+            ( foldr
+                insertCert
+                (allSeenCerts s)
+                ( mapMaybe
+                    (\r -> certificate r)
+                    ( MkBlock
+                        slotNumber
+                        creatorId
+                        parentBlock
+                        (Just cert)
+                        leadershipProof
+                        signature
+                        bodyHash
+                        : rest
+                    )
+                )
             )
         )
 transition _ s (NewVote v) =

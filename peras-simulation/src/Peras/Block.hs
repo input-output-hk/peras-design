@@ -1,10 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Peras.Block where
 
+import Numeric.Natural (Natural)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), LeadershipProof, Signature (bytesS), VerificationKey, emptyBS)
-import Peras.Numbering (RoundNumber, SlotNumber)
+import Peras.Numbering (RoundNumber (MkRoundNumber, getRoundNumber), SlotNumber)
+import qualified Prelude as Haskell (any, (+), (<), (<=))
 
 import GHC.Generics (Generic)
 import Peras.Crypto (Hash (..), Hashable (..))
@@ -45,6 +48,30 @@ data Certificate = MkCertificate
   deriving (Generic)
 
 type Payload = [Tx]
+
+needCert ::
+  RoundNumber ->
+  Certificate ->
+  Certificate ->
+  [Certificate] ->
+  Natural ->
+  Maybe Certificate
+needCert (MkRoundNumber r) cert' certS allCerts a =
+  if not
+    ( Haskell.any
+        ( \case
+            c -> (Haskell.+) (getRoundNumber (round c)) 2 == r
+        )
+        allCerts
+    )
+    && (Haskell.<=)
+      r
+      ((Haskell.+) (fromIntegral a) (getRoundNumber (round cert')))
+    && (Haskell.<)
+      (getRoundNumber (round certS))
+      (getRoundNumber (round cert'))
+    then Just cert'
+    else Nothing
 
 instance Eq Certificate where
   x == y = round x == round y && blockRef x == blockRef y

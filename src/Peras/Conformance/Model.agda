@@ -494,7 +494,7 @@ chainInState sutIsSlotLeader s = do
     notPenultimateCert : Certificate → Bool
     notPenultimateCert cert = getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
     noPenultimateCert = all notPenultimateCert (allSeenCerts s)
-    unexpiredCert' = getRoundNumber (round (cert' s)) + perasA (protocol s) >= getRoundNumber (rFromSlot s)
+    unexpiredCert' = getRoundNumber (round (cert' s)) + fromNat (perasA (protocol s)) >= getRoundNumber (rFromSlot s)
     newerCert' = getRoundNumber (round (cert' s)) > getRoundNumber (round (certS s))
     includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
     block = createSignedBlock
@@ -525,31 +525,48 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
     in record s'' { allSeenCerts =
                       foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain (block ∷ rest)) =
-  case certificate block of λ where
-    (Just _) →
-      let r = getRoundNumber (slotToRound (protocol s) (clock s))
-          a = not $ any (λ {c → (getRoundNumber (round c)) + 2 == r }) (allSeenCerts s)
-          b = r <= (perasA (protocol s)) + getRoundNumber (round (cert' s))
-          c = getRoundNumber (round (certS s)) < getRoundNumber (round (cert' s))
-      in do guard (a && b && c)
-            transition'
-    Nothing → transition'
-  where
-    transition' = do
-      guard (slotNumber block == clock s)
-      guard (checkBlockFromOther block)
-      guard (parentBlock block == tipHash rest)
-      guard (rest == pref s)
-      guard (checkSignedBlock block)
-      guard (checkLeadershipProof (leadershipProof block))
-      Just (([] , []) ,
-        record s
-          { allChains = (block ∷ rest) ∷ allChains s
-          ; allSeenCerts =
-              foldr insertCert (allSeenCerts s)
-                (mapMaybe certificate (block ∷ rest))
-          })
+transition _ s (NewChain (
+  record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+  ∷ rest))
+  =
+  let block = record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (needCert r (cert' s) (certS s) (allSeenCerts s) (fromNat (perasA (protocol s))) == Nothing)
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
+transition _ s (NewChain (
+  record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Just cert ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+  ∷ rest))
+  =
+  let block = record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Just cert ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (needCert r (cert' s) (certS s) (allSeenCerts s) (fromNat (perasA (protocol s))) == Just (cert' s))  
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
