@@ -22,11 +22,12 @@ import Peras.Conformance.Generators
 import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
+  SutIsSlotLeader,
+  SutIsVoter,
   checkVotingRules,
   initialModelState,
   otherId,
   pref,
-  sutIsSlotLeader,
   testParams,
   transition,
   votingBlockHash,
@@ -171,8 +172,11 @@ instance Pretty Trace.PerasLog where
 
 -- Slot leader every third slot, always a committee member
 -- FIXME: randomize slot leader slots
+sortition :: (SutIsSlotLeader, SutIsVoter)
+sortition = ((== 1) . (`mod` 3), const True)
+
 modelSUT :: Party
-modelSUT = mkParty 1 (filter sutIsSlotLeader [0 .. 10_000]) [0 .. 10_000]
+modelSUT = mkParty 1 (filter (fst sortition) [0 .. 10_000]) (filter (snd sortition) [0 .. 10_000])
 
 gen :: GenConstraints
 gen =
@@ -233,7 +237,7 @@ instance StateModel NodeModel where
       && twoParties gen `implies` Model.checkVoteFromOther v
       && checkVotingRules' gen s
       && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
-  precondition s (Step a) = isJust (transition s a)
+  precondition s (Step a) = isJust (transition sortition s a)
 
   nextState s (Step (NewVote v)) _ =
     if voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
@@ -243,7 +247,7 @@ instance StateModel NodeModel where
       && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
       then Model.addVote' s v
       else s
-  nextState s (Step a) _ = maybe s snd $ transition s a
+  nextState s (Step a) _ = maybe s snd $ transition sortition s a
 
 backoff :: NodeModel -> NodeModel
 backoff node@NodeModel{clock, protocol, allChains, allVotes, allSeenCerts} =

@@ -37,7 +37,7 @@ import Peras.Conformance.Model (
   vr2A,
   vr2B,
  )
-import Peras.Conformance.Test (Action (Step), backoff, modelSUT)
+import Peras.Conformance.Test (Action (Step), backoff, modelSUT, sortition)
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -129,7 +129,7 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
     monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
     monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
     monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
-    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition s a)
+    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition sortition s a)
     monitorPost $ tabulate "Expected chains" [show $ length expectedChains]
     monitorPost $ tabulate "Expected votes" [show $ length expectedVotes]
     -- let ok = length r == length expected
