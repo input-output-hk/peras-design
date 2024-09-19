@@ -1007,8 +1007,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                    }
           bodyHash≡txsHash = {!!} -- TODO: see ↑
 
+          prefChain≡prefChain' : prefChain tree ≡ prefChain (modelState s')
+          prefchain≡prefChain' = {!!}
+
+          rest≡pref' : rest ≡ prefChain tree
+          rest≡pref' = eqList-sound checkRest
+
           rest≡pref : rest ≡ prefChain (modelState s')
-          rest≡pref = {!!} -- eqList-sound checkRest
+          rest≡pref = trans rest≡pref' prefChain≡prefChain'
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
@@ -1125,7 +1131,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                      )
                  ↣ Fetch {m = ChainMsg chain}
                      (honest {p = sutId}
-                       {!!} -- otherExists2
+                       (existsTrees (sutTree inv) trace₁)
                        (Any.here refl)
                        ChainReceived
                      )
@@ -1216,7 +1222,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {m = set sutId (addVote tree v) blockTrees }
             rewrite get∘set≡id
               {k = sutId}
-              {v = addVote (modelState s₀) v}
+              {v = addVote tree v}
               {m = blockTrees}
             = {!refl!}
 
@@ -1252,7 +1258,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           s₁-agrees = trans set-irrelevant (trans addVote-modelState substitute)
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
-          votes-agree = {!!} -- rewrite vote≡w = refl
+          votes-agree rewrite vote≡w = refl
 
           inv₁ : Invariant s₁
           inv₁ =
