@@ -239,6 +239,7 @@ instance StateModel NetworkModel where
 monitorChain :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
 monitorChain net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@NodeModel{clock}} =
   do
+    monitorPost $ tabulate "Slots (cumulative, rounded down)" [show $ (* 25) . (`div` 25) $ (fromIntegral clock :: Integer)]
     monitorPost $ tabulate "Slot leader" [show $ fst (sortition net) clock]
     monitorPost $ tabulate "Preferred chain length (cumulative, rounded down)" [show $ (* 10) . (`div` 10) $ length $ pref s']
     monitorPost $ tabulate "Preferred chain lengthens" [show $ on (>) (length . pref) s' s]
@@ -259,5 +260,6 @@ monitorVoting net@NetworkModel{nodeModel = s@NodeModel{clock, protocol}} =
       monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
       monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
       monitorPost $ tabulate "Does vote" [show $ maybe 0 (length . snd . fst) $ transition (sortition net) s Tick]
+      monitorPost $ tabulate "Rounds (cumulative, rounded down)" [show $ (* 1) . (`div` 1) . (`div` perasU protocol) $ fromIntegral clock]
  where
   s' = s{clock = clock + 1}
