@@ -205,7 +205,7 @@ instance StateModel NetworkModel where
       , leadershipSlots = filter ((== 1) . (`mod` 3)) [0 .. 10_000]
       , voterRounds = [0 .. 10_000]
       , gen = strictGenConstraints
-      , initialized = useTestParams strictGenConstraints
+      , initialized = useTestParams lenientGenConstraints
       }
 
   arbitraryAction _ net@NetworkModel{nodeModel = s@NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
