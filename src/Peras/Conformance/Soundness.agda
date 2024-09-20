@@ -163,6 +163,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
     open SmallStep.TreeType NodeModelTree renaming (preferredChain to prefChain)
 
+    no-delays : PartyId → SmallStep.Delay
+    no-delays _ = fzero
+
     private
       instance
         Default-T : Default NodeModel
@@ -181,7 +184,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInStep (Fetch _) = []
     sutVotesInStep (CreateBlock _ _) = []
     sutVotesInStep (NextSlot _) = []
-    sutVotesInStep {s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _))
+    sutVotesInStep {s₀} (CreateVote _ (honest {p} {t} {M} {π} {σ} {b} _ _ _ _ _ _ _))
       with p ≟ sutId
     ... | (yes _) = (State.clock s₀ , createVote (State.clock M) p π σ b) ∷ []
     ... | (no _)  = []
@@ -404,6 +407,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     startOfRound
                     axiom-everyoneIsOnTheCommittee
                     validVote
+                    no-delays
                   )
               ↣ Fetch {m = VoteMsg ν}
                   (honest
@@ -593,6 +597,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                   (honest
                     (otherTree inv)
                     chain
+                    no-delays
                   )
               ↣ Fetch {m = ChainMsg chain}
                   (honest {p = sutId}
@@ -767,6 +772,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                         startOfRound
                         axiom-everyoneIsOnTheCommittee
                         validVote
+                        no-delays
                       )
                 ↣ Fetch {m = VoteMsg v}
                     (honest {p = sutId}
@@ -959,6 +965,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                        startOfRound
                        axiom-everyoneIsOnTheCommittee
                        validVote
+                       no-delays
                      )
                  ↣ Fetch {m = VoteMsg v}
                      (honest {p = sutId}
@@ -1126,6 +1133,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                      (honest {p = sutId}
                        (existsTrees (sutTree inv) trace₁)
                        chain
+                       no-delays
                      )
                  ↣ Fetch {m = ChainMsg chain}
                      (honest {p = sutId}
