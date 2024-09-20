@@ -7,6 +7,7 @@ module Peras.Conformance.Generators where
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Data.List
 import Data.Maybe
 import Debug.Trace
 import GHC.Generics (Generic)
@@ -24,9 +25,8 @@ import Prelude hiding (round)
 data GenConstraints
   = -- | Whether to use consistent and semi-realistic protocol parameters.
     MkGenConstraints
-    { useTestParams :: Bool
-    -- ^ Don't generate protocol parameters.
-    , realisticProtocol :: Bool
+    { -- \^ Don't generate protocol parameters.
+      useTestParams :: Bool
     -- ^ Generated parties may not be other than `sutId` and `otherId`.
     , twoParties :: Bool
     -- ^ New blocks are generated at the current slot.
@@ -64,42 +64,29 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False False
+strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 votingGenConstraints :: GenConstraints
-votingGenConstraints = MkGenConstraints False True True True True True True True True False False False False True True True True True
+votingGenConstraints = MkGenConstraints False True True True True True True True False False False False True True True True True
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
-lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False False
+lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
 
 genProtocol :: GenConstraints -> Gen PerasParams
-genProtocol MkGenConstraints{realisticProtocol, twoParties}
-  | realisticProtocol =
-      do
-        perasB <- chooseInteger (0, 20)
-        perasΔ <- chooseInteger (0, 5)
-        perasU <- chooseInteger (60 + 3 * perasΔ, 120)
-        perasL <- chooseInteger (20 + perasΔ, perasU)
-        perasR <- chooseInteger (1, 10)
-        let perasA = perasR * perasU
-        perasK <- (perasR +) <$> chooseInteger (0, 2)
-        let perasT = 0 -- Should not be used in the absence of pre-agreement.
-        perasτ <- frequency [(10, pure 1), (if twoParties then 0 else 1, chooseInteger (0, 3))]
-        pure MkPerasParams{..}
-  | otherwise =
-      do
-        perasB <- chooseInteger (0, 100)
-        perasΔ <- chooseInteger (0, 10)
-        perasU <- chooseInteger (10 + perasΔ, 500)
-        perasL <- chooseInteger (1 + perasΔ, perasU)
-        perasR <- chooseInteger (1, 100)
-        perasA <- ((perasR * perasU) +) <$> chooseInteger (-10, 30)
-        perasK <- (perasR +) <$> chooseInteger (0, 10)
-        let perasT = 0 -- Should not be used in the absence of pre-agreement.
-        perasτ <- frequency [(10, pure 1), (if twoParties then 0 else 1, chooseInteger (0, 3))]
-        pure MkPerasParams{..}
+genProtocol MkGenConstraints{twoParties} =
+  do
+    perasB <- chooseInteger (0, 20)
+    perasΔ <- chooseInteger (0, 5)
+    perasU <- chooseInteger (15 + 3 * perasΔ, 40)
+    perasL <- chooseInteger (10, perasU - perasΔ)
+    perasR <- chooseInteger (1, 4)
+    let perasA = perasR * perasU
+    perasK <- (perasR +) <$> chooseInteger (0, 1)
+    let perasT = 0 -- Should not be used in the absence of pre-agreement.
+    perasτ <- frequency [(10, pure 1), (if twoParties then 0 else 1, chooseInteger (0, 3))]
+    pure MkPerasParams{..}
 
 genSelection :: GenConstraints -> NodeModel -> Chain -> Gen (Hash Block, SlotNumber)
 genSelection MkGenConstraints{selectionObeyChain, selectionObeyAge} NodeModel{clock, protocol, allChains} prefChain =
@@ -241,3 +228,55 @@ genCommitteeMembership fraction limit =
 
 chooseFraction :: Double -> Gen Bool
 chooseFraction fraction = (<= fraction) <$> choose (0, 1)
+
+genHonestTick :: Bool -> GenConstraints -> NodeModel -> Gen (([Chain], [Vote]), NodeModel)
+genHonestTick obeyDelta MkGenConstraints{} node@NodeModel{clock, protocol = params@MkPerasParams{perasΔ}, allChains, allVotes} =
+  do
+    delta <- fromIntegral <$> if obeyDelta then choose (1, perasΔ) else getNonNegative <$> arbitrary
+    let votingSlot = slotInRound params clock == 0
+    sortition' <-
+      elements $
+        [(const True, const False)]
+          ++ [(const False, const True) | votingSlot]
+          ++ [(const True, const True) | votingSlot]
+    let ((newChains, newVotes), node') = second (\n -> n{clock = clock - 1}) $ rollbackNodeModel delta node
+    newChains' <- sublistOf newChains
+    newVotes' <- sublistOf newVotes
+    let
+      addChain s = maybe s snd . transition sortition' s . NewChain
+      addVote s = maybe s snd . transition sortition' s . NewVote
+      reassignTip [] = []
+      reassignTip (b : bs) = b{Peras.Block.creatorId = otherId} : bs
+      reassignVote v = v{Peras.Chain.creatorId = otherId}
+      doTick s =
+        maybe
+          ((mempty, mempty), s)
+          (first $ filter (`notElem` allChains) . fmap reassignTip *** filter (`notElem` allVotes) . fmap reassignVote)
+          $ transition sortition' s Tick
+    pure $
+      doTick $
+        flip (foldl addVote) newVotes' $
+          foldl addChain node' newChains'
+
+rollbackNodeModel :: Int -> NodeModel -> (([Chain], [Vote]), NodeModel)
+rollbackNodeModel delta s@NodeModel{..} =
+  let
+    clock' = max 1 $ clock - fromIntegral delta
+    round' = inRound clock' protocol
+    keepBlock MkBlock{slotNumber} = slotNumber <= clock'
+    keepChain = all keepBlock
+    -- This is approximate because we don't known when the vote was received.
+    keepVote MkVote{votingRound} = votingRound <= round'
+    -- This is approximate because we don't known when the certificate was received.
+    keepCert cert@MkCertificate{round} = cert == genesisCert || round <= round' && cert `elem` nub (mapMaybe certificate `concatMap` allChains')
+    (allChains', newChains) = partition keepChain allChains
+    (allVotes', newVotes) = partition keepVote allVotes
+   in
+    ( (newChains, newVotes)
+    , s
+        { clock = clock'
+        , allChains = allChains'
+        , allVotes = allVotes'
+        , allSeenCerts = filter keepCert allSeenCerts
+        }
+    )

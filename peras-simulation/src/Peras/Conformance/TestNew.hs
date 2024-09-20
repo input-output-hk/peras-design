@@ -95,7 +95,7 @@ instance HasVariables NetworkModel where
 instance DynLogicModel NetworkModel
 
 instance Show (Action NetworkModel a) where
-  show Initial{} = "Initial"
+  show (Initial params _ _) = "Initial (" <> show params <> ")"
   show (Step a) = show a
 deriving instance Eq (Action NetworkModel a)
 
@@ -205,12 +205,15 @@ instance StateModel NetworkModel where
       , leadershipSlots = filter ((== 1) . (`mod` 3)) [0 .. 10_000]
       , voterRounds = [0 .. 10_000]
       , gen = strictGenConstraints
-      , initialized = useTestParams strictGenConstraints
+      , initialized = useTestParams lenientGenConstraints
       }
 
-  arbitraryAction _ s@NetworkModel{nodeModel = NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
+  arbitraryAction _ net@NetworkModel{nodeModel = s@NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
     if initialized
-      then pure . Some $ Step Tick
+      then do
+        (newChains, newVotes) <- fst <$> genHonestTick True gen s
+        fmap (Some . Step) . elements $
+          [Tick] ++ (NewChain <$> newChains) ++ (NewVote <$> newVotes)
       else fmap Some $
         do
           params <- genProtocol gen
@@ -236,6 +239,7 @@ instance StateModel NetworkModel where
 monitorChain :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
 monitorChain net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@NodeModel{clock}} =
   do
+    monitorPost $ tabulate "Slots (cumulative, rounded down)" [show $ (* 25) . (`div` 25) $ (fromIntegral clock :: Integer)]
     monitorPost $ tabulate "Slot leader" [show $ fst (sortition net) clock]
     monitorPost $ tabulate "Preferred chain length (cumulative, rounded down)" [show $ (* 10) . (`div` 10) $ length $ pref s']
     monitorPost $ tabulate "Preferred chain lengthens" [show $ on (>) (length . pref) s' s]
@@ -256,5 +260,6 @@ monitorVoting net@NetworkModel{nodeModel = s@NodeModel{clock, protocol}} =
       monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (Model.vr1A s', Model.vr1B s', Model.vr2A s', Model.vr2B s')]
       monitorPost $ tabulate "Voting rules" [show $ checkVotingRules s']
       monitorPost $ tabulate "Does vote" [show $ maybe 0 (length . snd . fst) $ transition (sortition net) s Tick]
+      monitorPost $ tabulate "Rounds (cumulative, rounded down)" [show $ (* 1) . (`div` 1) . (`div` perasU protocol) $ fromIntegral clock]
  where
   s' = s{clock = clock + 1}

@@ -130,7 +130,6 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
     monitorCerts net net'
     monitorVoting net
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition (sortition net) s a)
-    -- let ok = length r == length expected
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Tick && newRound (clock s') (protocol s')) $
