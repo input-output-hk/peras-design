@@ -95,7 +95,7 @@ instance HasVariables NetworkModel where
 instance DynLogicModel NetworkModel
 
 instance Show (Action NetworkModel a) where
-  show Initial{} = "Initial"
+  show (Initial params _ _) = "Initial (" <> show params <> ")"
   show (Step a) = show a
 deriving instance Eq (Action NetworkModel a)
 
