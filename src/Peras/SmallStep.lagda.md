@@ -415,19 +415,19 @@ Updating the global state inserting the updated block-tree for a given party,
 adding messages to the message buffer for the other parties and appending the
 history
 ```agda
-    _,_⇑_ : Message → Delay → State → State
-    m , d ⇑ M =
+    _,_⇑_ : Message → (PartyId → Delay) → State → State
+    m , fᵈ ⇑ M =
       record M
         { messages =
-            map (uncurry ⦅_,_, m , d ⦆) parties
+            map (λ { (p , h) → ⦅ p , h , m , fᵈ p ⦆}) parties
             ++ messages
         ; history = m ∷ history
         }
       where open State M
 
-    add_diffuse_ : (Message × Delay) → State → State
-    add (m@(ChainMsg x) , d) diffuse M = m , d ⇑ M
-    add (m@(VoteMsg x) , d) diffuse M = m , d ⇑ M
+    delay_by_update_ : Message → (PartyId → Delay) → State → State
+    delay m@(ChainMsg x) by fᵈ update M = m , fᵈ ⇑ M
+    delay m@(VoteMsg x) by fᵈ update M = m , fᵈ ⇑ M
 ```
 ## Fetching
 
@@ -503,9 +503,11 @@ is added to be consumed immediately.
         → StartOfRound s r
         → (mem : IsCommitteeMember p r π)
         → VotingRule s t
+        → (fᵈ : PartyId → Delay)
           ----------------------------------------------
         → Honest {p} ⊢
-            M ⇉ add (VoteMsg (mem , sig) , 𝟘) diffuse M
+            M ⇉ delay VoteMsg (mem , sig) by fᵈ
+                 update M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -581,12 +583,11 @@ message is added to the message buffer
           in
           blockTrees M ⁉ p ≡ just t
         → (vc : ValidChain (b ∷ pref))
+        → (fᵈ : PartyId → Delay)
           ----------------------------
         → Honest {p} ⊢
-            M ↷ add (
-                  ChainMsg vc
-                , 𝟘)
-                diffuse M
+            M ↷ delay ChainMsg vc by fᵈ
+                 update M
 ```
 ## Small-step semantics
 
