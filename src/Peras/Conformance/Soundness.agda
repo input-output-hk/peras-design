@@ -468,35 +468,22 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition p (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s₀
-      (record
-        { slotNumber = slotNumber
-        ; creatorId = creatorId
-        ; parentBlock = parentBlock
-        ; certificate = Nothing
-        ; leadershipProof = leadershipProof
-        ; signature = signature
-        ; bodyHash = bodyHash } ∷ rest) inv prf
-      with (needCert (v-round (clock (modelState s₀))) (latestCertSeen (modelState s₀)) (latestCertOnChain (modelState s₀)) (certs (modelState s₀)) (perasA testParams) == Nothing) in ¬needCert
-         | (slotNumber == State.clock s₀) in checkSlot
-         | checkBlockFromOther
-             (record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash })
-               in checkedOther
-         | (parentBlock == tipHash rest) in checkHash
-         | (rest == pref (modelState s₀)) in checkRest
-         | checkSignedBlock
-             (record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash })
-               in checkedSig
-         | checkLeadershipProof leadershipProof in checkedLead
+    newChain-soundness s₀ (block@(record { certificate = Nothing }) ∷ rest) inv prf
+      with needCert
+             (v-round (clock (modelState s₀)))
+             (latestCertSeen (modelState s₀))
+             (latestCertOnChain (modelState s₀))
+             (certs (modelState s₀))
+             (perasA testParams) == Nothing
+               in ¬needCert
+         | slotNumber block == State.clock s₀ in checkSlot
+         | checkBlockFromOther block in checkedOther
+         | parentBlock block == tipHash rest in checkHash
+         | rest == pref (modelState s₀) in checkRest
+         | checkSignedBlock block in checkedSig
+         | checkLeadershipProof (leadershipProof block) in checkedLead
     newChain-soundness {cs} {vs} {ms₁} s₀
-      (record
-        {slotNumber = slotNumber
-        ; creatorId = creatorId
-        ; parentBlock = parentBlock
-        ; certificate = Nothing
-        ; leadershipProof = leadershipProof
-        ; signature = signature
-        ; bodyHash = bodyHash } ∷ rest) inv refl
+      (block@(record { certificate = Nothing }) ∷ rest) inv refl
       | True | True | True | True | True | True | True =
       record
         { s₁ = s₁
@@ -509,48 +496,43 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       where
         open State s₀ renaming (clock to slot)
 
-        block : Block
-        block =
-          record
-            { slotNumber = slotNumber
-            ; creatorId = creatorId
-            ; parentBlock = parentBlock
-            ; certificate = Nothing
-            ; leadershipProof = leadershipProof
-            ; signature = signature
-            ; bodyHash = bodyHash
-            }
-
         tree : NodeModel
         tree = modelState s₀
 
-        notFromSut : creatorId ≢ sutId
+        notFromSut : creatorId block ≢ sutId
         notFromSut x = otherId≢sutId (trans (sym (eqℕ-sound checkedOther)) x)
 
-        creatorId≡otherId : creatorId ≡ otherId
+        creatorId≡otherId : creatorId block ≡ otherId
         creatorId≡otherId = eqℕ-sound checkedOther
 
         β : Block
-        β = createBlock slot otherId leadershipProof signature tree
+        β = createBlock slot otherId (leadershipProof block) (signature block) tree
 
-        slotNumber≡slot : slotNumber ≡ slot
+        slotNumber≡slot : slotNumber block ≡ slot
         slotNumber≡slot = cong MkSlotNumber (eqℕ-sound checkSlot)
 
         rest≡pref : rest ≡ prefChain tree
         rest≡pref = eqList-sound checkRest
 
-        block-parentBlock : hashBytes parentBlock ≡ hashBytes (tipHash rest)
+        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
         block-parentBlock = eqBS-sound checkHash
 
-        parent≡tip : parentBlock ≡ tipHash rest
+        parent≡tip : parentBlock block ≡ tipHash rest
         parent≡tip = MkHash-inj block-parentBlock
 
-        cert≡needCert : certificate block ≡ needCert (v-round slot) (latestCertSeen tree) (latestCertOnChain tree) (certs tree) (perasA testParams)
+        cert≡needCert :
+          certificate block ≡
+          needCert
+            (v-round slot)
+            (latestCertSeen tree)
+            (latestCertOnChain tree)
+            (certs tree)
+            (perasA testParams)
         cert≡needCert = sym (eqMaybe-sound ¬needCert)
 
         bodyHash≡txsHash :
-          bodyHash ≡
-            let txs = txSelection slot creatorId
+          bodyHash block ≡
+            let txs = txSelection slot (creatorId block)
                 open Hashable ⦃...⦄
             in blockHash
                  record
@@ -560,31 +542,19 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         bodyHash≡txsHash = {!!} -- TODO: txSelection/hash from model
 
         block≡β : block ≡ β
-        block≡β = {!!} {-
-          with v ←
-          cong
-            (λ i →  record
-                      { slotNumber = i
-                      ; creatorId = creatorId
-                      ; parentBlock = parentBlock
-                      ; certificate = certificate block
-                      ; leadershipProof = leadershipProof
-                      ; bodyHash = bodyHash
-                      ; signature = signature
-                      })
-            slotNumber≡slot
+        block≡β with v ← cong (λ i →  record block{ slotNumber = i }) slotNumber≡slot
           rewrite parent≡tip
           rewrite cert≡needCert
           rewrite bodyHash≡txsHash
           rewrite rest≡pref
           rewrite creatorId≡otherId
-          = v -}
+          = v
 
         validSignature : IsBlockSignature β (Block.signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
           rewrite block≡β
           rewrite rest≡pref
-          = {!!} -- v
+          = v
 
         chain : ValidChain (β ∷ prefChain tree)
         chain
@@ -666,12 +636,13 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {k = sutId}
               {v = addChain tree chain}
               {m = blockTrees}
+          -- rewrite cert≡needCert
           rewrite block≡β
           rewrite rest≡pref
           = {!!} -- refl
 
         votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
-        votes-agree with creatorId ≟ sutId
+        votes-agree with (creatorId block) ≟ sutId
         ... | yes p = ⊥-elim (notFromSut p)
         ... | no _  = refl
 
