@@ -208,9 +208,12 @@ instance StateModel NetworkModel where
       , initialized = useTestParams strictGenConstraints
       }
 
-  arbitraryAction _ s@NetworkModel{nodeModel = NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
+  arbitraryAction _ net@NetworkModel{nodeModel = s@NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
     if initialized
-      then pure . Some $ Step Tick
+      then do
+        (newChains, newVotes) <- fst <$> genHonestTick True gen s
+        fmap (Some . Step) . elements $
+          [Tick] ++ (NewChain <$> newChains) ++ (NewVote <$> newVotes)
       else fmap Some $
         do
           params <- genProtocol gen

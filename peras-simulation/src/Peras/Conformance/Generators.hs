@@ -7,6 +7,7 @@ module Peras.Conformance.Generators where
 import Control.Applicative
 import Control.Arrow
 import Control.Monad
+import Data.List
 import Data.Maybe
 import Debug.Trace
 import GHC.Generics (Generic)
@@ -98,7 +99,7 @@ genProtocol MkGenConstraints{realisticProtocol, twoParties}
         perasA <- ((perasR * perasU) +) <$> chooseInteger (-10, 30)
         perasK <- (perasR +) <$> chooseInteger (0, 10)
         let perasT = 0 -- Should not be used in the absence of pre-agreement.
-        perasτ <- frequency [(10, pure 1), (if twoParties then 0 else 1, chooseInteger (0, 3))]
+        perasτ <- frequency [(1, pure 1), (5, pure 2), (if twoParties then 0 else 1, chooseInteger (0, 3))]
         pure MkPerasParams{..}
 
 genSelection :: GenConstraints -> NodeModel -> Chain -> Gen (Hash Block, SlotNumber)
@@ -241,3 +242,53 @@ genCommitteeMembership fraction limit =
 
 chooseFraction :: Double -> Gen Bool
 chooseFraction fraction = (<= fraction) <$> choose (0, 1)
+
+genHonestTick :: Bool -> GenConstraints -> NodeModel -> Gen (([Chain], [Vote]), NodeModel)
+genHonestTick obeyDelta MkGenConstraints{} node@NodeModel{clock, protocol = params@MkPerasParams{perasΔ}} =
+  do
+    delta <- fromIntegral <$> if obeyDelta then choose (1, perasΔ) else getNonNegative <$> arbitrary
+    let votingSlot = slotInRound params clock == 0
+    sortition' <-
+      elements $
+        [(const True, const False)]
+          ++ [(const False, const True) | votingSlot]
+          ++ [(const True, const True) | votingSlot]
+    let ((newChains, newVotes), node') = second (\n -> n{clock = clock - 1}) $ rollbackNodeModel delta node
+    newChains' <- sublistOf newChains
+    newVotes' <- sublistOf newVotes
+    let
+      addChain s = maybe s snd . transition sortition' s . NewChain
+      addVote s = maybe s snd . transition sortition' s . NewVote
+      reassignTip [] = []
+      reassignTip (b : bs) = b{Peras.Block.creatorId = otherId} : bs
+      reassignVote v = v{Peras.Chain.creatorId = otherId}
+      doTick s =
+        maybe ((mempty, mempty), s) (first $ fmap reassignTip *** fmap reassignVote) $
+          transition sortition' s Tick
+    pure $
+      doTick $
+        flip (foldl addVote) newVotes' $
+          foldl addChain node' newChains'
+
+rollbackNodeModel :: Int -> NodeModel -> (([Chain], [Vote]), NodeModel)
+rollbackNodeModel delta s@NodeModel{..} =
+  let
+    clock' = max 1 $ clock - fromIntegral delta
+    round' = inRound clock' protocol
+    keepBlock MkBlock{slotNumber} = slotNumber <= clock'
+    keepChain = all keepBlock
+    -- This is approximate because we don't known when the vote was received.
+    keepVote MkVote{votingRound} = votingRound <= round'
+    -- This is approximate because we don't known when the certificate was received.
+    keepCert cert@MkCertificate{round} = cert == genesisCert || round <= round' && cert `elem` nub (mapMaybe certificate `concatMap` allChains')
+    (allChains', newChains) = partition keepChain allChains
+    (allVotes', newVotes) = partition keepVote allVotes
+   in
+    ( (newChains, newVotes)
+    , s
+        { clock = clock'
+        , allChains = allChains'
+        , allVotes = allVotes'
+        , allSeenCerts = filter keepCert allSeenCerts
+        }
+    )
