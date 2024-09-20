@@ -13,7 +13,8 @@ data-dir:           golden
 data-files:         *.json
 
 common warnings
-    ghc-options: -Wall -Wunused-packages -Werror
+    ghc-options: -O3
+                 -Wall -Wunused-packages -Werror
                  -fno-warn-missing-pattern-synonym-signatures
                  -fno-warn-missing-signatures
                  -fno-warn-name-shadowing

@@ -214,14 +214,15 @@ instance StateModel NetworkModel where
         (newChains, newVotes) <- fst <$> genHonestTick True gen s
         fmap (Some . Step) . elements $
           [Tick] ++ (NewChain <$> newChains) ++ (NewVote <$> newVotes)
-      else fmap Some $
-        do
-          params <- genProtocol gen
-          let slotLimit = 10_000
-              roundLimit = fromIntegral $ fromIntegral slotLimit `div` perasU params
-          Initial params
-            <$> genSlotLeadership 0.30 slotLimit
-            <*> genCommitteeMembership 0.95 roundLimit
+      else scale (`div` actionsSizeScaling) $
+        fmap Some $
+          do
+            params <- genProtocol gen
+            let slotLimit = 10_000
+                roundLimit = fromIntegral $ fromIntegral slotLimit `div` perasU params
+            Initial params
+              <$> genSlotLeadership 0.30 slotLimit
+              <*> genCommitteeMembership 0.95 roundLimit
 
   shrinkAction _ _ Initial{} = []
   shrinkAction _ _ (Step Tick) = []
@@ -241,7 +242,7 @@ monitorChain net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@No
   do
     monitorPost $ tabulate "Slots (cumulative, rounded down)" [show $ (* 25) . (`div` 25) $ (fromIntegral clock :: Integer)]
     monitorPost $ tabulate "Slot leader" [show $ fst (sortition net) clock]
-    monitorPost $ tabulate "Preferred chain length (cumulative, rounded down)" [show $ (* 10) . (`div` 10) $ length $ pref s']
+    monitorPost $ tabulate "Preferred chain length (cumulative, rounded down)" [show $ (* 25) . (`div` 25) $ length $ pref s']
     monitorPost $ tabulate "Preferred chain lengthens" [show $ on (>) (length . pref) s' s]
 
 monitorCerts :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
@@ -250,7 +251,7 @@ monitorCerts net@NetworkModel{nodeModel = s} net'@NetworkModel{nodeModel = s'@No
     monitorPost $ tabulate "Certs found or created during fetching" [show $ on (-) (length . allSeenCerts) s' s]
     monitorPost $ tabulate "New quora" [show $ length $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')]
     monitorPost $ tabulate "Certs on preferred chain (cumulative)" [show $ length $ filter (isJust . certificate) $ pref s']
-    monitorPost $ tabulate "Certs created (cumulative, rounded down)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s']
+    monitorPost $ tabulate "Certs created (cumulative, rounded down)" [show $ (* 1) . (`div` 1) $ length $ allSeenCerts s']
 
 monitorVoting :: Monad m => NetworkModel -> PostconditionM m ()
 monitorVoting net@NetworkModel{nodeModel = s@NodeModel{clock, protocol}} =

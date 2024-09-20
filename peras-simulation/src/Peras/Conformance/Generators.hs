@@ -74,6 +74,10 @@ votingGenConstraints = MkGenConstraints False True True True True True True True
 lenientGenConstraints :: GenConstraints
 lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
 
+-- | Generator size scaling for sequence of actions.
+actionsSizeScaling :: Int
+actionsSizeScaling = 3
+
 genProtocol :: GenConstraints -> Gen PerasParams
 genProtocol MkGenConstraints{twoParties} =
   do
