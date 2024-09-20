@@ -4,21 +4,60 @@
 
 module Peras.Conformance.Generators where
 
-import Control.Applicative
-import Control.Arrow
-import Control.Monad
-import Data.List
-import Data.Maybe
-import Debug.Trace
+import Control.Applicative (Applicative (pure, (<*>)), (<$>))
+import Control.Arrow (Arrow (first, second, (&&&), (***)))
+import Control.Monad (Functor (fmap), filterM, (=<<))
+import Data.List (
+  all,
+  any,
+  concatMap,
+  dropWhile,
+  elem,
+  filter,
+  foldl,
+  maximum,
+  notElem,
+  nub,
+  null,
+  partition,
+  (++),
+ )
+import Data.Maybe (Maybe (..), isNothing, mapMaybe, maybe)
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
-import Peras.Block
-import Peras.Chain
-import Peras.Conformance.Model
-import Peras.Crypto
-import Peras.Numbering
+import Peras.Block (
+  Block (MkBlock, certificate, creatorId, slotNumber),
+  Certificate (MkCertificate, round),
+  PartyId,
+ )
+import Peras.Chain (Chain, Vote (MkVote, creatorId, votingRound))
+import Peras.Conformance.Model (
+  EnvAction (NewChain, NewVote, Tick),
+  NodeModel (..),
+  genesisCert,
+  genesisHash,
+  otherId,
+  sutId,
+  transition,
+ )
+import Peras.Crypto (Hash, Hashable (hash))
+import Peras.Numbering (
+  RoundNumber (..),
+  SlotNumber (..),
+  slotInRound,
+ )
 import Peras.Prototype.Types (PerasParams (..), hashTip, inRound)
-import Test.QuickCheck
+import Test.QuickCheck (
+  Arbitrary (arbitrary),
+  Gen,
+  NonNegative (getNonNegative),
+  Positive (getPositive),
+  choose,
+  chooseInteger,
+  elements,
+  frequency,
+  sublistOf,
+ )
 import Prelude hiding (round)
 
 -- | Constraints on generating Peras values.

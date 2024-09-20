@@ -17,11 +17,19 @@ import Control.Monad (when)
 import Data.Function (on)
 import Data.Maybe (Maybe (..), fromJust, isJust)
 import Data.Set (Set)
-import Debug.Trace (traceShow)
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), Certificate (..), Party (pid), tipHash)
 import Peras.Chain (Chain, Vote (..))
-import Peras.Conformance.Generators
+import Peras.Conformance.Generators (
+  GenConstraints (useTestParams),
+  actionsSizeScaling,
+  genCommitteeMembership,
+  genHonestTick,
+  genProtocol,
+  genSlotLeadership,
+  lenientGenConstraints,
+  strictGenConstraints,
+ )
 import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
@@ -37,7 +45,7 @@ import Peras.Conformance.Model (
   votingBlockHash,
  )
 import Peras.Conformance.Model qualified as Model
-import Peras.Conformance.Params
+import Peras.Conformance.Params (PerasParams (perasU, perasτ))
 import Peras.Crypto (Hashable (hash))
 import Peras.Foreign qualified as Foreign
 import Peras.Numbering (
@@ -57,7 +65,7 @@ import Test.QuickCheck (
   tabulate,
  )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
-import Test.QuickCheck.Gen
+import Test.QuickCheck.Gen (elements, scale)
 import Test.QuickCheck.StateModel (
   Any (Some),
   HasVariables (..),
