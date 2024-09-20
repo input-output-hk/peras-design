@@ -423,9 +423,9 @@ history
         }
       where open State M
 
-    _to_diffuse_ : Message → (PartyId → Delay) → State → State
-    m@(ChainMsg x) to fᵈ diffuse M = m , fᵈ ⇑ M
-    m@(VoteMsg x) to fᵈ diffuse M = m , fᵈ ⇑ M
+    delay_by_update_ : Message → (PartyId → Delay) → State → State
+    delay m@(ChainMsg x) by fᵈ update M = m , fᵈ ⇑ M
+    delay m@(VoteMsg x) by fᵈ update M = m , fᵈ ⇑ M
 ```
 ## Fetching
 
@@ -504,7 +504,8 @@ is added to be consumed immediately.
         → (fᵈ : PartyId → Delay)
           ----------------------------------------------
         → Honest {p} ⊢
-            M ⇉ VoteMsg (mem , sig) to fᵈ diffuse M
+            M ⇉ delay VoteMsg (mem , sig) by fᵈ
+                 update M
 ```
 Rather than creating a delayed vote, an adversary can honestly create it and
 delay the message.
@@ -583,9 +584,8 @@ message is added to the message buffer
         → (fᵈ : PartyId → Delay)
           ----------------------------
         → Honest {p} ⊢
-            M ↷ ChainMsg vc
-                 to fᵈ
-                 diffuse M
+            M ↷ delay ChainMsg vc by fᵈ
+                 update M
 ```
 ## Small-step semantics
 
