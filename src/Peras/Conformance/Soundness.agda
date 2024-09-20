@@ -550,7 +550,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rewrite creatorId≡otherId
           = v
 
-        validSignature : IsBlockSignature β (Block.signature β)
+        validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
           rewrite block≡β
           rewrite rest≡pref
@@ -560,10 +560,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         chain
           = let open SmallStep.IsTreeType
             in Cons {prefChain tree} {β}
-              validSignature
-              (axiom-checkLeadershipProof {β} checkedLead)
-              refl
-              (is-TreeType .valid tree)
+                 validSignature
+                 (axiom-checkLeadershipProof {β} checkedLead)
+                 refl
+                 (is-TreeType .valid tree)
 
         s₁ : State
         s₁ = record s₀
@@ -1006,7 +1006,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           bodyHash≡txsHash = {!!} -- TODO: see ↑
 
           prefChain≡prefChain' : prefChain tree ≡ prefChain (modelState s')
-          prefchain≡prefChain' = {!!}
+          prefChain≡prefChain' = {!!}
 
           rest≡pref' : rest ≡ prefChain tree
           rest≡pref' = eqList-sound checkRest

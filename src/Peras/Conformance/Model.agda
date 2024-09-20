@@ -525,11 +525,20 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
     in record s'' { allSeenCerts =
                       foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain (
-  record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
-  ∷ rest))
-  =
-  let block = record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Nothing ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+transition _ s (NewChain (record { slotNumber = slotNumber
+                                 ; creatorId = creatorId
+                                 ; parentBlock = parentBlock
+                                 ; certificate = Nothing
+                                 ; leadershipProof = leadershipProof
+                                 ; signature = signature
+                                 ; bodyHash = bodyHash } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Nothing
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash }
       r = slotToRound (protocol s) (clock s)
   in
   do guard (needCert r (cert' s) (certS s) (allSeenCerts s) (fromNat (perasA (protocol s))) == Nothing)
@@ -546,14 +555,25 @@ transition _ s (NewChain (
              foldr insertCert (allSeenCerts s)
                (mapMaybe certificate (block ∷ rest))
          })
-transition _ s (NewChain (
-  record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Just cert ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
-  ∷ rest))
-  =
-  let block = record {slotNumber = slotNumber ; creatorId = creatorId ; parentBlock = parentBlock ; certificate = Just cert ; leadershipProof = leadershipProof ; signature = signature ; bodyHash = bodyHash }
+transition _ s (NewChain (record { slotNumber = slotNumber
+                                 ; creatorId = creatorId
+                                 ; parentBlock = parentBlock
+                                 ; certificate = Just cert
+                                 ; leadershipProof = leadershipProof
+                                 ; signature = signature
+                                 ; bodyHash = bodyHash
+                                 } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Just cert
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash
+                     }
       r = slotToRound (protocol s) (clock s)
   in
-  do guard (needCert r (cert' s) (certS s) (allSeenCerts s) (fromNat (perasA (protocol s))) == Just (cert' s))  
+  do guard (needCert r (cert' s) (certS s) (allSeenCerts s) (fromNat (perasA (protocol s))) == Just (cert' s))
      guard (slotNumber == clock s)
      guard (checkBlockFromOther block)
      guard (parentBlock == tipHash rest)
