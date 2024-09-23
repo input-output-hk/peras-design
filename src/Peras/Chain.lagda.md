@@ -115,6 +115,9 @@ data _∻_ : Vote → Vote → Set where
     → votingRound v₁ ≡ votingRound v₂
     → v₁ ≢ v₂
     → v₁ ∻ v₂
+
+IsEquivocation : ∀ (v : Vote) → List Vote → Set
+IsEquivocation v = Any (_∻ v)
 ```
 ## Chain
 

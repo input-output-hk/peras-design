@@ -111,8 +111,8 @@ has to fulfil all the properties mentioned below:
                     (addChain : T → {c : Chain} → ValidChain c → T)
                     (chains : T → List Chain)
                     (preferredChain : T → Chain)
-                    (addVote : T → {v : Vote} → ValidVote v → T)
                     (votes : T → List Vote)
+                    (addVote : (t : T) → {v : Vote} → ValidVote v → ¬ (IsEquivocation v (votes t)) → T)
                     (certs : T → List Certificate)
                     (cert₀ : Certificate)
          : Type₁ where
@@ -153,17 +153,17 @@ Properties that must hold with respect to chains, certificates and votes.
         → All ValidVote (votes t)
 -}
 
-      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v) (¬eq : ¬ (IsEquivocation v (votes t)))
         → let vs = votes t
           in
           v ∈ vs
-        → vs ≡ votes (addVote t vv)
+        → vs ≡ votes (addVote t vv ¬eq)
 
-      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v) (¬eq : ¬ (IsEquivocation v (votes t)))
         → let vs = votes t
           in
           Any (v ∻_) vs
-        → vs ≡ votes (addVote t vv)
+        → vs ≡ votes (addVote t vv ¬eq)
 
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
@@ -186,8 +186,8 @@ The block-tree type is defined as follows:
       chains : T → List Chain
       preferredChain : T → Chain
 
-      addVote : T → {v : Vote} → ValidVote v → T
       votes : T → List Vote
+      addVote : (t : T) → {v : Vote} → ValidVote v → ¬ (IsEquivocation v (votes t)) → T
 
       certs : T → List Certificate
 
@@ -197,7 +197,7 @@ The block-tree type is defined as follows:
     field
       is-TreeType : IsTreeType
                       tree₀ addChain chains preferredChain
-                      addVote votes certs cert₀
+                      votes addVote certs cert₀
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
@@ -254,9 +254,9 @@ Updating the block-tree upon receiving a message for vote and block messages.
 ```agda
     data _[_]→_ : T → Message → T → Type where
 
-      VoteReceived : ∀ {v vv t} →
+      VoteReceived : ∀ {v vv t} (¬eq : ¬ (IsEquivocation v (votes t))) →
           ────────────────────────────
-          t [ VoteMsg {v} vv ]→ addVote t vv
+          t [ VoteMsg {v} vv ]→ addVote t vv ¬eq
 
       ChainReceived : ∀ {c vc t} →
           ──────────────────────────────
