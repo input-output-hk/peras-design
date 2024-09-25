@@ -4,24 +4,9 @@ module Peras.Block where
 
 <!--
 ```agda
-open import Data.Bool using (Bool; true; false)
-open import Data.List using (List; null; head; filter)
-open import Data.List.Membership.Propositional using (_∈_; _∉_)
-open import Data.Maybe using (Maybe; maybe′; just; nothing)
-open import Data.Nat using (ℕ)
-open import Data.Nat.Properties using (<-strictTotalOrder)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Data.Unit using (⊤)
-open import Function using (_∘_)
-open import Haskell.Prelude as Haskell using (Eq; _==_; True; False; _&&_)
-open import Level using (0ℓ)
-open import Relation.Binary using (StrictTotalOrder; DecidableEquality)
-open import Relation.Nullary using (yes; no; ¬_)
+open import Haskell.Prelude
 
-open import Data.Nat.Properties using (≤-totalOrder)
-open import Data.List.Extrema (≤-totalOrder) using (argmax)
-
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; cong; cong₂)
+open import Data.Product using (∃; ∃-syntax)
 
 open import Peras.Crypto
 open import Peras.Numbering
@@ -43,7 +28,7 @@ import qualified Peras.Block as G
 ## PartyId
 
 ```agda
-PartyId = ℕ  -- FIXME: Data.Fin ?
+PartyId = Nat
 ```
 
 <!--
@@ -67,7 +52,7 @@ open Party public
 
 instance
   iPartyEq : Eq Party
-  iPartyEq .Haskell._==_ x y = pid x Haskell.== pid y && pkey x Haskell.== pkey y
+  iPartyEq ._==_ x y = pid x == pid y && pkey x == pkey y
 ```
 
 <!--
@@ -89,21 +74,10 @@ data Honesty : PartyId → Set where
   Corrupt : ∀ {p : PartyId}
     → Honesty p
 ```
+
 ```agda
 PartyTup = ∃[ p ] (Honesty p)
 Parties = List PartyTup
-```
-
-```agda
-postulate
-  Honest≢Corrupt : ∀ {p₁ p₂} {h₁ : Honesty p₁} {h₂ : Honesty p₂}
-    → h₁ ≡ Honest
-    → h₂ ≡ Corrupt
-    → p₁ ≢ p₂
-
-isHonest : ∀ {p : PartyId} → Honesty p → Bool
-isHonest {p} Honest = true
-isHonest {p} Corrupt = false
 ```
 
 ## Transactions
@@ -139,7 +113,7 @@ record Certificate where
   field round : RoundNumber
         blockRef : Hash Block
 
-  roundNumber : ℕ
+  roundNumber : Nat
   roundNumber = getRoundNumber round
 
 open Certificate public
@@ -157,23 +131,10 @@ record Block where
         signature : Signature
         bodyHash : Hash Payload
 
-  slotNumber' : ℕ
+  slotNumber' : Nat
   slotNumber' = getSlotNumber slotNumber
 
 open Block public
-
-_≟-BlockHash_ : DecidableEquality (Hash Block)
-(MkHash b₁) ≟-BlockHash (MkHash b₂) with b₁ ≟-BS b₂
-... | yes p = yes (cong MkHash p)
-... | no ¬p =  no (¬p ∘ cong hashBytes)
-
-_≟-Certificate_ : DecidableEquality Certificate
-(MkCertificate r₁ b₁) ≟-Certificate (MkCertificate r₂ b₂)
-  with r₁ ≟-RoundNumber r₂
-  with b₁ ≟-BlockHash b₂
-... | yes p | yes q = yes (cong₂ MkCertificate p q)
-... | _ | no ¬q = no (¬q ∘ cong blockRef)
-... | no ¬p | _ = no (¬p ∘ cong round)
 
 record BlockBody where
   constructor MkBlockBody
@@ -181,14 +142,6 @@ record BlockBody where
         payload : Payload
 
 open BlockBody public
-```
-```agda
-data HonestBlock : Block → Set where
-
-  HonestParty : ∀ {p : PartyId} {h : Honesty p} {b : Block}
-    → creatorId b ≡ p
-    → h ≡ Honest {p}
-    → HonestBlock b
 ```
 <!--
 ```agda
@@ -199,19 +152,10 @@ data HonestBlock : Block → Set where
 {-# COMPILE GHC BlockBody = data G.BlockBody (G.MkBlockBody) #-}
 {-# COMPILE AGDA2HS Certificate deriving (Generic) #-}
 {-# COMPILE GHC Certificate = data G.Certificate (G.MkCertificate) #-}
-
-instance
-  iMaybeEq : {a : Set} → ⦃ i : Eq a ⦄ → Eq (Maybe a)
-  iMaybeEq {{i}} ._==_ x y =
-    maybe′
-      (λ x' → maybe′ (λ y' → x' == y') False y)
-      (maybe′ (λ _ → False) True y)
-      x
 ```
 -->
 
 ```agda
-
 instance
   iCertificateEq : Eq Certificate
   iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
@@ -237,25 +181,11 @@ module _ {a : Set} ⦃ _ : Hashable a ⦄
   open Hashable ⦃...⦄
 
   tipHash : List a → Hash a
-  tipHash Data.List.[] = MkHash emptyBS
-  tipHash (x Data.List.∷ _) = hash x
+  tipHash [] = MkHash emptyBS
+  tipHash (x ∷ _) = hash x
 
 {-# COMPILE AGDA2HS tipHash #-}
-
-private
-  open Hashable
-
-  instance
-    hashBlock : Hashable Block
-    hashBlock .hash = MkHash ∘ bytesS ∘ signature
-```
-
-<!--
-```agda
 {-# COMPILE AGDA2HS iCertificateEq #-}
 {-# COMPILE AGDA2HS iBlockEq #-}
 {-# COMPILE AGDA2HS iBlockBodyEq #-}
-
-{-# COMPILE AGDA2HS hashBlock #-}
 ```
--->

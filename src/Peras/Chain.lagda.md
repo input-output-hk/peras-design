@@ -1,32 +1,20 @@
 ```agda
 module Peras.Chain where
 ```
-
-<!--
 ```agda
-open import Data.Bool using (_∧_; true; false)
-open import Data.List using (sum; upTo; applyUpTo; filterᵇ; filter; concat; mapMaybe; zip) renaming (length to ∣_∣)
-open import Data.List.Membership.Propositional using (_∈_)
-open import Data.List.Relation.Unary.Any using (any?; Any; here; there; lookup)
-open import Data.List.Relation.Unary.All using (All)
-open import Data.Maybe as M using (nothing; just)
-open import Data.Nat using (ℕ; _/_; _>_; _≥_; _≥?_; _≤?_; NonZero; pred; _∸_; z≤n; s≤s)
-open import Data.Nat using (_≤_; _<_; _∸_)
-open import Data.Nat.Properties using (n≮n; _≟_)
-open import Data.Product using (Σ; _,_; ∃; Σ-syntax; ∃-syntax; _×_; proj₁; proj₂)
-open import Function.Base using (_∘_; _$_)
-open import Relation.Nullary using (¬_; Dec; yes; no; ¬?)
-open import Relation.Nullary.Decidable using (_×-dec_)
-open import Relation.Binary using (DecidableEquality)
+open import Haskell.Prelude
+open import Haskell.Extra.Dec
+open import Haskell.Extra.Refinement
+open import Haskell.Law.Equality
+
+open import Data.Nat using (NonZero; _/_)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Crypto
 open import Peras.Block
 open import Peras.Numbering
 open import Peras.Params
-
-open import Haskell.Prelude hiding (length; _<_; _>_; _∘_; sum; b; pred; filter; concat; _$_; lookup; zip; All; Any; _,_; _×_)
-open import Haskell.Law.Equality using (cong)
+open import Peras.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -37,14 +25,12 @@ import GHC.Generics (Generic)
 import qualified Peras.Chain as G
 #-}
 ```
--->
-
 ## Voting
 
 ### Vote
 
 ```agda
-VotingWeight = ℕ
+VotingWeight = Nat
 
 record Vote : Set where
   constructor MkVote
@@ -54,7 +40,7 @@ record Vote : Set where
         blockHash   : Hash Block
         signature   : Signature
 
-  votingRound' : ℕ
+  votingRound' : Nat
   votingRound' = getRoundNumber votingRound
 
 open Vote public
@@ -67,15 +53,12 @@ instance
                         && blockHash x == blockHash y
                         && signature x == signature y
 ```
-
-<!--
 ```agda
 {-# COMPILE AGDA2HS VotingWeight #-}
 {-# COMPILE AGDA2HS Vote deriving (Generic) #-}
 {-# COMPILE GHC Vote = data G.Vote (G.MkVote) #-}
 {-# COMPILE AGDA2HS iVoteEq #-}
 ```
--->
 ```agda
 record Postulates : Set₁ where
   field
@@ -86,7 +69,7 @@ record Postulates : Set₁ where
 
 record Network : Set₁ where
   field
-    Δ : ℕ
+    Δ : Nat
 ```
 ```agda
 module _ ⦃ _ : Postulates ⦄
@@ -120,13 +103,9 @@ data _∻_ : Vote → Vote → Set where
 
 ```agda
 Chain = List Block
-```
-<!--
-```agda
+
 {-# COMPILE AGDA2HS Chain #-}
 ```
--->
-
 ```agda
 certsFromChain : Chain → List Certificate
 certsFromChain = mapMaybe certificate
@@ -141,25 +120,6 @@ insertCert cert (cert' ∷ certs) =
 
 {-# COMPILE AGDA2HS insertCert #-}
 ```
-### Chain prefix
-
-```agda
-data _⪯_ : Chain → Chain → Set where
-
-  Prefix : ∀ {c₁ c₂ c₃ : Chain}
-    → c₁ ++ c₃ ≡ c₂
-    → c₁ ⪯ c₂
-```
-
-### Chain pruning
-
-```agda
-prune : SlotNumber → Chain → Chain
-prune (MkSlotNumber sl) = filter ((_≤? sl) ∘ slotNumber')
-```
-### Chain weight
-
-The weight of a chain is defined with respect of the Peras parameters
 ```agda
 open Params ⦃...⦄
 ```
@@ -174,25 +134,12 @@ module _ ⦃ _ : Hashable Block ⦄
   cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
 
   ChainExtends : Hash Block → Certificate → Chain → Set
-  ChainExtends h c =
+  ChainExtends h c ch =
     Any (λ block → (hash block ≡ blockRef c))
-      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
-
-  ChainExtends? : (h : Hash Block) → (c : Certificate) → (chain : Chain) → Dec (ChainExtends h c chain)
-  ChainExtends? h c =
-    any? (λ block → (hash block ≟-BlockHash blockRef c))
-      ∘ Data.List.dropWhile (λ block' → ¬? (hash block' ≟-BlockHash h))
+      (dropWhile (λ block' → (hash block' /= h)) ch)
 
   Extends : Hash Block → Certificate → List Chain → Set
   Extends h c = Any (ChainExtends h c)
-  {-
-  Extends h c with c ≟-Certificate cert₀
-  ... | yes _ = λ _ → ⊤
-  ... | no _  = Any (ChainExtends h c)
-  -}
-
---  Extends? : (h : Hash Block) → (c : Certificate) → (chains : List Chain) → Dec (Extends h c chains)
---  Extends? h c = any? (ChainExtends? h c)
 ```
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda
@@ -204,23 +151,15 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 ```
 ```agda
-  _PointsInto_ : Certificate → Chain → Set
-  _PointsInto_ c = Any ((blockRef c ≡_) ∘ hash)
-```
-```agda
-  _PointsInto?_ : ∀ (c : Certificate) → (ch : Chain) → Dec (c PointsInto ch)
-  _PointsInto?_ c = any? ((blockRef c ≟-BlockHash_) ∘ hash)
+  pointsInto : Certificate → Chain → Bool
+  pointsInto c ch = any (λ b → (blockRef c == hash b)) ch
 ```
 ```agda
   StartOfRound : SlotNumber → RoundNumber → Set
   StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * U
 ```
 ```agda
-  StartOfRound? : (sl : SlotNumber) → (r : RoundNumber) → Dec (StartOfRound sl r)
-  StartOfRound? (MkSlotNumber sl) (MkRoundNumber r) = sl ≟ r * U
-```
-```agda
-  rnd : ℕ → ⦃ _ : NonZero U ⦄ → ℕ
+  rnd : Nat → ⦃ _ : NonZero U ⦄ → Nat
   rnd s = s / U
 ```
 ```agda
@@ -229,22 +168,18 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 ### Chain weight
 
+The weight of a chain is defined with respect of the Peras parameters
+
 ```agda
-  ∥_∥_ : Chain → List Certificate → ℕ
-  ∥ ch ∥ cts = ∣ ch ∣ + ∣ filter (_PointsInto? ch) cts ∣ * B
+  weight : Chain → List Certificate → Nat
+  weight ch cts = len ch + len (filter (flip pointsInto ch) cts) * B
+    where
+      len : ∀ {a : Set} → List a → Nat
+      len = foldr (const suc) 0
 ```
 
 ### Chain validity
 
-<!--
-```agda
-open import Data.List.Membership.Propositional using (_∈_)
-open import Relation.Nullary.Negation using (¬_)
-open import Relation.Binary.PropositionalEquality using (trans)
-
-open Block
-```
--->
 ```agda
 module _ ⦃ _ : Hashable Block ⦄
          ⦃ _ : Postulates ⦄
