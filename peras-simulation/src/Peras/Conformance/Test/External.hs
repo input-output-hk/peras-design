@@ -41,10 +41,11 @@ import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
   initialModelState,
+  sutId,
   transition,
  )
 import Peras.Conformance.Params (PerasParams)
-import Peras.Conformance.Test (Action (Step), modelSUT, sortition)
+import Peras.Conformance.Test
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber)
 import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
@@ -53,6 +54,7 @@ import Peras.Prototype.Crypto (
   isCommitteeMember,
   isSlotLeader,
   mkCommitteeMember,
+  mkParty,
  )
 import Peras.Prototype.Diffusion (
   Diffuser,
@@ -159,18 +161,33 @@ callSUT RunState{hReader, hWriter} req =
 
 type Runtime = StateT RunState IO
 
-instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel Runtime where
-  perform NodeModel{..} (Step a) _ = case a of
+instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkModel Runtime where
+  perform net@NetworkModel{nodeModel = NodeModel{..}} a@Initial{} _ =
+    do
+      rs <- get
+      void . lift $
+        callSUT
+          rs
+          Initialize
+            { party = modelSUT net
+            , slotNumber = clock
+            , parameters = protocol
+            , chainsSeen = allChains
+            , votesSeen = allVotes
+            , certsSeen = allSeenCerts
+            }
+  perform net@NetworkModel{nodeModel = NodeModel{..}} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       let clock' = clock + 1
+          sut = modelSUT net
       ( lift $
           callSUT
             rs
             NewSlot
-              { isSlotLeader = Peras.Prototype.Crypto.isSlotLeader modelSUT clock'
-              , isCommitteeMember = Peras.Prototype.Crypto.isCommitteeMember modelSUT (inRound clock' protocol)
+              { isSlotLeader = Peras.Prototype.Crypto.isSlotLeader sut clock'
+              , isCommitteeMember = Peras.Prototype.Crypto.isCommitteeMember sut (inRound clock' protocol)
               , newChains = unfetchedChains
               , newVotes = unfetchedVotes
               }
@@ -188,8 +205,9 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure (mempty, mempty)
 
-  postcondition (s, s') (Step a) _ (cs, vs) = do
-    let (expectedChains, expectedVotes) = fst (fromJust (transition sortition s a))
+  postcondition _ Initial{} _ () = pure True
+  postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (cs, vs) = do
+    let (expectedChains, expectedVotes) = fst (fromJust (transition (sortition net) s a))
     let eqVotes vs vs' =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
            in sort (f <$> vs) == sort (f <$> vs')
@@ -202,10 +220,10 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel
     unless (null vs) $ do
       monitorPost . counterexample . show $ "  --      got:" <+> pPrint vs
     counterexamplePost . show $ "  -- expected:" <+> pPrint expectedVotes
-    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
+    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint net)
     pure ok
 
-prop_node :: Handle -> Handle -> Blind (Actions NodeModel) -> Property
+prop_node :: Handle -> Handle -> Blind (Actions NetworkModel) -> Property
 prop_node hReader hWriter (Blind as) = noShrinking $
   ioProperty $ do
     let unfetchedChains = mempty
@@ -213,7 +231,7 @@ prop_node hReader hWriter (Blind as) = noShrinking $
     callSUT
       RunState{..}
       Initialize
-        { party = modelSUT
+        { party = mkParty sutId mempty mempty
         , slotNumber = clock initialModelState
         , parameters = protocol initialModelState
         , chainsSeen = allChains initialModelState
