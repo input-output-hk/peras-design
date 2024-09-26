@@ -86,8 +86,8 @@ tickNode tracer diffuser params party state s r payload newChains newVotes =
   runExceptT $ do
     -- 2. Invoke fetching.
     ExceptT $ fetching tracer params party state s newChains newVotes
-    -- 3. Invoke block creation if leader.
-    ExceptT $ blockCreation tracer params party state s payload (diffuseChain diffuser)
-    -- 4. Invoke voting if committee member.
+    -- 3. Invoke voting if committee member.
     ExceptT $
       voting tracer params party state s (selectBlock tracer) (diffuseVote diffuser)
+    -- 4. Invoke block creation if leader.
+    ExceptT $ blockCreation tracer params party state s payload (diffuseChain diffuser)
