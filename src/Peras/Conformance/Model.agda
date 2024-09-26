@@ -349,9 +349,23 @@ chainExtendsDec h c ch = chainExtends h c ch ⟨ chainExtends-prf h c ch ⟩
 ¬Extends[] : (h : Hash Block) → (c : Certificate) → Extends h c [] → ⊥
 ¬Extends[] h c ()
 
-postulate
-  extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
-    → Reflects (Extends h c ch) (extends h c ch)
+extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
+  → Reflects (Extends h c ch) (extends h c ch)
+extends-prf h c [] = of {P = Extends h c []} {b = extends h c []} ite
+  where
+    ite : if extends h c []
+          then (λ ⦃ @0 _ ⦄ → Extends h c [])
+          else (λ ⦃ @0 _ ⦄ → Extends h c [] → ⊥)
+    ite = ¬Extends[] h c
+extends-prf h c (x ∷ ch) = of {P = Extends h c (x ∷ ch)} {b = extends h c (x ∷ ch)} ite
+  where
+    ite : if extends h c (x ∷ ch)
+          then (λ ⦃ @0 _ ⦄ → Extends h c (x ∷ ch))
+          else (λ ⦃ @0 _ ⦄ → Extends h c (x ∷ ch) → ⊥)
+    ite
+      with chainExtendsDec h c x in eq
+    ite | True ⟨ xx ⟩ = {!!}
+    ite | False ⟨ xx ⟩ = {!!}
 
 extendsDec : (h : Hash Block) → (c : Certificate) → (ch : List Chain) → Dec (Extends h c ch)
 extendsDec h c ch = extends h c ch ⟨ extends-prf h c ch ⟩
