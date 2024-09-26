@@ -128,7 +128,7 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
   postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (gotChains, gotVotes) = do
     monitorChain net net'
     monitorCerts net net'
-    monitorVoting net
+    monitorVoting net a
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition (sortition net) s a)
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
