@@ -217,11 +217,14 @@ instance StateModel NetworkModel where
           if canGenVotes && newRound clock protocol
             then genVote gen s
             else pure Nothing
+        b <- BadVote <$> genBadVote
+        fBad <- (<= 0.10) <$> choose (0, 1 :: Double)
         (newChains, newVotes) <- fst <$> genHonestTick True gen s
         fmap (Some . Step) . elements $
           [Tick]
             ++ (NewChain <$> newChains)
             ++ cleanVotes (NewVote <$> newVotes <> maybe mempty pure v)
+            ++ [b | canGenBadVote && fBad]
       else scale (`div` actionsSizeScaling) $
         fmap Some $
           do
@@ -245,14 +248,13 @@ instance StateModel NetworkModel where
               NewVote v -> not $ any (equivocated v) allVotes
               _ -> True
           )
-    {-
-        badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= sutId]
-        canGenBadVote = canGenVotes && not (null badVoteCandidates)
-        genBadVote = do
-          block <- elements (concat allChains)
-          (r, p) <- elements badVoteCandidates
-          MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
-    -}
+
+    badVoteCandidates = [(r, p) | MkVote r p _ _ _ <- allVotes, p /= sutId]
+    canGenBadVote = canGenVotes && not (null badVoteCandidates)
+    genBadVote = do
+      block <- elements (concat allChains)
+      (r, p) <- elements badVoteCandidates
+      MkVote r p <$> arbitrary <*> pure (hash block) <*> arbitrary
     canGenVotes =
       not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
