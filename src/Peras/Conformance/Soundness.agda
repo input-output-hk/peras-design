@@ -89,8 +89,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; T = perasT testParams
         }
 
-  import Peras.SmallStep as SmallStep
-
   module Assumptions
            (let open Postulates postulates)
 
@@ -111,6 +109,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
          where
 
+    import Peras.SmallStep as SmallStep
     open SmallStep using (⦅_,_,_,_⦆)
     open SmallStep.Message
 

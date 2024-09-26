@@ -10,6 +10,10 @@ open import Haskell.Law.Eq.Instances
 import Data.Bool
 open import Data.Nat using (ℕ; NonZero; _≤_; _<_; _≥_; _>_; z≤n; s≤s; z<s; s<s)
 
+{-# FOREIGN AGDA2HS
+  import GHC.Integer
+#-}
+
 uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
 uneraseNonZero {zero} ()
 uneraseNonZero {suc n} _ = _
@@ -89,42 +93,23 @@ decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
 
 {-# COMPILE AGDA2HS decS #-}
 
-_=='_ : ∀ (x y : Nat) → Dec (x ≡ y)
-x ==' y = (x == y) ⟨ isEquality x y ⟩
+eqDec : ∀ (x y : Nat) → Dec (x ≡ y)
+eqDec x y = (x == y) ⟨ isEquality x y ⟩
 
-{-# COMPILE AGDA2HS _=='_ #-}
+{-# COMPILE AGDA2HS eqDec #-}
 
-infix 3 ¬_
-¬_ : Set → Set
-¬ A = A → ⊥
+postulate
+  eq : ∀ (x y : ℕ) → Dec (x ≡ y)
+  ge : ∀ (x y : ℕ) → Dec (x ≥ y)
+  gt : ∀ (x y : ℕ) → Dec (x > y)
 
-¬s≤z : ∀ {m : ℕ} → ¬ (suc m ≤ zero)
-¬s≤z ()
+{-# FOREIGN AGDA2HS
+  eq :: Integer -> Integer -> Bool
+  eq = (==)
 
-¬s≤s : ∀ {m n : ℕ} → ¬ (m ≤ n) → ¬ (suc m ≤ suc n)
-¬s≤s ¬m≤n (s≤s m≤n) = ¬m≤n m≤n
+  gt :: Integer -> Integer -> Bool
+  gt = gtInteger
 
-le : ∀ (m n : ℕ) → Dec (m ≤ n)
-le zero n = True ⟨ z≤n ⟩
-le (suc m) zero = False ⟨ ¬s≤z ⟩
-le (suc m) (suc n) =
-  case le m n of λ where
-    (True ⟨ m≤n ⟩) → True ⟨ s≤s m≤n ⟩
-    (False ⟨ ¬m≤n ⟩) → False ⟨ ¬s≤s ¬m≤n ⟩
-
-{-# COMPILE AGDA2HS le #-}
-
-ge : ∀ (m n : ℕ) → Dec (m ≥ n)
-ge m n = le n m
-
-{-# COMPILE AGDA2HS ge #-}
-
-lt : ∀ (m n : ℕ) → Dec (m < n)
-lt m n = le (suc m) n
-
-{-# COMPILE AGDA2HS lt #-}
-
-gt : ∀ (m n : ℕ) → Dec (m > n)
-gt m n = lt n m
-
-{-# COMPILE AGDA2HS gt #-}
+  ge :: Integer -> Integer -> Bool
+  ge = geInteger
+#-}

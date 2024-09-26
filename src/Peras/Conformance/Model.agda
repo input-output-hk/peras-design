@@ -317,28 +317,49 @@ vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
 
-postulate
-  @0 vr1B-prf : ∀ {s} → Reflects (Vr1B s) (vr1B' s)
+¬ChainExtends[] : (h : Hash Block) → (c : Certificate) → ChainExtends h c [] → ⊥
+¬ChainExtends[] h c ()
 
+chainExtends-prf : (h : Hash Block) → (c : Certificate) → (ch : Chain)
+  → Reflects (ChainExtends h c ch) (chainExtends h c ch)
 {-
-vr1B-prf {s} = of {P = Vr1B s} {b = vr1B' s} (ite {s})
+chainExtends-prf h c [] = of {P = ChainExtends h c []} {b = chainExtends h c []} ite
   where
-    ite : ∀ {s} → if vr1B' s then (λ ⦃ @0 _ ⦄ → Vr1B s) else (λ ⦃ @0 _ ⦄ → Vr1B s → ⊥)
-    ite {s}
-      with vr1B' s in eq
-    ite {s} | False = {!!}
-
-    ite {s} | True
-      with allChains s
-    ite {s} | True | [] = contradiction refl (not-¬ eq)
-    ite {s} | True | c ∷ cs = {!!} {-
-      with ChainExtends? (votingBlockHash s) (cert' s) c
-    ite {s} | True | c ∷ cs | D.yes p = Any.here {!p!}
-    ite {s} | True | c ∷ cs | D.no p = Any.there {!!} -}
+    ite : if chainExtends h c []
+          then (λ ⦃ @0 _ ⦄ → ChainExtends h c [])
+          else (λ ⦃ @0 _ ⦄ → ChainExtends h c [] → ⊥)
+    ite = ¬ChainExtends[] h c
 -}
+chainExtends-prf h c ch = of {P = ChainExtends h c ch} {b = chainExtends h c ch} ite
+  where
+    ite : if chainExtends h c ch
+          then (λ ⦃ @0 _ ⦄ → ChainExtends h c ch)
+          else (λ ⦃ @0 _ ⦄ → ChainExtends h c ch → ⊥)
+    ite
+      with dropWhile (λ block' → Hashable.hash hashBlock block' /= h) ch
+    ite | [] = λ ()
+    ite | (x ∷ xs)
+      with MkHash (bytesS (signature x)) == blockRef c in eq
+    ite | (x ∷ xs) | True  = {!!} -- anyHere
+    ite | (x ∷ xs) | False = {!!} -- anyThere
+
+chainExtendsDec : (h : Hash Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends h c ch)
+chainExtendsDec h c ch = chainExtends h c ch ⟨ chainExtends-prf h c ch ⟩
+
+¬Extends[] : (h : Hash Block) → (c : Certificate) → Extends h c [] → ⊥
+¬Extends[] h c ()
+
+postulate
+  extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
+    → Reflects (Extends h c ch) (extends h c ch)
+
+extendsDec : (h : Hash Block) → (c : Certificate) → (ch : List Chain) → Dec (Extends h c ch)
+extendsDec h c ch = extends h c ch ⟨ extends-prf h c ch ⟩
+
+{-# COMPILE AGDA2HS extendsDec #-}
 
 vr1B : (s : NodeModel) → Dec (Vr1B s)
-vr1B s = vr1B' s ⟨ vr1B-prf {s} ⟩
+vr1B s = extendsDec (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B #-}
 
@@ -366,7 +387,7 @@ vr2B s = decP
   (gt
     (getRoundNumber (rFromSlot s))
     (getRoundNumber (round (certS s))))
-  ( (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) =='
+  (eqDec (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
     (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
 
 {-# COMPILE AGDA2HS vr2B #-}
