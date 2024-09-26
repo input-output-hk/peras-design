@@ -4,21 +4,66 @@
 
 module Peras.Conformance.Generators where
 
-import Control.Applicative
-import Control.Arrow
-import Control.Monad
-import Data.List
-import Data.Maybe
-import Debug.Trace
+import Control.Applicative (Applicative (pure, (<*>)), (<$>))
+import Control.Arrow (Arrow (first, second, (&&&), (***)))
+import Control.Monad (Functor (fmap), filterM, (=<<))
+import Data.Either (fromRight)
+import Data.Functor.Identity
+import Data.List (
+  all,
+  any,
+  concatMap,
+  dropWhile,
+  elem,
+  filter,
+  foldl,
+  maximum,
+  notElem,
+  nub,
+  null,
+  partition,
+  (++),
+ )
+import Data.Maybe (Maybe (..), isNothing, mapMaybe, maybe)
+import qualified Data.Set as Set (singleton)
 import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
 import Peras.Arbitraries ()
-import Peras.Block
-import Peras.Chain
-import Peras.Conformance.Model
+import Peras.Block (
+  Block (MkBlock, certificate, creatorId, slotNumber),
+  Certificate (MkCertificate, round),
+  PartyId,
+ )
+import Peras.Chain (Chain, Vote (MkVote, creatorId, votingRound))
+import Peras.Conformance.Model (
+  EnvAction (NewChain, NewVote, Tick),
+  NodeModel (..),
+  genesisCert,
+  genesisHash,
+  otherId,
+  sutId,
+  transition,
+ )
 import Peras.Crypto
-import Peras.Numbering
+import Peras.Crypto (Hash, Hashable (hash))
+import Peras.Numbering (
+  RoundNumber (..),
+  SlotNumber (..),
+  slotInRound,
+ )
+import Peras.Prototype.Crypto
 import Peras.Prototype.Types (PerasParams (..), hashTip, inRound)
-import Test.QuickCheck
+import Test.QuickCheck (
+  Arbitrary (arbitrary),
+  Gen,
+  NonNegative (getNonNegative),
+  Positive (getPositive),
+  choose,
+  chooseInteger,
+  elements,
+  frequency,
+  sublistOf,
+ )
 import Prelude hiding (round)
 
 -- | Constraints on generating Peras values.
@@ -64,7 +109,7 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+strictGenConstraints = MkGenConstraints False True False False False False False False False False False False False False False False False
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 votingGenConstraints :: GenConstraints
@@ -73,6 +118,10 @@ votingGenConstraints = MkGenConstraints False True True True True True True True
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 lenientGenConstraints :: GenConstraints
 lenientGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
+
+-- | Generator size scaling for sequence of actions.
+actionsSizeScaling :: Int
+actionsSizeScaling = 3
 
 genProtocol :: GenConstraints -> Gen PerasParams
 genProtocol MkGenConstraints{twoParties} =
@@ -85,7 +134,10 @@ genProtocol MkGenConstraints{twoParties} =
     let perasA = perasR * perasU
     perasK <- (perasR +) <$> chooseInteger (0, 1)
     let perasT = 0 -- Should not be used in the absence of pre-agreement.
-    perasτ <- frequency [(10, pure 1), (if twoParties then 0 else 1, chooseInteger (0, 3))]
+    perasτ <-
+      if twoParties
+        then pure 2
+        else chooseInteger (2, 3)
     pure MkPerasParams{..}
 
 genSelection :: GenConstraints -> NodeModel -> Chain -> Gen (Hash Block, SlotNumber)
@@ -106,6 +158,7 @@ genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2
     certPrime <- elements $ getCertPrimes node
     party <- genPartyId gc node
     let
+      party' = mkParty party mempty mempty
       certPrimeSlot = fromIntegral $ fromIntegral (round certPrime) * perasU protocol
       certStar = getCertStarRound prefChain
       r = inRound clock protocol
@@ -113,15 +166,10 @@ genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2
       vr1b = not voteObeyVR1B || blockSlot == 0 || blockSlot <= certPrimeSlot && block `elem` (hash <$> prefChain)
       vr2a = not voteObeyVR2A || fromIntegral r >= fromIntegral (round certPrime) + perasR protocol
       vr2b = not voteObeyVR2B || r > certStar && fromIntegral (r - certStar) `mod` perasK protocol == 0
+    vr <- if voteCurrent then pure r else genRoundNumber gc node
+    let pm = fromRight undefined . runIdentity $ createMembershipProof vr (Set.singleton party')
     if vr1a && vr1b || vr2a && vr2b
-      then
-        fmap Just $
-          MkVote
-            <$> (if voteCurrent then pure r else genRoundNumber gc node)
-            <*> pure party
-            <*> arbitrary
-            <*> pure block
-            <*> arbitrary
+      then pure . Just . fromRight undefined . runIdentity $ createSignedVote party' vr block pm 1
       else pure Nothing
 
 genNewChain :: GenConstraints -> NodeModel -> Gen Chain
@@ -210,13 +258,13 @@ genSlotNumber _ NodeModel{clock} =
 
 genRoundNumber :: GenConstraints -> NodeModel -> Gen RoundNumber
 genRoundNumber _ NodeModel{clock, protocol} =
-  MkRoundNumber <$> chooseInteger (0, getRoundNumber $ inRound clock protocol)
+  MkRoundNumber <$> chooseInteger (1, getRoundNumber $ inRound clock protocol)
 
 genPartyId :: GenConstraints -> NodeModel -> Gen PartyId
 genPartyId MkGenConstraints{twoParties} _ =
   if twoParties
     then pure otherId
-    else (max sutId otherId +) . getPositive <$> arbitrary
+    else elements [sutId, otherId, otherId + 1]
 
 genSlotLeadership :: Double -> SlotNumber -> Gen [SlotNumber]
 genSlotLeadership fraction limit =
