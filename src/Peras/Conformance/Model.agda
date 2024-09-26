@@ -16,6 +16,7 @@ open import Relation.Nullary.Negation using (¬_; contradiction)
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Conformance.Params
+open import Peras.Conformance.ProofPrelude
 open import Peras.Crypto
 open import Peras.Foreign
 open import Peras.Numbering
@@ -228,10 +229,6 @@ extends h cert chain = any (chainExtends h cert) chain
 
 {-# COMPILE AGDA2HS extends #-}
 
-private
-  mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
-  mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
-
 votingBlockHash : NodeModel → Hash Block
 votingBlockHash s =
   tipHash ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
@@ -340,7 +337,7 @@ chainExtends-prf h c ch = of {P = ChainExtends h c ch} {b = chainExtends h c ch}
     ite | [] = λ ()
     ite | (x ∷ xs)
       with MkHash (bytesS (signature x)) == blockRef c in eq
-    ite | (x ∷ xs) | True  = {!!} -- anyHere
+    ite | (x ∷ xs) | True  = anyHere ⦃ cong MkHash (eqBS-sound eq) ⦄
     ite | (x ∷ xs) | False = {!!} -- anyThere
 
 chainExtendsDec : (h : Hash Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends h c ch)

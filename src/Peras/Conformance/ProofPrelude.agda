@@ -21,7 +21,6 @@ open import Relation.Nullary.Decidable using (Dec; yes; no)
 open import Peras.Crypto
 open import Peras.Util
 
-
 mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
 mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 
@@ -44,8 +43,10 @@ not_b≡True→b≡False {False} x = refl
 not-eqℕ-sound : ∀ {n m : Nat} → not (n == m) ≡ True → n ≢ m
 not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
 
+eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
+eqBS-sound = lem-eqBS
+
 postulate -- TODO
-  eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
