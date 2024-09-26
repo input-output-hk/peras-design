@@ -301,24 +301,6 @@ x === y = (x == y) ⟨ isEquality x y ⟩
 
 {-# COMPILE AGDA2HS _===_ #-}
 
-_=='_ : ∀ (x y : Nat) → Dec (x ≡ y)
-x ==' y = (x == y) ⟨ isEquality x y ⟩
-
-{-# COMPILE AGDA2HS _=='_ #-}
-
-
-postulate -- FIXME
-  ge : ∀ (x y : ℕ) → Dec (x Data.Nat.≥ y)
-  gt : ∀ (x y : ℕ) → Dec (x Data.Nat.> y)
-
-{-# FOREIGN AGDA2HS
-  gt :: Integer -> Integer -> Bool
-  gt = gtInteger
-
-  ge :: Integer -> Integer -> Bool
-  ge = geInteger
-#-}
-
 Vr1A : NodeModel → Set
 Vr1A s = rFromSlot s ≡ nextRound (round (cert' s))
 

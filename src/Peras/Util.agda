@@ -1,12 +1,14 @@
 -- | Utility functions
 module Peras.Util where
 
-open import Haskell.Prelude
+open import Haskell.Prelude hiding (_<_; _>_)
 open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
+open import Haskell.Law.Eq.Def
+open import Haskell.Law.Eq.Instances
 
 import Data.Bool
-open import Data.Nat using (NonZero)
+open import Data.Nat using (ℕ; NonZero; _≤_; _<_; _≥_; _>_; z≤n; s≤s; z<s; s<s)
 
 uneraseNonZero : ∀ {n} → @0 NonZero n → NonZero n
 uneraseNonZero {zero} ()
@@ -86,3 +88,43 @@ decS : ∀ {A B : Set} → Dec A → Dec B → Dec (Either A B)
 decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
 
 {-# COMPILE AGDA2HS decS #-}
+
+_=='_ : ∀ (x y : Nat) → Dec (x ≡ y)
+x ==' y = (x == y) ⟨ isEquality x y ⟩
+
+{-# COMPILE AGDA2HS _=='_ #-}
+
+infix 3 ¬_
+¬_ : Set → Set
+¬ A = A → ⊥
+
+¬s≤z : ∀ {m : ℕ} → ¬ (suc m ≤ zero)
+¬s≤z ()
+
+¬s≤s : ∀ {m n : ℕ} → ¬ (m ≤ n) → ¬ (suc m ≤ suc n)
+¬s≤s ¬m≤n (s≤s m≤n) = ¬m≤n m≤n
+
+le : ∀ (m n : ℕ) → Dec (m ≤ n)
+le zero n = True ⟨ z≤n ⟩
+le (suc m) zero = False ⟨ ¬s≤z ⟩
+le (suc m) (suc n) =
+  case le m n of λ where
+    (True ⟨ m≤n ⟩) → True ⟨ s≤s m≤n ⟩
+    (False ⟨ ¬m≤n ⟩) → False ⟨ ¬s≤s ¬m≤n ⟩
+
+{-# COMPILE AGDA2HS le #-}
+
+ge : ∀ (m n : ℕ) → Dec (m ≥ n)
+ge m n = le n m
+
+{-# COMPILE AGDA2HS ge #-}
+
+lt : ∀ (m n : ℕ) → Dec (m < n)
+lt m n = le (suc m) n
+
+{-# COMPILE AGDA2HS lt #-}
+
+gt : ∀ (m n : ℕ) → Dec (m > n)
+gt m n = lt n m
+
+{-# COMPILE AGDA2HS gt #-}
