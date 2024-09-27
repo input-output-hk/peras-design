@@ -7,6 +7,7 @@
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
+import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
@@ -14,7 +15,7 @@ import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, per
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, mapMaybe, maximumBy, maybeToList)
+import Peras.Util (comparing, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -270,20 +271,36 @@ hasVoted :: PartyId -> RoundNumber -> NodeModel -> Bool
 hasVoted p r s =
   any (\v -> p == voterId v && r == votingRound v) (allVotes s)
 
+isYes :: Bool -> Bool
+isYes True = True
+isYes False = False
+
+decP :: Bool -> Bool -> Bool
+decP va vb = va && vb
+
+decS :: Bool -> Bool -> Bool
+decS va vb = va || vb
+
 (===) :: RoundNumber -> RoundNumber -> Bool
 x === y = x == y
 
+eq :: Integer -> Integer -> Bool
+eq = (==)
+
+gt :: Integer -> Integer -> Bool
+gt = gtInteger
+
+ge :: Integer -> Integer -> Bool
+ge = geInteger
+
 vr1A :: NodeModel -> Bool
-vr1A s = rFromSlot s === nextRound (round (cert' s))
+vr1A s = nextRound (round (cert' s)) === rFromSlot s
 
 vr1B' :: NodeModel -> Bool
 vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
-extendsDec :: Hash Block -> Certificate -> [Chain] -> Bool
-extendsDec h c ch = extends h c ch
-
 vr1B :: NodeModel -> Bool
-vr1B s = extendsDec (votingBlockHash s) (cert' s) (allChains s)
+vr1B s = vr1B' s
 
 vr2A :: NodeModel -> Bool
 vr2A s =
@@ -298,15 +315,9 @@ vr2B s =
         (getRoundNumber (rFromSlot s))
         (getRoundNumber (round (certS s)))
     )
-    ( eqDec
-        ( mod
-            (fromIntegral (getRoundNumber (rFromSlot s)))
-            (fromIntegral (perasK (protocol s)))
-        )
-        ( mod
-            (fromIntegral (getRoundNumber (round (certS s))))
-            (fromIntegral (perasK (protocol s)))
-        )
+    ( eq
+        (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
+        (mod (getRoundNumber (round (certS s))) (perasK (protocol s)))
     )
 
 checkVotingRules :: NodeModel -> Bool

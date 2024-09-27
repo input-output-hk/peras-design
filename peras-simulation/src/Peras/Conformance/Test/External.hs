@@ -34,7 +34,6 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (sort)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
-import Debug.Trace (traceShow)
 import GHC.Generics (Generic)
 import Peras.Block (Certificate, Party)
 import Peras.Chain (Chain, Vote (..))
@@ -182,19 +181,19 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
       rs@RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       let clock' = clock + 1
-          sut = modelSUT net
+          (isSlotLeader, isCommitteeMember) = sortition net
       ( lift $
           callSUT
             rs
             NewSlot
-              { isSlotLeader = Peras.Prototype.Crypto.isSlotLeader sut clock'
-              , isCommitteeMember = Peras.Prototype.Crypto.isCommitteeMember sut (inRound clock' protocol)
+              { isSlotLeader = isSlotLeader clock'
+              , isCommitteeMember = isCommitteeMember $ inRound clock' protocol
               , newChains = unfetchedChains
               , newVotes = unfetchedVotes
               }
         )
         >>= \case
-          NodeResponse{..} -> pure ([], diffuseVotes)
+          NodeResponse{..} -> pure (diffuseChains, diffuseVotes)
           _ -> pure (mempty, mempty) -- FIXME: The state model should define an error type.
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
@@ -208,7 +207,7 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
 
   postcondition _ Initial{} _ () = pure True
   postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (cs, vs) = do
-    let (expectedChains, expectedVotes) = fst (fromJust (transition (sortition net) s a))
+    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst $ transition (sortition net) s a
     let eqVotes vs vs' =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
            in sort (f <$> vs) == sort (f <$> vs')
@@ -218,9 +217,12 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
     when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null vs) $ do
-      monitorPost . counterexample . show $ "  --      got:" <+> pPrint vs
-    counterexamplePost . show $ "  -- expected:" <+> pPrint expectedVotes
+    unless (eqChains cs expectedChains) $ do
+      monitorPost . counterexample . show $ "  --      got chains:" <+> pPrint cs
+      monitorPost . counterexample . show $ "  --      expected chains:" <+> pPrint expectedChains
+    unless (eqVotes vs expectedVotes) $ do
+      monitorPost . counterexample . show $ "  --      got votes:" <+> pPrint vs
+      monitorPost . counterexample . show $ "  --      expected votes:" <+> pPrint expectedVotes
     counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint net)
     pure ok
 

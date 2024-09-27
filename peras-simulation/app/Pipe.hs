@@ -21,11 +21,12 @@ import qualified Data.Text.Lazy.Encoding as T
 import Data.Version (showVersion)
 import qualified Options.Applicative as O
 import Paths_peras_simulation (version)
+import Peras.Block (Party (pid))
 import Peras.Conformance.Params (PerasParams (perasΔ))
 import Peras.Conformance.Test.External (NodeRequest (..), NodeResponse (..))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
-import Peras.Prototype.Crypto (mkCommitteeMember, mkSlotLeader)
+import Peras.Prototype.Crypto (mkCommitteeMember, mkParty, mkSlotLeader)
 import Peras.Prototype.Diffusion (Diffuser, allPendingChains, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Prototype.Environment (mkSimpleScenario)
 import Peras.Prototype.Fetching (fetching)
@@ -40,6 +41,7 @@ import Peras.Prototype.Trace (PerasLog (Protocol), perasTracer)
 import Peras.Prototype.Types (
   PerasState (certs, chains, votes),
   inRound,
+  newRound,
  )
 import Peras.Prototype.Visualizer (makeVisTracer)
 import Peras.Prototype.Voting (voting)
@@ -121,8 +123,13 @@ handle tracer node@MkNodeState{..} =
           Left e -> pure (Failed $ show e, node)
     NewSlot{..} -> do
       let clock' = clock + 1
+          party =
+            mkParty
+              (pid self)
+              (if isSlotLeader then pure clock' else mempty)
+              (if isCommitteeMember && newRound clock' protocol then pure $ inRound clock' protocol else mempty)
       void $ popChainsAndVotes diffuserVar (clock' + fromIntegral (perasΔ protocol) + 1)
-      tickNode tracer diffuserVar protocol self stateVar clock' (inRound clock' protocol) mempty newChains newVotes
+      tickNode tracer diffuserVar protocol party stateVar clock' (inRound clock' protocol) mempty newChains newVotes
         >>= \case
           Right () -> (,node{clock = clock'}) . uncurry NodeResponse <$> popChainsAndVotes diffuserVar (clock' + fromIntegral (perasΔ protocol) + 1)
           Left e -> pure (Failed $ show e, node{clock = clock'})
