@@ -447,25 +447,29 @@ makeVote' s = do
 
 {-# COMPILE AGDA2HS makeVote' #-}
 
-voteInState : NodeModel → Maybe Vote
-voteInState s = do
+SutIsVoter = RoundNumber → Bool
+
+{-# COMPILE AGDA2HS SutIsVoter #-}
+
+voteInState : SutIsVoter → NodeModel → Maybe Vote
+voteInState sutIsVoter s = do
+  guard (sutIsVoter (rFromSlot s))
   guard (slotInRound (protocol s) (clock s) == 0)
   makeVote' s
 
 {-# COMPILE AGDA2HS voteInState #-}
 
-sutIsSlotLeader : SlotNumber → Bool
-sutIsSlotLeader n = 1 == mod (getSlotNumber n) 3
-
-{-# COMPILE AGDA2HS sutIsSlotLeader #-}
-
-votesInState : NodeModel → List Vote
-votesInState = maybeToList ∘ voteInState
+votesInState : SutIsVoter → NodeModel → List Vote
+votesInState sutIsVoter = maybeToList ∘ voteInState sutIsVoter
 
 {-# COMPILE AGDA2HS votesInState #-}
 
-chainInState : NodeModel → Maybe Chain
-chainInState s = do
+SutIsSlotLeader = SlotNumber → Bool
+
+{-# COMPILE AGDA2HS SutIsSlotLeader #-}
+
+chainInState : SutIsSlotLeader → NodeModel → Maybe Chain
+chainInState sutIsSlotLeader s = do
   guard (sutIsSlotLeader (clock s))
   guard (slotNumber block == clock s)
   guard (checkBlockFromSut block)
@@ -492,24 +496,24 @@ chainInState s = do
 
 {-# COMPILE AGDA2HS chainInState #-}
 
-chainsInState : NodeModel → List Chain
-chainsInState = maybeToList ∘ chainInState
+chainsInState : SutIsSlotLeader → NodeModel → List Chain
+chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 
 {-# COMPILE AGDA2HS chainsInState #-}
 
-transition : NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
-transition s Tick =
+transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
+transition (sutIsSlotLeader , sutIsVoter) s Tick =
   let s' = record s { clock = nextSlot (clock s) }
-      votes = votesInState s'
-      chains = chainsInState s'
+      votes = votesInState sutIsVoter  s'
+      chains = chainsInState sutIsSlotLeader s'
   in
   Just ((chains , votes) ,
     let s'' = record s' { allVotes  = votes ++ allVotes s'
                         ; allChains = chains ++ allChains s'
                         }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
-transition _ (NewChain []) = Nothing
-transition s (NewChain (block ∷ rest)) = do
+transition _ _ (NewChain []) = Nothing
+transition _ s (NewChain (block ∷ rest)) = do
   guard (slotNumber block == clock s)
   guard (checkBlockFromOther block)
   guard (parentBlock block == tipHash rest)
@@ -521,7 +525,7 @@ transition s (NewChain (block ∷ rest)) = do
       { allChains = (block ∷ rest) ∷ allChains s
       ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate (block ∷ rest))
       })
-transition s (NewVote v) = do
+transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
   guard (checkSignedVote v)
@@ -530,7 +534,7 @@ transition s (NewVote v) = do
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
   Just (([] , []) , addVote' s v)
-transition s (BadVote v) = do
+transition _ s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just (([] , []) , s)
 
