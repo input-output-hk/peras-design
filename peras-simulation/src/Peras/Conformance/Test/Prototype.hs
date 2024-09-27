@@ -115,6 +115,9 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
     NewVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
+    BadChain c -> do
+      modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
+      pure mempty
     BadVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty

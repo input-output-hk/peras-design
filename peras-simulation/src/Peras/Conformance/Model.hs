@@ -40,6 +40,7 @@ data EnvAction
   = Tick
   | NewChain Chain
   | NewVote Vote
+  | BadChain Chain
   | BadVote Vote
   deriving (Eq, Show)
 
@@ -525,6 +526,21 @@ transition _ s (NewVote v) =
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just (([], []), addVote' s v)
+transition _ s (BadChain blocks) =
+  do
+    guard
+      ( any
+          (\block -> hasForged (slotNumber block) (creatorId block))
+          blocks
+      )
+    Just (([], []), s)
+ where
+  equivocatedBlock :: SlotNumber -> PartyId -> Block -> Bool
+  equivocatedBlock slot pid block =
+    slot == slotNumber block && pid == creatorId block
+  hasForged :: SlotNumber -> PartyId -> Bool
+  hasForged slot pid =
+    any (any $ equivocatedBlock slot pid) $ allChains s
 transition _ s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)

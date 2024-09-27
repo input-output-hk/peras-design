@@ -15,7 +15,7 @@ import Peras.Chain (Chain, Vote (..))
 import Peras.Crypto (Hash)
 import Peras.Numbering (RoundNumber, SlotNumber)
 import Peras.Orphans ()
-import Peras.Prototype.Types (PerasParams, VotingWeight)
+import Peras.Prototype.Types (PerasParams, PerasState, VotingWeight)
 
 data PerasLog
   = Protocol {parameters :: PerasParams}
@@ -33,6 +33,7 @@ data PerasLog
   | VotingLogic {partyId :: PartyId, vr1a :: Bool, vr1b :: Bool, vr2a :: Bool, vr2b :: Bool}
   | DiffuseChain {partyId :: PartyId, chain :: Chain}
   | DiffuseVote {partyId :: PartyId, vote :: Vote}
+  | Snapshot {state :: PerasState}
   deriving stock (Show, Eq, Generic)
 
 data VoteLog = MkVoteLog

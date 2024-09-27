@@ -17,7 +17,7 @@ import qualified Data.Set as Set (singleton)
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
 import Peras.Block (
-  Block (MkBlock, certificate, creatorId, slotNumber),
+  Block (..),
   Certificate (MkCertificate, round),
   PartyId,
  )
@@ -39,6 +39,7 @@ import Peras.Numbering (
  )
 import Peras.Prototype.Crypto (
   createMembershipProof,
+  createSignedBlock,
   createSignedVote,
   mkParty,
  )
@@ -51,6 +52,7 @@ import Test.QuickCheck (
   chooseInteger,
   elements,
   sublistOf,
+  suchThat,
  )
 import Prelude hiding (round)
 
@@ -159,6 +161,13 @@ genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2
     if vr1a && vr1b || vr2a && vr2b
       then pure . Just . fromRight undefined . runIdentity $ createSignedVote party' vr block pm 1
       else pure Nothing
+
+genMutatedBlock :: GenConstraints -> Block -> Gen Block
+genMutatedBlock _ MkBlock{slotNumber, creatorId, parentBlock, bodyHash, certificate, leadershipProof} =
+  do
+    bodyHash' <- arbitrary `suchThat` (/= bodyHash)
+    pure . fromRight undefined . runIdentity $
+      createSignedBlock (mkParty creatorId mempty mempty) slotNumber parentBlock certificate leadershipProof bodyHash'
 
 genNewChain :: GenConstraints -> NodeModel -> Gen Chain
 genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
