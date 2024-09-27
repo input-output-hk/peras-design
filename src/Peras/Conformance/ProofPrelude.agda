@@ -52,6 +52,7 @@ eqBS-sound = lem-eqBS
 postulate
   not-eqBS-sound : {n m : ByteString} → eqBS n m ≡ False → n ≡ m → ⊥
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
+  eqMaybe-sound : ⦃ _ : Eq a ⦄ → {m₁ m₂ : Maybe a} → (m₁ == m₂) ≡ True → m₁ ≡ m₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem

@@ -419,15 +419,17 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → Invariant s₀
                           → transition p (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s₀ (block ∷ rest) inv prf
-      with (slotNumber block == State.clock s₀) in checkSlot
+    newChain-soundness s₀ (block@(record { certificate = Nothing }) ∷ rest) inv prf
+      with needCert' (modelState s₀) == Nothing in ¬needCert
+         | slotNumber block == State.clock s₀ in checkSlot
          | checkBlockFromOther block in checkedOther
-         | (parentBlock block == tipHash rest) in checkHash
-         | (rest == pref (modelState s₀)) in checkRest
+         | parentBlock block == tipHash rest in checkHash
+         | rest == pref (modelState s₀) in checkRest
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
-    newChain-soundness {cs} {vs} {ms₁} s₀ (block ∷ rest) inv refl
-      | True | True | True | True | True | True =
+    newChain-soundness {cs} {vs} {ms₁} s₀
+      (block@(record { certificate = Nothing }) ∷ rest) inv refl
+      | True | True | True | True | True | True | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
@@ -463,8 +465,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         parent≡tip : parentBlock block ≡ tipHash rest
         parent≡tip = MkHash-inj block-parentBlock
 
-        cert≡needCert : certificate block ≡ needCert (v-round slot) tree
-        cert≡needCert = {!!} -- TODO: guards in transition
+        cert≡needCert : certificate block ≡ needCert' tree
+        cert≡needCert = sym (eqMaybe-sound ¬needCert)
 
         bodyHash≡txsHash :
           bodyHash block ≡
@@ -478,19 +480,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         bodyHash≡txsHash = {!!} -- TODO: txSelection/hash from model
 
         block≡β : block ≡ β
-        block≡β
-          with v ←
-          cong
-            (λ i →  record
-                      { slotNumber = i
-                      ; creatorId = creatorId block
-                      ; parentBlock = parentBlock block
-                      ; certificate = certificate block
-                      ; leadershipProof = leadershipProof block
-                      ; bodyHash = bodyHash block
-                      ; signature = signature block
-                      })
-            slotNumber≡slot
+        block≡β with v ← cong (λ i →  record block{ slotNumber = i }) slotNumber≡slot
           rewrite parent≡tip
           rewrite cert≡needCert
           rewrite bodyHash≡txsHash
@@ -573,6 +563,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             }
           ≡ ms₁
         s₁-agrees
+          rewrite cert≡needCert
           rewrite
             k'≢k-get∘set
               {k = sutId}
@@ -587,7 +578,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {m = blockTrees}
           rewrite block≡β
           rewrite rest≡pref
-          = refl
+          = {!refl!} -- refl
 
         votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
         votes-agree with creatorId block ≟ sutId

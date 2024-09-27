@@ -501,6 +501,16 @@ chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 
 {-# COMPILE AGDA2HS chainsInState #-}
 
+needCert' : NodeModel → Maybe Certificate
+needCert' s =
+  let r = getRoundNumber (slotToRound (protocol s) (clock s))
+  in
+  if not (any (λ c → roundNumber c + 2 == r) (allSeenCerts s))
+     && r <= perasA (protocol s) + roundNumber (cert' s)
+     && (roundNumber (certS s) <= roundNumber (cert' s))
+  then Just (cert' s)
+  else Nothing
+
 transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition (sutIsSlotLeader , sutIsVoter) s Tick =
   let s' = record s { clock = nextSlot (clock s) }
@@ -513,18 +523,72 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
                         }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain (block ∷ rest)) = do
-  guard (slotNumber block == clock s)
-  guard (checkBlockFromOther block)
-  guard (parentBlock block == tipHash rest)
-  guard (rest == pref s)
-  guard (checkSignedBlock block)
-  guard (checkLeadershipProof (leadershipProof block))
-  Just (([] , []) ,
-    record s
-      { allChains = (block ∷ rest) ∷ allChains s
-      ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate (block ∷ rest))
-      })
+transition _ s (NewChain
+  (record -- TODO: is there a more concise way to do this?
+    { slotNumber = slotNumber
+    ; creatorId = creatorId
+    ; parentBlock = parentBlock
+    ; certificate = Nothing -- pattern match
+    ; leadershipProof = leadershipProof
+    ; signature = signature
+    ; bodyHash = bodyHash } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Nothing
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (needCert' s == Nothing) -- guard correponding to the pattern match above
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
+transition _ s (NewChain
+  (record
+    { slotNumber = slotNumber
+    ; creatorId = creatorId
+    ; parentBlock = parentBlock
+    ; certificate = Just cert -- pattern match
+    ; leadershipProof = leadershipProof
+    ; signature = signature
+    ; bodyHash = bodyHash
+    } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Just cert -- guard corresponding to the pattern match above
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash
+                     }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (needCert' s == Just cert)
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
