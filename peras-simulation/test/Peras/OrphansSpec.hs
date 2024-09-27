@@ -4,7 +4,6 @@ module Peras.OrphansSpec where
 
 import Paths_peras_simulation (getDataDir)
 import Peras.Arbitraries ()
-import Peras.Block (Block)
 import Peras.Chain (Chain)
 import Peras.Event (Event)
 import Peras.Orphans ()

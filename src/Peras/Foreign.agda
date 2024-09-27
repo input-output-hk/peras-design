@@ -9,6 +9,12 @@ open import Peras.Numbering
 
 
 {-# FOREIGN AGDA2HS
+  {-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+  {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+  {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+  {-# OPTIONS_GHC -fno-warn-type-defaults #-}
+  {-# OPTIONS_GHC -fno-warn-unused-imports #-}
+  {-# OPTIONS_GHC -fno-warn-unused-matches #-}
   import Data.Functor.Identity ( Identity(runIdentity) )
   import Peras.Block ( Block, Certificate, Party, PartyId, Payload )
   import Peras.Chain ( Vote, VotingWeight )

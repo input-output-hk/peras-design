@@ -13,8 +13,6 @@
 
 module Peras.Conformance.Test.External where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
-import Control.Concurrent.STM.TVar qualified as IO
 import Control.Monad (unless, void, when)
 import Control.Monad.IO.Class ()
 import Control.Monad.State (
@@ -23,17 +21,13 @@ import Control.Monad.State (
   StateT,
   modify,
  )
-import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as A
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 qualified as LBS8
 import Data.Default (Default (def))
-import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (sort)
-import Data.Maybe (fromJust)
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Peras.Block (Certificate, Party)
 import Peras.Chain (Chain, Vote (..))
@@ -41,43 +35,33 @@ import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
   initialModelState,
+  sutId,
   transition,
  )
 import Peras.Conformance.Params (PerasParams)
-import Peras.Conformance.Test (Action (Step), modelSUT, sortition)
+import Peras.Conformance.Test (
+  Action (Initial, Step),
+  NetworkModel (NetworkModel, nodeModel),
+  sortition,
+ )
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber)
-import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
   IsCommitteeMember,
   IsSlotLeader,
-  isCommitteeMember,
-  isSlotLeader,
-  mkCommitteeMember,
+  mkParty,
  )
-import Peras.Prototype.Diffusion (
-  Diffuser,
-  diffuseVote,
-  popChainsAndVotes,
- )
-import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.Trace qualified as Trace
 import Peras.Prototype.Types (
-  PerasState,
   inRound,
-  initialPerasState,
   newRound,
  )
-import Peras.Prototype.Voting (voting)
-import System.IO (Handle, IO)
+import System.IO (Handle)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
   counterexample,
   ioProperty,
   noShrinking,
-  whenFail,
  )
-import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras (runPropertyStateT)
 import Test.QuickCheck.Monadic (monadicIO, monitor)
 import Test.QuickCheck.StateModel (
@@ -88,7 +72,7 @@ import Test.QuickCheck.StateModel (
   monitorPost,
   runActions,
  )
-import Text.PrettyPrint (hang, vcat, (<+>))
+import Text.PrettyPrint (hang, (<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 import Prelude hiding (round)
 
@@ -159,24 +143,39 @@ callSUT RunState{hReader, hWriter} req =
 
 type Runtime = StateT RunState IO
 
-instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel Runtime where
-  perform NodeModel{..} (Step a) _ = case a of
+instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkModel Runtime where
+  perform NetworkModel{nodeModel = NodeModel{..}} (Initial params leaderSlots voterRounds) _ =
+    do
+      rs <- get
+      void . lift $
+        callSUT
+          rs
+          Initialize
+            { party = mkParty sutId leaderSlots voterRounds
+            , slotNumber = clock
+            , parameters = params
+            , chainsSeen = allChains
+            , votesSeen = allVotes
+            , certsSeen = allSeenCerts
+            }
+  perform net@NetworkModel{nodeModel = NodeModel{..}} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
-      modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
+      modify $ \rs' -> rs'{unfetchedChains = mempty, unfetchedVotes = mempty}
       let clock' = clock + 1
-      ( lift $
-          callSUT
+          (isSlotLeader', isCommitteeMember') = sortition net
+      lift
+        ( callSUT
             rs
             NewSlot
-              { isSlotLeader = Peras.Prototype.Crypto.isSlotLeader modelSUT clock'
-              , isCommitteeMember = Peras.Prototype.Crypto.isCommitteeMember modelSUT (inRound clock' protocol)
+              { isSlotLeader = isSlotLeader' clock'
+              , isCommitteeMember = isCommitteeMember' $ inRound clock' protocol
               , newChains = unfetchedChains
               , newVotes = unfetchedVotes
               }
         )
         >>= \case
-          NodeResponse{..} -> pure ([], diffuseVotes)
+          NodeResponse{..} -> pure (diffuseChains, diffuseVotes)
           _ -> pure (mempty, mempty) -- FIXME: The state model should define an error type.
     NewChain c -> do
       modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
@@ -188,24 +187,28 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NodeModel
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure (mempty, mempty)
 
-  postcondition (s, s') (Step a) _ (cs, vs) = do
-    let (expectedChains, expectedVotes) = fst (fromJust (transition sortition s a))
-    let eqVotes vs vs' =
+  postcondition _ Initial{} _ () = pure True
+  postcondition (net@NetworkModel{nodeModel = s}, NetworkModel{nodeModel = s'}) (Step a) _ (cs, vs) = do
+    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst $ transition (sortition net) s a
+    let eqVotes vs0 vs1 =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
-           in sort (f <$> vs) == sort (f <$> vs')
-        eqChains cs cs' = cs == cs'
+           in sort (f <$> vs0) == sort (f <$> vs1)
+        eqChains cs0 cs1 = cs0 == cs1
     let ok = eqChains cs expectedChains && eqVotes vs expectedVotes
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null vs) $ do
-      monitorPost . counterexample . show $ "  --      got:" <+> pPrint vs
-    counterexamplePost . show $ "  -- expected:" <+> pPrint expectedVotes
-    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
+    unless (eqChains cs expectedChains) $ do
+      monitorPost . counterexample . show $ "  --      got chains:" <+> pPrint cs
+      monitorPost . counterexample . show $ "  --      expected chains:" <+> pPrint expectedChains
+    unless (eqVotes vs expectedVotes) $ do
+      monitorPost . counterexample . show $ "  --      got votes:" <+> pPrint vs
+      monitorPost . counterexample . show $ "  --      expected votes:" <+> pPrint expectedVotes
+    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint net)
     pure ok
 
-prop_node :: Handle -> Handle -> Blind (Actions NodeModel) -> Property
+prop_node :: Handle -> Handle -> Blind (Actions NetworkModel) -> Property
 prop_node hReader hWriter (Blind as) = noShrinking $
   ioProperty $ do
     let unfetchedChains = mempty
@@ -213,7 +216,7 @@ prop_node hReader hWriter (Blind as) = noShrinking $
     callSUT
       RunState{..}
       Initialize
-        { party = modelSUT
+        { party = mkParty sutId mempty mempty
         , slotNumber = clock initialModelState
         , parameters = protocol initialModelState
         , chainsSeen = allChains initialModelState
