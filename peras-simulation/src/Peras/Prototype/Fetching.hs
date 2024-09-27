@@ -17,6 +17,7 @@ import Control.Tracer (Tracer, traceWith)
 import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (groupBy, maximumBy, nubBy, sortBy)
+import Data.Map (Map)
 import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
@@ -104,6 +105,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
         , certStar = certStar'
         }
 
+compareChains :: Integer -> Map Certificate SlotNumber -> Chain -> Chain -> Ordering
 compareChains perasB certs' a b =
   case (compare `on` chainWeight perasB (Map.keysSet certs')) a b of
     EQ ->

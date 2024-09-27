@@ -16,8 +16,6 @@ import Peras.Prototype.Types (PerasParams (..), PerasState (..), initialPerasSta
 import Test.Hspec (Spec, it, shouldReturn)
 import Test.QuickCheck (arbitrary)
 
-import qualified Data.Set as Set (size)
-
 spec :: Spec
 spec = do
   let params = def

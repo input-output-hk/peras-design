@@ -4,30 +4,17 @@
 
 module Peras.Conformance.Generators where
 
-import Control.Applicative (Applicative (pure, (<*>)), (<$>))
 import Control.Arrow (Arrow (first, second, (&&&), (***)))
-import Control.Monad (Functor (fmap), filterM, (=<<))
+import Control.Monad (filterM)
 import Data.Either (fromRight)
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.List (
-  all,
-  any,
-  concatMap,
-  dropWhile,
-  elem,
-  filter,
-  foldl,
-  maximum,
-  notElem,
   nub,
-  null,
   partition,
-  (++),
  )
-import Data.Maybe (Maybe (..), isNothing, mapMaybe, maybe)
+import Data.Maybe (isNothing, mapMaybe)
 import qualified Data.Set as Set (singleton)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Peras.Arbitraries ()
 import Peras.Block (
   Block (MkBlock, certificate, creatorId, slotNumber),
@@ -44,24 +31,25 @@ import Peras.Conformance.Model (
   sutId,
   transition,
  )
-import Peras.Crypto
 import Peras.Crypto (Hash, Hashable (hash))
 import Peras.Numbering (
   RoundNumber (..),
   SlotNumber (..),
   slotInRound,
  )
-import Peras.Prototype.Crypto
+import Peras.Prototype.Crypto (
+  createMembershipProof,
+  createSignedVote,
+  mkParty,
+ )
 import Peras.Prototype.Types (PerasParams (..), hashTip, inRound)
 import Test.QuickCheck (
   Arbitrary (arbitrary),
   Gen,
   NonNegative (getNonNegative),
-  Positive (getPositive),
   choose,
   chooseInteger,
   elements,
-  frequency,
   sublistOf,
  )
 import Prelude hiding (round)
@@ -176,8 +164,6 @@ genNewChain :: GenConstraints -> NodeModel -> Gen Chain
 genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
   do
     prefChain <- genPrefChain gc node
-    cert1 <- genCertForBlock gc node prefChain
-    cert2 <- genCert gc node prefChain -- FIXME: Guard this with a setting.
     fmap (: prefChain) $
       MkBlock
         <$> (if blockCurrent then pure clock else genSlotNumber gc node)
@@ -188,7 +174,8 @@ genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
         <*> arbitrary
         <*> arbitrary
 
-genPrefChain gc@MkGenConstraints{blockWeightiest} node@NodeModel{protocol, allChains} =
+genPrefChain :: GenConstraints -> NodeModel -> Gen Chain
+genPrefChain MkGenConstraints{blockWeightiest} NodeModel{protocol, allChains} =
   let
     weigh :: Integer -> Block -> Integer
     weigh w MkBlock{certificate} = w + 1 + maybe 0 (const $ perasB protocol) certificate
@@ -205,7 +192,7 @@ genPrefChain gc@MkGenConstraints{blockWeightiest} node@NodeModel{protocol, allCh
       else sublistOf =<< elements allChains
 
 getCertPrimes :: NodeModel -> [Certificate]
-getCertPrimes NodeModel{clock, protocol, allSeenCerts} =
+getCertPrimes NodeModel{allSeenCerts} =
   let certRound = maximum $ round <$> allSeenCerts
    in filter ((== certRound) . round) allSeenCerts
 

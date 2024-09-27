@@ -10,7 +10,7 @@
 
 module Peras.Conformance.Test.Prototype where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar), atomically, readTVarIO)
+import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
 import Control.Concurrent.STM.TVar qualified as IO
 import Control.Monad (unless, when)
 import Control.Monad.State (
@@ -22,23 +22,21 @@ import Control.Monad.State (
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
-import Data.Maybe (fromJust, isJust)
-import Data.Set (Set)
-import Debug.Trace (traceShow)
-import Peras.Block (Block (certificate))
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
-  checkVotingRules,
-  pref,
   transition,
-  vr1A,
-  vr1B,
-  vr2A,
-  vr2B,
  )
-import Peras.Conformance.Test
+import Peras.Conformance.Test (
+  Action (Initial, Step),
+  NetworkModel (NetworkModel, nodeModel),
+  modelSUT,
+  monitorCerts,
+  monitorChain,
+  monitorVoting,
+  sortition,
+ )
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -64,14 +62,11 @@ import Peras.Prototype.Voting (voting)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
-  classify,
   counterexample,
   ioProperty,
   noShrinking,
-  tabulate,
   whenFail,
  )
-import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras (runPropertyStateT)
 import Test.QuickCheck.Monadic (monadicIO, monitor)
 import Test.QuickCheck.StateModel (
@@ -135,13 +130,15 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
     when (a == Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null gotChains) $ do
-      monitorPost . counterexample . show $ "  --      got chains:" <+> pPrint gotChains
+    unless (null gotChains) $
+      monitorPost . counterexample . show $
+        "  --      got chains:" <+> pPrint gotChains
     when (gotChains /= expectedChains) $
       counterexamplePost . show $
         "  -- expected chains:" <+> pPrint expectedChains
-    unless (null gotVotes) $ do
-      monitorPost . counterexample . show $ "  --      got votes:" <+> pPrint gotVotes
+    unless (null gotVotes) $
+      monitorPost . counterexample . show $
+        "  --      got votes:" <+> pPrint gotVotes
     when (gotVotes /= expectedVotes) $
       counterexamplePost . show $
         "  -- expected votes:" <+> pPrint expectedVotes

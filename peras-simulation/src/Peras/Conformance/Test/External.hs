@@ -13,8 +13,6 @@
 
 module Peras.Conformance.Test.External where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (TVar))
-import Control.Concurrent.STM.TVar qualified as IO
 import Control.Monad (unless, void, when)
 import Control.Monad.IO.Class ()
 import Control.Monad.State (
@@ -23,17 +21,13 @@ import Control.Monad.State (
   StateT,
   modify,
  )
-import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as A
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 qualified as LBS8
 import Data.Default (Default (def))
-import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (sort)
-import Data.Maybe (fromJust)
-import Data.Set (Set)
 import GHC.Generics (Generic)
 import Peras.Block (Certificate, Party)
 import Peras.Chain (Chain, Vote (..))
@@ -45,41 +39,29 @@ import Peras.Conformance.Model (
   transition,
  )
 import Peras.Conformance.Params (PerasParams)
-import Peras.Conformance.Test
+import Peras.Conformance.Test (
+  Action (Initial, Step),
+  NetworkModel (NetworkModel, nodeModel),
+  sortition,
+ )
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber)
-import Peras.Prototype.BlockSelection (selectBlock)
 import Peras.Prototype.Crypto (
   IsCommitteeMember,
   IsSlotLeader,
-  isCommitteeMember,
-  isSlotLeader,
-  mkCommitteeMember,
   mkParty,
  )
-import Peras.Prototype.Diffusion (
-  Diffuser,
-  diffuseVote,
-  popChainsAndVotes,
- )
-import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.Trace qualified as Trace
 import Peras.Prototype.Types (
-  PerasState,
   inRound,
-  initialPerasState,
   newRound,
  )
-import Peras.Prototype.Voting (voting)
-import System.IO (Handle, IO)
+import System.IO (Handle)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
   counterexample,
   ioProperty,
   noShrinking,
-  whenFail,
  )
-import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras (runPropertyStateT)
 import Test.QuickCheck.Monadic (monadicIO, monitor)
 import Test.QuickCheck.StateModel (
@@ -90,7 +72,7 @@ import Test.QuickCheck.StateModel (
   monitorPost,
   runActions,
  )
-import Text.PrettyPrint (hang, vcat, (<+>))
+import Text.PrettyPrint (hang, (<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty (pPrint))
 import Prelude hiding (round)
 
@@ -162,7 +144,7 @@ callSUT RunState{hReader, hWriter} req =
 type Runtime = StateT RunState IO
 
 instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkModel Runtime where
-  perform net@NetworkModel{nodeModel = NodeModel{..}} a@(Initial params leaderSlots voterRounds) _ =
+  perform NetworkModel{nodeModel = NodeModel{..}} (Initial params leaderSlots voterRounds) _ =
     do
       rs <- get
       void . lift $
@@ -179,15 +161,15 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
   perform net@NetworkModel{nodeModel = NodeModel{..}} (Step a) _ = case a of
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
-      modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
+      modify $ \rs' -> rs'{unfetchedChains = mempty, unfetchedVotes = mempty}
       let clock' = clock + 1
-          (isSlotLeader, isCommitteeMember) = sortition net
-      ( lift $
-          callSUT
+          (isSlotLeader', isCommitteeMember') = sortition net
+      lift
+        ( callSUT
             rs
             NewSlot
-              { isSlotLeader = isSlotLeader clock'
-              , isCommitteeMember = isCommitteeMember $ inRound clock' protocol
+              { isSlotLeader = isSlotLeader' clock'
+              , isCommitteeMember = isCommitteeMember' $ inRound clock' protocol
               , newChains = unfetchedChains
               , newVotes = unfetchedVotes
               }
@@ -206,12 +188,12 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
       pure (mempty, mempty)
 
   postcondition _ Initial{} _ () = pure True
-  postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (cs, vs) = do
+  postcondition (net@NetworkModel{nodeModel = s}, NetworkModel{nodeModel = s'}) (Step a) _ (cs, vs) = do
     let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst $ transition (sortition net) s a
-    let eqVotes vs vs' =
+    let eqVotes vs0 vs1 =
           let f MkVote{..} = (votingRound, creatorId, blockHash)
-           in sort (f <$> vs) == sort (f <$> vs')
-        eqChains cs cs' = cs == cs'
+           in sort (f <$> vs0) == sort (f <$> vs1)
+        eqChains cs0 cs1 = cs0 == cs1
     let ok = eqChains cs expectedChains && eqVotes vs expectedVotes
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Peras.Conformance.Model.Tick && newRound (clock s') (protocol s')) $

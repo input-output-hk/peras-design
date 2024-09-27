@@ -7,7 +7,6 @@ module Peras.Prototype.Trace where
 import Control.Tracer (Tracer (..), contramap, debugTracer)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
-import Data.Set (Set)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LE
 import GHC.Generics (Generic)

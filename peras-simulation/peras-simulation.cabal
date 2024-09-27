@@ -15,12 +15,6 @@ data-files:         *.json
 common warnings
     ghc-options: -O3
                  -Wall -Wunused-packages -Werror
-                 -fno-warn-missing-pattern-synonym-signatures
-                 -fno-warn-missing-signatures
-                 -fno-warn-name-shadowing
-                 -fno-warn-type-defaults
-                 -fno-warn-unused-imports
-                 -fno-warn-unused-matches
 
 library
     import:           warnings
@@ -94,10 +88,8 @@ executable  peras-simulation-pipe
                     , contra-tracer
                     , data-default
                     , io-classes
-                    , mtl
                     , optparse-applicative
                     , peras-simulation
-                    , text
 
 executable  peras-simulate
     import:           warnings
@@ -167,9 +159,6 @@ executable peras-conformance-test
                   , aeson
                   , base
                   , bytestring
-                  , data-default
                   , hspec
-                  , mtl
                   , peras-simulation
-                  , quickcheck-dynamic
     ghc-options: -rtsopts -threaded

@@ -5,12 +5,10 @@
 module Peras.Prototype.Node where
 
 import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
-import Control.Monad (when)
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, gets, lift, modify')
 import Control.Tracer (Tracer, nullTracer, traceWith)
 import Data.Default (def)
-import Data.Set (Set)
 import Peras.Block (Party)
 import Peras.Chain (Chain, Vote)
 import Peras.Numbering (RoundNumber, SlotNumber)
@@ -27,7 +25,6 @@ import Peras.Prototype.Types (
   PerasState,
   inRound,
   initialPerasState,
-  newRound,
   systemStart,
  )
 import Peras.Prototype.Voting (voting)
@@ -81,7 +78,7 @@ tickNode ::
   [Chain] ->
   [Vote] ->
   m (PerasResult ())
-tickNode tracer diffuser params party state s r payload newChains newVotes =
+tickNode tracer diffuser params party state s _ payload newChains newVotes =
   -- 1. Get votes and chains from the network.
   runExceptT $ do
     -- 2. Invoke fetching.
