@@ -455,7 +455,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         slotNumber≡slot = cong MkSlotNumber (eqℕ-sound checkSlot)
 
         rest≡pref : rest ≡ prefChain tree
-        rest≡pref = eqList-sound checkRest
+        rest≡pref = ? -- eqList-sound checkRest -- TODO: IsLawfulEq instance for Block
 
         block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
         block-parentBlock = eqBS-sound checkHash
@@ -944,8 +944,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                    }
           bodyHash≡txsHash = {!!} -- TODO: see ↑
 
+          prefChain≡prefChain' : prefChain tree ≡ prefChain (modelState s')
+          prefChain≡prefChain' = {!!} -- FIXME: is this true?
+
+          rest≡pref' : rest ≡ prefChain tree
+          rest≡pref' = ? -- eqList-sound checkRest -- IsLawfulEq instance for Block
+
           rest≡pref : rest ≡ prefChain (modelState s')
-          rest≡pref = {!!} -- eqList-sound checkRest
+          rest≡pref = trans rest≡pref' prefChain≡prefChain'
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref

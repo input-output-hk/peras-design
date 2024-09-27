@@ -5,6 +5,8 @@ module Peras.Block where
 <!--
 ```agda
 open import Haskell.Prelude
+open import Haskell.Law.Eq.Def
+open import Haskell.Law.Eq.Instances
 
 open import Data.Product using (∃; ∃-syntax)
 
