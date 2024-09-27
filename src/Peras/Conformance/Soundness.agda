@@ -35,7 +35,7 @@ open import Peras.Params
 open import Peras.Util
 
 open import Peras.Conformance.Params
-open import Peras.Conformance.ProofPrelude
+open import Peras.Conformance.ProofPrelude hiding (⊥-elim)
 open import Peras.Conformance.Model as Model
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
@@ -155,7 +155,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
         ; no-equivocations = {!!}
-        ; quorum-cert = {!!} -- invariants
+--        ; quorum-cert = {!!} -- invariants
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
@@ -195,8 +195,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       BlockSelection (State.clock s) (modelState s) ≡ votingBlockHash (modelState s)
     blockSelection-eq = refl
 
-    -- Some postulates, resp. TODOs
-
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
         → State.blockTrees sᵢ ⁉ p ≡ just (modelState sᵢ)
@@ -209,16 +207,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
       -- noCertsFromQuorum = {!!}
 
-      noVotesAfterTick : ∀ {s₀ s₁}
-        → voteInState (modelState s₀) ≡ Nothing
-        → s₀ ↝⋆ s₁
-        → voteInState (modelState s₁) ≡ Nothing
-      -- noVotesAfterTick = {!!}
-
-    fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
+    fetched : ∀ {s} → Fetched s → Fetched (tick s)
     fetched {s} x
       rewrite fetched→[] {s} x
-      = {!!} -- All.[]
+      = allNil
 
     record Invariant (s : State) : Set where
       field
@@ -767,7 +759,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = refl
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
-          votes-agree = {!!} -- rewrite vote≡w = ? -- refl
+          votes-agree rewrite vote≡w = refl
 
           inv₁ : Invariant s₁
           inv₁ =
