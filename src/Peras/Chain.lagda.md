@@ -139,7 +139,7 @@ module _ ⦃ _ : Hashable Block ⦄
       (dropWhile (λ block' → (hash block' /= h)) ch)
 
   Extends : Hash Block → Certificate → List Chain → Set
-  Extends h c = Any (ChainExtends h c)
+  Extends h c ch = if (c == cert₀) then ⊤ else Any (ChainExtends h c) ch
 ```
 The weight of a chain is computed wrt to a set of dangling votes
 ```agda

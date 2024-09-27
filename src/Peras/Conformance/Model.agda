@@ -221,12 +221,10 @@ chainExtends h c =
 {-# COMPILE AGDA2HS chainExtends #-}
 
 extends : Hash Block → Certificate → List Chain → Bool
-extends h cert chain = any (chainExtends h cert) chain
-{-
+extends h cert chain =
   if cert == genesisCert
     then True
     else any (chainExtends h cert) chain
--}
 
 {-# COMPILE AGDA2HS extends #-}
 
@@ -341,7 +339,20 @@ chainExtendsDec h c ch = chainExtends h c ch ⟨ chainExtends-prf h c ch ⟩
 
 extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
   → Reflects (Extends h c ch) (extends h c ch)
-extends-prf h c ch = any-prf ch (chainExtends-prf h c)
+extends-prf h c ch =
+  of
+    {P = Extends h c ch}
+    {b = extends h c ch} ite
+  where
+    ite : if extends h c ch
+          then (λ ⦃ @0 _ ⦄ → Extends h c ch)
+          else (λ ⦃ @0 _ ⦄ → Extends h c ch → ⊥)
+    ite
+      with c == genesisCert in eq
+    ite | True = tt
+    ite | False =
+      let r = any-prf ch (chainExtends-prf h c)
+      in invert {b = any (chainExtends h c) ch} r
 
 extendsDec : (h : Hash Block) → (c : Certificate) → (ch : List Chain) → Dec (Extends h c ch)
 extendsDec h c ch = extends h c ch ⟨ extends-prf h c ch ⟩
