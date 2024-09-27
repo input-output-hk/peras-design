@@ -136,6 +136,7 @@ instance Pretty EnvAction where
   pPrint (NewChain chain) =
     "NewChain" <+> pPrint chain
   pPrint (NewVote vote) = "NewVote" <+> pPrintPrec prettyNormal 10 vote
+  pPrint (BadChain chain) = "BadVote" <+> pPrintPrec prettyNormal 10 chain
   pPrint (BadVote vote) = "BadVote" <+> pPrintPrec prettyNormal 10 vote
 
 instance Pretty Block where

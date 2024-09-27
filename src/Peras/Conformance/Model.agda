@@ -63,6 +63,7 @@ data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
+  BadChain : Chain → EnvAction
   BadVote  : Vote → EnvAction
 
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
@@ -539,6 +540,15 @@ transition _ s (NewVote v) = do
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
   Just (([] , []) , addVote' s v)
+transition _ s (BadChain blocks) = do
+  guard (any (λ block → hasForged (slotNumber block) (creatorId block)) blocks)
+  Just (([] , []) , s)
+  where
+    equivocatedBlock : SlotNumber → PartyId →  Block → Bool
+    equivocatedBlock slot pid block = slot == slotNumber block && pid == creatorId block
+    hasForged : SlotNumber → PartyId → Bool
+    hasForged slot pid =
+      any (any $ equivocatedBlock slot pid) $ allChains s
 transition _ s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just (([] , []) , s)
