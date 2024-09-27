@@ -184,8 +184,15 @@ module _ {a : Set} ⦃ _ : Hashable a ⦄
   tipHash [] = MkHash emptyBS
   tipHash (x ∷ _) = hash x
 
+private
+  open Hashable
+  instance
+    hashBlock : Hashable Block
+    hashBlock .hash = MkHash ∘ bytesS ∘ signature
+
 {-# COMPILE AGDA2HS tipHash #-}
 {-# COMPILE AGDA2HS iCertificateEq #-}
 {-# COMPILE AGDA2HS iBlockEq #-}
 {-# COMPILE AGDA2HS iBlockBodyEq #-}
+{-# COMPILE AGDA2HS hashBlock #-}
 ```

@@ -1,5 +1,9 @@
 module Peras.Util where
 
+import Numeric.Natural (Natural)
+
+import GHC.Integer
+
 maybeToList :: Maybe a -> [a]
 maybeToList Nothing = []
 maybeToList (Just x) = [x]
@@ -17,3 +21,32 @@ maximumBy candidate f (x : xs) =
 
 comparing :: Ord b => (a -> b) -> a -> a -> Ordering
 comparing f x y = compare (f x) (f y)
+
+mapMaybe :: (a -> Maybe b) -> [a] -> [b]
+mapMaybe p [] = []
+mapMaybe p (x : xs) =
+  case p x of
+    Just y -> y : mapMaybe p xs
+    Nothing -> mapMaybe p xs
+
+isYes :: Bool -> Bool
+isYes True = True
+isYes False = False
+
+decP :: Bool -> Bool -> Bool
+decP va vb = va && vb
+
+decS :: Bool -> Bool -> Bool
+decS va vb = va || vb
+
+eqDec :: Natural -> Natural -> Bool
+eqDec x y = x == y
+
+eq :: Integer -> Integer -> Bool
+eq = (==)
+
+gt :: Integer -> Integer -> Bool
+gt = gtInteger
+
+ge :: Integer -> Integer -> Bool
+ge = geInteger

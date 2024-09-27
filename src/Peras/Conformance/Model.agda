@@ -12,12 +12,11 @@ open import Haskell.Law.Ord.Def
 open import Haskell.Law.Ord.Ordering
 
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
-open import Relation.Nullary.Negation using (¬_; contradiction)
 
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Conformance.Params
-open import Peras.Conformance.ProofPrelude
+open import Peras.Conformance.ProofPrelude using (eqBS-sound; not-eqBS-sound; any-prf)
 open import Peras.Crypto
 open import Peras.Foreign
 open import Peras.Numbering
@@ -48,8 +47,6 @@ open Hashable
 instance
   hashBlock : Hashable Block
   hashBlock .hash = MkHash ∘ bytesS ∘ signature
-
-{-# COMPILE AGDA2HS hashBlock #-}
 
 -- To avoid name clash for Vote.creatorId and Block.creatorId
 voterId : Vote → PartyId
@@ -228,6 +225,10 @@ extends h cert chain =
 
 {-# COMPILE AGDA2HS extends #-}
 
+private
+  mod : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
+  mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
+
 votingBlockHash : NodeModel → Hash Block
 votingBlockHash s =
   tipHash ∘ filter (λ {b → (getSlotNumber (slotNumber b)) + (perasL (protocol s)) <= (getSlotNumber (clock s))})
@@ -380,16 +381,16 @@ vr2A s =
 Vr2B : NodeModel → Set
 Vr2B s =
   (getRoundNumber (rFromSlot s) Data.Nat.> getRoundNumber (round (certS s)))
-    × ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
-       ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+    × ((mod (fromNat (getRoundNumber (rFromSlot s))) (fromNat (perasK (protocol s))))
+       ≡ (mod (fromNat (getRoundNumber (round (certS s)))) (fromNat (perasK (protocol s)))))
 
 vr2B : (s : NodeModel) → Dec (Vr2B s)
 vr2B s = decP
   (gt
     (getRoundNumber (rFromSlot s))
     (getRoundNumber (round (certS s))))
-  (eqDec (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
-    (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+  (eqDec (mod (fromNat (getRoundNumber (rFromSlot s))) (fromNat (perasK (protocol s))))
+    (mod (fromNat (getRoundNumber (round (certS s)))) (fromNat (perasK (protocol s)))))
 
 {-# COMPILE AGDA2HS vr2B #-}
 
