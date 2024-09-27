@@ -2,6 +2,9 @@
 module Peras.Conformance.ProofPrelude where
 
 open import Haskell.Prelude
+
+open import Haskell.Extra.Dec
+open import Haskell.Extra.Refinement
 open import Haskell.Prim.Tuple
 open import Haskell.Prim.Eq
 open import Haskell.Law.Equality
@@ -46,8 +49,38 @@ not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
 eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
 eqBS-sound = lem-eqBS
 
-postulate -- TODO
+postulate
+  not-eqBS-sound : {n m : ByteString} → eqBS n m ≡ False → n ≡ m → ⊥
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
+
+¬any-[] : ∀ {a : Set} {f : a → Bool} → any f [] ≡ False
+¬any-[] = refl
+
+¬Any-[] : ∀ {a : Set} {f : a → Set} → Any f [] → ⊥
+¬Any-[] ()
+
+⊥-elim : ∀ {w} {Whatever : Set w} → ⊥ → Whatever
+⊥-elim ()
+
+any-prf : ∀ {A : Set} {f : A → Set} {g : A → Bool} (as : List A)
+  → (∀ x → Reflects (f x) (g x)) → Reflects (Any f as) (any g as)
+any-prf [] x = ¬Any-[]
+any-prf {g = g} (a ∷ as) f～g
+  with g a in eq
+any-prf (a ∷ as) f～g | True =
+  let t = extractTrue ⦃ eq ⦄ (f～g a)
+  in anyHere ⦃ t ⦄
+any-prf {g = g} (a ∷ as) f～g | False
+  with any g as in eq₁
+any-prf (a ∷ as) f～g | False | True =
+  let t = extractTrue ⦃ eq₁ ⦄ (any-prf as f～g)
+  in anyThere ⦃ t ⦄
+any-prf (a ∷ as) f～g | False | False =
+  let f₁ = extractFalse ⦃ eq ⦄ (f～g a)
+      f₂ = extractFalse ⦃ eq₁ ⦄ (any-prf as f～g)
+  in λ where
+       (anyHere ⦃ i ⦄) → f₁ i
+       (anyThere ⦃ is ⦄) → f₂ is

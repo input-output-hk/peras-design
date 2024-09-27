@@ -1,6 +1,7 @@
 module Peras.Conformance.Model where
 
 open import Haskell.Prelude
+open import Haskell.Prim
 open import Haskell.Control.Monad
 open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
@@ -314,55 +315,33 @@ vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
 
-¬ChainExtends[] : (h : Hash Block) → (c : Certificate) → ChainExtends h c [] → ⊥
-¬ChainExtends[] h c ()
+eqBS-prf : ∀ (c : Certificate) → (x : Block) →
+    Reflects
+      (MkHash (bytesS (signature x)) ≡ blockRef c)
+      (eqBS (bytesS (signature x)) (hashBytes (blockRef c)))
+eqBS-prf c x =
+  of
+    {P = MkHash (bytesS (signature x)) ≡ blockRef c}
+    {b = eqBS (bytesS (signature x)) (hashBytes (blockRef c))} ite
+  where
+    ite : if eqBS (bytesS (signature x)) (hashBytes (blockRef c))
+          then (λ ⦃ @0 _ ⦄ → MkHash (bytesS (signature x)) ≡ blockRef c)
+          else (λ ⦃ @0 _ ⦄ → MkHash (bytesS (signature x)) ≡ blockRef c → ⊥)
+    ite
+      with (MkHash (bytesS (signature x)) == blockRef c) in eq
+    ite | True = cong MkHash (eqBS-sound eq)
+    ite | False = not-eqBS-sound eq ∘ cong hashBytes
 
 chainExtends-prf : (h : Hash Block) → (c : Certificate) → (ch : Chain)
   → Reflects (ChainExtends h c ch) (chainExtends h c ch)
-{-
-chainExtends-prf h c [] = of {P = ChainExtends h c []} {b = chainExtends h c []} ite
-  where
-    ite : if chainExtends h c []
-          then (λ ⦃ @0 _ ⦄ → ChainExtends h c [])
-          else (λ ⦃ @0 _ ⦄ → ChainExtends h c [] → ⊥)
-    ite = ¬ChainExtends[] h c
--}
-chainExtends-prf h c ch = of {P = ChainExtends h c ch} {b = chainExtends h c ch} ite
-  where
-    ite : if chainExtends h c ch
-          then (λ ⦃ @0 _ ⦄ → ChainExtends h c ch)
-          else (λ ⦃ @0 _ ⦄ → ChainExtends h c ch → ⊥)
-    ite
-      with dropWhile (λ block' → Hashable.hash hashBlock block' /= h) ch
-    ite | [] = λ ()
-    ite | (x ∷ xs)
-      with MkHash (bytesS (signature x)) == blockRef c in eq
-    ite | (x ∷ xs) | True  = anyHere ⦃ cong MkHash (eqBS-sound eq) ⦄
-    ite | (x ∷ xs) | False = {!!} -- anyThere
+chainExtends-prf h c ch = any-prf (dropWhile (λ b → Hashable.hash hashBlock b /= h) ch) (eqBS-prf c)
 
 chainExtendsDec : (h : Hash Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends h c ch)
 chainExtendsDec h c ch = chainExtends h c ch ⟨ chainExtends-prf h c ch ⟩
 
-¬Extends[] : (h : Hash Block) → (c : Certificate) → Extends h c [] → ⊥
-¬Extends[] h c ()
-
 extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
   → Reflects (Extends h c ch) (extends h c ch)
-extends-prf h c [] = of {P = Extends h c []} {b = extends h c []} ite
-  where
-    ite : if extends h c []
-          then (λ ⦃ @0 _ ⦄ → Extends h c [])
-          else (λ ⦃ @0 _ ⦄ → Extends h c [] → ⊥)
-    ite = ¬Extends[] h c
-extends-prf h c (x ∷ ch) = of {P = Extends h c (x ∷ ch)} {b = extends h c (x ∷ ch)} ite
-  where
-    ite : if extends h c (x ∷ ch)
-          then (λ ⦃ @0 _ ⦄ → Extends h c (x ∷ ch))
-          else (λ ⦃ @0 _ ⦄ → Extends h c (x ∷ ch) → ⊥)
-    ite
-      with chainExtendsDec h c x in eq
-    ite | True ⟨ xx ⟩ = {!!}
-    ite | False ⟨ xx ⟩ = {!!}
+extends-prf h c ch = any-prf ch (chainExtends-prf h c)
 
 extendsDec : (h : Hash Block) → (c : Certificate) → (ch : List Chain) → Dec (Extends h c ch)
 extendsDec h c ch = extends h c ch ⟨ extends-prf h c ch ⟩
