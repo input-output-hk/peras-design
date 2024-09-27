@@ -36,6 +36,7 @@ import Peras.Conformance.Generators (
   actionsSizeScaling,
   genCommitteeMembership,
   genHonestTick,
+  genMutatedBlock,
   genProtocol,
   genSlotLeadership,
   genVote,
@@ -72,6 +73,7 @@ import Test.QuickCheck (
   Arbitrary (arbitrary),
   choose,
   elements,
+  suchThat,
   tabulate,
  )
 import Test.QuickCheck.DynamicLogic (DynLogicModel)
@@ -206,6 +208,7 @@ instance Pretty Trace.PerasLog where
       hang "DiffuseChain:" 2 $ pPrint chain
     Trace.DiffuseVote{vote} ->
       hang "DiffuseVote" 2 $ pPrint vote
+    Trace.Snapshot s -> hang "Final state" 2 $ pPrint $ show s
 
 sortition :: NetworkModel -> (SutIsSlotLeader, SutIsVoter)
 sortition NetworkModel{leadershipSlots, voterRounds} = (flip elem leadershipSlots, flip elem voterRounds)
@@ -234,13 +237,15 @@ instance StateModel NetworkModel where
           if canGenVotes && newRound clock protocol
             then genVote gen s
             else pure Nothing
+        c <- BadChain <$> genBadChain
         b <- BadVote <$> genBadVote
         fBad <- (<= 0.10) <$> choose (0, 1 :: Double)
         (newChains, newVotes) <- fst <$> genHonestTick True gen s
         fmap (Some . Step) . elements $
           [Tick]
-            ++ (NewChain <$> newChains)
+            ++ (NewChain <$> filter validChain newChains)
             ++ cleanVotes (NewVote <$> newVotes <> maybe mempty pure v)
+            ++ [c | canGenBadChain && fBad]
             ++ [b | canGenBadVote && fBad]
       else scale (`div` actionsSizeScaling) $
         fmap Some $
@@ -252,6 +257,9 @@ instance StateModel NetworkModel where
               <$> genSlotLeadership 0.30 slotLimit
               <*> genCommitteeMembership 0.95 roundLimit
    where
+    validChain [] = True
+    validChain [_] = True
+    validChain (block : rest) = slotNumber block > slotNumber (head rest) && validChain rest -- FIXME: Remove when specification is fixed.
     equivocated MkVote{votingRound = r0, creatorId = p} MkVote{votingRound = r1, creatorId = p'} = r0 == r1 && p == p'
     cleanVotes =
       nubBy
@@ -276,6 +284,12 @@ instance StateModel NetworkModel where
       not (all null allChains) -- There must be some block to vote for.
         && r > 0 -- No voting is allowed in the zeroth round.
         && checkVotingRules' gen s
+    canGenBadChain = not $ all null allChains
+    genBadChain = do
+      elements allChains `suchThat` (not . null)
+        >>= \case
+          block : rest -> (: rest) <$> genMutatedBlock gen block
+          _ -> error "Impossible."
     r = inRound clock protocol
 
   shrinkAction _ _ Initial{} = []
@@ -334,7 +348,7 @@ monitorChain net@NetworkModel{nodeModel = s} NetworkModel{nodeModel = s'@NodeMod
 monitorCerts :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
 monitorCerts NetworkModel{nodeModel = s} NetworkModel{nodeModel = s'} =
   do
-    monitorPost $ tabulate "Certs found or created during fetching" [show $ on (-) (length . allSeenCerts) s' s]
+    monitorPost $ tabulate "Certs found or created during fetching (max one per round)" [show $ on (-) (length . allSeenCerts) s' s]
     monitorPost $ tabulate "New quora" [show $ length $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')]
     monitorPost $ tabulate "Certs on preferred chain (cumulative)" [show $ length $ filter (isJust . certificate) $ pref s']
     monitorPost $ tabulate "Certs created (cumulative, rounded down)" [show $ (* 1) . (`div` 1) $ length $ allSeenCerts s']

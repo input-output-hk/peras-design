@@ -21,8 +21,9 @@ import Data.Map (Map)
 import Data.Map as Map (fromList, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import qualified Data.Set as Set (filter, fromList, intersection, map, notMember, size, union)
+import qualified Data.Set as Set (filter, fromList, intersection, map, notMember, size, toList, union)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
+import qualified Peras.Block as Block (Block (creatorId, signature, slotNumber))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import qualified Peras.Chain as Vote (Vote (creatorId, votingRound))
 import Peras.Crypto (Hash, hash)
@@ -49,9 +50,13 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
 
     -- 1. Fetch new chains Cnew and votes Vnew.
     lift . traceWith tracer $ NewChainAndVotes (pid party) newChains newVotes
-    let isEquivocatedVote = on (==) (Vote.votingRound &&& Vote.creatorId)
-    let newVotes' = Set.fromList $ nubBy isEquivocatedVote newVotes
-        newChains' = Set.fromList newChains
+    let isEquivocatedBlock b b' = on (==) (Block.slotNumber &&& Block.creatorId) b b' && on (/=) Block.signature b b'
+        isEquivocatedChain c = any (\b -> any (isEquivocatedBlock b) c)
+        isEquivocatedVote = on (==) (Vote.votingRound &&& Vote.creatorId)
+        -- NB: The first chain or vote is considered to be unequivocated
+        --     and all subsequent matches are considered to be equivocated.
+        newVotes' = Set.fromList $ nubBy isEquivocatedVote newVotes
+        newChains' = Set.fromList $ nubBy isEquivocatedChain $ filter (not . flip any (Set.toList chains) . isEquivocatedChain) newChains
 
     -- 2. Add any new chains in Cnew to C, add any new certificates contained in chains in Cnew to Certs.
     let chains' = chains `Set.union` newChains'

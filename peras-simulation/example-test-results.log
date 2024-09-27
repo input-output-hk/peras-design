@@ -1,0 +1,161 @@
+Peras.Conformance.Test
+  Prototype node
+    Simulation respects model [✔]
+      +++ OK, passed 5000 tests.
+
+      Action polarity (374648 in total):
+      100.0000% +
+
+      Actions (374648 in total):
+      71.9200% +Tick
+      20.1760% +NewChain
+       3.9928% +BadChain
+       1.6362% +BadVote
+       1.2911% +Initial
+       0.9839% +NewVote
+
+      Actions rejected by precondition (119122 in total):
+      100.0000% NewChain
+
+      Certs created (cumulative, rounded down) (369811 in total):
+      68.4401% 1
+      20.6097% 2
+       8.0711% 3
+       1.8501% 4
+       0.6852% 5
+       0.2250% 6
+       0.1128% 7
+       0.0059% 8
+
+      Certs found or created during fetching (max one per round) (369811 in total):
+      99.5465% 0
+       0.4535% 1
+
+      Certs on preferred chain (cumulative) (369811 in total):
+      71.1788% 0
+      22.3714% 1
+       4.8019% 2
+       1.1771% 3
+       0.3077% 4
+       0.1057% 5
+       0.0573% 6
+
+      Committee member (9722 in total):
+      95.08% True
+       4.92% False
+
+      Does vote (9722 in total):
+      66.27% 1
+      33.73% 0
+
+      New quora (369811 in total):
+      99.5465% 0
+       0.4535% 1
+
+      NewVote during voting (12641 in total):
+      70.841% False
+      29.159% True
+
+      Preferred chain length (cumulative, rounded down) (369811 in total):
+      46.3750% 0
+      23.4942% 25
+      12.4972% 50
+       6.9909% 75
+       4.3133% 100
+       2.5892% 125
+       1.5822% 150
+       0.9180% 175
+       0.5649% 200
+       0.3353% 225
+       0.1501% 250
+       0.1090% 275
+       0.0576% 300
+       0.0216% 325
+       0.0016% 350
+
+      Preferred chain lengthens (369811 in total):
+      57.6686% False
+      42.3314% True
+
+      Rounds (cumulative, rounded down) (9722 in total):
+      33.97% 0
+      21.42% 1
+      14.15% 2
+       9.23% 3
+       5.97% 4
+       4.13% 5
+       2.82% 6
+       1.97% 7
+       1.54% 8
+       1.27% 9
+       0.92% 10
+       0.59% 11
+       0.55% 12
+       0.34% 13
+       0.32% 14
+       0.20% 15
+       0.10% 16
+       0.10% 17
+       0.06% 18
+       0.06% 20
+       0.05% 19
+       0.03% 22
+       0.03% 30
+       0.03% 33
+       0.02% 21
+       0.02% 23
+       0.02% 31
+       0.02% 34
+       0.01% 24
+       0.01% 25
+       0.01% 26
+       0.01% 27
+       0.01% 28
+       0.01% 29
+       0.01% 32
+
+      Slot leader (369811 in total):
+      75.8163% False
+      24.1837% True
+
+      Slots (cumulative, rounded down) (369811 in total):
+      30.3866% 0
+      20.5770% 25
+      13.7408% 50
+       9.6198% 75
+       6.8097% 100
+       4.8154% 125
+       3.5694% 150
+       2.6841% 175
+       1.9832% 200
+       1.4781% 225
+       1.1544% 250
+       0.8507% 275
+       0.6712% 300
+       0.4759% 325
+       0.3340% 350
+       0.2423% 375
+       0.2015% 400
+       0.1617% 425
+       0.1111% 450
+       0.0844% 475
+       0.0416% 500
+       0.0073% 525
+
+      VR-1A/1B/2A/2B (9722 in total):
+      34.70% True,True,False,False
+      21.47% False,True,True,True
+      15.94% False,True,True,False
+      13.07% False,True,False,False
+       7.95% True,True,True,True
+       6.34% True,True,True,False
+       0.34% False,True,False,True
+       0.19% True,True,False,True
+
+      Voting rules (9722 in total):
+      70.64% True
+      29.36% False
+
+Finished in 741.6096 seconds
+1 example, 0 failures
+
