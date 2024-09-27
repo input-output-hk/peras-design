@@ -34,6 +34,7 @@ import Data.IORef (modifyIORef, newIORef, readIORef)
 import Data.List (sort)
 import Data.Maybe (fromJust)
 import Data.Set (Set)
+import Debug.Trace (traceShow)
 import GHC.Generics (Generic)
 import Peras.Block (Certificate, Party)
 import Peras.Chain (Chain, Vote (..))
@@ -162,16 +163,16 @@ callSUT RunState{hReader, hWriter} req =
 type Runtime = StateT RunState IO
 
 instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkModel Runtime where
-  perform net@NetworkModel{nodeModel = NodeModel{..}} a@Initial{} _ =
+  perform net@NetworkModel{nodeModel = NodeModel{..}} a@(Initial params leaderSlots voterRounds) _ =
     do
       rs <- get
       void . lift $
         callSUT
           rs
           Initialize
-            { party = modelSUT net
+            { party = mkParty sutId leaderSlots voterRounds
             , slotNumber = clock
-            , parameters = protocol
+            , parameters = params
             , chainsSeen = allChains
             , votesSeen = allVotes
             , certsSeen = allSeenCerts
