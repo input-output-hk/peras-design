@@ -7,18 +7,24 @@ open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
 open import Data.List using (map; mapMaybe; filter; _++_)
 open import Data.List.Membership.Propositional
 open import Data.List.Properties
+
 import Data.List.Relation.Unary.Any as Any
 import Data.List.Relation.Unary.All as All
+
 open import Data.List.Relation.Unary.Any.Properties
 open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe; maybe′; nothing; just)
-open import Data.Product as P using (∃; Σ-syntax; ∃-syntax; proj₁; proj₂) renaming (_,_ to _⸴_)
-open import Data.Sum as S using (inj₁; inj₂; _⊎_; [_,_])
+open import Data.Product as P using (proj₁ ; proj₂) renaming (_,_ to _,ᵖ_)
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
+
 open import Relation.Nullary.Negation using (¬_; contradiction)
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans)
+
+open import Prelude.AssocList
+open import Prelude.Default
+open import Prelude.DecEq hiding (_==_; _≟_)
 
 open import Peras.Block
 open import Peras.Chain
@@ -27,13 +33,9 @@ open import Peras.Foreign using (checkSignedVote; checkSignedBlock; checkLeaders
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
-open import Prelude.AssocList
-open import Prelude.Default
-open import Prelude.DecEq hiding (_==_; _≟_)
 
 open import Peras.Conformance.Params
-open import Peras.Conformance.ProofPrelude
-
+open import Peras.Conformance.ProofPrelude hiding (⊥-elim)
 open import Peras.Conformance.Model as Model
 
 module _ ⦃ _ : Hashable (List Tx) ⦄
@@ -52,15 +54,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
   sutId≢otherId = λ ()
 
   parties : Parties
-  parties = (sutId ⸴ Honest {sutId}) ∷ (otherId ⸴ Honest {otherId}) ∷ [] -- wlog
+  parties = (sutId ,ᵖ Honest {sutId}) ∷ (otherId ,ᵖ Honest {otherId}) ∷ [] -- wlog
 
-  sut∈parties : (sutId ⸴ Honest {sutId}) ∈ parties
+  sut∈parties : (sutId ,ᵖ Honest {sutId}) ∈ parties
   sut∈parties = Any.here refl
 
   sutHonesty : Honesty sutId
   sutHonesty = proj₂ (Any.lookup sut∈parties)
 
-  other∈parties : (otherId ⸴ Honest {otherId}) ∈ parties
+  other∈parties : (otherId ,ᵖ Honest {otherId}) ∈ parties
   other∈parties = Any.there (Any.here refl)
 
   otherHonesty : Honesty otherId
@@ -87,8 +89,6 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; T = perasT testParams
         }
 
-  import Peras.SmallStep as SmallStep
-
   module Assumptions
            (let open Postulates postulates)
 
@@ -109,6 +109,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
          where
 
+    import Peras.SmallStep as SmallStep
     open SmallStep using (⦅_,_,_,_⦆)
     open SmallStep.Message
 
@@ -154,7 +155,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
         ; unique-votes = {!!}
         ; no-equivocations = {!!}
-        ; quorum-cert = {!!} -- invariants
+--        ; quorum-cert = {!!} -- invariants
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
@@ -193,50 +194,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     sutVotesInTrace ∎ = []
     sutVotesInTrace (step ↣ trace) = sutVotesInStep step ++ sutVotesInTrace trace
 
-    postulate -- TODO
-      filter-eq : ∀ {l : Chain} {f : Block → ℕ} {b : ℕ} →
-        Haskell.filter (λ { a → (f a) <= b }) l ≡ filter (λ { a → (f a) ≤? b }) l
-
-    blockSelection-eq :
-      ∀ {s : State} →
+    blockSelection-eq : ∀ {s : State} →
       BlockSelection (State.clock s) (modelState s) ≡ votingBlockHash (modelState s)
-    blockSelection-eq {s}
-      rewrite
-        sym (filter-eq
-               {prefChain (modelState s)}
-               {λ {x → getSlotNumber (slotNumber x) + (Params.L params)}}
-               {getSlotNumber (State.clock s)})
-      = refl
-
-    -- Voting rules from the test-model to the small-step semantics
-
-    f-1a : ∀ {s : State}
-      → Vr1A (modelState s)
-      → VotingRule-1A (v-round (State.clock s)) (modelState s)
-    f-1a {s} x = cong getRoundNumber (sym x)
-
-    f-1b : ∀ {s : State}
-      → Vr1B (modelState s)
-      → VotingRule-1B (State.clock s) (modelState s)
-    f-1b {s} x
-      rewrite
-        filter-eq
-          {prefChain (modelState s)}
-          {λ {a → getSlotNumber (slotNumber a) + (Params.L params)}}
-          {getSlotNumber (clock (modelState s))}
-      = x
-
-    f-2a : ∀ {s : State}
-      → Vr2A (modelState s)
-      → VotingRule-2A (v-round (State.clock s)) (modelState s)
-    f-2a x = x
-
-    f-2b : ∀ {s : State}
-      → Vr2B (modelState s)
-      → VotingRule-2B (v-round (State.clock s)) (modelState s)
-    f-2b x = x
-
-    -- Some postulates, resp. TODOs
+    blockSelection-eq = refl
 
     postulate -- TODO
       existsTrees : ∀ {p sᵢ sⱼ}
@@ -247,24 +207,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
       -- fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
 
-      lastSlotInRound : ∀ {s : State} → ¬ (NextSlotInSameRound s) → LastSlotInRound s
-      {-
-      lastSlotInRound {s} = lastSlotInRound' {s}
-        where
-          lastSlotInRound' : ∀ {s : State} →
-            ¬ (rnd (getSlotNumber (State.clock s))
-                   ≡ (rnd (suc (getSlotNumber (State.clock s)))))
-            → LastSlotInRound s
-          lastSlotInRound' x = {!!} -- suc (rnd (getSlotNumber clock)) ≡ rnd (suc (getSlotNumber clock))
-      -}
-
       noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
       -- noCertsFromQuorum = {!!}
 
-    fetched : ∀ {s} → Fetched s → Fetched (tick s) -- TODO: only if no delayed msgs...
+
+    fetched : ∀ {s} → Fetched s → Fetched (tick s)
     fetched {s} x
       rewrite fetched→[] {s} x
-      = All.[]
+      = allNil
 
     record Invariant (s : State) : Set where
       field
@@ -362,13 +312,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         validSignature with v' ← axiom-checkVoteSignature checkedSig rewrite vote≡v = v'
 
         ν : ValidVote v
-        ν = axiom-everyoneIsOnTheCommittee ⸴ validSignature
+        ν = axiom-everyoneIsOnTheCommittee , validSignature
 
         validVote : VotingRule slot tree
-        validVote = S.map
-          (P.map (f-1a {s₀}) (f-1b {s₀}))
-          (P.map (f-2a {s₀}) (f-2b {s₀}))
-          (toWitness (isYes≡True⇒TTrue checkedVRs))
+        validVote = toWitness (isYes≡True⇒TTrue checkedVRs)
 
         s₁ : State
         s₁ = record s₀
@@ -726,7 +673,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = v
 
           v : ValidVote w
-          v = axiom-everyoneIsOnTheCommittee ⸴ validSignature
+          v = axiom-everyoneIsOnTheCommittee , validSignature
 
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -741,10 +688,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  }
 
           validVote : VotingRule slot tree
-          validVote = S.map
-            (P.map (f-1a {s₀}) (f-1b {s₀}))
-            (P.map (f-2a {s₀}) (f-2b {s₀}))
-            (toWitness (isYes≡True⇒TTrue checkedVRs))
+          validVote = toWitness (isYes≡True⇒TTrue checkedVRs)
 
           validBlockHash : BlockSelection slot tree ≡ blockHash vote
           validBlockHash =
@@ -914,7 +858,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = v
 
           v : ValidVote w
-          v = axiom-everyoneIsOnTheCommittee ⸴ validSignature
+          v = axiom-everyoneIsOnTheCommittee , validSignature
 
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
@@ -929,10 +873,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                  }
 
           validVote : VotingRule slot tree
-          validVote = S.map
-            (P.map (f-1a {s₀}) (f-1b {s₀}))
-            (P.map (f-2a {s₀}) (f-2b {s₀}))
-            (toWitness (isYes≡True⇒TTrue checkedVRs))
+          validVote = toWitness (isYes≡True⇒TTrue checkedVRs)
 
           validBlockHash : BlockSelection slot tree ≡ blockHash vote
           validBlockHash =

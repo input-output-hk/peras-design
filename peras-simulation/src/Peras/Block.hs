@@ -67,4 +67,4 @@ tipHash [] = MkHash emptyBS
 tipHash (x : _) = hash x
 
 instance Hashable Block where
-  hash = \x -> MkHash (bytesS (signature x))
+  hash = MkHash . (\r -> bytesS r) . \r -> signature r
