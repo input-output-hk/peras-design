@@ -426,8 +426,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | (rest == pref (modelState s₀)) in checkRest
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
+         | lastSlot rest Haskell.< slotNumber block in checkedNewer
     newChain-soundness {cs} {vs} {ms₁} s₀ (block ∷ rest) inv refl
-      | True | True | True | True | True | True =
+      | True | True | True | True | True | True | True =
       record
         { s₁ = s₁
         ; invariant₀ = inv
@@ -505,11 +506,14 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           = v
 
         chain : ValidChain (β ∷ prefChain tree)
-        chain
+        chain with newer ← LT-sound checkedNewer
+          rewrite block≡β
+          rewrite rest≡pref
           = let open SmallStep.IsTreeType
             in Cons {prefChain tree} {β}
               validSignature
               (axiom-checkLeadershipProof {β} checkedLead)
+              newer
               refl
               (is-TreeType .valid tree)
 
@@ -799,18 +803,18 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                == getRoundNumber (votingRound vote) in isVotingRound
            | checkVoteFromSut vote in checkedSut
 
-           | (slotNumber block == State.clock s₀) in checkSlot
+           | slotNumber block == State.clock s₀ in checkSlot
            | checkBlockFromSut block in checkedBlockSut
-           | (parentBlock block == tipHash rest) in checkHash
-           | (rest == pref (modelState s₀)) in checkRest -- FIXME: modelState s'
+           | parentBlock block == tipHash rest in checkHash
+           | rest == pref (modelState s₀) in checkRest -- FIXME: modelState s'
            | checkSignedBlock block in checkedBlockSig
            | checkLeadershipProof (leadershipProof block) in checkedLead
-
+           | lastSlot rest Haskell.< slotNumber block in checkedNewer
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ [] | (block ∷ rest) ∷ []
       | True | True | True | True | True
-      | True | True | True | True | True | True =
+      | True | True | True | True | True | True | True =
 
         record
           { s₁ = s₁
@@ -978,11 +982,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = v
 
           chain : ValidChain (β ∷ prefChain (modelState s'))
-          chain
-            = let open SmallStep.IsTreeType
-              in Cons {prefChain (modelState s')} {β}
+          chain =
+            let open SmallStep.IsTreeType
+            in Cons {prefChain (modelState s')} {β}
                 validBlockSignature
                 (axiom-checkLeadershipProof {β} checkedLead)
+                {!!}
                 refl
                 (is-TreeType .valid (modelState s'))
 
@@ -1213,7 +1218,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ [] | (block ∷ rest) ∷ []
       | _ | _ | _ | _ | _
-      | _ | _ | _ | _ | _ | _ = {!!}
+      | _ | _ | _ | _ | _ | _ | _ = {!!}
 
 
     tick-soundness s₀ inv refl

@@ -127,6 +127,12 @@ insertCert cert (cert' ∷ certs) =
 {-# COMPILE AGDA2HS insertCert #-}
 ```
 ```agda
+lastSlot : ∀ (c : Chain) → SlotNumber
+lastSlot = foldr max (MkSlotNumber 0) ∘ map slotNumber
+
+{-# COMPILE AGDA2HS lastSlot #-}
+```
+```agda
 open Params ⦃...⦄
 ```
 
@@ -205,6 +211,7 @@ module _ ⦃ _ : Hashable Block ⦄
     Cons : ∀ {c : Chain} {b : Block}
       → IsBlockSignature b (signature b)
       → IsSlotLeader (creatorId b) (slotNumber b) (leadershipProof b)
+      → compare (lastSlot c) (slotNumber b) ≡ LT
       → parentBlock b ≡ tipHash c
       → ValidChain c
       → ValidChain (b ∷ c)
