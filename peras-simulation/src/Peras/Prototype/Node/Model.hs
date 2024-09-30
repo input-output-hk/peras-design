@@ -36,8 +36,6 @@ import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.List ((\\))
 import qualified Data.Map as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Peras.Arbitraries ()
 import Peras.Block (
   Block (MkBlock, creatorId, slotNumber),
