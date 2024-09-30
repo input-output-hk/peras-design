@@ -2,6 +2,7 @@ module Peras.Conformance.Model where
 
 open import Haskell.Prelude
 open import Haskell.Prim
+open import Haskell.Prim.Ord
 open import Haskell.Control.Monad
 open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
@@ -477,6 +478,7 @@ chainInState sutIsSlotLeader s = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
+  guard (lastSlot rest < slotNumber block)
   pure (block ∷ rest)
   where
     rest = pref s
@@ -520,6 +522,7 @@ transition _ s (NewChain (block ∷ rest)) = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
+  guard (lastSlot rest < slotNumber block)
   Just (([] , []) ,
     record s
       { allChains = (block ∷ rest) ∷ allChains s
