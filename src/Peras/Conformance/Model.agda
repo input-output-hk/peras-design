@@ -1,6 +1,8 @@
 module Peras.Conformance.Model where
 
 open import Haskell.Prelude
+open import Haskell.Prim
+open import Haskell.Prim.Ord
 open import Haskell.Control.Monad
 open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
@@ -8,18 +10,14 @@ open import Haskell.Law.Equality using (cong)
 open import Haskell.Law.Eq.Def
 open import Haskell.Law.Eq.Instances
 open import Haskell.Law.Ord.Def
+open import Haskell.Law.Ord.Ordering
 
-open import Agda.Builtin.Maybe hiding (Maybe)
-import Agda.Builtin.Maybe as Maybe
-import Data.Bool
-import Data.List
 open import Data.Nat using (ℕ; _/_; _%_; NonZero; _≥_)
-open import Data.Sum using (inj₁; inj₂; _⊎_; [_,_])
-open import Data.Product as P using () renaming (_,_ to _⸴_)
 
 open import Peras.Block
 open import Peras.Chain
 open import Peras.Conformance.Params
+open import Peras.Conformance.ProofPrelude using (eqBS-sound; not-eqBS-sound; any-prf)
 open import Peras.Crypto
 open import Peras.Foreign
 open import Peras.Numbering
@@ -30,7 +28,12 @@ import Protocol.Peras
   {-# LANGUAGE RecordWildCards #-}
   {-# LANGUAGE NamedFieldPuns #-}
   {-# LANGUAGE TypeOperators #-}
-  {-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
+  {-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+  {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+  {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+  {-# OPTIONS_GHC -fno-warn-type-defaults #-}
+  {-# OPTIONS_GHC -fno-warn-unused-imports #-}
+  {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
   import Prelude hiding (round)
   import Control.Monad.Identity
@@ -45,6 +48,12 @@ import Protocol.Peras
   intToInteger = fromIntegral
 #-}
 
+open Hashable
+
+instance
+  hashBlock : Hashable Block
+  hashBlock .hash = MkHash ∘ bytesS ∘ signature
+
 -- To avoid name clash for Vote.creatorId and Block.creatorId
 voterId : Vote → PartyId
 voterId (MkVote _ p _ _ _) = p
@@ -55,6 +64,7 @@ data EnvAction : Set where
   Tick     : EnvAction
   NewChain : Chain → EnvAction
   NewVote  : Vote → EnvAction
+  BadChain : Chain → EnvAction
   BadVote  : Vote → EnvAction
 
 {-# COMPILE AGDA2HS EnvAction deriving (Eq, Show) #-}
@@ -89,15 +99,6 @@ seenBeforeStartOfRound params r (c , s) =
   getSlotNumber s <= getRoundNumber r * perasU params
 
 {-# COMPILE AGDA2HS seenBeforeStartOfRound #-}
-
--- FIXME: Relocate this.
-instance
-    hashBlock : Hashable Block
-    hashBlock = record
-      { hash = λ b →
-               (let record { bytesS = s } = signature b
-                  in record { hashBytes = s })
-      }
 
 chainWeight : Nat → List Certificate -> Chain → Nat
 chainWeight boost certs = chainWeight' 0
@@ -183,7 +184,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (Data.List.mapMaybe certificate (pref s))
+  in maximumBy genesisCert (comparing round) (mapMaybe certificate (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -246,7 +247,7 @@ addChain' : NodeModel → Chain → NodeModel
 addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
-    ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate c)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate c)
     }
 
 {-# COMPILE AGDA2HS addChain' #-}
@@ -299,75 +300,16 @@ instance
       MkRoundNumber-inj : ∀ {x y} → MkRoundNumber x ≡ MkRoundNumber y → x ≡ y
       MkRoundNumber-inj refl = refl
 
-isYes : ∀ {A : Set} → Dec A → Bool
-isYes (True ⟨ _ ⟩) = True
-isYes (False ⟨ _ ⟩) = False
-
-{-# COMPILE AGDA2HS isYes #-}
-
-TTrue : ∀ {A : Set} → Dec A → Set
-TTrue a = Data.Bool.T (isYes a)
-
-toTT : ∀ {A : Set} → {a : Dec A} → value a ≡ True → TTrue {A} a
-toTT refl = tt
-
-@0 isYes≡True⇒TTrue : ∀ {A : Set} → {a : Dec A} → isYes a ≡ True → TTrue {A} a
-isYes≡True⇒TTrue x = toTT (isYes≡True⇒value≡True x)
-  where
-    isYes≡True⇒value≡True : ∀ {A : Set} → {a : Dec A} → isYes a ≡ True → value a ≡ True
-    isYes≡True⇒value≡True {a = True ⟨ _ ⟩} _ = refl
-
-@0 toWitness : ∀ {A : Set} {a : Dec A} → TTrue a → A
-toWitness {a = True ⟨ prf ⟩} _ = prf
-
-_×-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A P.× B) (a && b)
-_×-reflects_ {True} {True} x y = x ⸴ y
-_×-reflects_ {True} {False} _ y = λ { (_ ⸴ y₁) → y y₁ }
-_×-reflects_ {False} {True} x _ = λ { (x₁ ⸴ _) → x x₁ }
-_×-reflects_ {False} {False} x _ = λ { (x₁ ⸴ _) → x x₁ }
-
-decP : ∀ {A B : Set} → Dec A → Dec B → Dec (A P.× B)
-decP (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va && vb ) ⟨ pa ×-reflects pb ⟩
-
-{-# COMPILE AGDA2HS decP #-}
-
-_⊎-reflects_ : ∀ {a b} {A B : Set} → Reflects A a → Reflects B b → Reflects (A ⊎ B) (a || b)
-_⊎-reflects_ {True} {True} x _ = inj₁ x
-_⊎-reflects_ {True} {False} x _ = inj₁ x
-_⊎-reflects_ {False} {True} _ y = inj₂ y
-_⊎-reflects_ {False} {False} x y = [ x , y ]
-
-decS : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⊎ B)
-decS (va ⟨ pa ⟩) (vb ⟨ pb ⟩) = (va || vb ) ⟨ pa ⊎-reflects pb ⟩
-
-{-# COMPILE AGDA2HS decS #-}
-
 _===_ : ∀ (x y : RoundNumber) → Dec (x ≡ y)
 x === y = (x == y) ⟨ isEquality x y ⟩
 
 {-# COMPILE AGDA2HS _===_ #-}
 
-postulate
-  eq : ∀ (x y : ℕ) → Dec (x ≡ y)
-  ge : ∀ (x y : ℕ) → Dec (x Data.Nat.≥ y)
-  gt : ∀ (x y : ℕ) → Dec (x Data.Nat.> y)
-
-{-# FOREIGN AGDA2HS
-  eq :: Integer -> Integer -> Bool
-  eq = (==)
-
-  gt :: Integer -> Integer -> Bool
-  gt = gtInteger
-
-  ge :: Integer -> Integer -> Bool
-  ge = geInteger
-#-}
-
 Vr1A : NodeModel → Set
-Vr1A s = nextRound (round (cert' s)) ≡ rFromSlot s
+Vr1A s = rFromSlot s ≡ nextRound (round (cert' s))
 
 vr1A : (s : NodeModel) → Dec (Vr1A s)
-vr1A s = nextRound (round (cert' s)) === rFromSlot s
+vr1A s = rFromSlot s === nextRound (round (cert' s))
 
 {-# COMPILE AGDA2HS vr1A #-}
 
@@ -379,34 +321,88 @@ vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B' #-}
 
-postulate
-  vr1B-prf : ∀ {s} → Reflects (Vr1B s) (vr1B' s)
+eqBS-prf : ∀ (c : Certificate) → (x : Block) →
+    Reflects
+      (MkHash (bytesS (signature x)) ≡ blockRef c)
+      (eqBS (bytesS (signature x)) (hashBytes (blockRef c)))
+eqBS-prf c x =
+  of
+    {P = MkHash (bytesS (signature x)) ≡ blockRef c}
+    {b = eqBS (bytesS (signature x)) (hashBytes (blockRef c))} ite
+  where
+    ite : if eqBS (bytesS (signature x)) (hashBytes (blockRef c))
+          then (λ ⦃ @0 _ ⦄ → MkHash (bytesS (signature x)) ≡ blockRef c)
+          else (λ ⦃ @0 _ ⦄ → MkHash (bytesS (signature x)) ≡ blockRef c → ⊥)
+    ite
+      with (MkHash (bytesS (signature x)) == blockRef c) in eq
+    ite | True = cong MkHash (eqBS-sound eq)
+    ite | False = not-eqBS-sound eq ∘ cong hashBytes
+
+chainExtends-prf : (h : Hash Block) → (c : Certificate) → (ch : Chain)
+  → Reflects (ChainExtends h c ch) (chainExtends h c ch)
+chainExtends-prf h c ch = any-prf (dropWhile (λ b → Hashable.hash hashBlock b /= h) ch) (eqBS-prf c)
+
+chainExtendsDec : (h : Hash Block) → (c : Certificate) → (ch : Chain) → Dec (ChainExtends h c ch)
+chainExtendsDec h c ch = chainExtends h c ch ⟨ chainExtends-prf h c ch ⟩
+
+extends-prf : (h : Hash Block) → (c : Certificate) → (ch : List Chain)
+  → Reflects (Extends h c ch) (extends h c ch)
+extends-prf h c ch =
+  of
+    {P = Extends h c ch}
+    {b = extends h c ch} ite
+  where
+    ite : if extends h c ch
+          then (λ ⦃ @0 _ ⦄ → Extends h c ch)
+          else (λ ⦃ @0 _ ⦄ → Extends h c ch → ⊥)
+    ite
+      with c == genesisCert in eq
+    ite | True = tt
+    ite | False =
+      let r = any-prf ch (chainExtends-prf h c)
+      in invert {b = any (chainExtends h c) ch} r
+
+extendsDec : (h : Hash Block) → (c : Certificate) → (ch : List Chain) → Dec (Extends h c ch)
+extendsDec h c ch = extends h c ch ⟨ extends-prf h c ch ⟩
+
+{-# COMPILE AGDA2HS extendsDec #-}
 
 vr1B : (s : NodeModel) → Dec (Vr1B s)
-vr1B s = vr1B' s ⟨ vr1B-prf {s} ⟩
+vr1B s = extendsDec (votingBlockHash s) (cert' s) (allChains s)
 
 {-# COMPILE AGDA2HS vr1B #-}
 
 Vr2A : NodeModel → Set
-Vr2A s = getRoundNumber (rFromSlot s) ≥ getRoundNumber (round (cert' s)) + perasR (protocol s)
+Vr2A s =
+    getRoundNumber (rFromSlot s)
+  ≥ getRoundNumber (round (cert' s)) + perasR (protocol s)
 
 vr2A : (s : NodeModel) → Dec (Vr2A s)
-vr2A s = ge (getRoundNumber (rFromSlot s)) (getRoundNumber (round (cert' s)) + perasR (protocol s))
+vr2A s =
+  ge
+    (getRoundNumber (rFromSlot s))
+    (getRoundNumber (round (cert' s)) + perasR (protocol s))
 
 {-# COMPILE AGDA2HS vr2A #-}
 
 Vr2B : NodeModel → Set
-Vr2B s = ((getRoundNumber (rFromSlot s)) Data.Nat.> (getRoundNumber (round (certS s))))
-    P.× ((mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) ≡ (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+Vr2B s =
+  (getRoundNumber (rFromSlot s) Data.Nat.> getRoundNumber (round (certS s)))
+    × ((mod (fromNat (getRoundNumber (rFromSlot s))) (fromNat (perasK (protocol s))))
+       ≡ (mod (fromNat (getRoundNumber (round (certS s)))) (fromNat (perasK (protocol s)))))
 
 vr2B : (s : NodeModel) → Dec (Vr2B s)
-vr2B s = decP (gt (getRoundNumber (rFromSlot s)) (getRoundNumber (round (certS s))))
-    (eq (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s))) (mod (getRoundNumber (round (certS s))) (perasK (protocol s))))
+vr2B s = decP
+  (gt
+    (getRoundNumber (rFromSlot s))
+    (getRoundNumber (round (certS s))))
+  (eqDec (mod (fromNat (getRoundNumber (rFromSlot s))) (fromNat (perasK (protocol s))))
+    (mod (fromNat (getRoundNumber (round (certS s)))) (fromNat (perasK (protocol s)))))
 
 {-# COMPILE AGDA2HS vr2B #-}
 
 CheckVotingRules : NodeModel → Set
-CheckVotingRules s = (Vr1A s P.× Vr1B s) ⊎ (Vr2A s P.× Vr2B s)
+CheckVotingRules s = Either (Vr1A s × Vr1B s) (Vr2A s × Vr2B s)
 
 opaque
   checkVotingRules : (s : NodeModel) → Dec (CheckVotingRules s)
@@ -488,6 +484,7 @@ chainInState sutIsSlotLeader s = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
+  guard (lastSlot rest < slotNumber block)
   pure (block ∷ rest)
   where
     rest = pref s
@@ -531,10 +528,11 @@ transition _ s (NewChain (block ∷ rest)) = do
   guard (rest == pref s)
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
+  guard (lastSlot rest < slotNumber block)
   Just (([] , []) ,
     record s
       { allChains = (block ∷ rest) ∷ allChains s
-      ; allSeenCerts = foldr insertCert (allSeenCerts s) (Data.List.mapMaybe certificate (block ∷ rest))
+      ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate (block ∷ rest))
       })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
@@ -545,6 +543,15 @@ transition _ s (NewVote v) = do
   guard (isYes $ checkVotingRules s)
   guard (votingBlockHash s == blockHash v)
   Just (([] , []) , addVote' s v)
+transition _ s (BadChain blocks) = do
+  guard (any (λ block → hasForged (slotNumber block) (creatorId block)) blocks)
+  Just (([] , []) , s)
+  where
+    equivocatedBlock : SlotNumber → PartyId →  Block → Bool
+    equivocatedBlock slot pid block = slot == slotNumber block && pid == creatorId block
+    hasForged : SlotNumber → PartyId → Bool
+    hasForged slot pid =
+      any (any $ equivocatedBlock slot pid) $ allChains s
 transition _ s (BadVote v) = do
   guard (hasVoted (voterId v) (votingRound v) s)
   Just (([] , []) , s)

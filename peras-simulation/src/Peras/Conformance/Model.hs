@@ -2,20 +2,24 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
-import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (comparing, maximumBy, maybeToList)
+import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, mapMaybe, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -36,6 +40,7 @@ data EnvAction
   = Tick
   | NewChain Chain
   | NewVote Vote
+  | BadChain Chain
   | BadVote Vote
   deriving (Eq, Show)
 
@@ -271,36 +276,20 @@ hasVoted :: PartyId -> RoundNumber -> NodeModel -> Bool
 hasVoted p r s =
   any (\v -> p == voterId v && r == votingRound v) (allVotes s)
 
-isYes :: Bool -> Bool
-isYes True = True
-isYes False = False
-
-decP :: Bool -> Bool -> Bool
-decP va vb = va && vb
-
-decS :: Bool -> Bool -> Bool
-decS va vb = va || vb
-
 (===) :: RoundNumber -> RoundNumber -> Bool
 x === y = x == y
 
-eq :: Integer -> Integer -> Bool
-eq = (==)
-
-gt :: Integer -> Integer -> Bool
-gt = gtInteger
-
-ge :: Integer -> Integer -> Bool
-ge = geInteger
-
 vr1A :: NodeModel -> Bool
-vr1A s = nextRound (round (cert' s)) === rFromSlot s
+vr1A s = rFromSlot s === nextRound (round (cert' s))
 
 vr1B' :: NodeModel -> Bool
 vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
 
+extendsDec :: Hash Block -> Certificate -> [Chain] -> Bool
+extendsDec h c ch = extends h c ch
+
 vr1B :: NodeModel -> Bool
-vr1B s = vr1B' s
+vr1B s = extendsDec (votingBlockHash s) (cert' s) (allChains s)
 
 vr2A :: NodeModel -> Bool
 vr2A s =
@@ -315,9 +304,15 @@ vr2B s =
         (getRoundNumber (rFromSlot s))
         (getRoundNumber (round (certS s)))
     )
-    ( eq
-        (mod (getRoundNumber (rFromSlot s)) (perasK (protocol s)))
-        (mod (getRoundNumber (round (certS s))) (perasK (protocol s)))
+    ( eqDec
+        ( mod
+            (fromIntegral (getRoundNumber (rFromSlot s)))
+            (fromIntegral (perasK (protocol s)))
+        )
+        ( mod
+            (fromIntegral (getRoundNumber (round (certS s))))
+            (fromIntegral (perasK (protocol s)))
+        )
     )
 
 checkVotingRules :: NodeModel -> Bool
@@ -381,6 +376,7 @@ chainInState sutIsSlotLeader s =
     guard (rest == pref s)
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
     pure (block : rest)
  where
   rest :: Chain
@@ -509,6 +505,7 @@ transition _ s (NewChain (block : rest)) =
     guard (rest == pref s)
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
     Just
       ( ([], [])
       , NodeModel
@@ -531,6 +528,21 @@ transition _ s (NewVote v) =
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just (([], []), addVote' s v)
+transition _ s (BadChain blocks) =
+  do
+    guard
+      ( any
+          (\block -> hasForged (slotNumber block) (creatorId block))
+          blocks
+      )
+    Just (([], []), s)
+ where
+  equivocatedBlock :: SlotNumber -> PartyId -> Block -> Bool
+  equivocatedBlock slot pid block =
+    slot == slotNumber block && pid == creatorId block
+  hasForged :: SlotNumber -> PartyId -> Bool
+  hasForged slot pid =
+    any (any $ equivocatedBlock slot pid) $ allChains s
 transition _ s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)
