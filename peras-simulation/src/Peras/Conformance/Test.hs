@@ -243,7 +243,7 @@ instance StateModel NetworkModel where
         (newChains, newVotes) <- fst <$> genHonestTick True gen s
         fmap (Some . Step) . elements $
           [Tick]
-            ++ (NewChain <$> filter validChain newChains)
+            ++ (NewChain <$> newChains)
             ++ cleanVotes (NewVote <$> newVotes <> maybe mempty pure v)
             ++ [c | canGenBadChain && fBad]
             ++ [b | canGenBadVote && fBad]
@@ -257,9 +257,6 @@ instance StateModel NetworkModel where
               <$> genSlotLeadership 0.30 slotLimit
               <*> genCommitteeMembership 0.95 roundLimit
    where
-    validChain [] = True
-    validChain [_] = True
-    validChain (block : rest) = slotNumber block > slotNumber (head rest) && validChain rest -- FIXME: Remove when specification is fixed.
     equivocated MkVote{votingRound = r0, creatorId = p} MkVote{votingRound = r1, creatorId = p'} = r0 == r1 && p == p'
     cleanVotes =
       nubBy
