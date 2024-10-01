@@ -2,14 +2,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert)
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
@@ -35,6 +40,7 @@ data EnvAction
   = Tick
   | NewChain Chain
   | NewVote Vote
+  | BadChain Chain
   | BadVote Vote
   deriving (Eq, Show)
 
@@ -370,6 +376,7 @@ chainInState sutIsSlotLeader s =
     guard (rest == pref s)
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
     pure (block : rest)
  where
   rest :: Chain
@@ -498,6 +505,7 @@ transition _ s (NewChain (block : rest)) =
     guard (rest == pref s)
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
     Just
       ( ([], [])
       , NodeModel
@@ -520,6 +528,21 @@ transition _ s (NewVote v) =
     guard (isYes $ checkVotingRules s)
     guard (votingBlockHash s == blockHash v)
     Just (([], []), addVote' s v)
+transition _ s (BadChain blocks) =
+  do
+    guard
+      ( any
+          (\block -> hasForged (slotNumber block) (creatorId block))
+          blocks
+      )
+    Just (([], []), s)
+ where
+  equivocatedBlock :: SlotNumber -> PartyId -> Block -> Bool
+  equivocatedBlock slot pid block =
+    slot == slotNumber block && pid == creatorId block
+  hasForged :: SlotNumber -> PartyId -> Bool
+  hasForged slot pid =
+    any (any $ equivocatedBlock slot pid) $ allChains s
 transition _ s (BadVote v) =
   do
     guard (hasVoted (voterId v) (votingRound v) s)

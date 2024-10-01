@@ -57,6 +57,9 @@ postulate
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem
 
+LT-sound : ∀ {x} → (x == LT) ≡ True → x ≡ LT
+LT-sound {LT} _ = refl
+
 ¬any-[] : ∀ {a : Set} {f : a → Bool} → any f [] ≡ False
 ¬any-[] = refl
 
