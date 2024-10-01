@@ -742,7 +742,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
             ≡
             let s = record tree
-                    { clock = MkSlotNumber (suc (getSlotNumber slot))
+                    { clock    = MkSlotNumber (suc (getSlotNumber slot))
                     ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
                     }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
@@ -942,7 +942,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           rest≡pref : rest ≡ prefChain (modelState s')
           rest≡pref
             -- rewrite vote≡w
-            = ? -- eqList-sound checkRest
+            = {!!} -- eqList-sound checkRest
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
@@ -963,12 +963,16 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
             = v
 
           chain : ValidChain (β ∷ prefChain (modelState s'))
-          chain =
+          chain with newer ← LT-sound checkedNewer
+            -- rewrite sym block≡β
+            -- rewrite rest≡pref
+            -- rewrite sym slotNumber≡slot
+            =
             let open SmallStep.IsTreeType
             in Cons {prefChain (modelState s')} {β}
                 validBlockSignature
                 (axiom-checkLeadershipProof {β} checkedLead)
-                {!!}
+                {!newer!}
                 refl
                 (is-TreeType .valid (modelState s'))
 
@@ -1128,8 +1132,8 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
             ≡
             let s = record tree
-                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
-                      ; allVotes = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
                       ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
@@ -1140,43 +1144,57 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               {m = set sutId (addVote tree v) blockTrees }
             rewrite get∘set≡id
               {k = sutId}
-              {v = addVote (modelState s₀) v}
+              {v = addVote tree v}
               {m = blockTrees}
-            = {!refl!}
+            = {!!}
+
+          substitute0 :
+            record tree
+              { clock     = MkSlotNumber (suc (getSlotNumber slot))
+              ; allVotes  = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+              ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+              }
+            ≡
+            record tree
+              { clock     = MkSlotNumber (suc (getSlotNumber slot))
+              ; allVotes  = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+              ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+              }
+          substitute0
+            rewrite sym vote≡w
+            rewrite sym block≡β
+            rewrite sym rest≡pref
+            = refl
 
           substitute :
             let s = record tree
-                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
-                      ; allVotes = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
                       ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
             ≡
             let s = record tree
-                      { clock    = MkSlotNumber (suc (getSlotNumber slot))
-                      ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
                       ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
           substitute
-            rewrite sym vote≡w
-            rewrite sym block≡β
-            rewrite sym rest≡pref
-            rewrite votingRound≡rnd-slot
-            = {!refl!}
+            = cong (λ s → record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }) substitute0
 
           s₁-agrees :
             modelState s₁ ≡
             let s = record tree
-                    { clock = MkSlotNumber (suc (getSlotNumber slot))
-                    ; allVotes = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                    { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                    ; allVotes  = vote ∷ maybe′ votes [] (blockTrees ⁉ sutId)
                     ; allChains = (block ∷ rest) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                     }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
           s₁-agrees = trans set-irrelevant (trans addVote-modelState substitute)
 
           votes-agree : sutVotesInTrace trace ≡ (slot , vote) ∷ map (slot ,_) []
-          votes-agree = {!!} -- rewrite vote≡w = refl
+          votes-agree = cong (_∷ []) (cong (slot ,_) (sym vote≡w))
 
           inv₁ : Invariant s₁
           inv₁ =
