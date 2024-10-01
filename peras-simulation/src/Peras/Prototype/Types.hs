@@ -1,6 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Peras.Prototype.Types (
   module Peras.Prototype.Types,
@@ -9,7 +7,6 @@ module Peras.Prototype.Types (
 
 import Control.Concurrent.Class.MonadSTM (TVar)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.ByteString as BS
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (singleton)

@@ -6,13 +6,13 @@ module Peras.ChainSpec where
 import Data.Data (Proxy (..))
 import Peras.Arbitraries ()
 import Peras.Block (Block (..), PartyId, Tx)
-import Peras.Chain (Chain, commonPrefix, prefix)
+import Peras.Chain (Chain, commonPrefix)
 import Peras.Crypto (Hash (..), LeadershipProof, MembershipProof)
 import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe)
 import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Arbitrary (..), Property, forAll, forAllShrink, (===), (==>))
+import Test.QuickCheck (Arbitrary (..), Property, forAllShrink, (===), (==>))
 import Test.QuickCheck.Classes (lawsCheck, showReadLaws)
 import Test.QuickCheck.Property (once)
 
@@ -33,6 +33,7 @@ spec = do
       once $
         commonPrefix sampleChains === [block2]
 
+sampleChains :: [Chain]
 sampleChains =
   [ chain1
   , chain2
@@ -46,10 +47,16 @@ sampleChains =
   , chain1
   ]
 
+block1 :: Block
 block1 = MkBlock{slotNumber = 49, creatorId = 1, parentBlock = MkHash{hashBytes = ""}, certificate = Nothing, leadershipProof = "f2a6ab5f8122", bodyHash = MkHash{hashBytes = "12345678"}, signature = "06f34b7da9fd"}
+
+block2 :: Block
 block2 = MkBlock{slotNumber = 44, creatorId = 2, parentBlock = MkHash{hashBytes = ""}, certificate = Nothing, leadershipProof = "0faf57e3c126", bodyHash = MkHash{hashBytes = "12345678"}, signature = "c63cff5266ee"}
 
+chain1 :: Chain
 chain1 = [block1, block2]
+
+chain2 :: Chain
 chain2 = [block2]
 
 propCommonPrefixSelf :: Property

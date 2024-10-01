@@ -25,7 +25,7 @@ selectBlock tracer MkPerasParams{..} party stateVar round =
   do
     MkPerasState{chainPref} <- readTVarIO stateVar
     -- Let B be the youngest block at least L slots old on Cpref.
-    let oldEnough MkBlock{slotNumber, signature} =
+    let oldEnough MkBlock{slotNumber} =
           let r = fromIntegral round * perasU
               s = fromIntegral slotNumber + perasL
            in s <= r

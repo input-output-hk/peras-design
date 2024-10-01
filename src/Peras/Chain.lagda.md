@@ -18,6 +18,12 @@ open import Peras.Util
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
 import GHC.Generics (Generic)
 #-}
 
@@ -121,6 +127,12 @@ insertCert cert (cert' ∷ certs) =
 {-# COMPILE AGDA2HS insertCert #-}
 ```
 ```agda
+lastSlot : ∀ (c : Chain) → SlotNumber
+lastSlot = foldr max (MkSlotNumber 0) ∘ map slotNumber
+
+{-# COMPILE AGDA2HS lastSlot #-}
+```
+```agda
 open Params ⦃...⦄
 ```
 
@@ -199,6 +211,7 @@ module _ ⦃ _ : Hashable Block ⦄
     Cons : ∀ {c : Chain} {b : Block}
       → IsBlockSignature b (signature b)
       → IsSlotLeader (creatorId b) (slotNumber b) (leadershipProof b)
+      → compare (lastSlot c) (slotNumber b) ≡ LT
       → parentBlock b ≡ tipHash c
       → ValidChain c
       → ValidChain (b ∷ c)

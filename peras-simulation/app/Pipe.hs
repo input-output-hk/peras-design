@@ -5,10 +5,9 @@
 import Control.Concurrent.Class.MonadSTM (
   MonadSTM (atomically, modifyTVar'),
  )
-import Control.Monad (Monad ((>>=)), void, when, (=<<))
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State (lift)
-import Control.Tracer (Tracer, nullTracer, traceWith)
+import Control.Tracer (Tracer, nullTracer)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
@@ -16,32 +15,29 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import Data.Default (def)
 import qualified Data.Map as Map (fromList)
 import qualified Data.Set as Set (fromList)
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Encoding as T
 import Data.Version (showVersion)
 import qualified Options.Applicative as O
 import Paths_peras_simulation (version)
+import Peras.Block (Party (pid))
 import Peras.Conformance.Params (PerasParams (perasΔ))
 import Peras.Conformance.Test.External (NodeRequest (..), NodeResponse (..))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
-import Peras.Prototype.Crypto (mkCommitteeMember, mkSlotLeader)
-import Peras.Prototype.Diffusion (Diffuser, allPendingChains, defaultDiffuser, diffuseChain, diffuseVote, popChainsAndVotes)
-import Peras.Prototype.Environment (mkSimpleScenario)
+import Peras.Prototype.Crypto (mkCommitteeMember, mkParty, mkSlotLeader)
+import Peras.Prototype.Diffusion (diffuseChain, diffuseVote, popChainsAndVotes)
 import Peras.Prototype.Fetching (fetching)
-import Peras.Prototype.Network (simulate, simulateNetwork)
 import Peras.Prototype.Node (
   NodeState (..),
   defaultNodeState,
   initialNodeState,
   tickNode,
  )
-import Peras.Prototype.Trace (PerasLog (Protocol), perasTracer)
+import Peras.Prototype.Trace (PerasLog, perasTracer)
 import Peras.Prototype.Types (
   PerasState (certs, chains, votes),
   inRound,
+  newRound,
  )
-import Peras.Prototype.Visualizer (makeVisTracer)
 import Peras.Prototype.Voting (voting)
 import System.Exit (die)
 import System.IO
@@ -86,7 +82,7 @@ handle :: MonadIO m => MonadSTM m => Tracer m PerasLog -> NodeState m -> NodeReq
 handle tracer node@MkNodeState{..} =
   \case
     Initialize{..} -> do
-      node <- initialNodeState tracer party slotNumber parameters
+      node' <- initialNodeState tracer party slotNumber parameters
       atomically . modifyTVar' stateVar $
         \state ->
           state
@@ -96,7 +92,7 @@ handle tracer node@MkNodeState{..} =
             }
       pure
         ( def
-        , node
+        , node'
         )
     Tick ->
       pure (def, node{clock = clock + 1})
@@ -121,14 +117,19 @@ handle tracer node@MkNodeState{..} =
           Left e -> pure (Failed $ show e, node)
     NewSlot{..} -> do
       let clock' = clock + 1
+          party =
+            mkParty
+              (pid self)
+              (if isSlotLeader then pure clock' else mempty)
+              (if isCommitteeMember && newRound clock' protocol then pure $ inRound clock' protocol else mempty)
       void $ popChainsAndVotes diffuserVar (clock' + fromIntegral (perasΔ protocol) + 1)
-      tickNode tracer diffuserVar protocol self stateVar clock' (inRound clock' protocol) mempty newChains newVotes
+      tickNode tracer diffuserVar protocol party stateVar clock' (inRound clock' protocol) mempty newChains newVotes
         >>= \case
           Right () -> (,node{clock = clock'}) . uncurry NodeResponse <$> popChainsAndVotes diffuserVar (clock' + fromIntegral (perasΔ protocol) + 1)
           Left e -> pure (Failed $ show e, node{clock = clock'})
     Stop -> pure (Stopped, node)
 
-data Command = Command
+newtype Command = Command
   { verbose :: Bool
   {-
     , simin :: FilePath

@@ -1,11 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
 module Peras.Chain where
 
 import Numeric.Natural (Natural)
-import Peras.Block (Block, Certificate, PartyId)
+import Peras.Block (Block (slotNumber), Certificate, PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
-import Peras.Numbering (RoundNumber)
+import Peras.Numbering (RoundNumber, SlotNumber (MkSlotNumber))
 
 import GHC.Generics (Generic)
 
@@ -36,6 +42,9 @@ insertCert cert (cert' : certs) =
   if cert == cert'
     then cert' : certs
     else cert' : insertCert cert certs
+
+lastSlot :: Chain -> SlotNumber
+lastSlot = foldr max (MkSlotNumber 0) . map (\r -> slotNumber r)
 
 foldl1Maybe :: (a -> a -> a) -> [a] -> Maybe a
 foldl1Maybe f xs =

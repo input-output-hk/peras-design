@@ -22,22 +22,21 @@ import Control.Monad.State (
 import Control.Tracer (Tracer (Tracer), emit, nullTracer)
 import Data.Default (Default (def))
 import Data.IORef (modifyIORef, newIORef, readIORef)
-import Data.Maybe (fromJust, isJust)
-import Data.Set (Set)
-import Peras.Block (Block (certificate))
 import Peras.Chain (Chain, Vote)
 import Peras.Conformance.Model (
   EnvAction (..),
   NodeModel (..),
-  checkVotingRules,
-  pref,
   transition,
-  vr1A,
-  vr1B,
-  vr2A,
-  vr2B,
  )
-import Peras.Conformance.Test (Action (Step), backoff, modelSUT, sortition)
+import Peras.Conformance.Test (
+  Action (Initial, Step),
+  NetworkModel (NetworkModel, nodeModel),
+  modelSUT,
+  monitorCerts,
+  monitorChain,
+  monitorVoting,
+  sortition,
+ )
 import Peras.Numbering (RoundNumber (getRoundNumber))
 import Peras.Prototype.BlockCreation (blockCreation)
 import Peras.Prototype.BlockSelection (selectBlock)
@@ -63,14 +62,11 @@ import Peras.Prototype.Voting (voting)
 import Test.QuickCheck (
   Blind (Blind),
   Property,
-  classify,
   counterexample,
   ioProperty,
   noShrinking,
-  tabulate,
   whenFail,
  )
-import Test.QuickCheck.DynamicLogic (DynLogicModel)
 import Test.QuickCheck.Extras (runPropertyStateT)
 import Test.QuickCheck.Monadic (monadicIO, monitor)
 import Test.QuickCheck.StateModel (
@@ -95,18 +91,20 @@ data RunState m = RunState
 
 type Runtime m = StateT (RunState m) m
 
-instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NodeModel (Runtime m) where
-  perform NodeModel{..} (Step a) _ = case a of
+instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunModel NetworkModel (Runtime m) where
+  perform _ Initial{} _ = pure ()
+  perform net@NetworkModel{nodeModel = NodeModel{..}} (Step a) _ = case a of
     Tick -> do
       RunState{..} <- get
       modify $ \rs -> rs{unfetchedChains = mempty, unfetchedVotes = mempty}
       lift $ do
         let clock' = clock + 1
             txs = []
-        _ <- fetching tracer protocol modelSUT stateVar clock' unfetchedChains unfetchedVotes
-        _ <- blockCreation tracer protocol modelSUT stateVar clock' txs (diffuseChain diffuserVar)
+            sut = modelSUT net
+        _ <- fetching tracer protocol sut stateVar clock' unfetchedChains unfetchedVotes
+        _ <- blockCreation tracer protocol sut stateVar clock' txs (diffuseChain diffuserVar)
         let roundNumber = inRound clock' protocol
-            party = mkCommitteeMember modelSUT protocol clock' (isCommitteeMember modelSUT roundNumber)
+            party = mkCommitteeMember sut protocol clock' (isCommitteeMember sut roundNumber)
             selectBlock' = selectBlock nullTracer
             diffuser = diffuseVote diffuserVar
         _ <- voting tracer protocol party stateVar clock' selectBlock' diffuser
@@ -117,41 +115,40 @@ instance (Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), MonadSTM m) => RunMo
     NewVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
+    BadChain c -> do
+      modify $ \rs -> rs{unfetchedChains = unfetchedChains rs ++ pure c}
+      pure mempty
     BadVote v -> do
       modify $ \rs -> rs{unfetchedVotes = unfetchedVotes rs ++ pure v}
       pure mempty
 
-  postcondition (s, s') (Step a) _ (gotChains, gotVotes) = do
-    when (newRound (clock s') (protocol s')) $
-      do
-        monitorPost $ tabulate "Voting rules" [show $ checkVotingRules $ backoff s]
-        monitorPost $ tabulate "VR-1A/1B/2A/2B" [init . tail $ show (vr1A s'', vr1B s'', vr2A s'', vr2B s'') | let s'' = if a == Tick then s' else backoff s]
-    monitorPost $ tabulate "Chain length (rounded)" [show $ (+ 5) . (* 10) . (`div` 10) . (+ 4) $ length $ pref s]
-    monitorPost $ tabulate "Certs on chain" [show $ length $ filter (isJust . certificate) $ pref s]
-    monitorPost $ tabulate "Certs created (rounded)" [show $ (* 2) . (`div` 2) $ length $ allSeenCerts s]
-    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition sortition s a)
-    monitorPost $ tabulate "Expected chains" [show $ length expectedChains]
-    monitorPost $ tabulate "Expected votes" [show $ length expectedVotes]
-    -- let ok = length r == length expected
+  postcondition _ Initial{} _ () = pure True
+  postcondition (net@NetworkModel{nodeModel = s}, net'@NetworkModel{nodeModel = s'}) (Step a) _ (gotChains, gotVotes) = do
+    monitorChain net net'
+    monitorCerts net net'
+    monitorVoting net a
+    let (expectedChains, expectedVotes) = maybe (mempty, mempty) fst (transition (sortition net) s a)
     let ok = (gotChains, gotVotes) == (expectedChains, expectedVotes)
     monitorPost . counterexample . show $ "  action $" <+> pPrint a
     when (a == Tick && newRound (clock s') (protocol s')) $
       monitorPost . counterexample $
         "  -- round: " ++ show (getRoundNumber $ inRound (clock s') (protocol s'))
-    unless (null gotChains) $ do
-      monitorPost . counterexample . show $ "  --      got chains:" <+> pPrint gotChains
+    unless (null gotChains) $
+      monitorPost . counterexample . show $
+        "  --      got chains:" <+> pPrint gotChains
     when (gotChains /= expectedChains) $
       counterexamplePost . show $
         "  -- expected chains:" <+> pPrint expectedChains
-    unless (null gotVotes) $ do
-      monitorPost . counterexample . show $ "  --      got votes:" <+> pPrint gotVotes
+    unless (null gotVotes) $
+      monitorPost . counterexample . show $
+        "  --      got votes:" <+> pPrint gotVotes
     when (gotVotes /= expectedVotes) $
       counterexamplePost . show $
         "  -- expected votes:" <+> pPrint expectedVotes
-    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint s)
+    counterexamplePost . show $ "  " <> hang "-- model state before:" 2 (pPrint net)
     pure ok
 
-prop_node :: Blind (Actions NodeModel) -> Property
+prop_node :: Blind (Actions NetworkModel) -> Property
 prop_node (Blind as) = noShrinking $
   ioProperty $ do
     stateVar <- IO.newTVarIO initialPerasState
