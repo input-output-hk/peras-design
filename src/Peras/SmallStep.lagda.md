@@ -502,9 +502,7 @@ Helper function for creating a block
       record
         { slotNumber = s
         ; creatorId = p
-        ; parentBlock =
-            let open IsTreeType
-            in tipHash (preferredChain t)
+        ; parentBlock = tipHash (preferredChain t)
         ; certificate =
             let r = v-round s
             in needCert r t
