@@ -479,19 +479,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         bodyHash≡txsHash = {!!} -- TODO: txSelection/hash from model
 
         block≡β : block ≡ β
-        block≡β
-          with v ←
-          cong
-            (λ i →  record
-                      { slotNumber = i
-                      ; creatorId = creatorId block
-                      ; parentBlock = parentBlock block
-                      ; certificate = certificate block
-                      ; leadershipProof = leadershipProof block
-                      ; bodyHash = bodyHash block
-                      ; signature = signature block
-                      })
-            slotNumber≡slot
+        block≡β with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
           rewrite parent≡tip
           rewrite cert≡needCert
           rewrite bodyHash≡txsHash
@@ -617,12 +605,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
     tick-soundness {cs} {vs} s₀ inv refl
       | True
       with vs
-      with cs
 
     tick-soundness s₀ inv refl
       | True
       | vote ∷ xs
-      | []
       with   checkSignedVote vote in checkedSig
            | isYes (checkVotingRules (modelState s₀)) in checkedVRs
            | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
@@ -631,7 +617,12 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
            | checkVoteFromSut vote in checkedSut
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | [] | True | True | True | True | True =
+      | True | vote ∷ [] | True | True | True | True | True
+      with cs
+
+    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
+      | True | vote ∷ [] | True | True | True | True | True
+      | [] =
 
         record
           { s₁ = s₁
@@ -790,30 +781,30 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | [] | _ | _ | _ | _ | _ = {!!}
-
-    tick-soundness s₀ inv refl
-      | True
-      | vote ∷ xs
-      | (block ∷ rest) ∷ ys
-      with   checkSignedVote vote in checkedSig
-           | isYes (checkVotingRules (modelState s₀)) in checkedVRs
-           | votingBlockHash (modelState s₀) == blockHash vote in isValidBlockHash
-           | div (getSlotNumber (State.clock s₀)) (Params.U params)
-               == getRoundNumber (votingRound vote) in isVotingRound
-           | checkVoteFromSut vote in checkedSut
-
-           | slotNumber block == State.clock s₀ in checkSlot
-           | checkBlockFromSut block in checkedBlockSut
-           | parentBlock block == tipHash rest in checkHash
-           | rest == pref (modelState s₀) in checkRest -- FIXME: modelState s'
-           | checkSignedBlock block in checkedBlockSig
-           | checkLeadershipProof (leadershipProof block) in checkedLead
-           | lastSlot rest Haskell.< slotNumber block in checkedNewer
+      | True | vote ∷ []
+      | True | True | True | True | True
+      | (block ∷ rest) ∷ []
+      with slotNumber block == State.clock s₀ in checkSlot
+         | checkBlockFromSut block in checkedBlockSut
+         | parentBlock block == tipHash rest in checkHash
+         | rest == pref (
+                 let v = axiom-everyoneIsOnTheCommittee , axiom-checkVoteSignature checkedSig
+                     s = record s₀
+                           { blockTrees =
+                               set otherId (addVote (modelState s₀) v)
+                                 (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
+                           ; history = VoteMsg v ∷ (State.history s₀)
+                           }
+                 in modelState s
+               ) in checkRest
+         | checkSignedBlock block in checkedBlockSig
+         | checkLeadershipProof (leadershipProof block) in checkedLead
+         | lastSlot rest Haskell.< slotNumber block in checkedNewer
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | (block ∷ rest) ∷ []
+      | True | vote ∷ []
       | True | True | True | True | True
+      | (block ∷ rest) ∷ []
       | True | True | True | True | True | True | True =
 
         record
@@ -949,25 +940,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           bodyHash≡txsHash = {!!} -- TODO: see ↑
 
           rest≡pref : rest ≡ prefChain (modelState s')
-          rest≡pref = {!!} -- eqList-sound checkRest
+          rest≡pref
+            -- rewrite vote≡w
+            = ? -- eqList-sound checkRest
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
 
           block≡β : block ≡ β
-          block≡β
-            with v ←
-            cong
-              (λ i →  record
-                      { slotNumber = i
-                      ; creatorId = creatorId block
-                      ; parentBlock = parentBlock block
-                      ; certificate = certificate block
-                      ; leadershipProof = leadershipProof block
-                      ; bodyHash = bodyHash block
-                      ; signature = signature block
-                      })
-              slotNumber≡slot
+          block≡β with v ← cong (λ i →  record block { slotNumber = i }) slotNumber≡slot
             rewrite creatorId≡sutId-block
             rewrite parent≡tip
             rewrite cert≡needCert
@@ -1068,7 +1049,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                     )
                 ↣ Fetch {m = ChainMsg chain}
                     (honest {p = sutId}
-                      {!!} -- otherExists2
+                      (existsTrees (sutTree inv) trace₁)
                       (Any.here refl)
                       ChainReceived
                     )
@@ -1215,6 +1196,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
               }
 
 
+{-
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ [] | (block ∷ rest) ∷ []
       | _ | _ | _ | _ | _
@@ -1286,6 +1268,7 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     tick-soundness s₀ inv refl
       | False | _ = {!!}
+-}
 
     @0 badVote-soundness : ∀ {cs vs ms₁ p} s₀ vote
                           → Invariant s₀
