@@ -8,12 +8,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Peras.Conformance.Test where
 
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Data.Function (on)
 import Data.List (nubBy)
 import Data.Maybe (isJust)
@@ -39,7 +40,7 @@ import Peras.Conformance.Generators (
   genMutatedBlock,
   genProtocol,
   genSlotLeadership,
-  genVote,
+  genVotes,
   lenientGenConstraints,
   rollbackNodeModel,
   strictGenConstraints,
@@ -73,6 +74,7 @@ import Test.QuickCheck (
   Arbitrary (arbitrary),
   choose,
   elements,
+  frequency,
   suchThat,
   tabulate,
  )
@@ -233,20 +235,20 @@ instance StateModel NetworkModel where
   arbitraryAction _ NetworkModel{nodeModel = s@NodeModel{clock, allChains, allVotes, protocol}, gen, initialized} =
     if initialized
       then do
-        v <-
+        vs <-
           if canGenVotes && newRound clock protocol
-            then genVote gen s
-            else pure Nothing
+            then genVotes gen s
+            else pure mempty
         c <- BadChain <$> genBadChain
         b <- BadVote <$> genBadVote
         fBad <- (<= 0.10) <$> choose (0, 1 :: Double)
         (newChains, newVotes) <- fst <$> genHonestTick True gen s
-        fmap (Some . Step) . elements $
-          [Tick]
-            ++ (NewChain <$> newChains)
-            ++ cleanVotes (NewVote <$> newVotes <> maybe mempty pure v)
-            ++ [c | canGenBadChain && fBad]
-            ++ [b | canGenBadVote && fBad]
+        fmap (Some . Step) . frequency $
+          [(1, pure Tick)]
+            ++ fmap (1,) (pure . NewChain <$> newChains)
+            ++ fmap ((50,) . pure) (cleanVotes $ NewVote <$> newVotes <> vs)
+            ++ [(1, pure c) | canGenBadChain && fBad]
+            ++ [(1, pure b) | canGenBadVote && fBad]
       else scale (`div` actionsSizeScaling) $
         fmap Some $
           do
@@ -296,37 +298,34 @@ instance StateModel NetworkModel where
 
   precondition NetworkModel{initialized} Initial{} = not initialized
   precondition _ (Step (NewChain [])) = False
-  precondition NetworkModel{nodeModel = s, gen} (Step (NewVote v)) =
-    voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
-      && Foreign.checkSignedVote v
-      && twoParties gen `implies` Model.checkVoteFromOther v
-      && checkVotingRules' gen s
-      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
+  precondition NetworkModel{nodeModel = s, gen} (Step (NewVote v)) = nextVotingState s v gen
   precondition net@NetworkModel{nodeModel = s} (Step a) = isJust $ transition (sortition net) s a
 
   nextState net@NetworkModel{nodeModel = s} (Initial params slots rounds) _ =
     net{nodeModel = s{protocol = params}, leadershipSlots = slots, voterRounds = rounds, initialized = True}
   nextState net@NetworkModel{nodeModel = s, gen} (Step (NewVote v)) _ =
-    if voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
-      && Foreign.checkSignedVote v
-      && twoParties gen `implies` Model.checkVoteFromOther v
-      && checkVotingRules' gen s
-      && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
+    if nextVotingState s v gen
       then net{nodeModel = Model.addVote' s v}
       else net
   nextState net@NetworkModel{nodeModel = s} (Step a) _ =
     net{nodeModel = maybe s snd $ transition (sortition net) s a}
 
+nextVotingState :: NodeModel -> Vote -> GenConstraints -> Bool
+nextVotingState s v gen =
+  voteCurrent gen `implies` (slotToRound (protocol s) (clock s) == votingRound v)
+    && Foreign.checkSignedVote v
+    && twoParties gen `implies` Model.checkVoteNotFromSut v
+    && checkVotingRules' gen s
+    && (selectionObeyChain gen && selectionObeyAge gen) `implies` (votingBlockHash s == blockHash v)
+
 checkVotingRules' :: GenConstraints -> NodeModel -> Bool
 checkVotingRules' MkGenConstraints{voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} s' =
-  let
-    -- FIXME: Evaluate whether we need this.
-    s = backoff s'
-   in
-    voteObeyVR1A `implies` Model.vr1A s
-      && voteObeyVR1B `implies` Model.vr1B s
-      || voteObeyVR2A `implies` Model.vr2A s
-        && voteObeyVR2B `implies` Model.vr2B s
+  voteObeyVR1A `implies` Model.vr1A s
+    && voteObeyVR1B `implies` Model.vr1B s
+    || voteObeyVR2A `implies` Model.vr2A s
+      && voteObeyVR2B `implies` Model.vr2B s
+ where
+  s = backoff s'
 
 backoff :: NodeModel -> NodeModel
 backoff = snd . rollbackNodeModel 1
@@ -346,7 +345,9 @@ monitorCerts :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
 monitorCerts NetworkModel{nodeModel = s} NetworkModel{nodeModel = s'} =
   do
     monitorPost $ tabulate "Certs found or created during fetching (max one per round)" [show $ on (-) (length . allSeenCerts) s' s]
-    monitorPost $ tabulate "New quora" [show $ length $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')]
+    unless (null $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')) $
+      monitorPost $
+        tabulate "New quorum" [show (fromIntegral (perasτ (protocol s)) :: Integer)]
     monitorPost $ tabulate "Certs on preferred chain (cumulative)" [show $ length $ filter (isJust . certificate) $ pref s']
     monitorPost $ tabulate "Certs created (cumulative, rounded down)" [show $ (* 1) . (`div` 1) $ length $ allSeenCerts s']
 
