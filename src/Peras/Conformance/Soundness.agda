@@ -420,10 +420,10 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
                           → transition p (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
     newChain-soundness s₀ (block ∷ rest) inv prf
-      with (slotNumber block == State.clock s₀) in checkSlot
+      with slotNumber block == State.clock s₀ in checkSlot
          | checkBlockFromOther block in checkedOther
-         | (parentBlock block == tipHash rest) in checkHash
-         | (rest == pref (modelState s₀)) in checkRest
+         | parentBlock block == tipHash rest in checkHash
+         | rest == pref (modelState s₀) in checkRest
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
          | lastSlot rest Haskell.< slotNumber block in checkedNewer
