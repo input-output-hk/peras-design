@@ -513,15 +513,13 @@ chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 
 {-# COMPILE AGDA2HS chainsInState #-}
 
-needCert' : NodeModel → Maybe Certificate
+needCert' : NodeModel → Bool
 needCert' s =
   let r = getRoundNumber (slotToRound (protocol s) (clock s))
   in
-  if not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
+     not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
      && r <= perasA (protocol s) + getRoundNumber (round (cert' s))
      && (getRoundNumber (round (certS s)) <= getRoundNumber (round (cert' s)))
-  then Just (cert' s)
-  else Nothing
 
 {-# COMPILE AGDA2HS needCert' #-}
 
@@ -538,7 +536,7 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
 transition _ s (NewChain
-  (record -- TODO: is there a more concise way to do this?
+  (record
     { slotNumber = slotNumber
     ; creatorId = creatorId
     ; parentBlock = parentBlock
@@ -555,7 +553,7 @@ transition _ s (NewChain
                      ; bodyHash = bodyHash }
       r = slotToRound (protocol s) (clock s)
   in
-  do guard (needCert' s == Nothing) -- guard correponding to the pattern match above
+  do guard (not $ needCert' s) -- guard correponding to the pattern match above
      guard (slotNumber == clock s)
      guard (checkBlockFromOther block)
      guard (parentBlock == tipHash rest)
@@ -591,7 +589,8 @@ transition _ s (NewChain
                      }
       r = slotToRound (protocol s) (clock s)
   in
-  do guard (needCert' s == Just cert) -- guard corresponding to the pattern match above
+  do guard (needCert' s) -- guard corresponding to the pattern match above
+     guard (cert == cert' s)
      guard (slotNumber == clock s)
      guard (checkBlockFromOther block)
      guard (parentBlock == tipHash rest)

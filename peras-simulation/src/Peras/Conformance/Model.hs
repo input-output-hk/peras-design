@@ -411,9 +411,9 @@ chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
 chainsInState sutIsSlotLeader =
   maybeToList . chainInState sutIsSlotLeader
 
-needCert' :: NodeModel -> Maybe Certificate
+needCert' :: NodeModel -> Bool
 needCert' s =
-  if not
+  not
     ( any
         ( \c ->
             getRoundNumber (round c) + 2
@@ -425,8 +425,6 @@ needCert' s =
       <= perasA (protocol s) + getRoundNumber (round (cert' s))
     && getRoundNumber (round (certS s))
       <= getRoundNumber (round (cert' s))
-    then Just (cert' s)
-    else Nothing
 
 transition ::
   (SutIsSlotLeader, SutIsVoter) ->
@@ -531,7 +529,7 @@ transition
         )
     ) =
     do
-      guard (needCert' s == Nothing)
+      guard (not $ needCert' s)
       guard (slotNumber == clock s)
       guard
         ( checkBlockFromOther
@@ -614,7 +612,8 @@ transition
         )
     ) =
     do
-      guard (needCert' s == Just cert)
+      guard (needCert' s)
+      guard (cert == cert' s)
       guard (slotNumber == clock s)
       guard
         ( checkBlockFromOther
