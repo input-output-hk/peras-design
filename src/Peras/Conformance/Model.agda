@@ -51,6 +51,9 @@ import Protocol.Peras
 open Hashable
 
 instance
+  hashPayload : Hashable Payload
+  hashPayload .hash = MkHash ∘ const emptyBS
+
   hashBlock : Hashable Block
   hashBlock .hash = MkHash ∘ bytesS ∘ signature
 
@@ -485,6 +488,7 @@ chainInState sutIsSlotLeader s = do
   guard (checkSignedBlock block)
   guard (checkLeadershipProof (leadershipProof block))
   guard (lastSlot rest < slotNumber block)
+  guard (bodyHash block == Hashable.hash hashPayload [])
   pure (block ∷ rest)
   where
     rest = pref s
@@ -557,6 +561,7 @@ transition _ s (NewChain
      guard (checkSignedBlock block)
      guard (checkLeadershipProof leadershipProof)
      guard (lastSlot rest < slotNumber)
+     guard (bodyHash == Hashable.hash hashPayload [])
      Just (([] , []) ,
        record s
          { allChains = (block ∷ rest) ∷ allChains s
@@ -592,6 +597,7 @@ transition _ s (NewChain
      guard (checkSignedBlock block)
      guard (checkLeadershipProof leadershipProof)
      guard (lastSlot rest < slotNumber)
+     guard (bodyHash == Hashable.hash hashPayload [])
      Just (([] , []) ,
        record s
          { allChains = (block ∷ rest) ∷ allChains s

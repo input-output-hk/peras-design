@@ -51,6 +51,7 @@ import Test.QuickCheck (
   choose,
   chooseInteger,
   elements,
+  frequency,
   sublistOf,
   suchThat,
  )
@@ -99,7 +100,7 @@ data GenConstraints
 
 -- | Enforce all Peras protocol rules when generating arbitrary instances.
 strictGenConstraints :: GenConstraints
-strictGenConstraints = MkGenConstraints False True False False False False False False False False False False False False False False False
+strictGenConstraints = MkGenConstraints False False False False False False False False False False False False False False False False False
 
 -- | Do not enforce Peras protocol rules when generating arbitrary instances.
 votingGenConstraints :: GenConstraints
@@ -127,7 +128,7 @@ genProtocol MkGenConstraints{twoParties} =
     perasτ <-
       if twoParties
         then pure 2
-        else chooseInteger (2, 3)
+        else frequency [(6, pure 2), (3, pure 3), (1, pure 4)]
     pure MkPerasParams{..}
 
 genSelection :: GenConstraints -> NodeModel -> Chain -> Gen (Hash Block, SlotNumber)
@@ -141,12 +142,14 @@ genSelection MkGenConstraints{selectionObeyChain, selectionObeyAge} NodeModel{cl
       else elements $ (genesisHash, 0) : fmap (hash &&& slotNumber) chain
 
 genVote :: GenConstraints -> NodeModel -> Gen (Maybe Vote)
-genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} node@NodeModel{clock, protocol} =
+genVote gc node = genVote' gc node =<< genPartyId gc node
+
+genVote' :: GenConstraints -> NodeModel -> PartyId -> Gen (Maybe Vote)
+genVote' gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} node@NodeModel{clock, protocol} party =
   do
     prefChain <- genPrefChain gc node
     (block, blockSlot) <- genSelection gc node prefChain
     certPrime <- elements $ getCertPrimes node
-    party <- genPartyId gc node
     let
       party' = mkParty party mempty mempty
       certPrimeSlot = fromIntegral $ fromIntegral (round certPrime) * perasU protocol
@@ -161,6 +164,40 @@ genVote gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2
     if vr1a && vr1b || vr2a && vr2b
       then pure . Just . fromRight undefined . runIdentity $ createSignedVote party' vr block pm 1
       else pure Nothing
+
+genVotes :: GenConstraints -> NodeModel -> Gen [Vote]
+genVotes gc node@NodeModel{protocol = MkPerasParams{perasτ}} =
+  do
+    totalVoters <-
+      frequency
+        [ (90, choose (perasτ, 4 * perasτ `div` 3))
+        , (10, choose (0, perasτ - 1))
+        ]
+    genVotes' gc node [otherId .. totalVoters + otherId - 1]
+
+genVotes' :: GenConstraints -> NodeModel -> [PartyId] -> Gen [Vote]
+genVotes' gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR2A, voteObeyVR2B} node@NodeModel{clock, protocol} parties =
+  do
+    prefChain <- genPrefChain gc node
+    (block, blockSlot) <- genSelection gc node prefChain
+    certPrime <- elements $ getCertPrimes node
+    let
+      certPrimeSlot = fromIntegral $ fromIntegral (round certPrime) * perasU protocol
+      certStar = getCertStarRound prefChain
+      r = inRound clock protocol
+      vr1a = not voteObeyVR1A || round certPrime == r - 1
+      vr1b = not voteObeyVR1B || blockSlot == 0 || blockSlot <= certPrimeSlot && block `elem` (hash <$> prefChain)
+      vr2a = not voteObeyVR2A || fromIntegral r >= fromIntegral (round certPrime) + perasR protocol
+      vr2b = not voteObeyVR2B || r > certStar && fromIntegral (r - certStar) `mod` perasK protocol == 0
+    vr <- if voteCurrent then pure r else genRoundNumber gc node
+    let genOne party =
+          let party' = mkParty party mempty mempty
+              pm = fromRight undefined . runIdentity $ createMembershipProof vr (Set.singleton party')
+           in fromRight undefined . runIdentity $ createSignedVote party' vr block pm 1
+    pure $
+      if vr1a && vr1b || vr2a && vr2b
+        then genOne <$> parties
+        else mempty
 
 genMutatedBlock :: GenConstraints -> Block -> Gen Block
 genMutatedBlock _ MkBlock{slotNumber, creatorId, parentBlock, bodyHash, certificate, leadershipProof} =
@@ -257,10 +294,10 @@ genRoundNumber _ NodeModel{clock, protocol} =
   MkRoundNumber <$> chooseInteger (1, getRoundNumber $ inRound clock protocol)
 
 genPartyId :: GenConstraints -> NodeModel -> Gen PartyId
-genPartyId MkGenConstraints{twoParties} _ =
+genPartyId MkGenConstraints{twoParties} NodeModel{protocol = MkPerasParams{perasτ}} =
   if twoParties
     then pure otherId
-    else elements [sutId, otherId, otherId + 1]
+    else choose (sutId, sutId + 4 * perasτ `div` 3)
 
 genSlotLeadership :: Double -> SlotNumber -> Gen [SlotNumber]
 genSlotLeadership fraction limit =
