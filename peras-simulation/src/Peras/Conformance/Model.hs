@@ -13,7 +13,7 @@ module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
+import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
@@ -377,6 +377,7 @@ chainInState sutIsSlotLeader s =
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
     guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
     pure (block : rest)
  where
   rest :: Chain
@@ -506,6 +507,7 @@ transition _ s (NewChain (block : rest)) =
     guard (checkSignedBlock block)
     guard (checkLeadershipProof (leadershipProof block))
     guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
     Just
       ( ([], [])
       , NodeModel
