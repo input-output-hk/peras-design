@@ -584,14 +584,14 @@ transition _ s (NewChain
   let block = record { slotNumber = slotNumber
                      ; creatorId = creatorId
                      ; parentBlock = parentBlock
-                     ; certificate = Just cert -- guard corresponding to the pattern match above
+                     ; certificate = Just cert
                      ; leadershipProof = leadershipProof
                      ; signature = signature
                      ; bodyHash = bodyHash
                      }
       r = slotToRound (protocol s) (clock s)
   in
-  do guard (needCert' s == Just cert)
+  do guard (needCert' s == Just cert) -- guard corresponding to the pattern match above
      guard (slotNumber == clock s)
      guard (checkBlockFromOther block)
      guard (parentBlock == tipHash rest)

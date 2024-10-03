@@ -420,8 +420,9 @@ module _ ⦃ postulates : Postulates ⦄
                           → Invariant s₀
                           → transition p (modelState s₀) (NewChain chain) ≡ Just ((cs , vs) , ms₁)
                           → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
-    newChain-soundness s₀ (block@(record { certificate = Nothing }) ∷ rest) inv prf
-      with needCert' (modelState s₀) == Nothing in ¬needCert
+
+    newChain-soundness s₀ (block@(record { certificate = Just cert }) ∷ rest) inv prf
+      with needCert' (modelState s₀) == Just cert in checkCert
          | slotNumber block == State.clock s₀ in checkSlot
          | checkBlockFromOther block in checkedOther
          | parentBlock block == tipHash rest in checkHash
@@ -431,7 +432,7 @@ module _ ⦃ postulates : Postulates ⦄
          | lastSlot rest Haskell.< slotNumber block in checkedNewer
          | bodyHash block == Hashable.hash hashPayload [] in checkedBodyHash
     newChain-soundness {cs} {vs} {ms₁} s₀
-      (block@(record { certificate = Nothing }) ∷ rest) inv refl
+      (block@(record { certificate = Just cert }) ∷ rest) inv refl
       | True | True | True | True | True | True | True | True | True =
       record
         { s₁          = s₁
@@ -469,7 +470,7 @@ module _ ⦃ postulates : Postulates ⦄
         parent≡tip = MkHash-inj block-parentBlock
 
         cert≡needCert : certificate block ≡ needCert' tree
-        cert≡needCert = sym (eqMaybe-sound ¬needCert)
+        cert≡needCert = sym (eqMaybe-sound checkCert)
 
         bodyHash≡txsHash :
           bodyHash block ≡ let open Hashable ⦃...⦄ in
@@ -477,13 +478,14 @@ module _ ⦃ postulates : Postulates ⦄
         bodyHash≡txsHash = MkHash-inj $ lem-eqBS checkedBodyHash
 
         block≡β : block ≡ β
-        block≡β with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
+        block≡β
+          rewrite slotNumber≡slot
           rewrite parent≡tip
           rewrite cert≡needCert
           rewrite bodyHash≡txsHash
           rewrite rest≡pref
           rewrite creatorId≡otherId
-          = v
+          = refl
 
         validSignature : IsBlockSignature β (signature β)
         validSignature with v ← axiom-checkBlockSignature checkedSig
@@ -564,7 +566,12 @@ module _ ⦃ postulates : Postulates ⦄
             }
           ≡ ms₁
         s₁-agrees
+          rewrite slotNumber≡slot
+          rewrite parent≡tip
           rewrite cert≡needCert
+          rewrite bodyHash≡txsHash
+          rewrite rest≡pref
+          rewrite creatorId≡otherId
           rewrite
             k'≢k-get∘set
               {k = sutId}
@@ -577,8 +584,185 @@ module _ ⦃ postulates : Postulates ⦄
               {k = sutId}
               {v = addChain tree chain}
               {m = blockTrees}
+          = {!refl!} -- refl
+
+        votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
+        votes-agree with creatorId block ≟ sutId
+        ... | yes p = ⊥-elim (notFromSut p)
+        ... | no _  = refl
+
+        inv₁ : Invariant s₁
+        inv₁ =
+          record
+            { invFetched = invFetched inv
+            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
+            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
+            }
+
+
+    newChain-soundness s₀ (block@(record { certificate = Nothing }) ∷ rest) inv prf
+      with needCert' (modelState s₀) == Nothing in ¬needCert
+         | slotNumber block == State.clock s₀ in checkSlot
+         | checkBlockFromOther block in checkedOther
+         | parentBlock block == tipHash rest in checkHash
+         | rest == pref (modelState s₀) in checkRest
+         | checkSignedBlock block in checkedSig
+         | checkLeadershipProof (leadershipProof block) in checkedLead
+         | lastSlot rest Haskell.< slotNumber block in checkedNewer
+         | bodyHash block == Hashable.hash hashPayload [] in checkedBodyHash
+    newChain-soundness {cs} {vs} {ms₁} s₀
+      (block@(record { certificate = Nothing }) ∷ rest) inv refl
+      | True | True | True | True | True | True | True | True | True =
+      record
+        { s₁          = s₁
+        ; invariant₀  = inv
+        ; invariant₁  = inv₁
+        ; trace       = trace
+        ; s₁-agrees   = s₁-agrees
+        ; votes-agree = votes-agree
+        }
+      where
+        open State s₀ renaming (clock to slot)
+
+        tree : NodeModel
+        tree = modelState s₀
+
+        notFromSut : creatorId block ≢ sutId
+        notFromSut x = otherId≢sutId (trans (sym (eqℕ-sound checkedOther)) x)
+
+        creatorId≡otherId : creatorId block ≡ otherId
+        creatorId≡otherId = eqℕ-sound checkedOther
+
+        β : Block
+        β = createBlock slot otherId (leadershipProof block) (signature block) tree
+
+        slotNumber≡slot : slotNumber block ≡ slot
+        slotNumber≡slot = cong MkSlotNumber (eqℕ-sound checkSlot)
+
+        rest≡pref : rest ≡ prefChain tree
+        rest≡pref = eqList-sound checkRest
+
+        block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
+        block-parentBlock = eqBS-sound checkHash
+
+        parent≡tip : parentBlock block ≡ tipHash rest
+        parent≡tip = MkHash-inj block-parentBlock
+
+        cert≡needCert : certificate block ≡ needCert' tree
+        cert≡needCert = sym (eqMaybe-sound ¬needCert)
+
+        bodyHash≡txsHash :
+          bodyHash block ≡ let open Hashable ⦃...⦄ in
+            hash (txSelection slot (creatorId block))
+        bodyHash≡txsHash = MkHash-inj $ lem-eqBS checkedBodyHash
+
+        block≡β : block ≡ β
+        block≡β
+          rewrite slotNumber≡slot
+          rewrite parent≡tip
+          rewrite cert≡needCert
+          rewrite bodyHash≡txsHash
+          rewrite rest≡pref
+          rewrite creatorId≡otherId
+          = refl
+
+        validSignature : IsBlockSignature β (signature β)
+        validSignature with v ← axiom-checkBlockSignature checkedSig
           rewrite block≡β
           rewrite rest≡pref
+          = v
+
+        chain : ValidChain (β ∷ prefChain tree)
+        chain with newer ← LT-sound checkedNewer
+          rewrite block≡β
+          rewrite rest≡pref
+          rewrite slotNumber≡slot
+          = let open SmallStep.IsTreeType
+            in Cons {prefChain tree} {β}
+              validSignature
+              (axiom-checkLeadershipProof {β} checkedLead)
+              newer
+              refl
+              (is-TreeType .valid tree)
+
+        s₁ : State
+        s₁ = record s₀
+               { blockTrees =
+                   set otherId (addChain tree chain)
+                     (set sutId (addChain tree chain)
+                       blockTrees)
+               ; history = ChainMsg chain ∷ history
+               }
+
+        otherExists :
+          set sutId
+            (addChain tree chain)
+              blockTrees ⁉ otherId ≡ just tree
+        otherExists =
+          trans
+            (k'≢k-get∘set
+              {k = otherId}
+              {k' = sutId}
+              {v = addChain tree chain}
+              {m = blockTrees}
+              sutId≢otherId)
+            (otherTree inv)
+
+        trace : s₀ ↝⋆ s₁
+        trace = CreateBlock (invFetched inv)
+                  (honest
+                    (otherTree inv)
+                    chain
+                    no-delays
+                  )
+              ↣ Fetch {m = ChainMsg chain}
+                  (honest {p = sutId}
+                    (sutTree inv)
+                    (Any.here refl)
+                    ChainReceived
+                  )
+              ↣ Fetch {m = ChainMsg chain}
+                  (honest {p = otherId}
+                    otherExists
+                    (Any.here refl)
+                    ChainReceived
+                  )
+              ↣ ∎
+
+        s₁-agrees :
+          let s = record s₀
+                    { blockTrees =
+                        set otherId (addChain tree chain)
+                        (set sutId (addChain tree chain)
+                          blockTrees) }
+          in
+          record
+            { clock        = State.clock s
+            ; protocol     = testParams
+            ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+            ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+            }
+          ≡ ms₁
+        s₁-agrees
+          rewrite slotNumber≡slot
+          rewrite parent≡tip
+          rewrite cert≡needCert
+          rewrite bodyHash≡txsHash
+          rewrite rest≡pref
+          rewrite creatorId≡otherId
+          rewrite
+            k'≢k-get∘set
+              {k = sutId}
+              {k' = otherId}
+              {v = addChain tree chain}
+              {m = set sutId (addChain tree chain) blockTrees}
+              otherId≢sutId
+          rewrite
+            get∘set≡id
+              {k = sutId}
+              {v = addChain tree chain}
+              {m = blockTrees}
           = {!refl!} -- refl
 
         votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
