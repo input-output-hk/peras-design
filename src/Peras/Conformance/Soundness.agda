@@ -432,11 +432,11 @@ module _ ⦃ postulates : Postulates ⦄
     newChain-soundness {cs} {vs} {ms₁} s₀ (block ∷ rest) inv refl
       | True | True | True | True | True | True | True | True =
       record
-        { s₁ = s₁
-        ; invariant₀ = inv
-        ; invariant₁ = inv₁
-        ; trace = trace
-        ; s₁-agrees = s₁-agrees
+        { s₁          = s₁
+        ; invariant₀  = inv
+        ; invariant₁  = inv₁
+        ; trace       = trace
+        ; s₁-agrees   = s₁-agrees
         ; votes-agree = votes-agree
         }
       where
@@ -621,11 +621,11 @@ module _ ⦃ postulates : Postulates ⦄
       | [] =
 
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = s₁-agrees
           ; votes-agree = votes-agree
           }
         where
@@ -805,11 +805,11 @@ module _ ⦃ postulates : Postulates ⦄
       | True | True | True | True | True | True | True | True =
 
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = s₁-agrees
           ; votes-agree = votes-agree
           }
         where
@@ -1225,11 +1225,11 @@ module _ ⦃ postulates : Postulates ⦄
       rewrite isSlotZero
       =
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = {!s₁-agrees!} -- s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = {!s₁-agrees!} -- s₁-agrees
           ; votes-agree = votes-agree
           }
 
@@ -1287,11 +1287,11 @@ module _ ⦃ postulates : Postulates ⦄
       with hasVoted (voterId vote) (votingRound vote) (modelState s₀)
     badVote-soundness {cs} {vs} {ms₁} s₀ vote inv refl | True =
       record
-        { s₁ = s₀
-        ; invariant₀ = inv
-        ; invariant₁ = inv
-        ; trace = ∎
-        ; s₁-agrees = refl
+        { s₁          = s₀
+        ; invariant₀  = inv
+        ; invariant₁  = inv
+        ; trace       = ∎
+        ; s₁-agrees   = refl
         ; votes-agree = refl
         }
 
