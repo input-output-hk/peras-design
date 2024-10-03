@@ -517,11 +517,13 @@ needCert' : NodeModel → Maybe Certificate
 needCert' s =
   let r = getRoundNumber (slotToRound (protocol s) (clock s))
   in
-  if not (any (λ c → roundNumber c + 2 == r) (allSeenCerts s))
-     && r <= perasA (protocol s) + roundNumber (cert' s)
-     && (roundNumber (certS s) <= roundNumber (cert' s))
+  if not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
+     && r <= perasA (protocol s) + getRoundNumber (round (cert' s))
+     && (getRoundNumber (round (certS s)) <= getRoundNumber (round (cert' s)))
   then Just (cert' s)
   else Nothing
+
+{-# COMPILE AGDA2HS needCert' #-}
 
 transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition (sutIsSlotLeader , sutIsVoter) s Tick =
