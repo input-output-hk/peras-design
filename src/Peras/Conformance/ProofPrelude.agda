@@ -30,6 +30,13 @@ mod a b ⦃ prf ⦄ = _%_ a b ⦃ uneraseNonZero prf ⦄
 div : ℕ → (n : ℕ) → @0 ⦃ NonZero n ⦄ → ℕ
 div a b ⦃ prf ⦄ = _/_ a b ⦃ uneraseNonZero prf ⦄
 
+eq𝔹-sound : {n m : Bool} → (n == m) ≡ True → n ≡ m
+eq𝔹-sound {False} {False} _ = refl
+eq𝔹-sound {True} {True} _ = refl
+
+not-eq𝔹-sound : {b : Bool} → not b ≡ True → b ≡ False
+not-eq𝔹-sound {False} _ = refl
+
 eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
 eqℕ-sound {zero}  {zero}   _  = refl
 eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
@@ -40,11 +47,8 @@ not-eqℕ-sound' {zero} {suc m} x ()
 not-eqℕ-sound' {suc n} {zero} x ()
 not-eqℕ-sound' {suc n} {suc m} x x₁ = not-eqℕ-sound' {n} {m} x (suc-injective x₁)
 
-not_b≡True→b≡False : ∀ {b : Bool} → not b ≡ True → b ≡ False
-not_b≡True→b≡False {False} x = refl
-
 not-eqℕ-sound : ∀ {n m : Nat} → not (n == m) ≡ True → n ≢ m
-not-eqℕ-sound = not-eqℕ-sound' ∘ not_b≡True→b≡False
+not-eqℕ-sound = not-eqℕ-sound' ∘ not-eq𝔹-sound
 
 eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
 eqBS-sound = lem-eqBS
@@ -52,6 +56,7 @@ eqBS-sound = lem-eqBS
 postulate
   not-eqBS-sound : {n m : ByteString} → eqBS n m ≡ False → n ≡ m → ⊥
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
+  eqMaybe-sound : ⦃ _ : Eq a ⦄ → {m₁ m₂ : Maybe a} → (m₁ == m₂) ≡ True → m₁ ≡ m₂
 
 lem-divMod : ∀ a b ⦃ _ : NonZero b ⦄ → mod a b ≡ 0 → a ≡ div a b * b
 lem-divMod a b eq with lem ← m≡m%n+[m/n]*n a b rewrite eq = lem

@@ -513,6 +513,16 @@ chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 
 {-# COMPILE AGDA2HS chainsInState #-}
 
+needCert' : NodeModel → Bool
+needCert' s =
+  let r = getRoundNumber (slotToRound (protocol s) (clock s))
+  in
+     not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
+     && r <= perasA (protocol s) + getRoundNumber (round (cert' s))
+     && (getRoundNumber (round (certS s)) <= getRoundNumber (round (cert' s)))
+
+{-# COMPILE AGDA2HS needCert' #-}
+
 transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition (sutIsSlotLeader , sutIsVoter) s Tick =
   let s' = record s { clock = nextSlot (clock s) }
@@ -525,20 +535,77 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
                         }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain (block ∷ rest)) = do
-  guard (slotNumber block == clock s)
-  guard (checkBlockFromOther block)
-  guard (parentBlock block == tipHash rest)
-  guard (rest == pref s)
-  guard (checkSignedBlock block)
-  guard (checkLeadershipProof (leadershipProof block))
-  guard (lastSlot rest < slotNumber block)
-  guard (bodyHash block == Hashable.hash hashPayload [])
-  Just (([] , []) ,
-    record s
-      { allChains = (block ∷ rest) ∷ allChains s
-      ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate (block ∷ rest))
-      })
+transition _ s (NewChain
+  (record
+    { slotNumber = slotNumber
+    ; creatorId = creatorId
+    ; parentBlock = parentBlock
+    ; certificate = Nothing -- pattern match
+    ; leadershipProof = leadershipProof
+    ; signature = signature
+    ; bodyHash = bodyHash } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Nothing
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (not $ needCert' s) -- guard correponding to the pattern match above
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     guard (lastSlot rest < slotNumber)
+     guard (bodyHash == Hashable.hash hashPayload [])
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
+transition _ s (NewChain
+  (record
+    { slotNumber = slotNumber
+    ; creatorId = creatorId
+    ; parentBlock = parentBlock
+    ; certificate = Just cert -- pattern match
+    ; leadershipProof = leadershipProof
+    ; signature = signature
+    ; bodyHash = bodyHash
+    } ∷ rest)) =
+  let block = record { slotNumber = slotNumber
+                     ; creatorId = creatorId
+                     ; parentBlock = parentBlock
+                     ; certificate = Just cert
+                     ; leadershipProof = leadershipProof
+                     ; signature = signature
+                     ; bodyHash = bodyHash
+                     }
+      r = slotToRound (protocol s) (clock s)
+  in
+  do guard (needCert' s) -- guard corresponding to the pattern match above
+     guard (cert == cert' s)
+     guard (slotNumber == clock s)
+     guard (checkBlockFromOther block)
+     guard (parentBlock == tipHash rest)
+     guard (rest == pref s)
+     guard (checkSignedBlock block)
+     guard (checkLeadershipProof leadershipProof)
+     guard (lastSlot rest < slotNumber)
+     guard (bodyHash == Hashable.hash hashPayload [])
+     Just (([] , []) ,
+       record s
+         { allChains = (block ∷ rest) ∷ allChains s
+         ; allSeenCerts =
+             foldr insertCert (allSeenCerts s)
+               (mapMaybe certificate (block ∷ rest))
+         })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)
   guard (slotToRound (protocol s) (clock s) == votingRound v)
