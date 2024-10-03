@@ -1,161 +1,199 @@
+cabal run test:peras-simulation-test -- \
+  --match "/Peras.Conformance.Test/Prototype node/Simulation respects model/" \
+  --qc-max-success=10000 \
+  --qc-max-size=100 \
+  --qc-max-shrink=0
+
+
 Peras.Conformance.Test
   Prototype node
     Simulation respects model [✔]
-      +++ OK, passed 5000 tests.
+      +++ OK, passed 10000 tests.
 
-      Action polarity (374648 in total):
+      Action polarity (748572 in total):
       100.0000% +
 
-      Actions (374648 in total):
-      71.9200% +Tick
-      20.1760% +NewChain
-       3.9928% +BadChain
-       1.6362% +BadVote
-       1.2911% +Initial
-       0.9839% +NewVote
+      Actions (748572 in total):
+      69.6363% +Tick
+      19.5153% +NewChain
+       3.8062% +NewVote
+       3.7192% +BadChain
+       2.0344% +BadVote
+       1.2886% +Initial
 
-      Actions rejected by precondition (119122 in total):
+      Actions rejected by precondition (229992 in total):
       100.0000% NewChain
 
-      Certs created (cumulative, rounded down) (369811 in total):
-      68.4401% 1
-      20.6097% 2
-       8.0711% 3
-       1.8501% 4
-       0.6852% 5
-       0.2250% 6
-       0.1128% 7
-       0.0059% 8
+      Certs created (cumulative, rounded down) (738926 in total):
+      67.7167% 1
+      16.8915% 2
+       8.9458% 3
+       3.2769% 4
+       1.3317% 5
+       0.7895% 6
+       0.4444% 7
+       0.2232% 8
+       0.1467% 9
+       0.1198% 10
+       0.0336% 11
+       0.0310% 13
+       0.0303% 14
+       0.0189% 12
 
-      Certs found or created during fetching (max one per round) (369811 in total):
-      99.5465% 0
-       0.4535% 1
+      Certs found or created during fetching (max one per round) (738926 in total):
+      99.3921% 0
+       0.6079% 1
 
-      Certs on preferred chain (cumulative) (369811 in total):
-      71.1788% 0
-      22.3714% 1
-       4.8019% 2
-       1.1771% 3
-       0.3077% 4
-       0.1057% 5
-       0.0573% 6
+      Certs on preferred chain (cumulative) (738926 in total):
+      70.2457% 0
+      23.2991% 1
+       3.4035% 2
+       1.5290% 3
+       0.8611% 4
+       0.3375% 5
+       0.1121% 6
+       0.0983% 7
+       0.0422% 9
+       0.0332% 8
+       0.0313% 10
+       0.0072% 11
 
-      Committee member (9722 in total):
-      95.08% True
-       4.92% False
+      Committee member (18824 in total):
+      95.107% True
+       4.893% False
 
-      Does vote (9722 in total):
-      66.27% 1
-      33.73% 0
+      Does vote (18824 in total):
+      69.480% 1
+      30.520% 0
 
-      New quora (369811 in total):
-      99.5465% 0
-       0.4535% 1
+      New quorum (4492 in total):
+      95.33% 2
+       4.45% 3
+       0.22% 4
 
-      NewVote during voting (12641 in total):
-      70.841% False
-      29.159% True
+      NewVote during voting (45526 in total):
+      62.584% True
+      37.416% False
 
-      Preferred chain length (cumulative, rounded down) (369811 in total):
-      46.3750% 0
-      23.4942% 25
-      12.4972% 50
-       6.9909% 75
-       4.3133% 100
-       2.5892% 125
-       1.5822% 150
-       0.9180% 175
-       0.5649% 200
-       0.3353% 225
-       0.1501% 250
-       0.1090% 275
-       0.0576% 300
-       0.0216% 325
-       0.0016% 350
+      Preferred chain length (cumulative, rounded down) (738926 in total):
+      47.8379% 0
+      23.3439% 25
+      12.3590% 50
+       6.9505% 75
+       3.9379% 100
+       2.2454% 125
+       1.3319% 150
+       0.8162% 175
+       0.4787% 200
+       0.2746% 225
+       0.1707% 250
+       0.0968% 275
+       0.0556% 300
+       0.0264% 325
+       0.0229% 350
+       0.0152% 375
+       0.0091% 450
+       0.0083% 475
+       0.0080% 400
+       0.0073% 425
+       0.0039% 500
 
-      Preferred chain lengthens (369811 in total):
-      57.6686% False
-      42.3314% True
+      Preferred chain lengthens (738926 in total):
+      59.1209% False
+      40.8791% True
 
-      Rounds (cumulative, rounded down) (9722 in total):
-      33.97% 0
-      21.42% 1
-      14.15% 2
-       9.23% 3
-       5.97% 4
-       4.13% 5
-       2.82% 6
-       1.97% 7
-       1.54% 8
-       1.27% 9
-       0.92% 10
-       0.59% 11
-       0.55% 12
-       0.34% 13
-       0.32% 14
-       0.20% 15
-       0.10% 16
-       0.10% 17
-       0.06% 18
-       0.06% 20
-       0.05% 19
-       0.03% 22
-       0.03% 30
-       0.03% 33
-       0.02% 21
-       0.02% 23
-       0.02% 31
-       0.02% 34
-       0.01% 24
-       0.01% 25
-       0.01% 26
-       0.01% 27
-       0.01% 28
-       0.01% 29
-       0.01% 32
+      Rounds (cumulative, rounded down) (18824 in total):
+      35.115% 0
+      21.329% 1
+      13.743% 2
+       9.042% 3
+       6.258% 4
+       4.388% 5
+       2.731% 6
+       2.051% 7
+       1.487% 8
+       1.020% 9
+       0.834% 10
+       0.542% 11
+       0.409% 12
+       0.282% 13
+       0.191% 14
+       0.149% 15
+       0.090% 16
+       0.080% 18
+       0.074% 17
+       0.053% 19
+       0.037% 20
+       0.027% 21
+       0.016% 22
+       0.016% 23
+       0.011% 24
+       0.011% 26
+       0.005% 25
+       0.005% 27
+       0.005% 28
 
-      Slot leader (369811 in total):
-      75.8163% False
-      24.1837% True
+      Slot leader (738926 in total):
+      75.6955% False
+      24.3045% True
 
-      Slots (cumulative, rounded down) (369811 in total):
-      30.3866% 0
-      20.5770% 25
-      13.7408% 50
-       9.6198% 75
-       6.8097% 100
-       4.8154% 125
-       3.5694% 150
-       2.6841% 175
-       1.9832% 200
-       1.4781% 225
-       1.1544% 250
-       0.8507% 275
-       0.6712% 300
-       0.4759% 325
-       0.3340% 350
-       0.2423% 375
-       0.2015% 400
-       0.1617% 425
-       0.1111% 450
-       0.0844% 475
-       0.0416% 500
-       0.0073% 525
+      Slots (cumulative, rounded down) (738926 in total):
+      30.6242% 0
+      21.5333% 25
+      13.9592% 50
+       9.5112% 75
+       6.7563% 100
+       4.7676% 125
+       3.4424% 150
+       2.5388% 175
+       1.8042% 200
+       1.2590% 225
+       0.9449% 250
+       0.7254% 275
+       0.5712% 300
+       0.4194% 325
+       0.3125% 350
+       0.2156% 375
+       0.1600% 400
+       0.1038% 425
+       0.0785% 450
+       0.0549% 475
+       0.0391% 500
+       0.0330% 525
+       0.0261% 550
+       0.0231% 575
+       0.0149% 625
+       0.0143% 650
+       0.0134% 600
+       0.0099% 700
+       0.0097% 725
+       0.0088% 675
+       0.0074% 750
+       0.0051% 775
+       0.0051% 800
+       0.0047% 825
+       0.0027% 850
 
-      VR-1A/1B/2A/2B (9722 in total):
-      34.70% True,True,False,False
-      21.47% False,True,True,True
-      15.94% False,True,True,False
-      13.07% False,True,False,False
-       7.95% True,True,True,True
-       6.34% True,True,True,False
-       0.34% False,True,False,True
-       0.19% True,True,False,True
+      VR-1A/1B/2A/2B (18824 in total):
+      39.391% True,True,False,False
+      18.662% False,True,True,True
+      13.499% False,True,True,False
+      11.023% False,True,False,False
+       8.356% True,True,True,True
+       6.965% True,True,True,False
+       0.579% True,True,False,True
+       0.552% False,True,False,True
+       0.297% False,False,True,True
+       0.239% True,False,False,False
+       0.228% False,False,True,False
+       0.106% False,False,False,False
+       0.064% True,False,True,True
+       0.032% True,False,True,False
+       0.005% True,False,False,True
 
-      Voting rules (9722 in total):
-      70.64% True
-      29.36% False
+      Voting rules (18824 in total):
+      74.315% True
+      25.685% False
 
-Finished in 741.6096 seconds
+Finished in 1561.9623 seconds
 1 example, 0 failures
-

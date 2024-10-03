@@ -62,8 +62,9 @@ createLeadershipProof ::
   SlotNumber ->
   Set Party ->
   m (PerasResult LeadershipProof)
-createLeadershipProof n ps = pure . pure . MkLeadershipProof . Serialize.encode
-                           $ H.hash (n, map pid $ S.toList ps) -- Note: only include the party id in the hash
+createLeadershipProof n ps =
+  pure . pure . MkLeadershipProof . Serialize.encode $
+    H.hash (n, map pid $ S.toList ps) -- Note: only include the party id in the hash
 
 createMembershipProof ::
   Applicative m =>
