@@ -504,17 +504,9 @@ Helper function for creating a block
         { slotNumber = s
         ; creatorId = p
         ; parentBlock = tipHash (preferredChain t)
-        ; certificate =
-            let r = v-round s
-            in needCert r t
+        ; certificate = needCert (v-round s) t
         ; leadershipProof = π
-        ; bodyHash =
-            let txs = txSelection s p
-            in blockHash
-                 record
-                   { blockHash = hash txs
-                   ; payload = txs
-                   }
+        ; bodyHash = hash (txSelection s p)
         ; signature = σ
         }
 ```

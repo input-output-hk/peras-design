@@ -38,10 +38,8 @@ open import Peras.Conformance.Params
 open import Peras.Conformance.ProofPrelude hiding (⊥-elim)
 open import Peras.Conformance.Model as Model
 
-module _ ⦃ _ : Hashable (List Tx) ⦄
-         ⦃ postulates : Postulates ⦄
+module _ ⦃ postulates : Postulates ⦄
          {S : Set} {adversarialState₀ : S}
-         {txSelection : SlotNumber → PartyId → List Tx}
     where
 
   -- The model introduces two parties, the sut (system under test) and
@@ -160,6 +158,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
 
     NodeModelTree : SmallStep.TreeType NodeModel
     NodeModelTree = record { is-TreeType = isTreeType }
+
+    txSelection : SlotNumber → PartyId → List Tx
+    txSelection _ _ = []
 
     open SmallStep.Semantics {NodeModel} {NodeModelTree} {S} {adversarialState₀} {txSelection} {parties}
     open SmallStep.TreeType NodeModelTree renaming (preferredChain to prefChain)
@@ -430,14 +431,15 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | checkSignedBlock block in checkedSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
          | lastSlot rest Haskell.< slotNumber block in checkedNewer
+         | bodyHash block == Hashable.hash hashPayload [] in checkedBodyHash
     newChain-soundness {cs} {vs} {ms₁} s₀ (block ∷ rest) inv refl
-      | True | True | True | True | True | True | True =
+      | True | True | True | True | True | True | True | True =
       record
-        { s₁ = s₁
-        ; invariant₀ = inv
-        ; invariant₁ = inv₁
-        ; trace = trace
-        ; s₁-agrees = s₁-agrees
+        { s₁          = s₁
+        ; invariant₀  = inv
+        ; invariant₁  = inv₁
+        ; trace       = trace
+        ; s₁-agrees   = s₁-agrees
         ; votes-agree = votes-agree
         }
       where
@@ -471,15 +473,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
         cert≡needCert = {!!} -- TODO: guards in transition
 
         bodyHash≡txsHash :
-          bodyHash block ≡
-            let txs = txSelection slot (creatorId block)
-                open Hashable ⦃...⦄
-            in blockHash
-                 record
-                   { blockHash = hash txs
-                   ; payload = txs
-                   }
-        bodyHash≡txsHash = {!!} -- TODO: txSelection/hash from model
+          bodyHash block ≡ let open Hashable ⦃...⦄ in
+            hash (txSelection slot (creatorId block))
+        bodyHash≡txsHash = MkHash-inj $ lem-eqBS checkedBodyHash
 
         block≡β : block ≡ β
         block≡β with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
@@ -628,11 +624,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       | [] =
 
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = s₁-agrees
           ; votes-agree = votes-agree
           }
         where
@@ -806,19 +802,20 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
          | checkSignedBlock block in checkedBlockSig
          | checkLeadershipProof (leadershipProof block) in checkedLead
          | lastSlot rest Haskell.< slotNumber block in checkedNewer
+         | bodyHash block == Hashable.hash hashPayload [] in checkedBodyHash
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ []
       | True | True | True | True | True
       | (block ∷ rest) ∷ []
-      | True | True | True | True | True | True | True =
+      | True | True | True | True | True | True | True | True =
 
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = s₁-agrees
           ; votes-agree = votes-agree
           }
         where
@@ -938,15 +935,9 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
           cert≡needCert = {!!} -- TODO: see ↑
 
           bodyHash≡txsHash :
-            bodyHash block ≡
-              let txs = txSelection slot (creatorId block)
-                  open Hashable ⦃...⦄
-              in blockHash
-                 record
-                   { blockHash = hash txs
-                   ; payload = txs
-                   }
-          bodyHash≡txsHash = {!!} -- TODO: see ↑
+            bodyHash block ≡ let open Hashable ⦃...⦄ in
+              hash (txSelection slot (creatorId block))
+          bodyHash≡txsHash = MkHash-inj $ lem-eqBS checkedBodyHash
 
           rest≡pref : rest ≡ prefChain (modelState s')
           rest≡pref
@@ -1243,11 +1234,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       rewrite isSlotZero
       =
         record
-          { s₁ = s₁
-          ; invariant₀ = inv
-          ; invariant₁ = inv₁
-          ; trace = trace
-          ; s₁-agrees = {!s₁-agrees!} -- s₁-agrees
+          { s₁          = s₁
+          ; invariant₀  = inv
+          ; invariant₁  = inv₁
+          ; trace       = trace
+          ; s₁-agrees   = {!s₁-agrees!} -- s₁-agrees
           ; votes-agree = votes-agree
           }
 
@@ -1305,11 +1296,11 @@ module _ ⦃ _ : Hashable (List Tx) ⦄
       with hasVoted (voterId vote) (votingRound vote) (modelState s₀)
     badVote-soundness {cs} {vs} {ms₁} s₀ vote inv refl | True =
       record
-        { s₁ = s₀
-        ; invariant₀ = inv
-        ; invariant₁ = inv
-        ; trace = ∎
-        ; s₁-agrees = refl
+        { s₁          = s₀
+        ; invariant₀  = inv
+        ; invariant₁  = inv
+        ; trace       = ∎
+        ; s₁-agrees   = refl
         ; votes-agree = refl
         }
 
