@@ -5,12 +5,14 @@ module Peras.Block where
 <!--
 ```agda
 open import Haskell.Prelude
-
-open import Data.Product using (∃; ∃-syntax)
+open import Haskell.Law.Bool
 
 open import Peras.Crypto
 open import Peras.Numbering
 open import Peras.Util
+
+open import Data.Product using (∃; ∃-syntax)
+open import Relation.Binary.PropositionalEquality using (cong; cong₂)
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
@@ -165,6 +167,16 @@ open BlockBody public
 instance
   iCertificateEq : Eq Certificate
   iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
+
+eqCertificate-sound : ∀ {c₁ c₂ : Certificate} → (c₁ == c₂) ≡ True → c₁ ≡ c₂
+eqCertificate-sound {MkCertificate round₁ blockRef₁} {MkCertificate round₂ blockRef₂} x
+  = let l = &&-leftTrue (getRoundNumber round₁ == getRoundNumber round₂) _ x
+        r = &&-rightTrue _ (eqBS (hashBytes blockRef₁) (hashBytes blockRef₂)) x
+    in cong₂ MkCertificate (cong MkRoundNumber (eqℕ-sound l)) (MkHash-inj (lem-eqBS r))
+  where
+    eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
+    eqℕ-sound {zero}  {zero}   _  = refl
+    eqℕ-sound {suc n} {suc m} prf = cong suc (eqℕ-sound prf)
 
 instance
   iBlockEq : Eq Block
