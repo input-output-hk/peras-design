@@ -22,6 +22,7 @@ postulate
   compare-BS : ByteString → ByteString → Ordering
 
   lem-eqBS : ∀ {b₁ b₂} → eqBS b₁ b₂ ≡ true → b₁ ≡ b₂
+  lem-eqBS' : ∀ {b₁ b₂} → b₁ ≡ b₂ → eqBS b₁ b₂ ≡ true
 
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE DeriveGeneric #-}
