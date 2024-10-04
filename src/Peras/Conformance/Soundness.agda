@@ -1780,7 +1780,7 @@ module _ ⦃ postulates : Postulates ⦄
               → transition p (modelState s₀) a ≡ Just ((cs , vs) , ms₁)
               → Soundness s₀ ms₁ (map (State.clock s₀ ,_) vs)
 
-    soundness s₀ (NewVote vote) = newVote-soundness s₀ vote
-    soundness s₀ (NewChain chain) = newChain-soundness s₀ chain
-    soundness s₀ Tick = tick-soundness s₀
-    soundness s₀ (BadVote vote) = badVote-soundness s₀ vote
+    soundness {p = p} s₀ (NewVote vote) = newVote-soundness {p = p} s₀ vote
+    soundness {p = p} s₀ (NewChain chain) = newChain-soundness {p = p} s₀ chain
+    soundness {p = p} s₀ Tick = tick-soundness {p = p} s₀
+    soundness {p = p} s₀ (BadVote vote) = badVote-soundness {p = p} s₀ vote
