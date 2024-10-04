@@ -20,7 +20,6 @@ packages:
   peras-server
   peras-delta-q
   peras-vote
-  test-demo
 
 tests: True
 test-show-details: direct
