@@ -1232,25 +1232,39 @@ module _ ⦃ postulates : Postulates ⦄
           s⋆ = record s₀
                  { blockTrees =
                      set otherId (addVote (modelState s₀) vv)
-                       (set sutId (addVote (modelState s₀) vv) (State.blockTrees s₀))
+                       (set sutId (addVote (modelState s₀) vv) blockTrees)
                  ; history = VoteMsg vv ∷ (State.history s₀)
                  }
 
           s⋆≡s' :
-              modelState
-              record s₀
-                 { blockTrees =
-                       (set sutId (addVote (modelState s₀) vv) (State.blockTrees s₀))
-                 }
+              let s = record s₀ { blockTrees = set sutId (addVote (modelState s₀) vv) blockTrees }
+              in record
+                   { clock        = State.clock s
+                   ; protocol     = testParams
+                   ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+                   ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+                   ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+                   }
               ≡
-              modelState
-              record s₀
-                 { blockTrees =
-                       (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
-                 }
+              let s = record s₀ { blockTrees = set sutId (addVote (modelState s₀) v) blockTrees }
+              in record
+                   { clock        = State.clock s
+                   ; protocol     = testParams
+                   ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+                   ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+                   ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+                   }
           s⋆≡s'
-            rewrite sym vote≡w
-            = {!refl!}
+            rewrite get∘set≡id
+                       {k = sutId}
+                       {v = addVote (modelState s₀) v}
+                       {m = blockTrees}
+            rewrite get∘set≡id
+                       {k = sutId}
+                       {v = addVote (modelState s₀) vv}
+                       {m = blockTrees}
+            rewrite vote≡w
+            = refl
 
           rest≡pref' : rest ≡ prefChain (modelState s⋆)
           rest≡pref' = eqList-sound checkRest
