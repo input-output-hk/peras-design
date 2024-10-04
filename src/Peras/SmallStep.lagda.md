@@ -130,6 +130,9 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
+      extendable-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+        → v ∈ votes (addVote t vv)
+
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
 
@@ -153,6 +156,7 @@ Properties that must hold with respect to chains, certificates and votes.
         → All ValidVote (votes t)
 -}
 
+{-
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → let vs = votes t
           in
@@ -164,7 +168,7 @@ Properties that must hold with respect to chains, certificates and votes.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t vv)
-
+-}
 {-
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →

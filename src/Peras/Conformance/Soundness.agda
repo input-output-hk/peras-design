@@ -20,7 +20,7 @@ open import Data.Product as P using (proj₁ ; proj₂) renaming (_,_ to _,ᵖ_)
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
 
 open import Relation.Nullary.Negation using (¬_; contradiction)
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans)
+open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; cong; sym; trans; subst)
 
 open import Prelude.AssocList
 open import Prelude.Default
@@ -149,12 +149,13 @@ module _ ⦃ postulates : Postulates ⦄
         { instantiated = refl
         ; instantiated-certs = refl
         ; instantiated-votes = refl
-        ; extendable-chain = λ _ _ → refl -- TODO: set union
+        ; extendable-votes = λ _ _ → Any.here refl
+        ; extendable-chain = λ _ _ → refl
         ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
-        ; unique-votes = {!!}
-        ; no-equivocations = {!!}
+--        ; unique-votes = {!!}
+--        ; no-equivocations = {!!}
 --        ; quorum-cert = {!!} -- invariants
         }
 
@@ -1224,16 +1225,52 @@ module _ ⦃ postulates : Postulates ⦄
               hash (txSelection slot (creatorId block))
           bodyHash≡txsHash = MkHash-inj $ lem-eqBS checkedBodyHash
 
+          vv : ValidVote vote
+          vv = axiom-everyoneIsOnTheCommittee , axiom-checkVoteSignature checkedSig
+
+          s⋆ : State
+          s⋆ = record s₀
+                 { blockTrees =
+                     set otherId (addVote (modelState s₀) vv)
+                       (set sutId (addVote (modelState s₀) vv) (State.blockTrees s₀))
+                 ; history = VoteMsg vv ∷ (State.history s₀)
+                 }
+
+          s⋆≡s' :
+              modelState
+              record s₀
+                 { blockTrees =
+                       (set sutId (addVote (modelState s₀) vv) (State.blockTrees s₀))
+                 }
+              ≡
+              modelState
+              record s₀
+                 { blockTrees =
+                       (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
+                 }
+          s⋆≡s'
+            rewrite sym vote≡w
+            = {!refl!}
+
+          rest≡pref' : rest ≡ prefChain (modelState s⋆)
+          rest≡pref' = eqList-sound checkRest
+
           rest≡pref : rest ≡ prefChain (modelState s')
-          rest≡pref
-            -- rewrite vote≡w
-            = {!!} -- eqList-sound checkRest
+          rest≡pref = {!!}
+
+{-
+          rest≡pref = subst P s⋆≡s' rest≡pref'
+            where
+              P : State → Set
+              P s = rest ≡ prefChain (modelState s)
+-}
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
 
           block≡β : block ≡ β
           block≡β with v ← cong (λ i →  record block { slotNumber = i }) slotNumber≡slot
+            rewrite sym vote≡w
             rewrite creatorId≡sutId-block
             rewrite parent≡tip
             rewrite cert≡needCert
