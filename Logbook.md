@@ -404,7 +404,7 @@ This experimental code is available in PR [#165](https://github.com/input-output
 
 ### Edinburgh Workshop report & short-term planning
 
-* We have completed and published the [workshop report](site/reports/2024-06-26-edinburgh-workshop.md)
+* We have completed and published the workshop report
 * In the wake of those discussions, we have created a few GitHub issues to short-term actions pursuant to this quarter's goals:
   * [164](https://github.com/input-output-hk/peras-design/issues/164) Define a communication plan for Peras
   * [163](https://github.com/input-output-hk/peras-design/issues/163) Conformance model-based tests for voting
@@ -840,8 +840,8 @@ a graph, which does not make sense.
 * Votes
   * Stick with header-like construction
   * We should use a special prefix for VRF
-  * $nonce = epoch nonce || "vote" || round$
-  * we could change for blocks signing (nakamoto) = epoch nonce || "block" || slot number, but it is probably fine to keep it as is
+  * $nonce = epoch nonce \Vert "vote" \Vert round$
+  * we could change for blocks signing (nakamoto) to $epoch nonce \Vert "block" \Vert slot , but it is probably fine to keep it as is
 * ΔQ discussion
   * instead of a generic scenario, hardwire a particular scenario to get started
   * how to model a global behaviour?
@@ -857,7 +857,7 @@ a graph, which does not make sense.
 
 ### Markov-chain scenario for ambiguous candidate blocks
 
-We began analyzing [the scenario](../c8043ab71e2bfa17ccbcc58db4dd7c551f67b823/peras-markov/src/Peras/Markov/Adversary/CommonCandidate.hs) where an adversary maintains a fork that contains a candidate block for voting (i.e., at least $L$ slots old on its preferred chain). We use the Markov-chain simulation to examine the situation where, at the start of a new round, a block of age $L + U$ contains a certificate and an adversary builds their own chain upon that. If the adversary succeeds in building a block in the next $U$ slots, then there would be a candidate-block proposal both on the honest chain and the adversarial one.
+We began analyzing the scenario where an adversary maintains a fork that contains a candidate block for voting (i.e., at least $L$ slots old on its preferred chain). We use the Markov-chain simulation to examine the situation where, at the start of a new round, a block of age $L + U$ contains a certificate and an adversary builds their own chain upon that. If the adversary succeeds in building a block in the next $U$ slots, then there would be a candidate-block proposal both on the honest chain and the adversarial one.
 
 In the preliminary results below (only lightly QA'ed), the round length is $U = 150 \text{slots}$, the block-selection offset is $L = 6 \text{slots}$, the honest party has 75% of the stake, the adversarial party has 25% of the stake, the active slot coefficient is 5%, and network diffusion occurs in one slot.
 
@@ -1269,8 +1269,8 @@ WASM specification paper: https://www.cl.cam.ac.uk/~caw77/papers/mechanising-and
 
 ### Peras v2 Prototype
 
-* The strategy is to follow as closely as possible the procedure's definition from fig.2 in the paper, writing unit/property tests along the way to help progress
-* Started working on `Voting` module from fig. 2 in the paper, then I realised that we are using IO instead of `io-classes` so converted the code to the latter which will make testing easier.
+* The strategy is to follow as closely as possible the procedure's definition from draft paper, writing unit/property tests along the way to help progress
+* Started working on `Voting` module, then I realised that we are using IO instead of `io-classes` so converted the code to the latter which will make testing easier.
   * I wonder if we should not make everything pure, then tie the various parts together with monadic "node", which leads me to think we should actually write that cdoe in Agda and generate the Haskell part.
 * Got confused on the committee membership selection process, I tried to reuse preexisting code from peras-iosim but of course it's based on different structure and does not fit in new version of protocol
 * **NOTE**: Using type aliases for type signatures of functions is not convenient for navigation: it adds one level of indirection when searching, one step to go to the function's definition and then another step to go to the type definition
@@ -1290,46 +1290,20 @@ WASM specification paper: https://www.cl.cam.ac.uk/~caw77/papers/mechanising-and
 
 ### Peras Weekly
 
-* Discussion w/ SC on Preagreement: Do not take into account for now, can use the `L` cutoff window
-  * BA will require 2 rounds of exchange with a cumulative 2/3 chance of another 2 rounds  before reaching agreement on a block or a vote on ⊥
 * Goals for this week:
   * Define and sketch property for conformance testing (work w/ Quviq)
-  * "Naive" Prototype for latest version of protocol (without taking into account preagreement)
+  * "Naive" Prototype for latest version of protocol
 * Dates and location for meeting confirmed => need to move forward as David is on a sick leave
 
 ### Prototype implementation
 
-We paired on defining interfaces for the Peras protocol. The design emphasizes interfaces (types and functions) that correspond closely to the algorithm described in Figure 2 of the draft paper. We opted for this approach in constrast to a more sophisticated implementation.
+We paired on defining interfaces for the Peras protocol. The design emphasizes interfaces (types and functions) that correspond closely to the algorithm of the draft paper. We opted for this approach in constrast to a more sophisticated implementation.
 
 So far the following modules have been provisionally implemented:
 
 - Fetching
-- A placeholder for preagreement
 - Diffusion
 - Cryptographic placeholders
-
-### Prototype Architecture
-
-Trying to figure out what the high-level architecture of a prototype could look like:
-
-![[High-level Architecture of Peras](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589768585230&cot=14)](docs/diagrams/peras-architecture.png)
-
-### 1-1 w/ James
-
-Some ideas we discussed with James related to the work we are doing in Innovation Streams with Formal methods:
-
-* Write a relatively detailed experience report on the various FM projects that have been carried on at IOG/Cardano, emphaisizing how they were built, why they were built, how they are used (or not):
-  * Plutus
-  * Conway Ledger
-  * Gödel project (counter-example)
-  * Peras
-  * Leios
-  * ??? (Plutus-ha ?)
-* This paper would be both shared publicly with the community and published at [Funarch](https://icfp24.sigplan.org/home/funarch-2024) workshop
-* We should also highlight the "FM engineering gaps" that could be the focus of internal development efforts (eg. tooling, IDEs, documentation, patterns...)
-* I believe there's an appetite to know more about these methods and Agda language, we could run an "Agda Coding Dojo" on a weekly or bi-weekly basis, publicly on discord, in order to share with the wider community how these tools could be put to use
-  * This could also be useful to educate more people at least in being able to read and understand the general ideas behind those tools
-* We also briefly discussed other tools like Model Checking (close to conformance testing we are trying to build for Peras) and Lean
 
 ## 2024-05-21
 
@@ -1345,7 +1319,7 @@ Next steps:
 
 The following picture attempts to clarify the relationship between Agda and Haskell as it's been explored recently:
 
-![[Agda-Haskell Interactions](https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589706996014&cot=14)](docs/diagrams/agda-haskell-interactions.jpg)
+![Agda-Haskell Interactions](site/static/img/agda-haskell-interactions.jpg)
 
 * Agda code relies on the Agda _Standard Library_ which provide much better support for proofs than Agda2hs and Haskell's `Prelude` obviously
 * Therefore Haskell code needs to depend on this stdlib code which is problematic for standard types (Eg. numbers, lists, tuples, etc.)
@@ -1386,7 +1360,7 @@ This would prevent any risk of compromising block diffusion time, while at the s
 
 ### Dynamic QuickCheck for new Agda+Haskell workflow
 
-The new tests [`Peras.ChainWeightSpec`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/peras-quickcheck/test/peras/ChainWeightSpec.hs#L1) check both (1) that the implementation being tested matches the output of the specification and (2) that an Agda property [`Peras.SmallStep.Experiment.propNeverShortens`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment.lagda.md#L1) holds.
+The new tests `Peras.ChainWeightSpec` check both (1) that the implementation being tested matches the output of the specification and (2) that an Agda property [`Peras.SmallStep.Experiment.propNeverShortens`](https://github.com/input-output-hk/peras-design/blob/9ca0108cbe24987ee7f36cfe46f86d39fe0f4a31/src/Peras/SmallStep/Experiment.lagda.md#L1) holds.
 
 Overall findings from the Agda+Haskell experiment are the following:
 
@@ -1446,10 +1420,9 @@ Thus, two types of indirection are needed to avoid dealing with unmangled names:
 
 As we are focusing our investigation and prototypibng efforts on the voting layer, I have sketched a somewhat detailed design of what this independent voting layer would look like: https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764589087032554&cot=14
 
-![](docs/diagrams/voting-layer-arch.jpg)
+![](site/static/img/voting-layer-arch.jpg)
 
 Some notes:
-* The _preagreement_ module from the paper is encapsulated away as a separate component that decides on which block to vote on, and at what time
 * The _orange_ parts describe what a test driver would look like, and what kind of messages it needs to input and monitor
 * The voting layer can be conceived as a "basic" chain follower, at least insofar as we are only interested in the voting logic
   * Inclusion of the latest certificate can be dealt later by exposing an interface for the _Nakamoto_ component to query it for inclusion in the block forged
@@ -1619,7 +1592,7 @@ Note that the experimental Peras executable specification has not been yet revie
   * significant investment in time
   * Formal verification of concurrent and distributed systems is _super hard_ and this is essentially 80% of what we are working on
 * The tools, languages, methods are "primitive" when compared to "standards" in software engineering
-  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1
+  * See https://x.com/dr_c0d3/status/1780221920140464187 which comes from [this code base](https://github.com/au-cobra/PoS-NSB/blob/8cb62e382f17626150a4b75e44af4d270474d3e7/README.md#L1)
   * Also, [this](https://www.repository.cam.ac.uk/items/2b447c99-dd97-4447-bb6a-cae0f8254162): A partial formal spec in Isabelle of Ouroboros adds up to 1.2MB of code!
   * Of course, when compared to the state of affair in Haskell, it's not too bad
 * Research is not using those tools and languages (yet?)
@@ -1657,9 +1630,9 @@ Some notes taken while reading [QED at large](https://ilyasergey.net/papers/qed-
 
     > We simplify the problem further by implementing interrupt points via polling, rather than temporary enabling of interrupts.
 
-    ![seL4 Design Process](docs/diagrams/sel4-design-process.png)
+    ![seL4 Design Process](site/static/img/sel4-design-process.png)
 
-    ![Proof Layers in seL4](docs/diagrams/sel4-proof-layers.png)
+    ![Proof Layers in seL4](site/static/img/sel4-proof-layers.png)
 
 
   * In distributed systems: formalization and proof of [Raft](https://homes.cs.washington.edu/~mernst/pubs/raft-proof-cpp2016.pdf) properties
@@ -1864,12 +1837,7 @@ research paper --> Agda executable specification --> Haskell executable specific
 
 ### Executable specification in Agda
 
-Here are the results of the experiment to encode the Peras protocol definition from the draft paper (shown in the figure below) as an Agda executable specification that compiles to Haskell under `agda2hs` and can be used with `quickcheck-dynamic`.
-
-* [Agda source](src/Peras/QCD/)
-* [Generated Haskell](peras-hs/src/Peras/QCD/)
-
-![Snapshot of Peras protocol](docs/diagrams/protocol_2024-05-09_09-16-51.png)
+Here are the results of the experiment to encode the Peras protocol definition from the draft paper as an Agda executable specification that compiles to Haskell under `agda2hs` and can be used with `quickcheck-dynamic`.
 
 The four main protocol operations are listed below, but helper functions are omitted. The operations are expressed monadically so that the recipe reads as pseudo-code. There are still opportunities for syntactic sugar that would make the code more readable, but dramatic improvements probably are not feasible in this approach. Perhaps a more readable approach would be to express this in a rigorously defined, standardized pseudo-code language, which could be compiled to Agda, Haskell, Rust, Go, etc.
 
@@ -1909,7 +1877,7 @@ Next steps (order might vary) that should be discussed before proceeding further
 - Revise when Peras paper is finalized.
 - Implement cryptographic functions in Agda.
 
-#### [Fetching](src/Peras/QCD/Node/Specification.hs)
+#### Fetching
 
 ```agda
 -- Enter a new slot and record the new chains and votes received.
@@ -1941,7 +1909,7 @@ fetching newChains newVotes =
     diffuse
 ```
 
-#### [Block creation](src/Peras/QCD/Node/Specification.hs)
+#### Block creation
 
 ```agda
 -- Create a new block.
@@ -1980,16 +1948,16 @@ blockCreation txs =
     diffuse ↞ NewChain chain
 ```
 
-#### [Voting](src/Peras/QCD/Node/Specification.hs)
+#### Voting
 
 ```agda
 -- Vote.
 voting : NodeOperation
 voting =
   do
-    -- Check for a preagreement block.
-    agreed ← preagreement
-    case agreed of λ where
+    -- Select block.
+    selected ← selectBlock
+    case selected of λ where
       -- There was no preagreement block.
       Nothing →
         do
@@ -2031,12 +1999,12 @@ voting =
              )
 ```
 
-#### [Preagreement](src/Peras/QCD/Node/Preagreement.hs)
+#### SelectBlock
 
 ```agda
--- Select a block to vote for, using preagreement.
-preagreement : NodeState (Maybe Block)
-preagreement =
+-- Select a block to vote for
+selectBlock : NodeState (Maybe Block)
+selectBlock =
   do
     -- Fetch the cutoff window for block selection.
     l ← peras L
@@ -2049,27 +2017,11 @@ preagreement =
       ⇉ foundBlock                   -- Report the newest block found, if any.
 ```
 
-## 2024-05-08
-
-### Peras weekly
-
-- Reviewed past week's progress
-    - Nicholas Clarke had several questions/concerns
-        - Will Peras be compatible with the history of the chain (Praos and Genesis)?
-        - Will Peras be compatible with Genesis?
-        - Are there possible attacks when a node syncs from genesis and receives votes/certificates from other nodes, where those certificates are not recorded on the public chain?
-- Reviewed stakeholder diagram
-    - Nicholas Clarke volunteered to provide Tweag's perspective as a stakeholder and to relate the latest Intersect status/processes
-- Reviewed action items from retrospective
-- Discussed `agda2hs` issues and limitations
-
 ## 2024-05-07
 
 ### Team Session
 
 * Welcomed Hans to the team!
-* Drafted stakeholders' map for the project, with an end goal of using that information to plan interviews and "focus group" discussions about the project's goals and deliverables
-  * https://miro.com/app/board/uXjVNNffmyI=/?moveToWidget=3458764588192135694&cot=14
 * Started drafting CIP for Peras:
   * Used [Hackmd](https://hackmd.io/hv_2Rr2dTleBFfI4kV2oqQ?both) to be able to collanoratively edit markdown document for the CIP
   * Also listed related tasks in issue [#97](https://github.com/input-output-hk/peras-design/issues/97)
@@ -2082,7 +2034,7 @@ preagreement =
 * Another quick discussion, on the topic of specification documents and language. The idea of having a formal "pseudo-code" language is appealing but seems like a huge effort
 * Here is an example algorithm from the [Introduction to Reliable and Secure Distributed Computing](https://link.springer.com/book/10.1007/978-3-642-15260-3) book
 
-  ![Pseudo-code for distirbuted systems example](docs/diagrams/pseudo-code.png)
+  ![Pseudo-code for distirbuted systems example](site/static/img/pseudo-code.png)
 
 ## 2024-05-06
 
@@ -2090,11 +2042,11 @@ preagreement =
 
 We followed the [Liked/Lacked/Learned](https://www.funretrospectives.com/the-3-ls-liked-learned-lacked/) retrospective process, yielding the following output:
 
-![Liked/Lacked/Learned](docs/diagrams/2024-05-06-retrospective.jpg)
+![Liked/Lacked/Learned](site/static/img/2024-05-06-retrospective.jpg)
 
 Then we spent some time grouping the various items in various "domains" and define some actionable item for each of those groupings
 
-![Retrospective Actions](docs/diagrams/2024-05-06-retrospective-plan.jpg)
+![Retrospective Actions](site/static/img/2024-05-06-retrospective-plan.jpg)
 
 ### Optimising ALBAs
 
@@ -2113,12 +2065,12 @@ The document [analytics/analytics-1.md](analytics/analytics-1.md) derives formul
 
 QuickCheck tests could be constructed to test that the chain dynamics conform to these analytic expressions when adversaries act accordingly.
 
-|   |   |   |
-|---|---|---|
-| No honest quorum in round | ![Line plot of no honest quorum](analytics/analytics-1/pnhq-line.png) | ![Contour plot of no honest quorum](analytics/analytics-1/pnhq-contour.png) |
-| Fraction of time in cool down | ![Fraction of time spent in cool-down periods](analytics/analytics-1/pc-line.png) |   |
-| No certificate in honest block | ![Line plot of no certificate in honest block](analytics/analytics-1/pnc-line.png) | ![Contour plot of no certificate in honest block](analytics/analytics-1/pnc-contour.png) |
-| Adversarial block with adversarial quorum | ![Adversarial block with adversarial quorum](analytics/analytics-1/pabq-line.png) |   |
+|                                           |                                                                                    |                                                                                          |
+|-------------------------------------------|------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| No honest quorum in round                 | ![Line plot of no honest quorum](analytics/analytics-1/pnhq-line.png)              | ![Contour plot of no honest quorum](analytics/analytics-1/pnhq-contour.png)              |
+| Fraction of time in cool down             | ![Fraction of time spent in cool-down periods](analytics/analytics-1/pc-line.png)  |                                                                                          |
+| No certificate in honest block            | ![Line plot of no certificate in honest block](analytics/analytics-1/pnc-line.png) | ![Contour plot of no certificate in honest block](analytics/analytics-1/pnc-contour.png) |
+| Adversarial block with adversarial quorum | ![Adversarial block with adversarial quorum](analytics/analytics-1/pabq-line.png)  |                                                                                          |
 
 ## 2024-04-29
 
@@ -2250,13 +2202,9 @@ Interesting observation:
 
 ## 2024-04-15
 
-* Working on [technical report](docs/reports/tech-report-1.md), filling in section on quickcheck-dynamic example protocol from Quviq
+* Working on [technical report](site/docs/reports/tech-report-1.md), filling in section on quickcheck-dynamic example protocol from Quviq
 * Also trying to provide a better intuition about the protocol and rework the introductory section following our discussions in Paris
 * Some questions for researchers related to committee selection and the number of messages we need to broadcast across the network
-
-## 2024-04-10
-
-Published [detailed notes](docs/reports/2024-04-10-paris-workshop.md) about the Peras team workshop in Paris
 
 ## 2024-03-30
 
@@ -2277,11 +2225,6 @@ A new `quickcheck-dynamic` model was created for closer and cleaner linkage betw
 - An `instance (Monad m, PerasNode n m) => RunModel NodeModel (RunMonad n m)` that runs actions on a `PerasNode` and checks postconditions.
 - An `instance PerasNode ExampleNode` embodying a simple, intentionally buggy, node for exercising the dynamic logic tests.
 - A simple property for the example node.
-
-The model is implemented by the following Haskell modules.
-
-- [`Peras.OptimalModel`](peras-quickcheck/src/Peras/OptimalModel.hs)
-- [`Peras.OptimalModelSpec`](peras-quickcheck/test/Peras/OptimalModelSpec.hs)
 
 The example property simply runs a simulation using `ExampleNode` and checks the trace's conformance to the executable specification. Because the example node contains a couple of intentional bugs, we expect the test to fail. Shrinkage reveals a parcimonious series of actions that exhibit one of the bugs.
 
@@ -2330,7 +2273,7 @@ This branch is abandoned in favor a TDD approach using QuickCheck Dynamic, but l
 
 ### Congestion experiment
 
-We conducted a coarse study to exercise `peras-iosim` in [a simulation experiment involving network congestion](peras-iosim/analyses/congestion/ReadMe.md). It was meant to check capabilities in these areas:
+We conducted a coarse study to exercise `peras-iosim` in a simulation experiment involving network congestion. It was meant to check capabilities in these areas:
 
 - simulation/analysis workflow
 - scalability and performance
@@ -2359,7 +2302,7 @@ Several findings were apparent:
 
 The following diagram shows the cumulative bytes received by nodes as a function of network latency and bandwidth, illustrating the ttheshold below which bandwidth is saturated by the protocol and block/vote diffusion.
 
-![Cumulative bytes received by nodes as a function of network latency and bandwidth](peras-iosim/analyses/congestion/congestion.png)
+![Cumulative bytes received by nodes as a function of network latency and bandwidth](site/static/img/sim-expts/congestion.png)
 
 ## 2024-03-27
 
@@ -2700,7 +2643,7 @@ The DeltaQ expression takes into account data from section 4 of DQSD paper:
 * Header/Body sequential transfer (eg. first request header, then request body)
 * Distribution of number of hops for block transfer depending on graph with 10 and 15 average degree (note the current valency target for cardano-node is 20)
 
-![](https://github.com/input-output-hk/peras-design/blob/95a381e407df08dbb5064da6c40abef1ec804e33/docs/diagrams/plot-hops-distribution.svg)
+![](https://github.com/input-output-hk/peras-design/blob/95a381e407df08dbb5064da6c40abef1ec804e33/site/static/img/plot-hops-distribution.svg)
 
 Unfortunately the expression is not readable when `show`ed:
 
@@ -2815,7 +2758,7 @@ projects.
 
 Trying to understand better the newest version of the protocol, I drew some diagram:
 
-![Peras with Certificates](docs/diagrams/peras-with-certs.jpg)
+![Peras with Certificates](site/static/img/peras-with-certs.jpg)
 
 Also shared my understanding of the potential benefits of ΔQ analysis:
 
@@ -3009,22 +2952,22 @@ Practical engineering question is: How much? And what's the _value_ of this prop
 
 ### Designs for sync protocol
 
-1. [Simple handoffs between client and server](docs/diagrams/protocol-1.puml)
+1. [Simple handoffs between client and server](site/static/img/protocol-1.puml)
     - ➕ Closely corresponds to Agda Message
     - ➕ Client could use blocking calls to tidily process messages
     - ➖ `FetchChain` does not stream, so another `FetchChain` request must be made for each subsequent block header in the new chain
     - ➖ Cannot handle `FetchVotes` or `FetchBlocks` when multiple hashes are provided, so all queries must be singletons
-2. [Messy multiplexing](docs/diagrams/protocol-2.puml)
+2. [Messy multiplexing](site/static/img/protocol-2.puml)
     - ➕ Similar to how we currently use incoming and outgoing STM channels
     - ➖ Incoming messages won't be in any particular order
     - ➖ Client needs to correlate what they received to what they are waiting for, and why - maybe use futures or promises with closures
-3. [Sequential mini-protocols](docs/diagrams/protocol-3.puml)
+3. [Sequential mini-protocols](site/static/img/protocol-3.puml)
     - ➕ Reminiscent of the production Ouroboros design
     - ➖ Client needs to `Cancel` and re-query when they want a different type of information
 4. Parallel mini-protocols
     - ➕ Separate threads for each type of sync (header, vote, block)
     - ➖ Client needs to orchestrate intra-thread communication
-5. [Constrained fetching](docs/diagrams/protocol-5.puml)
+5. [Constrained fetching](site/static/img/protocol-5.puml)
     - ➕ Supports the most common use case of fetching votes and bodies right after a new header is received
     - ➕ Reduces to a request/replies protocol if the protcol's state machine is erased or implicit
 
@@ -3296,7 +3239,7 @@ I have tried various codebases:
 * Peter suggested I try https://github.com/DeltaQ-SD/dqsd-wip-jacob which is a reimplementation by an intern but it lacked some basics (eg. `convolve = undefined` in the source) and seemed unfinished. It could be the case some code has not been pushed or merged. It provides some type classes along with a symbolic backend and a polynomials backend to implement ΔQ language semantics
 * I ended up using https://github.com/abailly-iohk/pnsol-deltaq-clone which is historical code from Neil implemented the langauge with step "functions" and random sampling using `statistics`  package. This code works and I was able to produce the following graph:
 
-  ![ΔQ example](/docs/diagrams/deltaq-basic.png)
+  ![ΔQ example](/site/static/img/deltaq-basic.png)
 
 * There is some code in Agda, Haskell, and Python that's been written by Artjoms in [this repo](https://github.com/DeltaQ-SD/Artjoms) to support a follow-up paper on [Algebraic reasoning](https://iohk.io/en/research/library/papers/algebraic-reasoning-about-timeliness/) but it's unclear what state it's in and I haven't tried to model the examples with it. It seems it supports a numpy-based backend for easy plotting, approximating the distribution with a vector of sample values, plus a Haskell version (slow?)
 
