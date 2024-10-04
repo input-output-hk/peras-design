@@ -1237,7 +1237,12 @@ module _ ⦃ postulates : Postulates ⦄
                  }
 
           s⋆≡s' :
-              let s = record s₀ { blockTrees = set sutId (addVote (modelState s₀) vv) blockTrees }
+              let s = record s₀
+                        { blockTrees =
+                            set otherId (addVote (modelState s₀) vv)
+                              (set sutId (addVote (modelState s₀) vv) blockTrees)
+                        ; history = VoteMsg vv ∷ (State.history s₀)
+                        }
               in record
                    { clock        = State.clock s
                    ; protocol     = testParams
@@ -1246,7 +1251,12 @@ module _ ⦃ postulates : Postulates ⦄
                    ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
                    }
               ≡
-              let s = record s₀ { blockTrees = set sutId (addVote (modelState s₀) v) blockTrees }
+              let s = record s₀
+                        { blockTrees =
+                            set otherId (addVote (modelState s₀) v)
+                              (set sutId (addVote (modelState s₀) v) blockTrees)
+                        ; history = VoteMsg v ∷ (State.history s₀)
+                        }
               in record
                    { clock        = State.clock s
                    ; protocol     = testParams
@@ -1270,14 +1280,10 @@ module _ ⦃ postulates : Postulates ⦄
           rest≡pref' = eqList-sound checkRest
 
           rest≡pref : rest ≡ prefChain (modelState s')
-          rest≡pref = {!!}
-
-{-
           rest≡pref = subst P s⋆≡s' rest≡pref'
             where
-              P : State → Set
-              P s = rest ≡ prefChain (modelState s)
--}
+              P : NodeModel → Set
+              P s = rest ≡ prefChain s
 
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
