@@ -4,7 +4,7 @@ open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
 
 open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
-open import Data.List using (map; mapMaybe; filter; _++_)
+open import Data.List using (map; filter; _++_)
 open import Data.List.Membership.Propositional
 open import Data.List.Properties
 
@@ -1506,6 +1506,98 @@ module _ ⦃ postulates : Postulates ⦄
                 {m = blockTrees}
             = refl
 
+          lem1 :
+            let s = record s₀
+                      { blockTrees =
+                          set sutId (addChain (modelState s') β∷pref) blockTrees }
+            in
+            record
+              { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
+              ; protocol     = testParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+              }
+            ≡
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
+                      ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (mapMaybe certificate (β ∷ prefChain (modelState s')))
+                      }
+            in s
+          lem1
+            rewrite get∘set≡id
+              {k = sutId}
+              {v = addChain (modelState s') β∷pref}
+              {m = blockTrees }
+            = refl
+
+          lem2 :
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
+                      ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (mapMaybe certificate (β ∷ prefChain (modelState s')))
+                      }
+            in s
+            ≡
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          lem2 = {!!} -- depends on certificate in block, see ↑
+
+          lem3 :
+            let s = record s₀
+                      { blockTrees =
+                          set sutId (addChain (modelState s') β∷pref) blockTrees }
+            in
+            record
+              { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
+              ; protocol     = testParams
+              ; allChains    = maybe′ chains [] (State.blockTrees s ⁉ sutId)
+              ; allVotes     = maybe′ votes  [] (State.blockTrees s ⁉ sutId)
+              ; allSeenCerts = maybe′ certs  [] (State.blockTrees s ⁉ sutId)
+              }
+            ≡
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          lem3 = trans lem1 lem2
+
+          lem4 :
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+            ≡
+            let s = record tree
+                      { clock     = MkSlotNumber (suc (getSlotNumber slot))
+                      ; allVotes  = w ∷ maybe′ votes [] (blockTrees ⁉ sutId)
+                      ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
+                      }
+            in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
+          lem4
+            rewrite k'≢k-get∘set
+              {k  = sutId}
+              {k' = otherId}
+              {v  = addVote tree v}
+              {m  = set sutId (addVote tree v) blockTrees}
+              otherId≢sutId
+            rewrite get∘set≡id
+              {k = sutId}
+              {v = addVote tree v}
+              {m = blockTrees}
+            = refl
+
           addVote-modelState :
             let s = record s₀
                       { blockTrees =
@@ -1525,16 +1617,7 @@ module _ ⦃ postulates : Postulates ⦄
                       ; allChains = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (blockTrees ⁉ sutId)
                       }
             in record s { allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromQuorum s) }
-          addVote-modelState
-            rewrite get∘set≡id
-              {k = sutId}
-              {v = addChain (modelState s') β∷pref}
-              {m = blockTrees }
-            rewrite get∘set≡id
-              {k = sutId}
-              {v = addVote tree v}
-              {m = blockTrees}
-            = {!refl!} -- refl
+          addVote-modelState = trans lem3 lem4
 
           substitute0 :
             record tree
