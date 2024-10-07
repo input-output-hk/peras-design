@@ -290,6 +290,7 @@ The implementation takes some liberty with the necessary rigor suitable for cryp
 
 ### Certificates
 
+
 #### Mithril certificates
 
 Mithril certificates' construction is described in details in the [Mithril](https://iohk.io/en/research/library/papers/mithril-stake-based-threshold-multisignatures/) paper and is implemented in the [mithril network](https://github.com/input-output-hk/mithril). It's also described in the [Leios paper](https://iohk.io/en/research/library/papers/high-throughput-blockchain-consensus-under-realistic-network-assumptions/), in the appendix, as a potential voting scheme for Leios, and implicitly Peras.
@@ -301,6 +302,17 @@ Mithril certificates have the following features:
 * The use of BLS signatures implies nodes will need to generate and exchange specialized keys for the purpose of voting, something we know from [Mithril](https://mithril.network/doc/mithril/mithril-protocol/certificates) is somewhat tricky as it requires some form of consensus to guarantee all nodes have the exact same view of the key set.
 
 #### ALBA
+
+
+:::danger
+
+**2024-10-07 Update**
+
+On closer scrutiny, it appeared the parameters used in these benchrmarks are way too optimistic, which lead us to conclude hastily ALBA would be the "right" certificate scheme for Peras. Actually, to provide strong guarantees about quorum, the $n_f$ parameter should be set to the quorum value, e.g 75% of stake, which means the $n_p$ should be set quite high too as certificate size is pretty much dependent on the $n_p/n_f$ ratio.
+
+A thorough analysis of the issues is discussed on the [ALBA](https://github.com/cardano-scaling/alba/discussions/17) repository, thanks to Alex Esgen for pointing it out.
+
+:::
 
 [Approximate Lower Bound Arguments](https://iohk.io/en/research/library/papers/approximate-lower-bound-arguments/) or _ALBAs_ in short, are a novel cryptographic algorithm based on a _telescope_ construction providing a fast way to build compact certificates out of a large number of _unique_ items. A lot more details are provided in the paper, on the [website](https://alba.cardano-scaling.org) and the [GitHub repository](https://github.com/cardano-scaling/alba) where implementation is being developed, we only provide here some key information relevant to the use of ALBAs in Peras.
 
