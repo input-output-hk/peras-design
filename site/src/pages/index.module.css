@@ -17,7 +17,8 @@
 }
 
 .ctaButton{
-  color: var(--ifm-color-primary-lightest);
+    color: var(--ifm-color-primary-lightest);
+    margin: 1rem;
 }
 
 .featuresContainer {
