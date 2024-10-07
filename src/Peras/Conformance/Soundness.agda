@@ -1,6 +1,7 @@
 module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
+open import Haskell.Prim.Bool
 
 open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
@@ -1075,7 +1076,7 @@ module _ ⦃ postulates : Postulates ⦄
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ []
       | True | True | True | True | True
-      | (block ∷ rest) ∷ []
+      | (block@(record { certificate = Nothing }) ∷ rest) ∷ []
       with slotNumber block == State.clock s₀ in checkSlot
          | checkBlockFromSut block in checkedBlockSut
          | parentBlock block == tipHash rest in checkHash
@@ -1093,12 +1094,21 @@ module _ ⦃ postulates : Postulates ⦄
          | checkLeadershipProof (leadershipProof block) in checkedLead
          | lastSlot rest Haskell.< slotNumber block in checkedNewer
          | bodyHash block == Hashable.hash hashPayload [] in checkedBodyHash
+         | (let v = axiom-everyoneIsOnTheCommittee , axiom-checkVoteSignature checkedSig
+                s = record s₀
+                      { blockTrees =
+                          set otherId (addVote (modelState s₀) v)
+                            (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
+                      ; history = VoteMsg v ∷ (State.history s₀)
+                      }
+            in ((certificate block == Just (cert' (modelState s)) && needCert' (modelState s))
+             || (certificate block == Nothing && not (needCert' (modelState s))))) in checkCert
 
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ []
       | True | True | True | True | True
-      | (block ∷ rest) ∷ []
-      | True | True | True | True | True | True | True | True =
+      | (block@(record { certificate = Nothing }) ∷ rest) ∷ []
+      | True | True | True | True | True | True | True | True | True =
 
         record
           { s₁          = s₁
@@ -1218,8 +1228,8 @@ module _ ⦃ postulates : Postulates ⦄
               block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
               block-parentBlock = eqBS-sound checkHash
 
-          cert≡needCert : certificate block ≡ needCert (v-round slot) (modelState s')
-          cert≡needCert = {!!} -- TODO: see ↑
+          cert≡needCert : needCert (v-round slot) (modelState s') ≡ Nothing
+          cert≡needCert = ?
 
           bodyHash≡txsHash :
             bodyHash block ≡ let open Hashable ⦃...⦄ in
@@ -1299,8 +1309,8 @@ module _ ⦃ postulates : Postulates ⦄
                                   ; certificate = needCert (v-round slot) (modelState s')
                                   ; bodyHash    = let open Hashable ⦃...⦄ in hash (txSelection slot sutId)
                                   }
-          block≡β-lem with v ← cong (λ (i P., j) → record block { slotNumber = i ; certificate = j})
-                                (×-≡,≡→≡ (slotNumber≡slot P., cert≡needCert))
+          block≡β-lem with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
+            rewrite cert≡needCert
             rewrite creatorId≡sutId-block
             rewrite sym rest≡pref
             rewrite sym parent≡tip

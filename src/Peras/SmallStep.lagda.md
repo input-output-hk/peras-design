@@ -495,7 +495,7 @@ c) The last seen certificate is from a later round than
       in
         if not (any (λ c → roundNumber c + 2 == r) (certs t)) -- (a)
            && (r <= A + roundNumber cert′)                    -- (b)
-           && (roundNumber cert⋆ <= roundNumber cert′)        -- (c)
+           && (roundNumber cert⋆ < roundNumber cert′)         -- (c)
         then Just cert′
         else Nothing
 ```

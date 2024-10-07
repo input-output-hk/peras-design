@@ -366,51 +366,6 @@ votesInState sutIsVoter = maybeToList . voteInState sutIsVoter
 
 type SutIsSlotLeader = SlotNumber -> Bool
 
-chainInState :: SutIsSlotLeader -> NodeModel -> Maybe Chain
-chainInState sutIsSlotLeader s =
-  do
-    guard (sutIsSlotLeader (clock s))
-    guard (slotNumber block == clock s)
-    guard (checkBlockFromSut block)
-    guard (parentBlock block == tipHash rest)
-    guard (rest == pref s)
-    guard (checkSignedBlock block)
-    guard (checkLeadershipProof (leadershipProof block))
-    guard (lastSlot rest < slotNumber block)
-    guard (bodyHash block == hash [])
-    pure (block : rest)
- where
-  rest :: Chain
-  rest = pref s
-  notPenultimateCert :: Certificate -> Bool
-  notPenultimateCert cert =
-    getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
-  noPenultimateCert :: Bool
-  noPenultimateCert = all notPenultimateCert (allSeenCerts s)
-  unexpiredCert' :: Bool
-  unexpiredCert' =
-    getRoundNumber (round (cert' s)) + perasA (protocol s)
-      >= getRoundNumber (rFromSlot s)
-  newerCert' :: Bool
-  newerCert' =
-    getRoundNumber (round (cert' s))
-      > getRoundNumber (round (certS s))
-  includeCert' :: Bool
-  includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
-  block :: Block
-  block =
-    createSignedBlock
-      (mkParty sutId [] [])
-      (clock s)
-      (tipHash rest)
-      (if includeCert' then Just (cert' s) else Nothing)
-      (createLeadershipProof (clock s) [mkParty sutId [] []])
-      (MkHash emptyBS)
-
-chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
-chainsInState sutIsSlotLeader =
-  maybeToList . chainInState sutIsSlotLeader
-
 needCert' :: NodeModel -> Bool
 needCert' s =
   not
@@ -423,8 +378,41 @@ needCert' s =
     )
     && getRoundNumber (slotToRound (protocol s) (clock s))
       <= perasA (protocol s) + getRoundNumber (round (cert' s))
-    && getRoundNumber (round (certS s))
-      <= getRoundNumber (round (cert' s))
+    && getRoundNumber (round (certS s)) < getRoundNumber (round (cert' s))
+
+chainInState :: SutIsSlotLeader -> NodeModel -> Maybe Chain
+chainInState sutIsSlotLeader s =
+  do
+    guard (sutIsSlotLeader (clock s))
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromSut block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
+    guard
+      ( certificate block == Just (cert' s) && needCert' s
+          || certificate block == Nothing && not (needCert' s)
+      )
+    pure (block : rest)
+ where
+  rest :: Chain
+  rest = pref s
+  block :: Block
+  block =
+    createSignedBlock
+      (mkParty sutId [] [])
+      (clock s)
+      (tipHash rest)
+      (if needCert' s then Just (cert' s) else Nothing)
+      (createLeadershipProof (clock s) [mkParty sutId [] []])
+      (MkHash emptyBS)
+
+chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
+chainsInState sutIsSlotLeader =
+  maybeToList . chainInState sutIsSlotLeader
 
 transition ::
   (SutIsSlotLeader, SutIsVoter) ->

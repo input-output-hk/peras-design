@@ -478,6 +478,16 @@ SutIsSlotLeader = SlotNumber → Bool
 
 {-# COMPILE AGDA2HS SutIsSlotLeader #-}
 
+needCert' : NodeModel → Bool
+needCert' s =
+  let r = getRoundNumber (slotToRound (protocol s) (clock s))
+  in
+     not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
+     && r <= perasA (protocol s) + getRoundNumber (round (cert' s))
+     && (getRoundNumber (round (certS s)) < getRoundNumber (round (cert' s)))
+
+{-# COMPILE AGDA2HS needCert' #-}
+
 chainInState : SutIsSlotLeader → NodeModel → Maybe Chain
 chainInState sutIsSlotLeader s = do
   guard (sutIsSlotLeader (clock s))
@@ -489,20 +499,16 @@ chainInState sutIsSlotLeader s = do
   guard (checkLeadershipProof (leadershipProof block))
   guard (lastSlot rest < slotNumber block)
   guard (bodyHash block == Hashable.hash hashPayload [])
+  guard ((certificate block == Just (cert' s) && needCert' s)
+      || (certificate block == Nothing && not (needCert' s)))
   pure (block ∷ rest)
   where
     rest = pref s
-    notPenultimateCert : Certificate → Bool
-    notPenultimateCert cert = getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
-    noPenultimateCert = all notPenultimateCert (allSeenCerts s)
-    unexpiredCert' = getRoundNumber (round (cert' s)) + perasA (protocol s) >= getRoundNumber (rFromSlot s)
-    newerCert' = getRoundNumber (round (cert' s)) > getRoundNumber (round (certS s))
-    includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
     block = createSignedBlock
       (mkParty sutId [] [])
       (clock s)
       (tipHash rest)
-      (if includeCert' then Just (cert' s) else Nothing)
+      (if (needCert' s) then Just (cert' s) else Nothing)
       (createLeadershipProof (clock s) (mkParty sutId [] [] ∷ []))
       (MkHash emptyBS)
 
@@ -512,16 +518,6 @@ chainsInState : SutIsSlotLeader → NodeModel → List Chain
 chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 
 {-# COMPILE AGDA2HS chainsInState #-}
-
-needCert' : NodeModel → Bool
-needCert' s =
-  let r = getRoundNumber (slotToRound (protocol s) (clock s))
-  in
-     not (any (λ c → getRoundNumber (round c) + 2 == r) (allSeenCerts s))
-     && r <= perasA (protocol s) + getRoundNumber (round (cert' s))
-     && (getRoundNumber (round (certS s)) <= getRoundNumber (round (cert' s)))
-
-{-# COMPILE AGDA2HS needCert' #-}
 
 transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition (sutIsSlotLeader , sutIsVoter) s Tick =
