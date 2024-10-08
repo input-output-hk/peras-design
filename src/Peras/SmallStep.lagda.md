@@ -136,6 +136,11 @@ Properties that must hold with respect to chains, certificates and votes.
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
 
+      -- TODO: can be express by other properties
+      self-contained-certs : ∀ (t : T) {c : Chain}
+        → c ∈ chains t
+        → certs t ≡ foldr insertCert (certs t) (certsFromChain c)
+
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
 

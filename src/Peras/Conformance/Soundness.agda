@@ -153,6 +153,7 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
+        ; self-contained-certs = λ _ _ → {!!}
         ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
@@ -1547,21 +1548,24 @@ module _ ⦃ postulates : Postulates ⦄
             = refl
 
           noNewCertβ : foldr insertCert (allSeenCerts (modelState s'))
-                  (mapMaybe certificate (β ∷ prefChain (modelState s')))
+                  (certsFromChain (β ∷ prefChain (modelState s')))
                 ≡
                 foldr insertCert (allSeenCerts (modelState s'))
-                  (mapMaybe certificate (prefChain (modelState s')))
+                  (certsFromChain (prefChain (modelState s')))
           noNewCertβ
             rewrite cert≡needCert
             = refl
 
           noNewCert-pref : foldr insertCert (allSeenCerts (modelState s'))
-                  (mapMaybe certificate (prefChain (modelState s')))
+                  (certsFromChain (prefChain (modelState s')))
                 ≡ allSeenCerts (modelState s')
-          noNewCert-pref = {!refl!}
+          noNewCert-pref =
+            let open SmallStep.IsTreeType
+                pref∈chains = is-TreeType .self-contained (modelState s')
+            in sym $ is-TreeType .self-contained-certs (modelState s') {pref (modelState s')} pref∈chains
 
           noNewCert : foldr insertCert (allSeenCerts (modelState s'))
-                  (mapMaybe certificate (β ∷ prefChain (modelState s')))
+                  (certsFromChain (β ∷ prefChain (modelState s')))
                 ≡ allSeenCerts (modelState s')
           noNewCert = trans noNewCertβ noNewCert-pref
 
@@ -1571,7 +1575,7 @@ module _ ⦃ postulates : Postulates ⦄
               ; protocol     = testParams
               ; allVotes     = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
               ; allChains    = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
-              ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (mapMaybe certificate (β ∷ prefChain (modelState s')))
+              ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (β ∷ prefChain (modelState s')))
               }
             ≡
             record
@@ -1623,7 +1627,7 @@ module _ ⦃ postulates : Postulates ⦄
               { clock        = MkSlotNumber (suc (getSlotNumber slot))
               ; allVotes     = maybe′ votes [] (State.blockTrees s' ⁉ sutId)
               ; allChains    = (β ∷ prefChain (modelState s')) ∷ maybe′ chains [] (State.blockTrees s' ⁉ sutId)
-              ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (mapMaybe certificate (β ∷ prefChain (modelState s')))
+              ; allSeenCerts = foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (β ∷ prefChain (modelState s')))
               }
             ≡
             let s = record tree
