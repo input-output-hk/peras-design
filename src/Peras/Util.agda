@@ -50,11 +50,11 @@ comparing f x y = compare (f x) (f y)
 
 mapMaybe : {a b : Set} → (a → Maybe b) → List a → List b
 mapMaybe p []       = []
-mapMaybe p (x ∷ xs) =
-  case p x of λ where
-    (Just y) → y ∷ mapMaybe p xs
-    Nothing → mapMaybe p xs
-{-# COMPILE AGDA2HS mapMaybe #-}
+mapMaybe p (x ∷ xs) with p x
+... | Just y  = y ∷ mapMaybe p xs
+... | Nothing =     mapMaybe p xs
+
+-- mapMaybe is exported in rewrites.yaml
 
 isYes : ∀ {A : Set} → Dec A → Bool
 isYes (True ⟨ _ ⟩) = True

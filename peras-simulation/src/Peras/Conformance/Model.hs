@@ -12,6 +12,7 @@
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
+import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
@@ -19,7 +20,7 @@ import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, per
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, mapMaybe, maximumBy, maybeToList)
+import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)

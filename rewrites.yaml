@@ -2,3 +2,6 @@ rewrites:
   - from: "Peras.Crypto.ByteString"
     to: "ByteString"
     importing: "Data.ByteString"
+  - from: "Peras.Util.mapMaybe"
+    to: "mapMaybe"
+    importing: "Data.Maybe"

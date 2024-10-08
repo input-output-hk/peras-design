@@ -1228,8 +1228,11 @@ module _ ⦃ postulates : Postulates ⦄
               block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
               block-parentBlock = eqBS-sound checkHash
 
+          need-cert : needCert' (modelState s') ≡ False
+          need-cert = {!!}
+
           cert≡needCert : needCert (v-round slot) (modelState s') ≡ Nothing
-          cert≡needCert = {!!}
+          cert≡needCert rewrite need-cert = refl
 
           bodyHash≡txsHash :
             bodyHash block ≡ let open Hashable ⦃...⦄ in
@@ -1543,10 +1546,24 @@ module _ ⦃ postulates : Postulates ⦄
               {m = blockTrees}
             = refl
 
+          noNewCertβ : foldr insertCert (allSeenCerts (modelState s'))
+                  (mapMaybe certificate (β ∷ prefChain (modelState s')))
+                ≡
+                foldr insertCert (allSeenCerts (modelState s'))
+                  (mapMaybe certificate (prefChain (modelState s')))
+          noNewCertβ
+            rewrite cert≡needCert
+            = refl
+
+          noNewCert-pref : foldr insertCert (allSeenCerts (modelState s'))
+                  (mapMaybe certificate (prefChain (modelState s')))
+                ≡ allSeenCerts (modelState s')
+          noNewCert-pref = {!refl!}
+
           noNewCert : foldr insertCert (allSeenCerts (modelState s'))
                   (mapMaybe certificate (β ∷ prefChain (modelState s')))
                 ≡ allSeenCerts (modelState s')
-          noNewCert = {!refl!}
+          noNewCert = trans noNewCertβ noNewCert-pref
 
           lem2a :
             record
