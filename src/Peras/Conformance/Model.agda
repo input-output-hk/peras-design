@@ -187,7 +187,7 @@ pref s =
 certS : NodeModel → Certificate
 certS s =
   let open NodeModel s
-  in maximumBy genesisCert (comparing round) (mapMaybe certificate (pref s))
+  in maximumBy genesisCert (comparing round) (certsFromChain (pref s))
 
 {-# COMPILE AGDA2HS certS #-}
 
@@ -250,7 +250,7 @@ addChain' : NodeModel → Chain → NodeModel
 addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
-    ; allSeenCerts = foldr insertCert (allSeenCerts s) (mapMaybe certificate c)
+    ; allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromChain c)
     }
 
 {-# COMPILE AGDA2HS addChain' #-}
@@ -522,7 +522,7 @@ chainsInState sutIsSlotLeader = maybeToList ∘ chainInState sutIsSlotLeader
 transition : SutIsSlotLeader × SutIsVoter → NodeModel → EnvAction → Maybe ((List Chain × List Vote) × NodeModel)
 transition (sutIsSlotLeader , sutIsVoter) s Tick =
   let s' = record s { clock = nextSlot (clock s) }
-      votes = votesInState sutIsVoter  s'
+      votes = votesInState sutIsVoter s'
       chains = chainsInState sutIsSlotLeader s'
   in
   Just ((chains , votes) ,
@@ -563,7 +563,7 @@ transition _ s (NewChain
          { allChains = (block ∷ rest) ∷ allChains s
          ; allSeenCerts =
              foldr insertCert (allSeenCerts s)
-               (mapMaybe certificate (block ∷ rest))
+               (certsFromChain (block ∷ rest))
          })
 transition _ s (NewChain
   (record
@@ -600,7 +600,7 @@ transition _ s (NewChain
          { allChains = (block ∷ rest) ∷ allChains s
          ; allSeenCerts =
              foldr insertCert (allSeenCerts s)
-               (mapMaybe certificate (block ∷ rest))
+               (certsFromChain (block ∷ rest))
          })
 transition _ s (NewVote v) = do
   guard (slotInRound (protocol s) (clock s) == 0)

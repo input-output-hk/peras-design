@@ -2,6 +2,7 @@ module Peras.Conformance.Soundness where
 
 open import Haskell.Prelude as Haskell hiding (map; filter; _++_; maybe; _>_)
 open import Haskell.Prim.Bool
+open import Haskell.Law.Bool
 
 open import Data.Empty using (⊥-elim)
 open import Data.Fin using () renaming (zero to fzero; suc to fsuc)
@@ -19,6 +20,7 @@ open import Data.Nat.DivMod
 open import Data.Maybe using (maybe; maybe′; nothing; just)
 open import Data.Product as P using (proj₁ ; proj₂) renaming (_,_ to _,ᵖ_)
 open import Data.Product.Properties
+open import Data.Sum using (inj₁; inj₂)
 open import Relation.Nullary.Decidable using (Dec; yes; no; ¬?)
 
 open import Relation.Nullary.Negation using (¬_; contradiction)
@@ -153,7 +155,7 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
-        ; self-contained-certs = λ _ _ → {!!}
+        ; self-contained-certs = λ _ _ → {!refl!}
         ; valid = {!!}
         ; optimal = {!!} -- ok
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
@@ -1077,7 +1079,7 @@ module _ ⦃ postulates : Postulates ⦄
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ []
       | True | True | True | True | True
-      | (block@(record { certificate = Nothing }) ∷ rest) ∷ []
+      | (block ∷ rest) ∷ []
       with slotNumber block == State.clock s₀ in checkSlot
          | checkBlockFromSut block in checkedBlockSut
          | parentBlock block == tipHash rest in checkHash
@@ -1108,7 +1110,7 @@ module _ ⦃ postulates : Postulates ⦄
     tick-soundness {cs} {vs} {ms₁} s₀ inv refl
       | True | vote ∷ []
       | True | True | True | True | True
-      | (block@(record { certificate = Nothing }) ∷ rest) ∷ []
+      | (block ∷ rest) ∷ []
       | True | True | True | True | True | True | True | True | True =
 
         record
@@ -1229,11 +1231,13 @@ module _ ⦃ postulates : Postulates ⦄
               block-parentBlock : hashBytes (parentBlock block) ≡ hashBytes (tipHash rest)
               block-parentBlock = eqBS-sound checkHash
 
+{-
           need-cert : needCert' (modelState s') ≡ False
           need-cert = {!!}
 
           cert≡needCert : needCert (v-round slot) (modelState s') ≡ Nothing
           cert≡needCert rewrite need-cert = refl
+-}
 
           bodyHash≡txsHash :
             bodyHash block ≡ let open Hashable ⦃...⦄ in
@@ -1306,6 +1310,39 @@ module _ ⦃ postulates : Postulates ⦄
           pref≡rest : prefChain (modelState s') ≡ rest
           pref≡rest = sym rest≡pref
 
+          block≡β-lem⋆ : block ≡ record block
+                                  { slotNumber  = slot
+                                  ; creatorId   = sutId
+                                  ; parentBlock = tipHash (prefChain (modelState s⋆))
+                                  ; certificate = needCert (v-round slot) (modelState s⋆)
+                                  ; bodyHash    = let open Hashable ⦃...⦄ in hash (txSelection slot sutId)
+                                  }
+          block≡β-lem⋆
+            with ⊎≡True
+                {certificate block == Just (cert' (modelState s⋆)) && needCert' (modelState s⋆)}
+                {certificate block == Nothing && not (needCert' (modelState s⋆))}
+                checkCert
+          ... | inj₁ l
+            with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
+            rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Just (cert' (modelState s⋆))}
+                      (&&-leftTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l)
+            rewrite &&-rightTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l
+            rewrite creatorId≡sutId-block
+            rewrite sym rest≡pref⋆
+            rewrite sym parent≡tip
+            rewrite bodyHash≡txsHash
+            = v
+          ... | inj₂ r
+            with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
+            rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Nothing}
+                      (&&-leftTrue (certificate block == Nothing) (not (needCert' (modelState s⋆))) r)
+            rewrite not-eq𝔹-sound (&&-rightTrue (certificate block == Nothing) (not (needCert' (modelState s⋆))) r)
+            rewrite creatorId≡sutId-block
+            rewrite sym rest≡pref⋆
+            rewrite sym parent≡tip
+            rewrite bodyHash≡txsHash
+            = v
+
           block≡β-lem : block ≡ record block
                                   { slotNumber  = slot
                                   ; creatorId   = sutId
@@ -1313,13 +1350,16 @@ module _ ⦃ postulates : Postulates ⦄
                                   ; certificate = needCert (v-round slot) (modelState s')
                                   ; bodyHash    = let open Hashable ⦃...⦄ in hash (txSelection slot sutId)
                                   }
-          block≡β-lem with v ← cong (λ i → record block { slotNumber = i }) slotNumber≡slot
-            rewrite cert≡needCert
-            rewrite creatorId≡sutId-block
-            rewrite sym rest≡pref
-            rewrite sym parent≡tip
-            rewrite bodyHash≡txsHash
-            = v
+          block≡β-lem = subst P modelState-s⋆≡modelState-s' block≡β-lem⋆
+            where
+              P : NodeModel → Set
+              P s = block ≡ record block
+                              { slotNumber  = slot
+                              ; creatorId   = sutId
+                              ; parentBlock = tipHash (prefChain s)
+                              ; certificate = needCert (v-round slot) s
+                              ; bodyHash    = let open Hashable ⦃...⦄ in hash (txSelection slot sutId)
+                              }
 
           block≡β : block ≡ β
           block≡β = block≡β-lem
@@ -1547,14 +1587,42 @@ module _ ⦃ postulates : Postulates ⦄
               {m = blockTrees}
             = refl
 
-          noNewCertβ : foldr insertCert (allSeenCerts (modelState s'))
-                  (certsFromChain (β ∷ prefChain (modelState s')))
-                ≡
-                foldr insertCert (allSeenCerts (modelState s'))
-                  (certsFromChain (prefChain (modelState s')))
-          noNewCertβ
-            rewrite cert≡needCert
+          noNewCertβx :
+              foldr insertCert (allSeenCerts (modelState s⋆)) (certsFromChain (block ∷ prefChain (modelState s⋆)))
+            ≡ foldr insertCert (allSeenCerts (modelState s⋆)) (certsFromChain (prefChain (modelState s⋆)))
+          noNewCertβx
+            with ⊎≡True
+                {certificate block == Just (cert' (modelState s⋆)) && needCert' (modelState s⋆)}
+                {certificate block == Nothing && not (needCert' (modelState s⋆))}
+                checkCert
+          ... | inj₁ l
+            rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Just (cert' (modelState s⋆))}
+                      (&&-leftTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l)
+            rewrite &&-rightTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l
+            = {!!}
+          ... | inj₂ r
+            rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Nothing}
+                      (&&-leftTrue (certificate block == Nothing) (not (needCert' (modelState s⋆))) r)
+            rewrite not-eq𝔹-sound (&&-rightTrue (certificate block == Nothing) (not (needCert' (modelState s⋆))) r)
             = refl
+
+          noNewCertβ0 :
+              foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (block ∷ prefChain (modelState s')))
+            ≡ foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (prefChain (modelState s')))
+          noNewCertβ0 = subst P modelState-s⋆≡modelState-s' noNewCertβx
+            where
+              P : NodeModel → Set
+              P s =   foldr insertCert (allSeenCerts s) (certsFromChain (block ∷ prefChain s))
+                    ≡ foldr insertCert (allSeenCerts s) (certsFromChain (prefChain s))
+
+          noNewCertβ :
+              foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (β ∷ prefChain (modelState s')))
+            ≡ foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (prefChain (modelState s')))
+          noNewCertβ = subst P block≡β noNewCertβ0
+            where
+              P : Block → Set
+              P b =   foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (b ∷ prefChain (modelState s')))
+                    ≡ foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (prefChain (modelState s')))
 
           noNewCert-pref : foldr insertCert (allSeenCerts (modelState s'))
                   (certsFromChain (prefChain (modelState s')))
