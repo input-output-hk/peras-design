@@ -12,10 +12,9 @@
 module Peras.Conformance.Model where
 
 import Control.Monad (guard)
-import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), certsFromChain, insertCert, lastSlot)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
@@ -143,7 +142,7 @@ certS s =
   maximumBy
     genesisCert
     (comparing (\r -> round r))
-    (mapMaybe (\r -> certificate r) (pref s))
+    (certsFromChain (pref s))
 
 testParams :: PerasParams
 testParams =
@@ -191,11 +190,7 @@ addChain' s c =
     (protocol s)
     (c : allChains s)
     (allVotes s)
-    ( foldr
-        insertCert
-        (allSeenCerts s)
-        (mapMaybe (\r -> certificate r) c)
-    )
+    (foldr insertCert (allSeenCerts s) (certsFromChain c))
 
 newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
 newQuora _ _ [] = []
@@ -502,173 +497,33 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
         )
     )
 transition _ _ (NewChain []) = Nothing
-transition
-  _
-  s
-  ( NewChain
-      ( MkBlock
-          slotNumber
-          creatorId
-          parentBlock
-          Nothing
-          leadershipProof
-          signature
-          bodyHash
-          : rest
-        )
-    ) =
-    do
-      guard (not $ needCert' s)
-      guard (slotNumber == clock s)
-      guard
-        ( checkBlockFromOther
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                Nothing
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (parentBlock == tipHash rest)
-      guard (rest == pref s)
-      guard
-        ( checkSignedBlock
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                Nothing
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (checkLeadershipProof leadershipProof)
-      guard (lastSlot rest < slotNumber)
-      guard (bodyHash == hash [])
-      Just
-        ( ([], [])
-        , NodeModel
-            (clock s)
-            (protocol s)
-            ( ( MkBlock
-                  slotNumber
-                  creatorId
-                  parentBlock
-                  Nothing
-                  leadershipProof
-                  signature
-                  bodyHash
-                  : rest
-              )
-                : allChains s
-            )
-            (allVotes s)
-            ( foldr
-                insertCert
-                (allSeenCerts s)
-                ( mapMaybe
-                    (\r -> certificate r)
-                    ( MkBlock
-                        slotNumber
-                        creatorId
-                        parentBlock
-                        Nothing
-                        leadershipProof
-                        signature
-                        bodyHash
-                        : rest
-                    )
-                )
-            )
-        )
-transition
-  _
-  s
-  ( NewChain
-      ( MkBlock
-          slotNumber
-          creatorId
-          parentBlock
-          (Just cert)
-          leadershipProof
-          signature
-          bodyHash
-          : rest
-        )
-    ) =
-    do
-      guard (needCert' s)
-      guard (cert == cert' s)
-      guard (slotNumber == clock s)
-      guard
-        ( checkBlockFromOther
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                (Just cert)
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (parentBlock == tipHash rest)
-      guard (rest == pref s)
-      guard
-        ( checkSignedBlock
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                (Just cert)
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (checkLeadershipProof leadershipProof)
-      guard (lastSlot rest < slotNumber)
-      guard (bodyHash == hash [])
-      Just
-        ( ([], [])
-        , NodeModel
-            (clock s)
-            (protocol s)
-            ( ( MkBlock
-                  slotNumber
-                  creatorId
-                  parentBlock
-                  (Just cert)
-                  leadershipProof
-                  signature
-                  bodyHash
-                  : rest
-              )
-                : allChains s
-            )
-            (allVotes s)
-            ( foldr
-                insertCert
-                (allSeenCerts s)
-                ( mapMaybe
-                    (\r -> certificate r)
-                    ( MkBlock
-                        slotNumber
-                        creatorId
-                        parentBlock
-                        (Just cert)
-                        leadershipProof
-                        signature
-                        bodyHash
-                        : rest
-                    )
-                )
-            )
-        )
+transition _ s (NewChain (block : rest)) =
+  do
+    guard
+      ( certificate block == Just (cert' s) && needCert' s
+          || certificate block == Nothing && not (needCert' s)
+      )
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromOther block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
+    Just
+      ( ([], [])
+      , NodeModel
+          (clock s)
+          (protocol s)
+          ((block : rest) : allChains s)
+          (allVotes s)
+          ( foldr
+              insertCert
+              (allSeenCerts s)
+              (certsFromChain (block : rest))
+          )
+      )
 transition _ s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)

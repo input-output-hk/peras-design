@@ -531,70 +531,19 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
                         }
     in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
 transition _ _ (NewChain []) = Nothing
-transition _ s (NewChain
-  (record
-    { slotNumber = slotNumber
-    ; creatorId = creatorId
-    ; parentBlock = parentBlock
-    ; certificate = Nothing -- pattern match
-    ; leadershipProof = leadershipProof
-    ; signature = signature
-    ; bodyHash = bodyHash } ∷ rest)) =
-  let block = record { slotNumber = slotNumber
-                     ; creatorId = creatorId
-                     ; parentBlock = parentBlock
-                     ; certificate = Nothing
-                     ; leadershipProof = leadershipProof
-                     ; signature = signature
-                     ; bodyHash = bodyHash }
-      r = slotToRound (protocol s) (clock s)
+transition _ s (NewChain (block ∷ rest)) =
+  let r = slotToRound (protocol s) (clock s)
   in
-  do guard (not $ needCert' s) -- guard correponding to the pattern match above
-     guard (slotNumber == clock s)
+  do guard ((certificate block == Just (cert' s) && needCert' s)
+         || (certificate block == Nothing && not (needCert' s)))
+     guard (slotNumber block == clock s)
      guard (checkBlockFromOther block)
-     guard (parentBlock == tipHash rest)
+     guard (parentBlock block == tipHash rest)
      guard (rest == pref s)
      guard (checkSignedBlock block)
-     guard (checkLeadershipProof leadershipProof)
-     guard (lastSlot rest < slotNumber)
-     guard (bodyHash == Hashable.hash hashPayload [])
-     Just (([] , []) ,
-       record s
-         { allChains = (block ∷ rest) ∷ allChains s
-         ; allSeenCerts =
-             foldr insertCert (allSeenCerts s)
-               (certsFromChain (block ∷ rest))
-         })
-transition _ s (NewChain
-  (record
-    { slotNumber = slotNumber
-    ; creatorId = creatorId
-    ; parentBlock = parentBlock
-    ; certificate = Just cert -- pattern match
-    ; leadershipProof = leadershipProof
-    ; signature = signature
-    ; bodyHash = bodyHash
-    } ∷ rest)) =
-  let block = record { slotNumber = slotNumber
-                     ; creatorId = creatorId
-                     ; parentBlock = parentBlock
-                     ; certificate = Just cert
-                     ; leadershipProof = leadershipProof
-                     ; signature = signature
-                     ; bodyHash = bodyHash
-                     }
-      r = slotToRound (protocol s) (clock s)
-  in
-  do guard (needCert' s) -- guard corresponding to the pattern match above
-     guard (cert == cert' s)
-     guard (slotNumber == clock s)
-     guard (checkBlockFromOther block)
-     guard (parentBlock == tipHash rest)
-     guard (rest == pref s)
-     guard (checkSignedBlock block)
-     guard (checkLeadershipProof leadershipProof)
-     guard (lastSlot rest < slotNumber)
-     guard (bodyHash == Hashable.hash hashPayload [])
+     guard (checkLeadershipProof (leadershipProof block))
+     guard (lastSlot rest < slotNumber block)
+     guard (bodyHash block == Hashable.hash hashPayload [])
      Just (([] , []) ,
        record s
          { allChains = (block ∷ rest) ∷ allChains s
