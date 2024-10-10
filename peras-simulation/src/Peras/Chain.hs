@@ -8,8 +8,9 @@
 
 module Peras.Chain where
 
+import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (slotNumber), Certificate, PartyId)
+import Peras.Block (Block (certificate, slotNumber), Certificate, PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
 import Peras.Numbering (RoundNumber, SlotNumber (MkSlotNumber))
 
@@ -35,6 +36,9 @@ instance Eq Vote where
       && signature x == signature y
 
 type Chain = [Block]
+
+certsFromChain :: Chain -> [Certificate]
+certsFromChain = mapMaybe (\r -> certificate r)
 
 insertCert :: Certificate -> [Certificate] -> [Certificate]
 insertCert cert [] = [cert]

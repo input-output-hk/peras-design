@@ -4,7 +4,7 @@
 
 module Peras.Prototype.Node where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM (..), readTVarIO)
+import Control.Concurrent.Class.MonadSTM (MonadSTM (..))
 import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
 import Control.Monad.State (StateT, gets, lift, modify')
 import Control.Tracer (Tracer, nullTracer, traceWith)
@@ -88,5 +88,8 @@ tickNode tracer diffuser params party state s _ payload newChains newVotes =
       voting tracer params party state s (selectBlock tracer) (diffuseVote diffuser)
     -- 4. Invoke block creation if leader.
     ExceptT $ blockCreation tracer params party state s payload (diffuseChain diffuser)
+
+{-
     -- Record the new state.
     ExceptT $ fmap pure . traceWith tracer . Snapshot =<< readTVarIO state
+-}

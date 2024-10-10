@@ -118,6 +118,8 @@ Chain = List Block
 ```agda
 certsFromChain : Chain → List Certificate
 certsFromChain = mapMaybe certificate
+
+{-# COMPILE AGDA2HS certsFromChain #-}
 ```
 ```agda
 insertCert : Certificate → List Certificate → List Certificate

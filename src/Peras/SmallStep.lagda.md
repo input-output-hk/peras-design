@@ -131,8 +131,18 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
+{-
+      extendable-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+        → v ∈ votes (addVote t vv)
+-}
+
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
+
+      -- TODO: can be express by other properties
+      self-contained-certs : ∀ (t : T) {c : Chain}
+        → c ∈ chains t
+        → certs t ≡ foldr insertCert (certs t) (certsFromChain c)
 
       valid : ∀ (t : T)
         → ValidChain (preferredChain t)
@@ -154,6 +164,7 @@ Properties that must hold with respect to chains, certificates and votes.
         → All ValidVote (votes t)
 -}
 
+{-
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v) (¬eq : ¬ (IsEquivocation v (votes t)))
         → let vs = votes t
           in
@@ -165,7 +176,7 @@ Properties that must hold with respect to chains, certificates and votes.
           in
           Any (v ∻_) vs
         → vs ≡ votes (addVote t vv ¬eq)
-
+-}
 {-
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
@@ -213,6 +224,9 @@ The block-tree type is defined as follows:
 
     allBlocks : T → List Block
     allBlocks = concat ∘ chains
+
+    postulate
+      latestCertSeen∈certs : ∀ t → latestCertSeen t ∈ certs t
 ```
 ### Additional parameters
 
@@ -492,7 +506,7 @@ c) The last seen certificate is from a later round than
       in
         if not (any (λ c → roundNumber c + 2 == r) (certs t)) -- (a)
            && (r <= A + roundNumber cert′)                    -- (b)
-           && (roundNumber cert⋆ <= roundNumber cert′)        -- (c)
+           && (roundNumber cert⋆ < roundNumber cert′)         -- (c)
         then Just cert′
         else Nothing
 ```

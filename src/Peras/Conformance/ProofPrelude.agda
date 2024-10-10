@@ -7,6 +7,7 @@ open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
 open import Haskell.Prim.Tuple
 open import Haskell.Prim.Eq
+open import Haskell.Law.Bool
 open import Haskell.Law.Equality
 open import Haskell.Law.Eq.Instances
 
@@ -52,6 +53,14 @@ not-eqℕ-sound = not-eqℕ-sound' ∘ not-eq𝔹-sound
 
 eqBS-sound : {n m : ByteString} → eqBS n m ≡ True → n ≡ m
 eqBS-sound = lem-eqBS
+
+⊎≡True : ∀ {a b : Bool} → (a || b) ≡ True → (a ≡ True) ⊎ (b ≡ True)
+⊎≡True {False} {True} refl = inj₂ refl
+⊎≡True {True} {False} refl = inj₁ refl
+⊎≡True {True} {True} refl = inj₁ refl
+
+not-involution' : ∀ (a b : Bool) → not a ≡ b → a ≡ not b
+not-involution' b .(not b) refl = sym (not-not b)
 
 postulate
   not-eqBS-sound : {n m : ByteString} → eqBS n m ≡ False → n ≡ m → ⊥

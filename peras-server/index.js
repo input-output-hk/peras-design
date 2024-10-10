@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return `cool:${party}:${round}`;
   }
 
-  const genesisBlockId = "block:0000000000000000";
+  const genesisBlockId = "block:";
 
   const genesisCertId = "cert:0:0";
 
