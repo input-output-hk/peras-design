@@ -16,6 +16,7 @@ open import Data.Nat using (_%_; _≥_; _>_; _≤_; NonZero)
 open import Data.List.Membership.Propositional
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
 open import Data.Product using () renaming (_,_ to _,ᵖ_)
+open import Relation.Nullary.Negation using (¬_)
 
 open import Haskell.Prelude hiding (_>_)
 open import Haskell.Extra.Dec
@@ -111,8 +112,8 @@ has to fulfil all the properties mentioned below:
                     (addChain : T → {c : Chain} → ValidChain c → T)
                     (chains : T → List Chain)
                     (preferredChain : T → Chain)
-                    (addVote : T → {v : Vote} → ValidVote v → T)
                     (votes : T → List Vote)
+                    (addVote : (t : T) → {v : Vote} → ValidVote v → ¬ (IsEquivocation v (votes t)) → T)
                     (certs : T → List Certificate)
                     (cert₀ : Certificate)
          : Set₁ where
@@ -130,8 +131,10 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
+{-
       extendable-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → v ∈ votes (addVote t vv)
+-}
 
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
@@ -162,17 +165,17 @@ Properties that must hold with respect to chains, certificates and votes.
 -}
 
 {-
-      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v) (¬eq : ¬ (IsEquivocation v (votes t)))
         → let vs = votes t
           in
           v ∈ vs
-        → vs ≡ votes (addVote t vv)
+        → vs ≡ votes (addVote t vv ¬eq)
 
-      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v) (¬eq : ¬ (IsEquivocation v (votes t)))
         → let vs = votes t
           in
           Any (v ∻_) vs
-        → vs ≡ votes (addVote t vv)
+        → vs ≡ votes (addVote t vv ¬eq)
 -}
 {-
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
@@ -197,14 +200,14 @@ The block-tree type is defined as follows:
       chains : T → List Chain
       preferredChain : T → Chain
 
-      addVote : T → {v : Vote} → ValidVote v → T
       votes : T → List Vote
+      addVote : (t : T) → {v : Vote} → ValidVote v → ¬ (IsEquivocation v (votes t)) → T
 
       certs : T → List Certificate
 
       is-TreeType : IsTreeType
                       tree₀ addChain chains preferredChain
-                      addVote votes certs cert₀
+                      votes addVote certs cert₀
 
     latestCertOnChain : T → Certificate
     latestCertOnChain =
@@ -257,9 +260,9 @@ Updating the block-tree upon receiving a message for vote and block messages.
 ```agda
     data _[_]→_ : T → Message → T → Set where
 
-      VoteReceived : ∀ {v vv t} →
+      VoteReceived : ∀ {v vv t} (¬eq : ¬ (IsEquivocation v (votes t))) →
           ────────────────────────────
-          t [ VoteMsg {v} vv ]→ addVote t vv
+          t [ VoteMsg {v} vv ]→ addVote t vv ¬eq
 
       ChainReceived : ∀ {c vc t} →
           ──────────────────────────────

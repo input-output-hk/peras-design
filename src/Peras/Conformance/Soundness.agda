@@ -127,8 +127,8 @@ module _ ⦃ postulates : Postulates ⦄
     addChain'' : NodeModel → {c : Chain} → ValidChain c → NodeModel
     addChain'' s {c} _ = addChain' s c
 
-    addVote'' : NodeModel → {v : Vote} → ValidVote v → NodeModel
-    addVote'' s {v} _ = addVote' s v
+    addVote'' : (s : NodeModel) → {v : Vote} → ValidVote v → ¬ (IsEquivocation v (allVotes s)) → NodeModel
+    addVote'' s {v} _ _ = addVote' s v
 
     {-
     allChains' : NodeModel → List Chain
@@ -143,8 +143,8 @@ module _ ⦃ postulates : Postulates ⦄
         addChain''
         allChains -- (λ t → genesisChain ∷ allChains t)
         pref
-        addVote''
         allVotes
+        addVote''
         allSeenCerts
         genesisCert
 
@@ -153,7 +153,7 @@ module _ ⦃ postulates : Postulates ⦄
         { instantiated = refl
         ; instantiated-certs = refl
         ; instantiated-votes = refl
-        ; extendable-votes = λ _ _ → Any.here refl
+--        ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
         ; self-contained-certs = λ _ _ → {!refl!}
         ; valid = {!!}
@@ -323,14 +323,17 @@ module _ ⦃ postulates : Postulates ⦄
         ν : ValidVote v
         ν = axiom-everyoneIsOnTheCommittee , validSignature
 
+        ¬eq : ¬ (IsEquivocation v (allVotes tree))
+        ¬eq = {!!}
+
         validVote : VotingRule slot tree
         validVote = toWitness (isYes≡True⇒TTrue checkedVRs)
 
         s₁ : State
         s₁ = record s₀
                { blockTrees =
-                   set otherId (addVote tree ν)
-                     (set sutId (addVote tree ν)
+                   set otherId (addVote tree ν ¬eq)
+                     (set sutId (addVote tree ν ¬eq)
                        blockTrees)
                ; history = VoteMsg ν ∷ history
                }
@@ -340,11 +343,11 @@ module _ ⦃ postulates : Postulates ⦄
 
         otherExists :
           set sutId
-            (addVote tree ν)
+            (addVote tree ν ¬eq)
               blockTrees ⁉ otherId ≡ just tree
         otherExists =
              trans
-               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree ν} {m = blockTrees} sutId≢otherId)
+               (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree ν ¬eq} {m = blockTrees} sutId≢otherId)
                (otherTree inv)
 
         validBlockHash : BlockSelection slot tree ≡ blockHash vote
@@ -369,18 +372,18 @@ module _ ⦃ postulates : Postulates ⦄
                   (honest
                     (sutTree inv)
                     (Any.here refl)
-                    VoteReceived
+                    (VoteReceived ¬eq)
                   )
               ↣ Fetch {m = VoteMsg ν}
                   (honest
                     otherExists
                     (Any.here refl)
-                    VoteReceived
+                    (VoteReceived ¬eq)
                   )
               ↣ ∎
 
         tree⁺ : NodeModel
-        tree⁺ = addVote tree ν
+        tree⁺ = addVote tree ν ¬eq
 
         s₁-agrees :
           let s = record s₀
@@ -758,14 +761,17 @@ module _ ⦃ postulates : Postulates ⦄
           v : ValidVote w
           v = axiom-everyoneIsOnTheCommittee , validSignature
 
+          ¬eq : ¬ (IsEquivocation w (allVotes tree))
+          ¬eq = {!!}
+
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
           s₁ : State
           s₁ = tick record s₀
                  { blockTrees =
-                     set otherId (addVote tree v)
-                       (set sutId (addVote tree v)
+                     set otherId (addVote tree v ¬eq)
+                       (set sutId (addVote tree v ¬eq)
                          blockTrees)
                  ; history = VoteMsg v ∷ history
                  }
@@ -780,10 +786,10 @@ module _ ⦃ postulates : Postulates ⦄
                 (cong hashBytes (blockSelection-eq {s₀}))
                 (lem-eqBS isValidBlockHash)
 
-          otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
+          otherExists : set sutId (addVote tree v ¬eq) blockTrees ⁉ otherId ≡ just tree
           otherExists =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v ¬eq} {m = blockTrees} sutId≢otherId)
               (otherTree inv)
 
           trace : s₀ ↝⋆ s₁
@@ -801,19 +807,19 @@ module _ ⦃ postulates : Postulates ⦄
                     (honest {p = sutId}
                       (sutTree inv)
                       (Any.here refl)
-                      VoteReceived
+                      (VoteReceived ¬eq)
                     )
                 ↣ Fetch {m = VoteMsg v}
                     (honest {p = otherId}
                       otherExists
                       (Any.here refl)
-                      VoteReceived
+                      (VoteReceived ¬eq)
                     )
                 ↣ NextSlot (invFetched inv)
                 ↣ ∎
 
           tree⁺ : NodeModel
-          tree⁺ = addVote tree v
+          tree⁺ = addVote tree v ¬eq
 
           s₁-agrees :
             let s = record s₀
@@ -858,8 +864,8 @@ module _ ⦃ postulates : Postulates ⦄
                   fetched {
                     record s₀
                       { blockTrees =
-                          set otherId (addVote tree v)
-                            (set sutId (addVote tree v)
+                          set otherId (addVote tree v ¬eq)
+                            (set sutId (addVote tree v ¬eq)
                               blockTrees)
                       ; history = VoteMsg v ∷ history
                       }
@@ -879,8 +885,8 @@ module _ ⦃ postulates : Postulates ⦄
                  let v = axiom-everyoneIsOnTheCommittee , axiom-checkVoteSignature checkedSig
                      s = record s₀
                            { blockTrees =
-                               set otherId (addVote (modelState s₀) v)
-                                 (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
+                               set otherId (addVote (modelState s₀) v {!!})
+                                 (set sutId (addVote (modelState s₀) v {!!}) (State.blockTrees s₀))
                            ; history = VoteMsg v ∷ (State.history s₀)
                            }
                  in modelState s
@@ -892,8 +898,8 @@ module _ ⦃ postulates : Postulates ⦄
          | (let v = axiom-everyoneIsOnTheCommittee , axiom-checkVoteSignature checkedSig
                 s = record s₀
                       { blockTrees =
-                          set otherId (addVote (modelState s₀) v)
-                            (set sutId (addVote (modelState s₀) v) (State.blockTrees s₀))
+                          set otherId (addVote (modelState s₀) v {!!})
+                            (set sutId (addVote (modelState s₀) v {!!}) (State.blockTrees s₀))
                       ; history = VoteMsg v ∷ (State.history s₀)
                       }
             in ((certificate block == Just (cert' (modelState s)) && needCert' (modelState s))
@@ -953,14 +959,17 @@ module _ ⦃ postulates : Postulates ⦄
           v : ValidVote w
           v = axiom-everyoneIsOnTheCommittee , validSignature
 
+          ¬eq : ¬ (IsEquivocation w (allVotes tree))
+          ¬eq = {!!}
+
           startOfRound : StartOfRound slot r
           startOfRound = lem-divMod _ _ (eqℕ-sound isSlotZero)
 
           s' : State
           s' = record s₀
                  { blockTrees =
-                     set otherId (addVote tree v)
-                       (set sutId (addVote tree v)
+                     set otherId (addVote tree v ¬eq)
+                       (set sutId (addVote tree v ¬eq)
                          blockTrees)
                  ; history = VoteMsg v ∷ history
                  }
@@ -975,10 +984,10 @@ module _ ⦃ postulates : Postulates ⦄
                 (cong hashBytes (blockSelection-eq {s₀}))
                 (lem-eqBS isValidBlockHash)
 
-          otherExists : set sutId (addVote tree v) blockTrees ⁉ otherId ≡ just tree
+          otherExists : set sutId (addVote tree v ¬eq) blockTrees ⁉ otherId ≡ just tree
           otherExists =
             trans
-              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v} {m = blockTrees} sutId≢otherId)
+              (k'≢k-get∘set {k = otherId} {k' = sutId} {v = addVote tree v ¬eq} {m = blockTrees} sutId≢otherId)
               (otherTree inv)
 
           trace₁ : s₀ ↝⋆ s'
@@ -996,13 +1005,13 @@ module _ ⦃ postulates : Postulates ⦄
                     (honest {p = sutId}
                       (sutTree inv)
                       (Any.here refl)
-                      VoteReceived
+                      (VoteReceived ¬eq)
                     )
                 ↣ Fetch {m = VoteMsg v}
                     (honest {p = otherId}
                       otherExists
                       (Any.here refl)
-                      VoteReceived
+                      (VoteReceived ¬eq)
                     )
                 ↣ ∎
 
@@ -1042,16 +1051,16 @@ module _ ⦃ postulates : Postulates ⦄
           s⋆ : State
           s⋆ = record s₀
                  { blockTrees =
-                     set otherId (addVote (modelState s₀) vv)
-                       (set sutId (addVote (modelState s₀) vv) blockTrees)
+                     set otherId (addVote (modelState s₀) vv {!!})
+                       (set sutId (addVote (modelState s₀) vv {!!}) blockTrees)
                  ; history = VoteMsg vv ∷ (State.history s₀)
                  }
 
           modelState-s⋆≡modelState-s' :
               let s = record s₀
                         { blockTrees =
-                            set otherId (addVote (modelState s₀) vv)
-                              (set sutId (addVote (modelState s₀) vv) blockTrees)
+                            set otherId (addVote (modelState s₀) vv {!!})
+                              (set sutId (addVote (modelState s₀) vv {!!}) blockTrees)
                         ; history = VoteMsg vv ∷ (State.history s₀)
                         }
               in record
@@ -1064,8 +1073,8 @@ module _ ⦃ postulates : Postulates ⦄
               ≡
               let s = record s₀
                         { blockTrees =
-                            set otherId (addVote (modelState s₀) v)
-                              (set sutId (addVote (modelState s₀) v) blockTrees)
+                            set otherId (addVote (modelState s₀) v ¬eq)
+                              (set sutId (addVote (modelState s₀) v ¬eq) blockTrees)
                         ; history = VoteMsg v ∷ (State.history s₀)
                         }
               in record
@@ -1078,11 +1087,11 @@ module _ ⦃ postulates : Postulates ⦄
           modelState-s⋆≡modelState-s'
             rewrite get∘set≡id
                        {k = sutId}
-                       {v = addVote (modelState s₀) v}
+                       {v = addVote (modelState s₀) v ¬eq}
                        {m = blockTrees}
             rewrite get∘set≡id
                        {k = sutId}
-                       {v = addVote (modelState s₀) vv}
+                       {v = addVote (modelState s₀) vv {!!}}
                        {m = blockTrees}
             rewrite vote≡w
             = refl
@@ -1192,8 +1201,8 @@ module _ ⦃ postulates : Postulates ⦄
 
           otherExists2 :
             set sutId (addChain (modelState s') β∷pref)
-              (set otherId (addVote tree v)
-                (set sutId (addVote tree v) blockTrees))
+              (set otherId (addVote tree v ¬eq)
+                (set sutId (addVote tree v ¬eq) blockTrees))
                   ⁉ otherId
             ≡ just (modelState s')
           otherExists2 =
@@ -1202,12 +1211,12 @@ module _ ⦃ postulates : Postulates ⦄
                 {k = otherId}
                 {k' = sutId}
                 {v = addChain (modelState s') β∷pref}
-                {m = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)}
+                {m = set otherId (addVote tree v ¬eq) (set sutId (addVote tree v ¬eq) blockTrees)}
                 sutId≢otherId)
               otherExists'
             where
-              otherExists'' : addVote (modelState s₀) v ≡
-                 let bt = set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees)
+              otherExists'' : addVote tree v ¬eq ≡
+                 let bt = set otherId (addVote tree v ¬eq) (set sutId (addVote tree v ¬eq) blockTrees)
                  in record
                       { clock        = State.clock s'
                       ; protocol     = testParams
@@ -1219,29 +1228,29 @@ module _ ⦃ postulates : Postulates ⦄
                 rewrite k'≢k-get∘set
                           {k = sutId}
                           {k' = otherId}
-                          {v = addVote tree v}
-                          {m = set sutId (addVote tree v) blockTrees}
+                          {v = addVote tree v ¬eq}
+                          {m = set sutId (addVote tree v ¬eq) blockTrees}
                           otherId≢sutId
                 rewrite get∘set≡id
                           {k = sutId}
-                          {v = addVote tree v}
+                          {v = addVote tree v ¬eq}
                           {m = blockTrees}
                 = refl
 
               otherExists' :
-                set otherId (addVote tree v) (set sutId (addVote tree v) blockTrees) ⁉ otherId
+                set otherId (addVote tree v ¬eq) (set sutId (addVote tree v ¬eq) blockTrees) ⁉ otherId
                   ≡ just (modelState s')
               otherExists' =
                 trans
                   (get∘set∘set
                     {k = otherId}
                     {k' = sutId}
-                    {v = addVote tree v}
-                    {v' = addVote tree v}
+                    {v = addVote tree v ¬eq}
+                    {v' = addVote tree v ¬eq}
                     {m = blockTrees})
                   (trans (get∘set≡id
                            {k = otherId}
-                           {v = addVote tree v}
+                           {v = addVote tree v ¬eq}
                            {m = blockTrees})
                              (cong just otherExists''))
 
@@ -1293,7 +1302,7 @@ module _ ⦃ postulates : Postulates ⦄
             let s = record s₀
                       { blockTrees =
                           set sutId (addChain (modelState s') β∷pref) (
-                          set sutId (addVote tree v) blockTrees) }
+                          set sutId (addVote tree v ¬eq) blockTrees) }
             in
             record
               { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
@@ -1313,15 +1322,15 @@ module _ ⦃ postulates : Postulates ⦄
               {k = sutId}
               {k' = otherId}
               {v = addChain (modelState s') β∷pref}
-              {v' = addVote tree v}
-              {m = set sutId (addVote tree v) blockTrees}
+              {v' = addVote tree v ¬eq}
+              {m = set sutId (addVote tree v ¬eq) blockTrees}
             = refl
 
           addVote-modelState-lem :
             let s = record s₀
                       { blockTrees =
                           set sutId (addChain (modelState s') β∷pref) (
-                          set sutId (addVote tree v) blockTrees) }
+                          set sutId (addVote tree v ¬eq) blockTrees) }
             in
             record
               { clock        = MkSlotNumber (suc (getSlotNumber (State.clock s)))
@@ -1348,7 +1357,7 @@ module _ ⦃ postulates : Postulates ⦄
                 {k = sutId}
                 {k' = sutId}
                 {v = addChain (modelState s') β∷pref}
-                {v' = addVote tree v}
+                {v' = addVote tree v ¬eq}
                 {m = blockTrees}
             = refl
 
@@ -1473,12 +1482,12 @@ module _ ⦃ postulates : Postulates ⦄
             rewrite k'≢k-get∘set
               {k  = sutId}
               {k' = otherId}
-              {v  = addVote tree v}
-              {m  = set sutId (addVote tree v) blockTrees}
+              {v  = addVote tree v ¬eq}
+              {m  = set sutId (addVote tree v ¬eq) blockTrees}
               otherId≢sutId
             rewrite get∘set≡id
               {k = sutId}
-              {v = addVote tree v}
+              {v = addVote tree v ¬eq}
               {m = blockTrees}
             = refl
 
@@ -1537,12 +1546,12 @@ module _ ⦃ postulates : Postulates ⦄
             rewrite k'≢k-get∘set
               {k  = sutId}
               {k' = otherId}
-              {v  = addVote tree v}
-              {m  = set sutId (addVote tree v) blockTrees}
+              {v  = addVote tree v ¬eq}
+              {m  = set sutId (addVote tree v ¬eq) blockTrees}
               otherId≢sutId
             rewrite get∘set≡id
               {k = sutId}
-              {v = addVote tree v}
+              {v = addVote tree v ¬eq}
               {m = blockTrees}
             = refl
 
@@ -1622,8 +1631,8 @@ module _ ⦃ postulates : Postulates ⦄
                 fetched {
                   record s₀
                     { blockTrees =
-                        set otherId (addVote tree v)
-                          (set sutId (addVote tree v)
+                        set otherId (addVote tree v ¬eq)
+                          (set sutId (addVote tree v ¬eq)
                             blockTrees)
                     ; history = ChainMsg β∷pref ∷ State.history s'
                     }
