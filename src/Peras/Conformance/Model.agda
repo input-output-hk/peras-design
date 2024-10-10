@@ -574,3 +574,26 @@ transition _ s (BadVote v) = do
   Just (([] , []) , s)
 
 {-# COMPILE AGDA2HS transition #-}
+
+module _ where
+
+  open import Data.List.Membership.Propositional
+
+  postulate
+    set-like : ∀ {c : Certificate} {l : List Certificate}
+      → c ∈ l
+      → insertCert c l ≡ l
+
+    foldr-step : ∀ {C : Set} {c : C} {l₁ l₂ : List C}
+      → (f : C → List C → List C)
+      →   foldr f l₁ (c ∷ l₂)
+        ≡ foldr f (f c l₁) l₂
+
+  c∈l₁⇒no-insert : ∀ {c : Certificate} {l₁ l₂ : List Certificate}
+    → c ∈ l₁
+    →   foldr insertCert l₁ (c ∷ l₂)
+      ≡ foldr insertCert l₁ l₂
+  c∈l₁⇒no-insert {c} {l₁} {l₂} x
+    with s ← foldr-step {_} {c} {l₁} {l₂} insertCert
+    rewrite set-like {c} {l₁} x
+    = s

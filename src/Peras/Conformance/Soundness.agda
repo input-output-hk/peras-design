@@ -1391,7 +1391,7 @@ module _ ⦃ postulates : Postulates ⦄
             rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Just (cert' (modelState s⋆))}
                       (&&-leftTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l)
             rewrite &&-rightTrue (certificate block == Just (cert' (modelState s⋆))) (needCert' (modelState s⋆)) l
-            = {!!}
+            = c∈l₁⇒no-insert {l₂ = certsFromChain (prefChain (modelState s⋆))} (latestCertSeen∈certs (modelState s⋆))
           ... | inj₂ r
             rewrite eqMaybe-sound {m₁ = certificate block} {m₂ = Nothing}
                       (&&-leftTrue (certificate block == Nothing) (not (needCert' (modelState s⋆))) r)

@@ -221,6 +221,9 @@ The block-tree type is defined as follows:
 
     allBlocks : T → List Block
     allBlocks = concat ∘ chains
+
+    postulate
+      latestCertSeen∈certs : ∀ t → latestCertSeen t ∈ certs t
 ```
 ### Additional parameters
 
