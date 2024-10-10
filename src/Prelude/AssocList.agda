@@ -69,14 +69,13 @@ module _ {K V : Type} where
           → k' ≢ k
           → set k' v m ⁉ k ≡ m ⁉ k
 
-        k'≢k-set-assoc : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
+        k'≢k-set-comm : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
           → k' ≢ k
           → set k v (set k' v' m) ≡ set k' v' (set k v m)
 
-      k'≢k-get∘set∘set : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
-        → k' ≢ k
+      get∘set∘set : ∀ {k k' : K} {v v' : V} {m : AssocList K V}
         → set k v (set k' v' m) ⁉ k ≡ set k v m ⁉ k
-      k'≢k-get∘set∘set {k} {k'} {v} {v'} {m} p =
-        trans
-          (cong (_⁉ k) (k'≢k-set-assoc {k} {k'} {v} {v'} {m} p))
-          (k'≢k-get∘set {k} {k'} {v'} {m = set k v m} p)
+      get∘set∘set {k} {k'} {v} {v'} {m} =
+        let s = get∘set≡id {k} {v} {set k' v' m}
+            t = get∘set≡id {k} {v} {m}
+        in trans s (sym t)
