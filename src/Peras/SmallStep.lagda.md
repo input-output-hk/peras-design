@@ -136,7 +136,6 @@ Properties that must hold with respect to chains, certificates and votes.
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
 
-      -- TODO: can be express by other properties
       self-contained-certs : ∀ (t : T) {c : Chain}
         → c ∈ chains t
         → certs t ≡ foldr insertCert (certs t) (certsFromChain c)
@@ -155,11 +154,6 @@ Properties that must hold with respect to chains, certificates and votes.
 
       self-contained : ∀ (t : T)
         → preferredChain t ∈ chains t
-
-{-
-      valid-votes : ∀ (t : T)
-        → All ValidVote (votes t)
--}
 
 {-
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
@@ -222,7 +216,9 @@ The block-tree type is defined as follows:
     allBlocks : T → List Block
     allBlocks = concat ∘ chains
 
-    postulate
+    postulate -- TODO: any t is constructed based on tree₀
+              --       using addVote, addChain and tree₀
+              --       contains cert₀ (see instantiated-certs above)
       latestCertSeen∈certs : ∀ t → latestCertSeen t ∈ certs t
 ```
 ### Additional parameters
