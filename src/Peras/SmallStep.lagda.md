@@ -10,10 +10,11 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 
 open import Data.Maybe using (just; nothing)
+import Data.List as L
 open import Data.List.Relation.Unary.Any using () renaming (_∷=_ to _∷ˡ=_)
+open import Data.List.Membership.Propositional
 open import Data.Fin using (Fin) renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (_%_; _≥_; _>_; _≤_; NonZero)
-open import Data.List.Membership.Propositional
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
 open import Data.Product using () renaming (_,_ to _,ᵖ_)
 
@@ -160,10 +161,11 @@ Properties that must hold with respect to chains, certificates and votes.
         → Any (v ∻_) (votes t)
         → votes t ≡ votes (addVote t vv)
 -}
-      quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
-        → length (filter (λ {v →
-                    (getRoundNumber (votingRound v) ≟ r)
-              ×-dec (blockHash v ≟-BlockHash hash b)}
+      quorum-cert : ∀ (t : T) (b : Block) (r : Nat)
+        → L.length
+            (filter (λ {v →
+                    (getRoundNumber (votingRound v) == r)
+                 && (blockHash v == hash b)}
             ) (votes t)) ≥ τ
         → Any (λ {c →
             (getRoundNumber (round c) ≡ r)
