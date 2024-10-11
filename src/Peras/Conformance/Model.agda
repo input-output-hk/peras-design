@@ -579,7 +579,7 @@ module _ where
 
   open import Data.List.Membership.Propositional
 
-  postulate
+  postulate -- TODO
     set-like : ∀ {c : Certificate} {l : List Certificate}
       → c ∈ l
       → insertCert c l ≡ l

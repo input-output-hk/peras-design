@@ -62,7 +62,7 @@ eqBS-sound = lem-eqBS
 not-involution' : ∀ (a b : Bool) → not a ≡ b → a ≡ not b
 not-involution' b .(not b) refl = sym (not-not b)
 
-postulate
+postulate -- TODO: Use IsLawfulEq instances
   not-eqBS-sound : {n m : ByteString} → eqBS n m ≡ False → n ≡ m → ⊥
   eqList-sound : ⦃ _ : Eq a ⦄ → {l₁ l₂ : List a} → (l₁ == l₂) ≡ True → l₁ ≡ l₂
   eqMaybe-sound : ⦃ _ : Eq a ⦄ → {m₁ m₂ : Maybe a} → (m₁ == m₂) ≡ True → m₁ ≡ m₂

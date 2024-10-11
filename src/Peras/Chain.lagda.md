@@ -165,10 +165,6 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 ```
 ```agda
-  pointsInto : Certificate → Chain → Bool
-  pointsInto c ch = any (λ b → (blockRef c == hash b)) ch
-```
-```agda
   StartOfRound : SlotNumber → RoundNumber → Set
   StartOfRound (MkSlotNumber sl) (MkRoundNumber r) = sl ≡ r * U
 ```
@@ -183,15 +179,20 @@ module _ ⦃ _ : Hashable Block ⦄
 ### Chain weight
 
 The weight of a chain is defined with respect of the Peras parameters
-
 ```agda
   weight : Chain → List Certificate → Nat
-  weight ch cts = len ch + len (filter (flip pointsInto ch) cts) * B
+  weight ch cts = chainWeight' 0 ch
     where
-      len : ∀ {a : Set} → List a → Nat
-      len = foldr (const suc) 0
-```
+      isCertified : Block → Bool
+      isCertified block = any (λ cert → hash block == blockRef cert) cts
 
+      chainWeight' : Nat → Chain → Nat
+      chainWeight' accum [] = accum
+      chainWeight' accum (block ∷ blocks) =
+        if isCertified block
+          then chainWeight' (accum + 1 + B) blocks
+          else chainWeight' (accum + 1) blocks
+```
 ### Chain validity
 
 ```agda

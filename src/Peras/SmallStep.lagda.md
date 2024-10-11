@@ -10,10 +10,11 @@ open Default ⦃...⦄
 open import Prelude.InferenceRules
 
 open import Data.Maybe using (just; nothing)
+import Data.List as L
 open import Data.List.Relation.Unary.Any using () renaming (_∷=_ to _∷ˡ=_)
+open import Data.List.Membership.Propositional
 open import Data.Fin using (Fin) renaming (zero to fzero; suc to fsuc)
 open import Data.Nat using (_%_; _≥_; _>_; _≤_; NonZero)
-open import Data.List.Membership.Propositional
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
 open import Data.Product using () renaming (_,_ to _,ᵖ_)
 
@@ -109,11 +110,11 @@ has to fulfil all the properties mentioned below:
   record IsTreeType {T : Set}
                     (tree₀ : T)
                     (addChain : T → {c : Chain} → ValidChain c → T)
-                    (chains : T → List Chain)
+                    (chains : T → List Chain) -- TODO: use Set instead of List
                     (preferredChain : T → Chain)
                     (addVote : T → {v : Vote} → ValidVote v → T)
-                    (votes : T → List Vote)
-                    (certs : T → List Certificate)
+                    (votes : T → List Vote) -- TODO: use Set instead of List
+                    (certs : T → List Certificate) -- TODO: use Set instead of List
                     (cert₀ : Certificate)
          : Set₁ where
 
@@ -136,7 +137,6 @@ Properties that must hold with respect to chains, certificates and votes.
       extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
         → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
 
-      -- TODO: can be express by other properties
       self-contained-certs : ∀ (t : T) {c : Chain}
         → c ∈ chains t
         → certs t ≡ foldr insertCert (certs t) (certsFromChain c)
@@ -145,45 +145,31 @@ Properties that must hold with respect to chains, certificates and votes.
         → ValidChain (preferredChain t)
 
       optimal : ∀ (c : Chain) (t : T)
-        → let
-            b = preferredChain t
-            cts = certs t
-          in
-          ValidChain c
         → c ∈ chains t
-        → weight c cts ≤ weight b cts
+        → weight c (certs t) ≤ weight (preferredChain t) (certs t)
 
       self-contained : ∀ (t : T)
         → preferredChain t ∈ chains t
-
 {-
-      valid-votes : ∀ (t : T)
-        → All ValidVote (votes t)
--}
-
-{-
+      -- TODO: use Set instead of List for votes
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
-        → let vs = votes t
-          in
-          v ∈ vs
-        → vs ≡ votes (addVote t vv)
+        → v ∈ votes t
+        → votes t ≡ votes (addVote t vv)
 
+      -- TODO: use Set with `equivocation` as equivalence relation for votes
       no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
-        → let vs = votes t
-          in
-          Any (v ∻_) vs
-        → vs ≡ votes (addVote t vv)
+        → Any (v ∻_) (votes t)
+        → votes t ≡ votes (addVote t vv)
 -}
-{-
-      quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
-        → length (filter (λ {v →
-                    (getRoundNumber (votingRound v) ≟ r)
-              ×-dec (blockHash v ≟-BlockHash hash b)}
+      quorum-cert : ∀ (t : T) (b : Block) (r : Nat)
+        → L.length
+            (filter (λ {v →
+                    (getRoundNumber (votingRound v) == r)
+                 && (blockHash v == hash b)}
             ) (votes t)) ≥ τ
         → Any (λ {c →
             (getRoundNumber (round c) ≡ r)
           × (blockRef c ≡ hash b) }) (certs t)
--}
 ```
 In addition to chains the block-tree manages votes and certificates as well.
 The block-tree type is defined as follows:
@@ -222,7 +208,9 @@ The block-tree type is defined as follows:
     allBlocks : T → List Block
     allBlocks = concat ∘ chains
 
-    postulate
+    postulate -- TODO: any t is constructed based on tree₀
+              --       using addVote, addChain and tree₀
+              --       contains cert₀ (see instantiated-certs above)
       latestCertSeen∈certs : ∀ t → latestCertSeen t ∈ certs t
 ```
 ### Additional parameters
@@ -252,7 +240,7 @@ additionally:
 ```
 #### Block-tree update
 
-Updating the block-tree upon receiving a message for vote and block messages.
+Updating the block-tree upon receiving a message for vote and chain messages.
 
 ```agda
     data _[_]→_ : T → Message → T → Set where
@@ -272,6 +260,8 @@ in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
 #### BlockSelection
+
+Block selection is to decide on which block to vote for.
 ```agda
     BlockSelection' : SlotNumber → Chain → Hash Block
     BlockSelection' (MkSlotNumber s) = tipHash ∘ filter (λ {b → (slotNumber' b) + L <= s})
@@ -281,12 +271,12 @@ cool-down phase.
 ```
 #### Voting rules
 
-VR-1A: A party has seen a certificate cert-r−1 for round r−1
+VR-1A: A party has seen a certificate `cert-r−1` for round `r−1`
 ```agda
     VotingRule-1A : RoundNumber → T → Set
     VotingRule-1A r t = r ≡ nextRound (round (latestCertSeen t))
 ```
-VR-1B: The  extends the block certified by cert-r−1,
+VR-1B: The  extends the block certified by `cert-r−1`,
 ```agda
     VotingRule-1B : SlotNumber → T → Set
     VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (chains t)
@@ -564,13 +554,7 @@ The relation allows
 * Fetching messages at the beginning of each slot
 * Block creation
 * Voting
-* Transitioning to next slot in the same voting round
-* Transitioning to next slot in a new voting round
-
-Note, when transitioning to the next slot we need to distinguish whether the
-next slot is in the same or a new voting round. This is necessary in order to
-detect adversarial behaviour with respect to voting (adversarialy not voting
-in a voting round)
+* Transitioning to next slot
 ```agda
     data _↝_ : State → State → Set where
 

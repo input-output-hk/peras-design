@@ -14,7 +14,7 @@ import Data.List.Relation.Unary.Any as Any
 import Data.List.Relation.Unary.All as All
 
 open import Data.List.Relation.Unary.Any.Properties
-open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_)
+open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_; _≤_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe; maybe′; nothing; just)
@@ -115,33 +115,17 @@ module _ ⦃ postulates : Postulates ⦄
     open SmallStep using (⦅_,_,_,_⦆)
     open SmallStep.Message
 
-    open import Data.List.Membership.Propositional
-    import Data.List.Relation.Unary.All as All
-
-{-
-    postulate
-      maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
-        → maximumBy d o l ∈ d ∷ l
--}
-
     addChain'' : NodeModel → {c : Chain} → ValidChain c → NodeModel
     addChain'' s {c} _ = addChain' s c
 
     addVote'' : NodeModel → {v : Vote} → ValidVote v → NodeModel
     addVote'' s {v} _ = addVote' s v
 
-    {-
-    allChains' : NodeModel → List Chain
-    allChains' t with (allChains t) == []
-    ... | True = genesisChain ∷ []
-    ... | False = allChains t
-    -}
-
     isTreeType :
       SmallStep.IsTreeType
         initialModelState
         addChain''
-        allChains -- (λ t → genesisChain ∷ allChains t)
+        allChains -- TODO: (λ t → genesisChain ∷ allChains t) ?
         pref
         addVote''
         allVotes
@@ -155,13 +139,11 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
-        ; self-contained-certs = λ _ _ → {!refl!}
-        ; valid = {!!}
-        ; optimal = {!!} -- ok
-        ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
---        ; unique-votes = {!!}
---        ; no-equivocations = {!!}
---        ; quorum-cert = {!!} -- invariants
+        ; self-contained-certs = {!!} -- TODO
+        ; valid = {!!} -- TODO
+        ; optimal = {!!} -- TODO
+        ; self-contained = {!!} -- TODO
+        ; quorum-cert = {!!} -- TODO
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
@@ -214,11 +196,6 @@ module _ ⦃ postulates : Postulates ⦄
         → State.blockTrees sⱼ ⁉ p ≡ just (modelState sⱼ)
 
       fetched→[] : ∀ {s} → Fetched s → State.messages s ≡ []
-      -- fetched→[] {s} x = {!!} -- all parties are honest and therefore there are no delayed messages
-
-      noCertsFromQuorum : ∀ {s : State} → Fetched s → certsFromQuorum (modelState s) ≡ []
-      -- noCertsFromQuorum = {!!}
-
 
     fetched : ∀ {s} → Fetched s → Fetched (tick s)
     fetched {s} x
@@ -230,13 +207,6 @@ module _ ⦃ postulates : Postulates ⦄
         invFetched : Fetched s
         sutTree : State.blockTrees s ⁉ sutId ≡ just (modelState s)
         otherTree : State.blockTrees s ⁉ otherId ≡ just (modelState s)
-{-
-        no-equivocations : ∀ (t : T) (v : Vote)
-          → let vs = votes t
-            in
-            Any (v ∻_) vs
-          → vs ≡ votes (addVote t v)
--}
 
     open Invariant
 
@@ -1379,10 +1349,10 @@ module _ ⦃ postulates : Postulates ⦄
               {m = blockTrees}
             = refl
 
-          noNewCertβx :
+          noNewCertβ⋆ :
               foldr insertCert (allSeenCerts (modelState s⋆)) (certsFromChain (block ∷ prefChain (modelState s⋆)))
             ≡ foldr insertCert (allSeenCerts (modelState s⋆)) (certsFromChain (prefChain (modelState s⋆)))
-          noNewCertβx
+          noNewCertβ⋆
             with ⊎≡True
                 {certificate block == Just (cert' (modelState s⋆)) && needCert' (modelState s⋆)}
                 {certificate block == Nothing && not (needCert' (modelState s⋆))}
@@ -1401,7 +1371,7 @@ module _ ⦃ postulates : Postulates ⦄
           noNewCertβ0 :
               foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (block ∷ prefChain (modelState s')))
             ≡ foldr insertCert (allSeenCerts (modelState s')) (certsFromChain (prefChain (modelState s')))
-          noNewCertβ0 = subst P modelState-s⋆≡modelState-s' noNewCertβx
+          noNewCertβ0 = subst P modelState-s⋆≡modelState-s' noNewCertβ⋆
             where
               P : NodeModel → Set
               P s =   foldr insertCert (allSeenCerts s) (certsFromChain (block ∷ prefChain s))
@@ -1631,81 +1601,6 @@ module _ ⦃ postulates : Postulates ⦄
               ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
               ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
               }
-
-
-{-
-    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | True | vote ∷ [] | (block ∷ rest) ∷ []
-      | _ | _ | _ | _ | _
-      | _ | _ | _ | _ | _ | _ | _ = {!!}
-
-
-    tick-soundness s₀ inv refl
-      | True | _ | _ = {!!} -- a vote is expected
-
-    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | False
-      with cs
-
-    tick-soundness {cs} {vs} {ms₁} s₀ inv refl
-      | False
-      | []
-      rewrite isSlotZero
-      =
-        record
-          { s₁          = s₁
-          ; invariant₀  = inv
-          ; invariant₁  = inv₁
-          ; trace       = trace
-          ; s₁-agrees   = {!s₁-agrees!} -- s₁-agrees
-          ; votes-agree = votes-agree
-          }
-
-      where
-        open State s₀ renaming (clock to slot)
-
-        tree : NodeModel
-        tree = modelState s₀
-
-        s₁ : State
-        s₁ = tick s₀
-
-        invFetched₁ : Fetched s₁
-        invFetched₁ = fetched {s₀} (invFetched inv)
-
-        s₁-agrees :
-          modelState s₁ ≡ ms₁
-          {-
-          modelState (tick s₀)
-          ≡
-          record
-            { clock        = MkSlotNumber (suc (getSlotNumber slot))
-            ; protocol     = testParams
-            ; allChains    = maybe′ chains [] (State.blockTrees s₀ ⁉ sutId)
-            ; allVotes     = maybe′ votes  [] (State.blockTrees s₀ ⁉ sutId)
-            ; allSeenCerts = maybe′ certs  [] (State.blockTrees s₀ ⁉ sutId)
-            } -}
-        s₁-agrees
-          rewrite noCertsFromQuorum {s₁} invFetched₁
-          = {!!} -- refl
-
-        trace : s₀ ↝⋆ s₁
-        trace = NextSlot (invFetched inv) ↣ ∎
-
-        votes-agree : sutVotesInTrace trace ≡ map (slot ,_) vs
-        votes-agree = {!refl!} -- isSlotZero ≡ False → no vote
-
-        inv₁ : Invariant s₁
-        inv₁ =
-          record
-            { invFetched = invFetched₁
-            ; sutTree = existsTrees {sutId} {s₀} {s₁} (sutTree inv) trace
-            ; otherTree = existsTrees {otherId} {s₀} {s₁} (otherTree inv) trace
-            }
-
-    tick-soundness s₀ inv refl
-      | False | _ = {!!}
--}
 
     @0 badVote-soundness : ∀ {cs vs ms₁ p} s₀ vote
                           → Invariant s₀
