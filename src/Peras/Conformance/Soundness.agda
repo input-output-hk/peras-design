@@ -139,11 +139,11 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
-        ; self-contained-certs = λ _ _ → {!!}
-        ; valid = {!!}
-        ; optimal = {!!} -- TODO: proof
-        ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
---        ; quorum-cert = {!!} -- invariants
+        ; self-contained-certs = λ _ _ → {!!} -- TODO
+        ; valid = {!!} -- TODO
+        ; optimal = {!!} -- TODO
+        ; self-contained = {!!} -- TODO
+        ; quorum-cert = {!!} -- TODO
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel

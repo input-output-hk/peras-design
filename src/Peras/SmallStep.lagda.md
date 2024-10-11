@@ -149,18 +149,17 @@ Properties that must hold with respect to chains, certificates and votes.
 
       self-contained : ∀ (t : T)
         → preferredChain t ∈ chains t
-
-{-    -- TODO: use Set instead of List for votes
+{-
+      -- TODO: use Set instead of List for votes
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → v ∈ votes t
         → votes t ≡ votes (addVote t vv)
--}
-{-    -- TODO: use Set with `equivocation` as equivalence relation for votes
+
+      -- TODO: use Set with `equivocation` as equivalence relation for votes
       no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
         → Any (v ∻_) (votes t)
         → votes t ≡ votes (addVote t vv)
 -}
-{-
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
         → length (filter (λ {v →
                     (getRoundNumber (votingRound v) ≟ r)
@@ -169,7 +168,6 @@ Properties that must hold with respect to chains, certificates and votes.
         → Any (λ {c →
             (getRoundNumber (round c) ≡ r)
           × (blockRef c ≡ hash b) }) (certs t)
--}
 ```
 In addition to chains the block-tree manages votes and certificates as well.
 The block-tree type is defined as follows:
