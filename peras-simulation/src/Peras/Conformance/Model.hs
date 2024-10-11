@@ -14,12 +14,12 @@ module Peras.Conformance.Model where
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
 import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), insertCert, lastSlot)
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), certsFromChain, insertCert, lastSlot)
 import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
-import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, mapMaybe, maximumBy, maybeToList)
+import Peras.Util (comparing, decP, decS, eqDec, ge, gt, isYes, maximumBy, maybeToList)
 
 import Control.Monad.Identity
 import Data.Function (on)
@@ -142,7 +142,7 @@ certS s =
   maximumBy
     genesisCert
     (comparing (\r -> round r))
-    (mapMaybe (\r -> certificate r) (pref s))
+    (certsFromChain (pref s))
 
 testParams :: PerasParams
 testParams =
@@ -190,11 +190,7 @@ addChain' s c =
     (protocol s)
     (c : allChains s)
     (allVotes s)
-    ( foldr
-        insertCert
-        (allSeenCerts s)
-        (mapMaybe (\r -> certificate r) c)
-    )
+    (foldr insertCert (allSeenCerts s) (certsFromChain c))
 
 newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
 newQuora _ _ [] = []
@@ -366,51 +362,6 @@ votesInState sutIsVoter = maybeToList . voteInState sutIsVoter
 
 type SutIsSlotLeader = SlotNumber -> Bool
 
-chainInState :: SutIsSlotLeader -> NodeModel -> Maybe Chain
-chainInState sutIsSlotLeader s =
-  do
-    guard (sutIsSlotLeader (clock s))
-    guard (slotNumber block == clock s)
-    guard (checkBlockFromSut block)
-    guard (parentBlock block == tipHash rest)
-    guard (rest == pref s)
-    guard (checkSignedBlock block)
-    guard (checkLeadershipProof (leadershipProof block))
-    guard (lastSlot rest < slotNumber block)
-    guard (bodyHash block == hash [])
-    pure (block : rest)
- where
-  rest :: Chain
-  rest = pref s
-  notPenultimateCert :: Certificate -> Bool
-  notPenultimateCert cert =
-    getRoundNumber (round cert) + 2 /= getRoundNumber (rFromSlot s)
-  noPenultimateCert :: Bool
-  noPenultimateCert = all notPenultimateCert (allSeenCerts s)
-  unexpiredCert' :: Bool
-  unexpiredCert' =
-    getRoundNumber (round (cert' s)) + perasA (protocol s)
-      >= getRoundNumber (rFromSlot s)
-  newerCert' :: Bool
-  newerCert' =
-    getRoundNumber (round (cert' s))
-      > getRoundNumber (round (certS s))
-  includeCert' :: Bool
-  includeCert' = noPenultimateCert && unexpiredCert' && newerCert'
-  block :: Block
-  block =
-    createSignedBlock
-      (mkParty sutId [] [])
-      (clock s)
-      (tipHash rest)
-      (if includeCert' then Just (cert' s) else Nothing)
-      (createLeadershipProof (clock s) [mkParty sutId [] []])
-      (MkHash emptyBS)
-
-chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
-chainsInState sutIsSlotLeader =
-  maybeToList . chainInState sutIsSlotLeader
-
 needCert' :: NodeModel -> Bool
 needCert' s =
   not
@@ -423,8 +374,41 @@ needCert' s =
     )
     && getRoundNumber (slotToRound (protocol s) (clock s))
       <= perasA (protocol s) + getRoundNumber (round (cert' s))
-    && getRoundNumber (round (certS s))
-      <= getRoundNumber (round (cert' s))
+    && getRoundNumber (round (certS s)) < getRoundNumber (round (cert' s))
+
+chainInState :: SutIsSlotLeader -> NodeModel -> Maybe Chain
+chainInState sutIsSlotLeader s =
+  do
+    guard (sutIsSlotLeader (clock s))
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromSut block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
+    guard
+      ( certificate block == Just (cert' s) && needCert' s
+          || certificate block == Nothing && not (needCert' s)
+      )
+    pure (block : rest)
+ where
+  rest :: Chain
+  rest = pref s
+  block :: Block
+  block =
+    createSignedBlock
+      (mkParty sutId [] [])
+      (clock s)
+      (tipHash rest)
+      (if needCert' s then Just (cert' s) else Nothing)
+      (createLeadershipProof (clock s) [mkParty sutId [] []])
+      (MkHash emptyBS)
+
+chainsInState :: SutIsSlotLeader -> NodeModel -> [Chain]
+chainsInState sutIsSlotLeader =
+  maybeToList . chainInState sutIsSlotLeader
 
 transition ::
   (SutIsSlotLeader, SutIsVoter) ->
@@ -513,173 +497,33 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
         )
     )
 transition _ _ (NewChain []) = Nothing
-transition
-  _
-  s
-  ( NewChain
-      ( MkBlock
-          slotNumber
-          creatorId
-          parentBlock
-          Nothing
-          leadershipProof
-          signature
-          bodyHash
-          : rest
-        )
-    ) =
-    do
-      guard (not $ needCert' s)
-      guard (slotNumber == clock s)
-      guard
-        ( checkBlockFromOther
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                Nothing
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (parentBlock == tipHash rest)
-      guard (rest == pref s)
-      guard
-        ( checkSignedBlock
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                Nothing
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (checkLeadershipProof leadershipProof)
-      guard (lastSlot rest < slotNumber)
-      guard (bodyHash == hash [])
-      Just
-        ( ([], [])
-        , NodeModel
-            (clock s)
-            (protocol s)
-            ( ( MkBlock
-                  slotNumber
-                  creatorId
-                  parentBlock
-                  Nothing
-                  leadershipProof
-                  signature
-                  bodyHash
-                  : rest
-              )
-                : allChains s
-            )
-            (allVotes s)
-            ( foldr
-                insertCert
-                (allSeenCerts s)
-                ( mapMaybe
-                    (\r -> certificate r)
-                    ( MkBlock
-                        slotNumber
-                        creatorId
-                        parentBlock
-                        Nothing
-                        leadershipProof
-                        signature
-                        bodyHash
-                        : rest
-                    )
-                )
-            )
-        )
-transition
-  _
-  s
-  ( NewChain
-      ( MkBlock
-          slotNumber
-          creatorId
-          parentBlock
-          (Just cert)
-          leadershipProof
-          signature
-          bodyHash
-          : rest
-        )
-    ) =
-    do
-      guard (needCert' s)
-      guard (cert == cert' s)
-      guard (slotNumber == clock s)
-      guard
-        ( checkBlockFromOther
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                (Just cert)
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (parentBlock == tipHash rest)
-      guard (rest == pref s)
-      guard
-        ( checkSignedBlock
-            ( MkBlock
-                slotNumber
-                creatorId
-                parentBlock
-                (Just cert)
-                leadershipProof
-                signature
-                bodyHash
-            )
-        )
-      guard (checkLeadershipProof leadershipProof)
-      guard (lastSlot rest < slotNumber)
-      guard (bodyHash == hash [])
-      Just
-        ( ([], [])
-        , NodeModel
-            (clock s)
-            (protocol s)
-            ( ( MkBlock
-                  slotNumber
-                  creatorId
-                  parentBlock
-                  (Just cert)
-                  leadershipProof
-                  signature
-                  bodyHash
-                  : rest
-              )
-                : allChains s
-            )
-            (allVotes s)
-            ( foldr
-                insertCert
-                (allSeenCerts s)
-                ( mapMaybe
-                    (\r -> certificate r)
-                    ( MkBlock
-                        slotNumber
-                        creatorId
-                        parentBlock
-                        (Just cert)
-                        leadershipProof
-                        signature
-                        bodyHash
-                        : rest
-                    )
-                )
-            )
-        )
+transition _ s (NewChain (block : rest)) =
+  do
+    guard
+      ( certificate block == Just (cert' s) && needCert' s
+          || certificate block == Nothing && not (needCert' s)
+      )
+    guard (slotNumber block == clock s)
+    guard (checkBlockFromOther block)
+    guard (parentBlock block == tipHash rest)
+    guard (rest == pref s)
+    guard (checkSignedBlock block)
+    guard (checkLeadershipProof (leadershipProof block))
+    guard (lastSlot rest < slotNumber block)
+    guard (bodyHash block == hash [])
+    Just
+      ( ([], [])
+      , NodeModel
+          (clock s)
+          (protocol s)
+          ((block : rest) : allChains s)
+          (allVotes s)
+          ( foldr
+              insertCert
+              (allSeenCerts s)
+              (certsFromChain (block : rest))
+          )
+      )
 transition _ s (NewVote v) =
   do
     guard (slotInRound (protocol s) (clock s) == 0)

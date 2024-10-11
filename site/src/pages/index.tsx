@@ -36,6 +36,11 @@ function HomepageHeader() {
                         to="/docs/intro">
                         Start here 🚀
                     </Link>
+                    <Link
+                        className={clsx("button button--secondary button--lg", styles.ctaButton)}
+                        to="/docs/faq">
+                        F.A.Q. ❓
+                    </Link>
                 </div>
             </header>
             <div style={{ width: "100%", display: "flex" }}>
