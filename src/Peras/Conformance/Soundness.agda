@@ -125,7 +125,7 @@ module _ ⦃ postulates : Postulates ⦄
       SmallStep.IsTreeType
         initialModelState
         addChain''
-        allChains -- TODO: (λ t → genesisChain ∷ allChains t)
+        allChains -- TODO: (λ t → genesisChain ∷ allChains t) ?
         pref
         addVote''
         allVotes
@@ -139,7 +139,7 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
-        ; self-contained-certs = λ _ _ → {!!} -- TODO
+        ; self-contained-certs = {!!} -- TODO
         ; valid = {!!} -- TODO
         ; optimal = {!!} -- TODO
         ; self-contained = {!!} -- TODO

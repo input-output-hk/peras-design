@@ -240,7 +240,7 @@ additionally:
 ```
 #### Block-tree update
 
-Updating the block-tree upon receiving a message for vote and block messages.
+Updating the block-tree upon receiving a message for vote and chain messages.
 
 ```agda
     data _[_]→_ : T → Message → T → Set where
@@ -260,6 +260,8 @@ in the previous round a quorum has been achieved or that voting resumes after a
 cool-down phase.
 
 #### BlockSelection
+
+Block selection is to decide on which block to vote for.
 ```agda
     BlockSelection' : SlotNumber → Chain → Hash Block
     BlockSelection' (MkSlotNumber s) = tipHash ∘ filter (λ {b → (slotNumber' b) + L <= s})
@@ -269,12 +271,12 @@ cool-down phase.
 ```
 #### Voting rules
 
-VR-1A: A party has seen a certificate cert-r−1 for round r−1
+VR-1A: A party has seen a certificate `cert-r−1` for round `r−1`
 ```agda
     VotingRule-1A : RoundNumber → T → Set
     VotingRule-1A r t = r ≡ nextRound (round (latestCertSeen t))
 ```
-VR-1B: The  extends the block certified by cert-r−1,
+VR-1B: The  extends the block certified by `cert-r−1`,
 ```agda
     VotingRule-1B : SlotNumber → T → Set
     VotingRule-1B s t = Extends (BlockSelection s t) (latestCertSeen t) (chains t)
@@ -552,13 +554,7 @@ The relation allows
 * Fetching messages at the beginning of each slot
 * Block creation
 * Voting
-* Transitioning to next slot in the same voting round
-* Transitioning to next slot in a new voting round
-
-Note, when transitioning to the next slot we need to distinguish whether the
-next slot is in the same or a new voting round. This is necessary in order to
-detect adversarial behaviour with respect to voting (adversarialy not voting
-in a voting round)
+* Transitioning to next slot
 ```agda
     data _↝_ : State → State → Set where
 
