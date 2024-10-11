@@ -14,7 +14,7 @@ import Data.List.Relation.Unary.Any as Any
 import Data.List.Relation.Unary.All as All
 
 open import Data.List.Relation.Unary.Any.Properties
-open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_)
+open import Data.Nat using (NonZero; ℕ; _≡ᵇ_; _≥_; _>_; _≥?_; _>?_; _≤?_; _≤_)
 open import Data.Nat.Properties
 open import Data.Nat.DivMod
 open import Data.Maybe using (maybe; maybe′; nothing; just)
@@ -115,15 +115,6 @@ module _ ⦃ postulates : Postulates ⦄
     open SmallStep using (⦅_,_,_,_⦆)
     open SmallStep.Message
 
-    open import Data.List.Membership.Propositional
-    import Data.List.Relation.Unary.All as All
-
-{-
-    postulate
-      maximumBy-default-or-∈ : ∀ {a : Set} → (d : a) → (o : a → a → Ordering) → (l : List a)
-        → maximumBy d o l ∈ d ∷ l
--}
-
     addChain'' : NodeModel → {c : Chain} → ValidChain c → NodeModel
     addChain'' s {c} _ = addChain' s c
 
@@ -134,7 +125,7 @@ module _ ⦃ postulates : Postulates ⦄
       SmallStep.IsTreeType
         initialModelState
         addChain''
-        allChains -- (λ t → genesisChain ∷ allChains t)
+        allChains -- TODO: (λ t → genesisChain ∷ allChains t)
         pref
         addVote''
         allVotes
@@ -148,12 +139,10 @@ module _ ⦃ postulates : Postulates ⦄
         ; instantiated-votes = refl
         ; extendable-votes = λ _ _ → Any.here refl
         ; extendable-chain = λ _ _ → refl
-        ; self-contained-certs = λ _ _ → {!refl!}
+        ; self-contained-certs = λ _ _ → {!!}
         ; valid = {!!}
-        ; optimal = {!!} -- ok
+        ; optimal = {!!} -- TODO: proof
         ; self-contained = {!!} -- λ t → maximumBy-default-or-∈ genesisChain _ (allChains t)
---        ; unique-votes = {!!}
---        ; no-equivocations = {!!}
 --        ; quorum-cert = {!!} -- invariants
         }
 

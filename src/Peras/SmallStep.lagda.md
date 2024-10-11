@@ -109,11 +109,11 @@ has to fulfil all the properties mentioned below:
   record IsTreeType {T : Set}
                     (tree₀ : T)
                     (addChain : T → {c : Chain} → ValidChain c → T)
-                    (chains : T → List Chain)
+                    (chains : T → List Chain) -- TODO: use Set instead of List
                     (preferredChain : T → Chain)
                     (addVote : T → {v : Vote} → ValidVote v → T)
-                    (votes : T → List Vote)
-                    (certs : T → List Certificate)
+                    (votes : T → List Vote) -- TODO: use Set instead of List
+                    (certs : T → List Certificate) -- TODO: use Set instead of List
                     (cert₀ : Certificate)
          : Set₁ where
 
@@ -144,29 +144,21 @@ Properties that must hold with respect to chains, certificates and votes.
         → ValidChain (preferredChain t)
 
       optimal : ∀ (c : Chain) (t : T)
-        → let
-            b = preferredChain t
-            cts = certs t
-          in
-          ValidChain c
         → c ∈ chains t
-        → weight c cts ≤ weight b cts
+        → weight c (certs t) ≤ weight (preferredChain t) (certs t)
 
       self-contained : ∀ (t : T)
         → preferredChain t ∈ chains t
 
-{-
+{-    -- TODO: use Set instead of List for votes
       unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
-        → let vs = votes t
-          in
-          v ∈ vs
-        → vs ≡ votes (addVote t vv)
-
+        → v ∈ votes t
+        → votes t ≡ votes (addVote t vv)
+-}
+{-    -- TODO: use Set with `equivocation` as equivalence relation for votes
       no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
-        → let vs = votes t
-          in
-          Any (v ∻_) vs
-        → vs ≡ votes (addVote t vv)
+        → Any (v ∻_) (votes t)
+        → votes t ≡ votes (addVote t vv)
 -}
 {-
       quorum-cert : ∀ (t : T) (b : Block) (r : ℕ)
