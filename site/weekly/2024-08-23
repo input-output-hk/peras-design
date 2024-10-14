@@ -1,0 +1,14 @@
+---
+title: '2024-08-23'
+---
+
+## Present
+- Significant progress on soundness proofs
+- Analytic formulae for fast estimation of settlement probabilities
+- Initial dashboard for exploring performance and safety implications of Peras protocol-parameter choices
+- Wrote Peras section for IOR Methodology document
+
+## Future
+- Complete soundness proofs
+- Polish and improve usability of performance dashboard
+- Outreach materials (FAQ, slides, business case) for Peras
