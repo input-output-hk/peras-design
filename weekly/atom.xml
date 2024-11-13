@@ -28,6 +28,102 @@
 </ul>]]></content>
     </entry>
     <entry>
+        <title type="html"><![CDATA[A project's retrospetive]]></title>
+        <id>https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective</id>
+        <link href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective"/>
+        <updated>2024-10-07T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[On the 2nd of October, the Peras team spent some time reflecting on the project and wrote some "post-mortem" thoughts that seem worthwhile to be shared.]]></summary>
+        <content type="html"><![CDATA[<p>On the 2nd of October, the Peras team spent some time reflecting on the project and wrote some "post-mortem" thoughts that seem worthwhile to be shared.
+This post is a summary of these discussions along with a short timeline and possible next steps.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="projects-timeline">Project's Timeline<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#projects-timeline" class="hash-link" aria-label="Direct link to Project's Timeline" title="Direct link to Project's Timeline">​</a></h2>
+<table><thead><tr><th>Date</th><th>Event</th></tr></thead><tbody><tr><td>2023-09-29</td><td>Engineering/Research Peras workshop in Edinburgh - <a href="https://github.com/input-output-hk/peras-design/commit/85e8e124c79768eb24549c39de88433545be1c6d" target="_blank" rel="noopener noreferrer">First commits</a> to Peras repository - Revised version of algorithm version</td></tr><tr><td>2023-11-20</td><td>First video update on Peras project - Draft project's charter and form team</td></tr><tr><td>2024-02-05</td><td>Started work on <a href="https://github.com/input-output-hk/peras-design/commit/2bc084ae078ef22ffef8a91cb67c94e31576f20c" target="_blank" rel="noopener noreferrer">simulation</a> - Started work on <a href="https://github.com/input-output-hk/peras-design/commit/d90f164d5b5d1ac15bc6c8126d8180addb872681" target="_blank" rel="noopener noreferrer">Agda</a> Haskell &amp; model</td></tr><tr><td>2024-04-09</td><td>First Team workshop in Paris -  "Final" version of algorithm (aka. pre-alpha) for deployment</td></tr><tr><td>2024-04-15</td><td><a href="https://github.com/input-output-hk/peras-design/commit/c85bec9c27a2e5dd7c821304a65c3eabd327f752" target="_blank" rel="noopener noreferrer">First version</a> of quickcheck-dynamic and Agda workflow</td></tr><tr><td>2024-04-18</td><td><a href="https://github.com/input-output-hk/peras-design/commit/997c0be361f22273bbea5b4e445dd9bdf0850183" target="_blank" rel="noopener noreferrer">Technical Report #1</a> reviewed</td></tr><tr><td>2024-06-26</td><td>Team workshop in Edinburgh -  CIP draft started</td></tr><tr><td>2024-07-10</td><td>Relation specification completed - Soundness proofs started</td></tr><tr><td>2024-07-15</td><td><a href="https://github.com/input-output-hk/peras-design/commit/50a9354695343f5eaebc899ec7da457a00c5a24f" target="_blank" rel="noopener noreferrer">Technical Report #2</a></td></tr><tr><td>2024-08-01</td><td><a href="https://github.com/input-output-hk/peras-design/commit/0c0d797f7e2bac16a8e247724e1ed7cffe2c151c" target="_blank" rel="noopener noreferrer">Website published</a></td></tr><tr><td>2024-08-14</td><td><a href="https://github.com/cardano-scaling/CIPs/commit/5942b8f49a4e21f43c0905512cb18f3735aed93e" target="_blank" rel="noopener noreferrer">CIP</a> completed, sent for internal review</td></tr><tr><td>2024-09-27</td><td>Conformance tests finalized.</td></tr><tr><td>2024-10-02</td><td><a href="https://docs.google.com/presentation/d/1CIEOJrXorzsQagE1zi7S9VFts7AT1inEuC332JmNsjM/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Last Monthly demo</a></td></tr><tr><td>2024-10-21</td><td>IO R&amp;D seminar</td></tr></tbody></table>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="project-outcomes">Project Outcomes<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#project-outcomes" class="hash-link" aria-label="Direct link to Project Outcomes" title="Direct link to Project Outcomes">​</a></h2>
+<p>How does the team assess achievement of stated primary and secondary goals (see Modelling Ouroboros Peras document), and production of expected deliverables.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="primary-goals">Primary Goals<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#primary-goals" class="hash-link" aria-label="Direct link to Primary Goals" title="Direct link to Primary Goals">​</a></h3>
+<table><thead><tr><th>Goal</th><th>Achieved?</th><th>Comment</th></tr></thead><tbody><tr><td>Expected impact on transaction settlement time</td><td>🟢</td><td>See <a href="https://peras.cardano-scaling.org/docs/reports/tech-report-2">Technical report</a></td></tr><tr><td>Operational and performance profile</td><td>🟢</td><td>See <a href="https://peras.cardano-scaling.org/docs/reports/tech-report-2#settlement-probabilities" target="_blank" rel="noopener noreferrer">Technical report</a></td></tr><tr><td>Design and architecture of potential solution</td><td>🟡</td><td>We did not want to overly restrict implementors but CIP provides a detailed specification</td></tr></tbody></table>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="secondary-goals">Secondary Goals<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#secondary-goals" class="hash-link" aria-label="Direct link to Secondary Goals" title="Direct link to Secondary Goals">​</a></h3>
+<table><thead><tr><th>Goal</th><th>Achieved?</th><th>Comment</th></tr></thead><tbody><tr><td>Use the models as formal foundation for publications</td><td>🔴</td><td>Remains to be seen, some discussions in progress, but awaiting</td></tr><tr><td>Demonstrate use of FM as communication tool between Research and Engineering</td><td>🟡</td><td>Was done informally, need more work</td></tr><tr><td>Build reusable tools, libraries, and methods</td><td>🟡</td><td>Some contributions in progress (q-d, ce-netsim, deltaQ)</td></tr></tbody></table>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="deliverables">Deliverables<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#deliverables" class="hash-link" aria-label="Direct link to Deliverables" title="Direct link to Deliverables">​</a></h3>
+<table><thead><tr><th>Deliverable</th><th>Completed?</th></tr></thead><tbody><tr><td>An executable formal model of the Ouroboros Peras protocol</td><td>🟢 <a href="https://github.com/input-output-hk/peras-design/blob/main/src/Peras/Conformance/Model.agda" target="_blank" rel="noopener noreferrer">code</a></td></tr><tr><td>A prototype of Peras protocol components</td><td>🟢 <a href="https://github.com/input-output-hk/peras-design/blob/main/peras-simulation/src/Peras/Prototype/Node.hs" target="_blank" rel="noopener noreferrer">code</a></td></tr><tr><td>A tool and a method to validate any implementation</td><td>🟢 <a href="https://github.com/input-output-hk/peras-design/blob/main/peras-simulation/src/Peras/Conformance/Test/External.hs" target="_blank" rel="noopener noreferrer">code</a></td></tr><tr><td>A simulation of a network of nodes implementing Peras + simulation results</td><td>🟢 <a href="https://github.com/input-output-hk/peras-design/blob/main/peras-server/src/Peras/Server.hs" target="_blank" rel="noopener noreferrer">code</a> <a href="https://github.com/input-output-hk/peras-design/tree/main/peras-markov" target="_blank" rel="noopener noreferrer">code </a></td></tr><tr><td>Appropriate documentation</td><td>🟢 <a href="https://peras.cardano-scaling.org/" target="_blank" rel="noopener noreferrer">site</a></td></tr><tr><td>A journal of the whole development process</td><td>🟢 <a href="https://github.com/input-output-hk/peras-design/blob/main/Logbook.md" target="_blank" rel="noopener noreferrer">logbook</a></td></tr><tr><td>Evaluation of the deliverable with respect to the aforementioned goals</td><td>🟢 <a href="https://peras.cardano-scaling.org/docs/reports/" target="_blank" rel="noopener noreferrer">reports</a> <a href="https://github.com/cardano-scaling/CIPs/blob/bwbush/peras/CIP-0PRS/README.lagda.md" target="_blank" rel="noopener noreferrer">cip</a></td></tr></tbody></table>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="final-retrospective-outcome">Final Retrospective Outcome<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#final-retrospective-outcome" class="hash-link" aria-label="Direct link to Final Retrospective Outcome" title="Direct link to Final Retrospective Outcome">​</a></h2>
+<p>During the retrospective we followed a simple "What went well/What went wrong/what to improve" categorisation approach.
+The following sections list "raw" items that were raised during the meeting:</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="what-went-well">What went well<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#what-went-well" class="hash-link" aria-label="Direct link to What went well" title="Direct link to What went well">​</a></h3>
+<ul>
+<li>Technical reports</li>
+<li>Agile development: Shifting focus for formal methods from Safety/Liveness proofs, to Voting string analysis to soundness property of test model</li>
+<li>Monthly wrap-up sessions with external stakeholders worked great. As well as the monthly videos</li>
+<li>Project is at the finish line</li>
+<li>Good complementary mix of skills on the team.</li>
+<li>Feedbacks between research, formalization, simulation, analysis, and testing</li>
+<li>Shared a lot of information and insights</li>
+<li>Literate Agda and drawing on tech reports worked well for the CIP.</li>
+<li>We avoided over-engineering and other activities that had low value added for providing evidence about the protocol It was good to stop at SRL 4.</li>
+<li>Good synergy w/in team</li>
+<li>Very productive workshops</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="what-went-wrong-or-not-so-well">What went wrong (or not so well)<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#what-went-wrong-or-not-so-well" class="hash-link" aria-label="Direct link to What went wrong (or not so well)" title="Direct link to What went wrong (or not so well)">​</a></h3>
+<ul>
+<li>Not much interest from the community + FUD &amp; persistent misconceptions blurred the message</li>
+<li>Not sure Agda effort really pays off</li>
+<li>Handing over to IOE / Intersect isn't as easy as planned</li>
+<li>quickcheck-dynamic's methodology is misaligned with conformance testing of protocol implementation</li>
+<li>agda2hs and the Agda -&gt; Haskell workflow are not sufficiently robust for use on the critical path</li>
+<li>Intersect wasn't ready to ingest results of the innovation stream.</li>
+<li>Soundness property proof is not yet finished / under-estimated proof effort</li>
+<li>Having both, the Haskell.Prelude as well as the Agda stdlib in the same project is a big hassle - decided too late in the project to have only one</li>
+<li>Could have started with the CPS</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="what-to-improve">What to improve<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#what-to-improve" class="hash-link" aria-label="Direct link to What to improve" title="Direct link to What to improve">​</a></h3>
+<ul>
+<li>Start from the beginning: "quantify" use cases</li>
+<li>Draw in folks outside of the team for some QA and review activities</li>
+<li>Start with CPS that can be shared with the community to get feedback</li>
+<li>Innovation role within the Intersect WGs</li>
+<li>Define early on what flavor of conformance tests are needed</li>
+<li>Write the CPS at the start and then start writing the CIP much sooner, because it highlights missing tasks early on.</li>
+<li>Redefined BRLs to fit innovation</li>
+<li>Use the formal language for the specification initially and do the proofs later, off of the critical path.</li>
+<li>And Test generators should be written in the formal language.</li>
+<li>Tighter feedback loop  (smaller more focused questions)</li>
+<li>Pairing / code review sessions for Agda</li>
+<li>Lessons learnt about DeltaQ</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="next-steps">Next Steps<a href="https://peras.cardano-scaling.org/weekly/2024/10/07/retrospective#next-steps" class="hash-link" aria-label="Direct link to Next Steps" title="Direct link to Next Steps">​</a></h2>
+<p>Project is entering maintenance mode following the last Demo &amp; Review meeting. As follow-up steps, we plan to:</p>
+<ol>
+<li>Run an "Agda Retrospective" in Longmont<!-- -->
+<ul>
+<li>Reflect on different approaches used by different projects</li>
+<li>Provide future guidelines about Formal Methods workflow w/in Innovation streams</li>
+<li>Nudge people and teams to converge towards reasonably standardised methodology and tools (training, sharing libs, …)</li>
+</ul>
+</li>
+<li>Clarify boundaries of Innovation projects<!-- -->
+<ul>
+<li>What's the right input for innovation projects, or combination of inputs? Research papers, CPS, business requirements?</li>
+<li>What are the right artifacts to handoff the project at completion?</li>
+<li>Define a handover to IOE/Intersect process</li>
+<li>Beware of the danger to be pulled into a production mindset</li>
+</ul>
+</li>
+<li>Three months chartering<!-- -->
+<ul>
+<li>More aggressive pruning of Question/Answer cycle within (and across?) innovation projects</li>
+<li>"If we don't cancel anything, we are not taking enough risk"</li>
+</ul>
+</li>
+<li>Redefine BRLs (Business Readiness Level) to fit innovation projects<!-- -->
+<ul>
+<li>We need more hands-on people to identify use cases and interact with the community/users/ customers</li>
+<li>DevRel role able to quickly build PoCs and sketch usages in the wild could be the vanguard to more structured product work</li>
+<li>Most innovation projects are essentially features for our products, or proposals to improve Cardano. They are not standalone products that can have a meaningful business plan.</li>
+</ul>
+</li>
+<li>Provide a more focused post-mortem or lessons learned analysis about DeltaQ Software Development methodology</li>
+</ol>]]></content>
+    </entry>
+    <entry>
         <title type="html"><![CDATA[2024-10-04]]></title>
         <id>https://peras.cardano-scaling.org/weekly/2024/10/04/</id>
         <link href="https://peras.cardano-scaling.org/weekly/2024/10/04/"/>
@@ -474,44 +570,6 @@
 <ul>
 <li>The Peras protocol paper is near completion.</li>
 <li>The target date for the in-person Peras meetings is the week of June 24.</li>
-</ul>]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[2024-05-17]]></title>
-        <id>https://peras.cardano-scaling.org/weekly/2024/05/17/update</id>
-        <link href="https://peras.cardano-scaling.org/weekly/2024/05/17/update"/>
-        <updated>2024-05-17T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Present]]></summary>
-        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="present">Present<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#present" class="hash-link" aria-label="Direct link to Present" title="Direct link to Present">​</a></h2>
-<ul>
-<li>Summarized the status of Peras prototyping and defined next steps.</li>
-<li>Outlined the business value of formal methods.</li>
-<li>Investigated different approaches for representing a voting string in Agda: the first attempt implemented a formal language using equational reasoning and a coalgebraic style.</li>
-<li>Changed the reflexive transitive closure of the small-step semantics to a List-like syntax similar to what has been proposed in <code>test-demo</code>. This allows to express execution steps in a concise way and could be used as DSL for specifying test-cases and attack-scenarios.</li>
-<li>Computed the size in bytes of the various keys and certificates involved in Peras, under the assumption that it uses existing keys and crypto available to a Cardano node.</li>
-<li>Sketched a detailed design of what the independent voting layer would look like.</li>
-<li>Designed an Agda+Haskell workflow where Agda formal specifications for Peras can be made decidable and then exported as an executable specification for Haskell <code>quickcheck-dynamic</code> tests.</li>
-<li>Met with Max (Quviq) to settle next steps in their support of Peras.<!-- -->
-<ul>
-<li>Suggest improvements in exising Agda+Haskell workflow and code, including identifying changes to <code>agda</code> and/or <code>agda2hs</code> that would streamline the workflow.</li>
-<li>Demonstrate how to convert proofs present in the workflow into property-based tests in <code>quickcheck-dynamic</code>.</li>
-</ul>
-</li>
-<li>Started mapping the spectrum of conformance testing relevant for a Peras CIP and RFP. The overall goal is "conformance without over-specification".</li>
-<li>Discussed strategies for making the Peras specification readable by the broad Cardano commmunity.</li>
-</ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="future">Future<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#future" class="hash-link" aria-label="Direct link to Future" title="Direct link to Future">​</a></h2>
-<ul>
-<li>Complete Praos proofs à la Baspitter.</li>
-<li>Model voting and vote diffusion in detail using Dynamic QuickCheck and ΔQ.</li>
-<li>Construct Dynamic QuickCheck tests for adversarial scenarios.</li>
-<li>Continue refining requirements for conformance testing.</li>
-<li>Conduct additional stakeholder interviews, with an aim to define the ideal form of a Peras CIP.</li>
-</ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="issues">Issues<a href="https://peras.cardano-scaling.org/weekly/2024/05/17/update#issues" class="hash-link" aria-label="Direct link to Issues" title="Direct link to Issues">​</a></h2>
-<ul>
-<li>The Peras protocol paper is expected to be submitted May 22.</li>
-<li>The target date for the in-person Peras meeting is June 24.</li>
 </ul>]]></content>
     </entry>
 </feed>

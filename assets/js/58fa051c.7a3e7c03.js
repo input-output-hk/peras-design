@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunksite=self.webpackChunksite||[]).push([[9050],{4730:e=>{e.exports=JSON.parse('{"metadata":{"permalink":"/weekly/page/2","page":2,"postsPerPage":5,"totalPages":7,"totalCount":32,"previousPage":"/weekly","nextPage":"/weekly/page/3","blogDescription":"Regular updates from Peras R&D Team","blogTitle":"Peras R&D Updates"}}')}}]);
