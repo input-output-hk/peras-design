@@ -122,6 +122,10 @@ No, Ouroboros Peras is a layer 1 protocol, just like Ouroboros Praos or Genesis.
 
 The CIPs for protocol parameters and for the disaster recovery plan will need revision when Peras is adopted.
 
+## Will relay nodes need to track boosted blocks?
+
+Yes, both block producers and relay nodes will need to track boosted blocks because they need to agree on the weight of the chain. If relay nodes did not include boosts in their chain selection, then they could experience periods of time when they were not following the weightiest chain.
+
 ## What is the lightest way for clients to know whether a block has a Peras boost?
 
 Services such as BlockFrost likely will provide information on the number of Peras boosts that follow a given transaction.
