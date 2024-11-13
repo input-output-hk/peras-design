@@ -117,3 +117,11 @@ Peras modifies the chain selection of the underlying Nakamoto approach by having
 ## Is Peras a layer 2?
 
 No, Ouroboros Peras is a layer 1 protocol, just like Ouroboros Praos or Genesis. Peras’ fast settlement may, however, benefit some layer 2 use cases.
+
+## Which other CIPs will need PRs when Peras is adopted?
+
+The CIPs for protocol parameters and for the disaster recovery plan will need revision when Peras is adopted.
+
+## What is the lightest way for clients to know whether a block has a Peras boost?
+
+Services such as BlockFrost likely will provide information on the number of Peras boosts that follow a given transaction.
