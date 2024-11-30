@@ -31,7 +31,8 @@ let
     };
   };
 
-in pkgs.agdaPackages.override {
-  Agda = frankenAgda;
+in
+pkgs.agdaPackages.override {
+  Agda = frankenAgda // { bin = frankenAgda; };
   pkgs = frankenPkgs;
 }
