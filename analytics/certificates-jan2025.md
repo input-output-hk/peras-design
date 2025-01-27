@@ -5,7 +5,7 @@
 
 The January 27 IOG R&D Seminar entitled "ALBA" summarizes recent developments for the ALBA algorithm and indicates that new variants of ALBA may be suitable for compactly storing Peras certificates, perhaps even using existing Praos VRF and KES keys. Similarly, progress has also been made on certificate compression via SNARKs.
 
-This write-up documents that BLS certificates based on the Fiat Accompli sortition scheme comprise a viable option, with certificates being smaller that 15 kB. The downside of BLS approaches like this is that new keys must be registered and occasionally rotated.
+The present write-up documents that BLS certificates based on the Fiat Accompli sortition scheme comprise a viable option, with certificates being smaller that 15 kB. The downside of BLS approaches like this is that new keys must be registered and occasionally rotated.
 
 However, if any of the ALBA- and/or SNARK-based voting and certificate schemes meet the following conditions, they would be superior to the BLS-based scheme outlined later in this document.
 
@@ -25,9 +25,9 @@ Previous analysis indicates that the Peras committee size should be no smaller t
 
 Leios is currently entertaining the following certificate scheme, and it could be considered for adoption by Peras, too.
 
-1. Stake pools register BLS keys for using in voting and prove possession of those keys.
-2. Nodes verify the proof of possession of the keys they receive.
-3. Those keys are replaced periodically, perhaps every KES period (currently 36 hours) or every operational certificate (currently 90 days).
+1. Stake pools register BLS keys for use in voting and prove possession of those keys.
+2. Nodes verify the proofs of possession of the keys they receive.
+3. Those keys are replaced periodically, perhaps every KES period (currently 36 hours) or in every operational certificate (currently 90 days).
 4. For each epoch, the [Fiat Accompli](https://iohk.io/en/research/library/papers/fait-accompli-committee-selection-improving-the-size-security-tradeoff-of-stake-based-committees/) scheme wFA<sup>F</sup> is applied to the stake distribution in order to determine the *persistent voters* for the epoch.
     1. Persistent voters should vote in every election during the epoch.
     2. A different supplement of *non-persistent voters* are selected at random for each election during the epoch.
@@ -36,11 +36,11 @@ Leios is currently entertaining the following certificate scheme, and it could b
 
 ### Key registration
 
-The key registration records the public key and proof of its possession.
+The key registration records the public key and the proof of its possession.
 
 1. The Pool ID (or similar unique identifier) identifies the pool holding the key and comprises 32 bytes.
-2. The public key $mvk$ belongs to $\mathbb{G}_2$ , so it occupies 192 bytes if BLS12-381 is used.
-3. The proof of possession for the secret key is the pair $\left(H_{\mathbb{G}_1}(\text{``PoP''}||mvk)^{sk}, g_1^{sk}\right)$, where $sk$ is the secret key and $H$ hashes to points in $\mathbb{G}_1$. This pair will occupy 192 bytes.
+2. The public key $\mathit{mvk}$ belongs to $\mathbb{G}_2$ , so it occupies 192 bytes if BLS12-381 is used.
+3. The proof of possession for the secret key is the pair $\left(H_{\mathbb{G}_1}(\text{``PoP''} \parallel \mathit{mvk})^\mathit{sk}, g_1^\mathit{sk}\right)$, where $\mathit{sk}$ is the secret key and $H$ hashes to points in $\mathbb{G}_1$. This pair will occupy 192 bytes.
 4. The KES signature for the above will add another 448 bytes.
 
 Altogether, a key registration occupies $32 + 192 + 192 + 448 = 864$ bytes.
@@ -74,7 +74,8 @@ The certificate must contain the following information:
     - Message: the 32-byte hash of the Praos block being boosted is also included in the certificate.
 - Identity of voters
     - Persistent voters are encoded in a bitset of size $m$, occupying $\left\lceil m / 8 \right\rceil$ bytes.
-    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 32 bytes each and hence $32 \cdot (n - m)$ bytes total. (Alternatively, all possible non-persistent voters could be assigned bits in the bitset.)
+    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 32 bytes each and hence $32 \cdot (n - m)$ bytes total.
+    - Alternatively, all possible voters could be assigned bits in a bitset, with size $\left\lceil N_\text{pools} / 8 \right\rceil$.
 - Eligibility proof
     - Persistent voters are eligible by definition (by virtue of their stake in the epoch), so no proof is needed.
     - Non-persistent voters prove eligibility with a 96-byte BLS signature on the message, occupying $96 \cdot (n - m)$ bytes total.
