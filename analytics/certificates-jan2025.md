@@ -3,15 +3,15 @@
 
 ## Overview of options
 
-The January 27 IOG R&D Seminar entitled "ALBA" summarizes recent developments with the ALBA algorithm and indicates that new variants of ALBA may be suitable for compactly storing Peras certificates, perhaps even using existing Praos VRF and KES keys. Similarly, progress has also been made on certificate compression via SNARKs.
+The January 27 IOG R&D Seminar entitled "ALBA" summarizes recent developments for the ALBA algorithm and indicates that new variants of ALBA may be suitable for compactly storing Peras certificates, perhaps even using existing Praos VRF and KES keys. Similarly, progress has also been made on certificate compression via SNARKs.
 
-This documents that BLS certificates based on the Fiat Accompli sortition scheme remain a viable option, with certificates being smaller that 15 kB. The downside of BLS approaches is that new keys must be registered and occasionally rotated.
+This write-up documents that BLS certificates based on the Fiat Accompli sortition scheme comprise a viable option, with certificates being smaller that 15 kB. The downside of BLS approaches like this is that new keys must be registered and occasionally rotated.
 
-If any of the ALBA- and/or SNARK-based voting and certificate schemes meet the following conditions, the would be superior to the BLS-based scheme outlined later in this document.
+However, if any of the ALBA- and/or SNARK-based voting and certificate schemes meet the following conditions, they would be superior to the BLS-based scheme outlined later in this document.
 
 1. No new keys need be registered. (E.g., the existing VRF and KES keys can be used for voting.)
 2. The certificate size is well under the 90,112 byte maximum size of a Praos block.
-3. Proving and verification times fit within the `cardano-node` CPU budget.
+3. Proof and verification times fit within the `cardano-node` CPU budget.
 
 Ideally, of course, the same voting and certificate infrastructure would be used for Mithril, Peras, Leios, and partner chains.
 
@@ -29,8 +29,8 @@ Leios is currently entertaining the following certificate scheme, and it could b
 2. Nodes verify the proof of possession of the keys they receive.
 3. Those keys are replaced periodically, perhaps every KES period (currently 36 hours) or every operational certificate (currently 90 days).
 4. For each epoch, the [Fiat Accompli](https://iohk.io/en/research/library/papers/fait-accompli-committee-selection-improving-the-size-security-tradeoff-of-stake-based-committees/) scheme wFA<sup>F</sup> is applied to the stake distribution in order to determine the *persistent voters* for the epoch.
-	1. Persistent voters should vote in every election during the epoch.
-	2. A different supplement of *non-persistent voters* are selected at random for each election during the epoch.
+    1. Persistent voters should vote in every election during the epoch.
+    2. A different supplement of *non-persistent voters* are selected at random for each election during the epoch.
 5. The certificate records the set of voters, proof of their eligibility, and the quorum achieved.
 
 
@@ -52,7 +52,7 @@ Sadly, this registration needs to be recorded on chain so that certificates can 
 
 Figure 7 of the [Fiat Accompli paper](https://iohk.io/en/research/library/papers/fait-accompli-committee-selection-improving-the-size-security-tradeoff-of-stake-based-committees/) provides the algorithm for determining which pools are persistent voters. The inequality for this determination can be computed exactly using rational arithmetic, so there is no danger of round-off errors. The input to the formula is the size of the committee and the distribution of stake among the pools.
 
-The non-persistent pools are subject to sortition for each vote, based on an updated stake distribution where the persistent voters have been removed and where the distribution is normalized. The VRF value for that sortition is the BLS signature on the election identifier $eid$, which could just be the slot number. The probability that a pool with fraction $\sigma$ of the stake is awarded $k$ votes of the committee of $n$ votes is 
+The non-persistent pools are subject to sortition for each vote, based on an updated stake distribution where the persistent voters have been removed and where the distribution is normalized to unit probability. The VRF value for that sortition is the bytes of the BLS signature on the election identifier $eid$. The probability that a pool with fraction $\sigma$ of the stake is awarded $k$ votes of the committee of $n$ votes is 
 
 $$
 \mathcal{P}(k) := \frac{(n \cdot \sigma)^k \cdot e^{- n \cdot \sigma}}{k!}
@@ -70,13 +70,13 @@ Consider the committee size $n$, which contains $m$ persistent voters.
 The certificate must contain the following information:
 
 - Common to all votes
-    - Election ID: Presumably a 32-byte identifier for the Peras election is included in the certificate, though perhaps this is not strictly necessary.
+    - Election ID: Presumably a 32-byte identifier for the Peras election is included in the certificate, though perhaps this is not strictly necessary. This could just be the slot number.
     - Message: the 32-byte hash of the Praos block being boosted is also included in the certificate.
 - Identity of voters
     - Persistent voters are encoded in a bitset of size $m$, occupying $\left\lceil m / 8 \right\rceil$ bytes.
-    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 32 bytes each and hence $32 \cdot (n - m)$ bytes total.
+    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 32 bytes each and hence $32 \cdot (n - m)$ bytes total. (Alternatively, all possible non-persistent voters could be assigned bits in the bitset.)
 - Eligibility proof
-    - Persistent voters are eligible by definition, so no proof is needed.
+    - Persistent voters are eligible by definition (by virtue of their stake in the epoch), so no proof is needed.
     - Non-persistent voters prove eligibility with a 96-byte BLS signature on the message, occupying $96 \cdot (n - m)$ bytes total.
 - Aggregate signatures
     - Signed message: This aggregate BLS signature on the message is 96 bytes.
@@ -88,21 +88,21 @@ $$
 \text{certificate bytes} = 256 + \left\lceil \frac{m}{8} \right\rceil + 128 \cdot (n - m)
 $$
 
-but not including any minor overhead arising from CBOR serialization.
+but not including any minor overhead arising from CBOR serialization. As noted previously, only a quorum of votes actually needs to be recorded.
 
 
 ### Benchmarks in Rust
 
 - Sortition
-	- Persistent voters: not benchmarked.
-	- Non-persistent voters: 4.1 µs
+    - Persistent voters: not benchmarked because it would be reasonably fast and only computed once per epoch
+    - Non-persistent voters: 4.1 µs
 - Vote
-  - Verify the proof of key possession: 1.5 ms/key
-  - Generate vote: 280 µs/vote
-  - Verify vote: 1.4 ms/vote
+    - Verify the proof of key possession: 1.5 ms/key
+    - Generate vote: 280 µs/vote
+    - Verify vote: 1.4 ms/vote
 - Certificate
-  - Generate certificate for a 750-vote quorum: 125 ms/cert
-  - Verify certificate for a 750-vote quorum: 225 ms/cert
+    - Generate certificate for a 750-vote quorum: 125 ms/cert
+    - Verify certificate for a 750-vote quorum: 225 ms/cert
 
 
 ### Realistic stake distribution
@@ -112,4 +112,3 @@ The following plots show number of persistent votes and votes, along with certif
 | Voters                                            | Votes                                           | Certificate size                                          |
 | ------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
 | ![Fiat-accompli voters](fiat-accompli-voters.svg) | ![Fiat-accompli votes](fiat-accompli-votes.svg) | ![Fiat-accompli certificate size](fiat-accompli-cert.svg) |
-
