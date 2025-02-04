@@ -108,8 +108,8 @@ but not including any minor overhead arising from CBOR serialization. As noted p
 
 ### Realistic stake distribution
 
-The following plots show number of persistent votes and votes, along with certificate size, for the `mainnet` stake distribution of Epoch 535. The dashed line in the first two plots has slope one, so the gap between it and the solid line indicates the number of non-persistent voters or votes. The certificate-size plot does not take into account a potential reduction in certificate size from omitting votes in excess of a quorum.
+The following plots show number of persistent votes and votes, along with certificate size, for the `mainnet` stake distribution of Epoch 535. The dashed line in the first plot has slope one, so the gap between it and the solid line indicates the number of non-persistent voters. The certificate-size plot does not take into account a potential reduction in certificate size from omitting votes in excess of a quorum.
 
-| Voters                                            | Votes                                           | Certificate size                                          |
-| ------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
-| ![Fait-accompli voters](fait-accompli-voters.svg) | ![Fait-accompli votes](fait-accompli-votes.svg) | ![Fait-accompli certificate size](fait-accompli-cert.svg) |
+| Persistent voters                                 | Certificate size                                          |
+| ------------------------------------------------- | --------------------------------------------------------- |
+| ![Fait-accompli voters](fait-accompli-voters.svg) | ![Fait-accompli certificate size](fait-accompli-cert.svg) |
