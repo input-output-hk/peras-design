@@ -38,12 +38,12 @@ Leios is currently entertaining the following certificate scheme, and it could b
 
 The key registration records the public key and the proof of its possession.
 
-1. The Pool ID (or similar unique identifier) identifies the pool holding the key and comprises 32 bytes.
-2. The public key $\mathit{mvk}$ belongs to $\mathbb{G}_2$ , so it occupies 192 bytes if BLS12-381 is used.
-3. The proof of possession for the secret key is the pair $\left(H_{\mathbb{G}_1}(\text{``PoP''} \parallel \mathit{mvk})^\mathit{sk}, g_1^\mathit{sk}\right)$, where $\mathit{sk}$ is the secret key and $H$ hashes to points in $\mathbb{G}_1$. This pair will occupy 192 bytes.
+1. The Pool ID (or similar unique identifier) identifies the pool holding the key and comprises 28 bytes.
+2. The public key $\mathit{mvk}$ belongs to $\mathbb{G}_2$ , so it occupies 96 bytes if BLS12-381 with compression is used.
+3. The proof of possession for the secret key is the pair $\left(H_{\mathbb{G}_1}(\text{``PoP''} \parallel \mathit{mvk})^\mathit{sk}, g_1^\mathit{sk}\right)$, where $\mathit{sk}$ is the secret key and $H$ hashes to points in $\mathbb{G}_1$. This pair will occupy 96 bytes with compression.
 4. The KES signature for the above will add another 448 bytes.
 
-Altogether, a key registration occupies $32 + 192 + 192 + 448 = 864$ bytes.
+Altogether, a key registration occupies $28 + 96 + 2 * 48 + 448 = 668$ bytes.
 
 Sadly, this registration needs to be recorded on chain so that certificates can be later verified independently. However, cryptographic compression may reduce the overall size of the registration data.
 
@@ -70,23 +70,23 @@ Consider the committee size $n$, which contains $m$ persistent voters.
 The certificate must contain the following information:
 
 - Common to all votes
-    - Election ID: Presumably a 32-byte identifier for the Peras election is included in the certificate, though perhaps this is not strictly necessary. This could just be the slot number.
+    - Election ID: Presumably a 8-byte identifier for the Peras election is included in the certificate, though perhaps this is not strictly necessary. This could just be the slot number.
     - Message: the 32-byte hash of the Praos block being boosted is also included in the certificate.
 - Identity of voters
     - Persistent voters are encoded in a bitset of size $m$, occupying $\left\lceil m / 8 \right\rceil$ bytes.
-    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 32 bytes each and hence $32 \cdot (n - m)$ bytes total.
+    - Non-persistent voters are encoded by their Pool ID (or equivalent), occupying 28 bytes each and hence $28 \cdot (n - m)$ bytes total.
     - Alternatively, all possible voters could be assigned bits in a bitset, with size $\left\lceil N_\text{pools} / 8 \right\rceil$.
 - Eligibility proof
     - Persistent voters are eligible by definition (by virtue of their stake in the epoch), so no proof is needed.
-    - Non-persistent voters prove eligibility with a 96-byte BLS signature on the message, occupying $96 \cdot (n - m)$ bytes total.
+    - Non-persistent voters prove eligibility with a 48 byte (compressed) BLS signature on the message, occupying $48 \cdot (n - m)$ bytes total.
 - Aggregate signatures
-    - Signed message: This aggregate BLS signature on the message is 96 bytes.
-    - Signed election proofs: Perhaps not strictly necessary, but another 96 byte BLS signature can attest to the proof of the eligibility, see **BLS.BSig** in [the Leios paper](https://iohk.io/en/research/library/papers/high-throughput-blockchain-consensus-under-realistic-network-assumptions/).
+    - Signed message: This aggregate BLS signature on the message is 48 bytes (compressed).
+    - Signed election proofs: Perhaps not strictly necessary, but another 48 byte (compressed) BLS signature can attest to the proof of the eligibility, see **BLS.BSig** in [the Leios paper](https://iohk.io/en/research/library/papers/high-throughput-blockchain-consensus-under-realistic-network-assumptions/).
     
 Thus the total certificate size is
 
 $$
-\text{certificate bytes} = 256 + \left\lceil \frac{m}{8} \right\rceil + 128 \cdot (n - m)
+\text{certificate bytes} = 136 + \left\lceil \frac{m}{8} \right\rceil + 76 \cdot (n - m)
 $$
 
 but not including any minor overhead arising from CBOR serialization. As noted previously, only a quorum of votes actually needs to be recorded.
