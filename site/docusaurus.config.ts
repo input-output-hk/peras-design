@@ -104,7 +104,7 @@ const config: Config = {
                     position: 'left'
                 },
                 {
-                    to: 'https://github.com/cardano-scaling/CIPs/blob/peras/CIP-0PRS/README.lagda.md',
+                    to: 'https://github.com/cardano-scaling/CIPs/blob/peras/CIP-0140/README.lagda.md',
                     label: 'CIP',
                     position: 'right',
                 },
