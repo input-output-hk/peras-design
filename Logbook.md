@@ -1,3 +1,9 @@
+## 2025-01-27
+
+### Update on votes and certificates
+
+The document [Peras certificates revisited: January 2025](analytics/certificates-jan2025.md) summarizes some recent developments on BLS certificates, which appear to be viable for Peras and whose certificates would occupy fewer than 15 kB.
+
 ## 2024-09-06
 
 ### Conformance testing of external implementations.
