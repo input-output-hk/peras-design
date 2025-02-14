@@ -63,6 +63,23 @@ This VRF value is used to look up the correct number of votes from the cumulativ
 Each vote has a weight, with weights summing to unity. A quorum is achieved if the weights total to 0.75 or more.
 
 
+### Votes
+
+Votes cast by persistent versus non-persistent voters contain different information because persistent voters can be identified by a two-byte identifier and the do not have to provide an eligibility proof.
+
+- Common to all votes
+	- *Election ID:* 8 bytes
+	- *Message:* 32 bytes
+	- *Vote signature:* 48-byte BLS signature on the election ID and message hash
+- Specific to persistent voters
+	- *Epoch-specific identifier of the pool:* 2 bytes
+- Specific to non-persistent voters
+	- *Pool ID:* 28 bytes
+	- *Eligibility signature:* a 48-byte BLS signature on the election ID
+
+This amounts to 90 bytes for persistent votes and 164 bytes for non-persistent votes.
+
+
 ### Certification
 
 Consider the committee size $n$, which contains $m$ persistent voters.
@@ -101,9 +118,31 @@ but not including any minor overhead arising from CBOR serialization. As noted p
     - Verify the proof of key possession: 1.5 ms/key
     - Generate vote: 280 µs/vote
     - Verify vote: 1.4 ms/vote
-- Certificate
-    - Generate certificate for a 750-vote quorum: 125 ms/cert
-    - Verify certificate for a 750-vote quorum: 225 ms/cert
+- Certificate (for a realistic number of pools, stake distribution, and committee size)
+    - *Generate certificate:* 90 ms/cert
+    - *Verify certificate:* 130 ms/cert
+    - *Determine weight (i.e., total stake voted for) in certificate:* 5.9 ms/cert
+- Serialization
+	- *Key registration:* 1.1 µs
+	- *Vote:* 630 ns
+	- *Certificate:* 65 µs 
+- Deserialization
+	- *Key registration:* 52 µs
+	- *Vote:* 19 µs
+	- *Certificate:* 2.7 ms
+
+As a general rule of thumb, assume that 80% of votes are persistent and 20% are non-persistent.
+
+Here are details for how certificate operations vary with committee size.
+
+| Number of pools | Number of committee seats | Generate certificate | Verify certificate | Weigh certificate |
+|----------------:|--------------------------:|---------------------:|-------------------:|------------------:|
+|            2500 |                       500 |              63.4 ms |           104.8 ms |           10.6 ms |
+|            2500 |                       600 |              71.1 ms |           116.9 ms |           12.0 ms |
+|            2500 |                       700 |              77.4 ms |           125.5 ms |           12.3 ms |
+|            2500 |                       800 |              83.5 ms |           134.4 ms |           12.8 ms |
+|            2500 |                       900 |              88.2 ms |           141.1 ms |           12.4 ms |
+|            2500 |                      1000 |              92.5 ms |           144.9 ms |           12.3 ms |
 
 
 ### Realistic stake distribution
