@@ -1,3 +1,13 @@
+> [!IMPORTANT]
+>
+> **As of 2024-11-01, this repository has entered maintenance mode as the project as left the R&D stage and moved under the umbrella of [Intersect MBO](https://www.intersectmbo.org/) towards implementation.**
+> - CIP 140: [Ouroboros Peras - Faster Settlement](https://cips.cardano.org/cip/CIP-0140)
+> - CPS 17: [Settlement Speed](https://cips.cardano.org/cps/CPS-0017)
+> - Results of Peras R&D: https://peras.cardano-scaling.org/
+> - Tweag's design for implementing Peras: [github:tweag/cardano-peras](https://github.com/tweag/cardano-peras)
+
+---
+
 # Model and Simulations for Ouroboros Peras
 
 <div align="center">
@@ -14,11 +24,6 @@ This repository contains the various artifacts (code, diagrams, documentation, w
   help the team members stay in sync
 
 ## Hacking
-
-> [!IMPORTANT]
->
-> As of 2024-11-01, this repository has entered maintenance mode as the project as left the R&D stage and moved under the umbrella of [Intersect MBO]() towards implementation.
-> Checkout [CIP](https://github.com/cardano-foundation/CIPs/pull/872) for relevant discussions on the road towards implementing Peras in Cardano.
 
 ### Agda
 
