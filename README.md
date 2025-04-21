@@ -4,7 +4,9 @@
 > - CIP 140: [Ouroboros Peras - Faster Settlement](https://cips.cardano.org/cip/CIP-0140)
 > - CPS 17: [Settlement Speed](https://cips.cardano.org/cps/CPS-0017)
 > - Results of Peras R&D: https://peras.cardano-scaling.org/
-> - Tweag's design for implementing Peras: [github:tweag/cardano-peras](https://github.com/tweag/cardano-peras)
+> - Implementation
+>     - Intersect Knowledge Base: [Tweag - Ouroborus Peras protocol](https://docs.intersectmbo.org/intersect-operational-services/2025-delivery-assurance-contract-updates/technical-steering-committee-contracts/tweag-ouroborus-peras-protocol)
+>     - Tweag's design for implementing Peras: [github:tweag/cardano-peras](https://github.com/tweag/cardano-peras)
 
 ---
 
