@@ -53,7 +53,7 @@ This graph reads as follows: assuming an adversarial stake of at most 10%, and a
 
 If Δ drops to 2s, e.g. if we consider the network to be faster and more reliable, then this probability also drops to 0.0001%.
 
-On Cardano's mainnet, because of the much more stringent security requirements, we'll require a much lower failure rate of $2^60$. Assuming the adversary has at most 35% stake and huge _grinding power_, and network propagation delay $Δ=5s$, the same computation yields roughly the current value of $k$, i.e. a bit over 2000 blocks.
+On Cardano's mainnet, because of the much more stringent security requirements, we'll require a much lower failure rate of $2^{60}$. Assuming the adversary has at most 35% stake and huge _grinding power_, and network propagation delay $Δ=5s$, the same computation yields roughly the current value of $k$, i.e. a bit over 2000 blocks.
 
 ### What happens in practice?
 
