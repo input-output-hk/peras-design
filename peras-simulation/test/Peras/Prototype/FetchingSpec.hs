@@ -5,14 +5,14 @@ import Control.Tracer (nullTracer)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Peras.Arbitraries (generateWith)
-import Peras.Block (Block, Certificate (..))
+import Peras.Block (Block (certificate), Certificate (..))
 import qualified Peras.Chain as Vote
 import qualified Peras.Conformance.Model as Model
 import Peras.Crypto (hash)
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Fetching (chainWeight, fetching)
 import Peras.Prototype.Types (PerasParams (..), PerasState (..), genesisCert, initialPerasState)
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (arbitrary)
 
@@ -43,6 +43,26 @@ spec = do
     prop "prototype and conformance chain weights agree" $ \certs' blocks ->
       chainWeight (Set.fromList certs') blocks == fromIntegral (Model.chainWeight certs' blocks)
     mapM_ (checkParameter block) [0, 7, 23]
+
+  describe "Certificate first-seen times" $ do
+    it "preserves the original receipt time when fetching a certificate again" $ do
+      let certifiedChain = [block{certificate = Just cert}]
+          model = Model.initialModelState{Model.clock = 7}
+          once = Model.addChain' model certifiedChain
+          twice = Model.addChain' once{Model.clock = 12} certifiedChain
+      Model.certificateFirstSeen once cert `shouldBe` Just 7
+      Model.certificateFirstSeen twice cert `shouldBe` Just 7
+      stateVar <- newTVarIO initialPerasState
+      fetching nullTracer Model.testParams (mkParty 1 [] []) stateVar 7 [certifiedChain] [] `shouldReturn` Right ()
+      fetching nullTracer Model.testParams (mkParty 1 [] []) stateVar 12 [certifiedChain] [] `shouldReturn` Right ()
+      state <- readTVarIO stateVar
+      Map.lookup cert (certs state) `shouldBe` Just 7
+    it "records the slot in which a quorum creates a certificate" $ do
+      let vote = (arbitrary `generateWith` 42){Vote.votingRound = 1, Vote.blockHash = hash block}
+          model = Model.initialModelState{Model.clock = 7}
+          updated = Model.addVote' model vote
+          expected = MkCertificate 1 (hash block) (fromIntegral (perasB Model.testParams))
+      Model.certificateFirstSeen updated expected `shouldBe` Just 7
 
 checkParameter :: Block -> Integer -> Spec
 checkParameter block boost =

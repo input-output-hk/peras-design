@@ -160,6 +160,7 @@ record NodeModel : Set where
     allChains    : List Chain
     allVotes     : List Vote
     allSeenCerts : List Certificate
+    certSeenSlots : List (Certificate × SlotNumber)
 
 rFromSlot : NodeModel → RoundNumber
 rFromSlot s =
@@ -193,6 +194,19 @@ open NodeModel public
 
 {-# COMPILE AGDA2HS NodeModel deriving (Eq, Show) #-}
 
+certificateFirstSeen : NodeModel → Certificate → Maybe SlotNumber
+certificateFirstSeen s cert = lookup cert (certSeenSlots s)
+
+{-# COMPILE AGDA2HS certificateFirstSeen #-}
+
+recordCertSeen : SlotNumber → Certificate → List (Certificate × SlotNumber) → List (Certificate × SlotNumber)
+recordCertSeen slot cert seen =
+  if any (λ entry → fst entry == cert) seen
+  then seen
+  else (cert , slot) ∷ seen
+
+{-# COMPILE AGDA2HS recordCertSeen #-}
+
 testParams : PerasParams
 testParams =
   record defaultPerasParams
@@ -214,6 +228,7 @@ initialModelState = record
   ; allChains        = genesisChain ∷ []
   ; allVotes         = []
   ; allSeenCerts     = genesisCert ∷ []
+  ; certSeenSlots    = (genesisCert , 0) ∷ []
   }
 
 {-# COMPILE AGDA2HS initialModelState #-}
@@ -249,6 +264,7 @@ addChain' s c =
   record s
     { allChains = c ∷ (allChains s)
     ; allSeenCerts = foldr insertCert (allSeenCerts s) (certsFromChain c)
+    ; certSeenSlots = foldr (recordCertSeen (clock s)) (certSeenSlots s) (certsFromChain c)
     }
 
 {-# COMPILE AGDA2HS addChain' #-}
@@ -282,7 +298,10 @@ certsFromQuorum s = newQuora (fromNat (perasB (protocol s))) (fromNat (perasτ (
 addVote' : NodeModel → Vote → NodeModel
 addVote' s v =
   let s' = record s { allVotes = v ∷ (allVotes s) }
-  in record s' { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s') }
+  in record s'
+    { allSeenCerts = foldr insertCert (allSeenCerts s') (certsFromQuorum s')
+    ; certSeenSlots = foldr (recordCertSeen (clock s')) (certSeenSlots s') (certsFromQuorum s')
+    }
 
 {-# COMPILE AGDA2HS addVote' #-}
 
@@ -307,10 +326,14 @@ x === y = (x == y) ⟨ isEquality x y ⟩
 {-# COMPILE AGDA2HS _===_ #-}
 
 Vr1A : NodeModel → Set
-Vr1A s = rFromSlot s ≡ nextRound (round (cert' s))
+Vr1A s =
+  rFromSlot s ≡ nextRound (round (cert' s))
+  × SeenInCertificateRound (perasU (protocol s)) (perasΔ (protocol s)) (cert' s) (certificateFirstSeen s (cert' s))
 
 vr1A : (s : NodeModel) → Dec (Vr1A s)
-vr1A s = rFromSlot s === nextRound (round (cert' s))
+vr1A s = decP
+  (rFromSlot s === nextRound (round (cert' s)))
+  (seenInCertificateRound (fromNat (perasU (protocol s))) (fromNat (perasΔ (protocol s))) (cert' s) (certificateFirstSeen s (cert' s)))
 
 {-# COMPILE AGDA2HS vr1A #-}
 
@@ -527,7 +550,10 @@ transition (sutIsSlotLeader , sutIsVoter) s Tick =
     let s'' = record s' { allVotes  = votes ++ allVotes s'
                         ; allChains = chains ++ allChains s'
                         }
-    in record s'' { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'') })
+    in record s''
+      { allSeenCerts = foldr insertCert (allSeenCerts s'') (certsFromQuorum s'')
+      ; certSeenSlots = foldr (recordCertSeen (clock s'')) (certSeenSlots s'') (certsFromQuorum s'')
+      })
 transition _ _ (NewChain []) = Nothing
 transition _ s (NewChain (block ∷ rest)) =
   let r = slotToRound (protocol s) (clock s)
@@ -547,6 +573,9 @@ transition _ s (NewChain (block ∷ rest)) =
          { allChains = (block ∷ rest) ∷ allChains s
          ; allSeenCerts =
              foldr insertCert (allSeenCerts s)
+               (certsFromChain (block ∷ rest))
+         ; certSeenSlots =
+             foldr (recordCertSeen (clock s)) (certSeenSlots s)
                (certsFromChain (block ∷ rest))
          })
 transition _ s (NewVote v) = do

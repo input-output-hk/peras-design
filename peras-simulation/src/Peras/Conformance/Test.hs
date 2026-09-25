@@ -133,6 +133,7 @@ instance Pretty NetworkModel where
           , hang "allChains =" 2 $ vcat (map pPrint allChains)
           , hang "allVotes =" 2 $ pPrint allVotes
           , hang "allSeenCerts =" 2 $ vcat (map pPrint allSeenCerts)
+          , hang "certSeenSlots =" 2 $ text (show certSeenSlots)
           ]
 
 instance Pretty EnvAction where

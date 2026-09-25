@@ -9,10 +9,9 @@ import Control.Monad (filterM)
 import Data.Either (fromRight)
 import Data.Functor.Identity (Identity (runIdentity))
 import Data.List (
-  nub,
   partition,
  )
-import Data.Maybe (isNothing, mapMaybe)
+import Data.Maybe (isNothing)
 import qualified Data.Set as Set (singleton)
 import GHC.Generics (Generic)
 import Peras.Arbitraries ()
@@ -21,12 +20,12 @@ import Peras.Block (
   Certificate (MkCertificate, round),
   PartyId,
  )
-import Peras.Chain (Chain, Vote (MkVote, creatorId, votingRound))
+import Peras.Chain (Chain, Vote (MkVote, creatorId, votingRound), seenInCertificateRound)
 import Peras.Conformance.Model (
   EnvAction (NewChain, NewVote, Tick),
   NodeModel (..),
+  certificateFirstSeen,
   chainWeight,
-  genesisCert,
   genesisHash,
   otherId,
   sutId,
@@ -156,7 +155,14 @@ genVote' gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyVR
       certPrimeSlot = fromIntegral $ fromIntegral (round certPrime) * perasU protocol
       certStar = getCertStarRound prefChain
       r = inRound clock protocol
-      vr1a = not voteObeyVR1A || round certPrime == r - 1
+      vr1a =
+        not voteObeyVR1A
+          || round certPrime == r - 1
+            && seenInCertificateRound
+              (fromIntegral (perasU protocol))
+              (fromIntegral (perasΔ protocol))
+              certPrime
+              (certificateFirstSeen node certPrime)
       vr1b = not voteObeyVR1B || blockSlot == 0 || blockSlot <= certPrimeSlot && block `elem` (hash <$> prefChain)
       vr2a = not voteObeyVR2A || fromIntegral r >= fromIntegral (round certPrime) + perasR protocol
       vr2b = not voteObeyVR2B || r > certStar && fromIntegral (r - certStar) `mod` perasK protocol == 0
@@ -186,7 +192,14 @@ genVotes' gc@MkGenConstraints{voteCurrent, voteObeyVR1A, voteObeyVR1B, voteObeyV
       certPrimeSlot = fromIntegral $ fromIntegral (round certPrime) * perasU protocol
       certStar = getCertStarRound prefChain
       r = inRound clock protocol
-      vr1a = not voteObeyVR1A || round certPrime == r - 1
+      vr1a =
+        not voteObeyVR1A
+          || round certPrime == r - 1
+            && seenInCertificateRound
+              (fromIntegral (perasU protocol))
+              (fromIntegral (perasΔ protocol))
+              certPrime
+              (certificateFirstSeen node certPrime)
       vr1b = not voteObeyVR1B || blockSlot == 0 || blockSlot <= certPrimeSlot && block `elem` (hash <$> prefChain)
       vr2a = not voteObeyVR2A || fromIntegral r >= fromIntegral (round certPrime) + perasR protocol
       vr2b = not voteObeyVR2B || r > certStar && fromIntegral (r - certStar) `mod` perasK protocol == 0
@@ -346,8 +359,7 @@ rollbackNodeModel delta s@NodeModel{..} =
     keepChain = all keepBlock
     -- This is approximate because we don't known when the vote was received.
     keepVote MkVote{votingRound} = votingRound <= round'
-    -- This is approximate because we don't known when the certificate was received.
-    keepCert cert@MkCertificate{round} = cert == genesisCert || round <= round' && cert `elem` nub (mapMaybe certificate `concatMap` allChains')
+    keepCert cert = maybe False (<= clock') (lookup cert certSeenSlots)
     (allChains', newChains) = partition keepChain allChains
     (allVotes', newVotes) = partition keepVote allVotes
    in
@@ -357,5 +369,6 @@ rollbackNodeModel delta s@NodeModel{..} =
         , allChains = allChains'
         , allVotes = allVotes'
         , allSeenCerts = filter keepCert allSeenCerts
+        , certSeenSlots = filter ((<= clock') . snd) certSeenSlots
         }
     )

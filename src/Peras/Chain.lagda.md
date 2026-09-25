@@ -7,7 +7,7 @@ open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
 open import Haskell.Law.Equality
 
-open import Data.Nat using (NonZero; _/_)
+open import Data.Nat using (NonZero; _/_; _≤_)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Crypto
@@ -25,6 +25,7 @@ open import Peras.Util
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 import GHC.Generics (Generic)
+import Prelude hiding (round)
 #-}
 
 {-# FOREIGN GHC
@@ -117,6 +118,29 @@ certsFromChain : Chain → List Certificate
 certsFromChain = mapMaybe certificate
 
 {-# COMPILE AGDA2HS certsFromChain #-}
+```
+### Certificate receipt window
+
+A certificate for round `r` must first be seen between slots `r * U` and
+`r * U + Δ`, inclusive. A missing receipt time does not satisfy the rule.
+
+```agda
+SeenInCertificateRound : Nat → Nat → Certificate → Maybe SlotNumber → Set
+SeenInCertificateRound u delta cert Nothing = ⊥
+SeenInCertificateRound u delta cert (Just seen) =
+  let start = getRoundNumber (round cert) * fromNat u
+      received = getSlotNumber seen
+  in start ≤ received × received ≤ start + fromNat delta
+
+seenInCertificateRound : (u delta : Nat) → (cert : Certificate) → (seen : Maybe SlotNumber)
+  → Dec (SeenInCertificateRound u delta cert seen)
+seenInCertificateRound u delta cert Nothing = False ⟨ (λ ()) ⟩
+seenInCertificateRound u delta cert (Just seen) =
+  let start = getRoundNumber (round cert) * fromNat u
+      received = getSlotNumber seen
+  in decP (ge received start) (ge (start + fromNat delta) received)
+
+{-# COMPILE AGDA2HS seenInCertificateRound #-}
 ```
 ```agda
 insertCert : Certificate → List Certificate → List Certificate

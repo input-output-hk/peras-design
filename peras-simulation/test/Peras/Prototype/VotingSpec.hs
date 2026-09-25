@@ -6,15 +6,17 @@ import Control.Concurrent.Class.MonadSTM (MonadSTM (readTVarIO), newTVarIO)
 import Control.Monad (void)
 import Control.Tracer (nullTracer)
 import Data.Default (def)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Peras.Arbitraries (generateWith)
 import Peras.Block (Block (..), Certificate (..))
+import qualified Peras.Conformance.Model as Model
 import Peras.Crypto (hash)
 import Peras.Prototype.Crypto (mkParty)
 import Peras.Prototype.Diffusion (allPendingVotes, defaultDiffuser, diffuseVote)
 import Peras.Prototype.Types (PerasParams (..), PerasState (..), initialPerasState)
 import Peras.Prototype.Voting (voting)
-import Test.Hspec (Spec, describe, it, shouldReturn)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 import Test.QuickCheck (arbitrary)
 import Prelude hiding (round)
 
@@ -43,8 +45,38 @@ spec = do
         initialPerasState
           { chainPref = someChain
           , certPrime = someCertificate
+          , certs = Map.singleton someCertificate (fromInteger ((fromIntegral roundNumber - 1) * perasU))
           , chains = Set.singleton someChain
           }
+
+      checkReceipt label receipt expected = it label $ do
+        let received = maybe Map.empty (Map.singleton someCertificate) receipt
+            model =
+              Model.initialModelState
+                { Model.clock = slotNumber
+                , Model.protocol = params
+                , Model.allSeenCerts = [someCertificate]
+                , Model.certSeenSlots = Map.toList received
+                }
+            selectCertified _ _ _ _ = pure $ Right $ Just (head someChain, 1)
+        Model.vr1A model `shouldBe` expected
+        perasState <- newTVarIO steadyState{certs = received}
+        diffuser <- newTVarIO $ defaultDiffuser 0
+        result <- voting nullTracer params committeeMember perasState slotNumber selectCertified (diffuseVote diffuser)
+        result `shouldBe` Right ()
+        length . allPendingVotes <$> readTVarIO diffuser `shouldReturn` (if expected then 1 else 0)
+
+      certRoundStart = fromInteger $ (fromIntegral roundNumber - 1) * perasU
+
+  describe "VR1-A certificate receipt window" $ do
+    checkReceipt "accepts receipt at the start of the certificate's round" (Just certRoundStart) True
+    checkReceipt "accepts receipt exactly at the Delta deadline" (Just (certRoundStart + 5)) True
+    checkReceipt "rejects receipt one slot after the Delta deadline" (Just (certRoundStart + 6)) False
+    checkReceipt "rejects receipt in the voting round" (Just slotNumber) False
+    checkReceipt "rejects receipt before the certificate's round" (Just (certRoundStart - 1)) False
+    checkReceipt "rejects certificates without a receipt timestamp" Nothing False
+    it "accepts the genesis certificate seen at slot zero" $
+      Model.vr1A Model.initialModelState{Model.clock = 5} `shouldBe` True
 
   {- FIXME: Needs a better generator.
     it "votes on selectBlock's block given party is committee member" $ do

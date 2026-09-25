@@ -10,11 +10,13 @@ module Peras.Chain where
 
 import Data.Maybe (mapMaybe)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (certificate, slotNumber), Certificate, PartyId)
+import Peras.Block (Block (certificate, slotNumber), Certificate (round), PartyId)
 import Peras.Crypto (Hash, MembershipProof, Signature)
-import Peras.Numbering (RoundNumber, SlotNumber (MkSlotNumber))
+import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (MkSlotNumber, getSlotNumber))
+import Peras.Util (decP, ge)
 
 import GHC.Generics (Generic)
+import Prelude hiding (round)
 
 type VotingWeight = Natural
 
@@ -39,6 +41,20 @@ type Chain = [Block]
 
 certsFromChain :: Chain -> [Certificate]
 certsFromChain = mapMaybe (\r -> certificate r)
+
+seenInCertificateRound ::
+  Natural -> Natural -> Certificate -> Maybe SlotNumber -> Bool
+seenInCertificateRound u delta cert Nothing = False
+seenInCertificateRound u delta cert (Just seen) =
+  decP
+    ( ge
+        (getSlotNumber seen)
+        (getRoundNumber (round cert) * fromIntegral u)
+    )
+    ( ge
+        (getRoundNumber (round cert) * fromIntegral u + fromIntegral delta)
+        (getSlotNumber seen)
+    )
 
 insertCert :: Certificate -> [Certificate] -> [Certificate]
 insertCert cert [] = [cert]
