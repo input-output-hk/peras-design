@@ -67,7 +67,7 @@ import Peras.Prototype.Fetching (fetching)
 import Peras.Prototype.Types (
   Payload,
   PerasError (MultipleItemsDiffused),
-  PerasParams,
+  PerasParams (perasB),
   PerasState (..),
   hashTip,
   inRound,
@@ -277,7 +277,7 @@ instance StateModel NodeModel where
           )
         ,
           ( if null chain || null validCertRounds then 0 else 1
-          , fmap Just . MkCertificate <$> elements validCertRounds <*> (hash <$> elements chain)
+          , fmap Just $ MkCertificate <$> elements validCertRounds <*> (hash <$> elements chain) <*> pure (fromIntegral (perasB protocol))
           )
         ]
     validCertRounds = [1 .. r] \\ (round <$> Map.keys certs)

@@ -21,7 +21,7 @@ open import Data.Product using () renaming (_,_ to _,ᵖ_)
 open import Haskell.Prelude hiding (_>_)
 open import Haskell.Extra.Dec
 
-open import Peras.Block
+open import Peras.Block hiding (weight)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering

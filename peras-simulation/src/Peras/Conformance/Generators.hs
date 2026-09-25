@@ -25,6 +25,7 @@ import Peras.Chain (Chain, Vote (MkVote, creatorId, votingRound))
 import Peras.Conformance.Model (
   EnvAction (NewChain, NewVote, Tick),
   NodeModel (..),
+  chainWeight,
   genesisCert,
   genesisHash,
   otherId,
@@ -221,12 +222,9 @@ genNewChain gc@MkGenConstraints{blockCurrent} node@NodeModel{clock} =
         <*> arbitrary
 
 genPrefChain :: GenConstraints -> NodeModel -> Gen Chain
-genPrefChain MkGenConstraints{blockWeightiest} NodeModel{protocol, allChains} =
+genPrefChain MkGenConstraints{blockWeightiest} NodeModel{allChains, allSeenCerts} =
   let
-    weigh :: Integer -> Block -> Integer
-    weigh w MkBlock{certificate} = w + 1 + maybe 0 (const $ perasB protocol) certificate
-    weights :: [(Integer, Chain)]
-    weights = [(foldl weigh 0 chain, chain) | chain <- allChains]
+    weights = [(chainWeight allSeenCerts chain, chain) | chain <- allChains]
     maxWeight = maximum $ fst <$> weights
     prefChains = snd <$> filter ((== maxWeight) . fst) weights
    in
@@ -283,7 +281,7 @@ genCert MkGenConstraints{} NodeModel{clock, protocol} prefChain =
    in
     if null prefChain || null validCertRounds
       then pure Nothing
-      else fmap Just . MkCertificate <$> elements validCertRounds <*> (hash <$> elements prefChain)
+      else fmap Just $ MkCertificate <$> elements validCertRounds <*> (hash <$> elements prefChain) <*> pure (fromIntegral (perasB protocol))
 
 genSlotNumber :: GenConstraints -> NodeModel -> Gen SlotNumber
 genSlotNumber _ NodeModel{clock} =

@@ -11,7 +11,7 @@ open import Data.Nat using (NonZero; _/_)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Crypto
-open import Peras.Block
+open import Peras.Block hiding (weight)
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
@@ -145,7 +145,7 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 
   cert₀ : Certificate
-  cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
+  cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS) 0
 
   ChainExtends : Hash Block → Certificate → Chain → Set
   ChainExtends h c ch =
@@ -178,20 +178,18 @@ module _ ⦃ _ : Hashable Block ⦄
 ```
 ### Chain weight
 
-The weight of a chain is defined with respect of the Peras parameters
+Each block contributes one plus the largest weight of any certificate for that block.
 ```agda
   weight : Chain → List Certificate → Nat
   weight ch cts = chainWeight' 0 ch
     where
-      isCertified : Block → Bool
-      isCertified block = any (λ cert → hash block == blockRef cert) cts
+      certificateBoost : Block → Nat
+      certificateBoost block = foldr max 0 (map Certificate.weight (filter (λ cert → hash block == blockRef cert) cts))
 
       chainWeight' : Nat → Chain → Nat
       chainWeight' accum [] = accum
       chainWeight' accum (block ∷ blocks) =
-        if isCertified block
-          then chainWeight' (accum + 1 + B) blocks
-          else chainWeight' (accum + 1) blocks
+        chainWeight' (accum + 1 + certificateBoost block) blocks
 ```
 ### Chain validity
 

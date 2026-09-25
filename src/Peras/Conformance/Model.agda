@@ -83,7 +83,7 @@ genesisChain = []
 {-# COMPILE AGDA2HS genesisChain #-}
 
 genesisCert : Certificate
-genesisCert = MkCertificate 0 genesisHash
+genesisCert = MkCertificate 0 genesisHash 0
 
 {-# COMPILE AGDA2HS genesisCert #-}
 
@@ -103,17 +103,15 @@ seenBeforeStartOfRound params r (c , s) =
 
 {-# COMPILE AGDA2HS seenBeforeStartOfRound #-}
 
-chainWeight : Nat → List Certificate -> Chain → Nat
-chainWeight boost certs = chainWeight' 0
+chainWeight : List Certificate -> Chain → Nat
+chainWeight certs = chainWeight' 0
   where
-    isCertified : Block → Bool
-    isCertified block = any (λ cert → Hashable.hash hashBlock block == blockRef cert) certs
+    certificateBoost : Block → Nat
+    certificateBoost block = foldr max 0 (map Certificate.weight (filter (λ cert → Hashable.hash hashBlock block == blockRef cert) certs))
     chainWeight' : Nat → List Block → Nat
     chainWeight' accum [] = accum
     chainWeight' accum (block ∷ blocks) =
-      if isCertified block
-        then chainWeight' (accum + 1 + boost) blocks
-        else chainWeight' (accum + 1) blocks
+      chainWeight' (accum + 1 + certificateBoost block) blocks
 
 {-# COMPILE AGDA2HS chainWeight #-}
 
@@ -130,9 +128,9 @@ compareTip (block1 ∷ blocks1) (block2 ∷ blocks2) =
 
 {-# COMPILE AGDA2HS compareTip #-}
 
-compareChains : Nat → List Certificate → Chain → Chain → Ordering
-compareChains boost certs chain1 chain2 =
-  case compare (chainWeight boost certs chain1) (chainWeight boost certs chain2) of λ where
+compareChains : List Certificate → Chain → Chain → Ordering
+compareChains certs chain1 chain2 =
+  case compare (chainWeight certs chain1) (chainWeight certs chain2) of λ where
     EQ → compareTip chain1 chain2
     x → x
 
@@ -140,7 +138,7 @@ compareChains boost certs chain1 chain2 =
 
 preferredChain : PerasParams → List Certificate → List Chain → Chain
 preferredChain params certs =
-  maximumBy genesisChain (compareChains (fromNat (perasB params)) certs)
+  maximumBy genesisChain (compareChains certs)
 
 {-# COMPILE AGDA2HS preferredChain #-}
 
@@ -256,9 +254,9 @@ addChain' s c =
 {-# COMPILE AGDA2HS addChain' #-}
 
 {-# TERMINATING #-}
-newQuora : ℕ → List Certificate → List Vote → List Certificate
-newQuora _ _ [] = []
-newQuora quorum priorCerts (vote ∷ votes) =
+newQuora : Nat → ℕ → List Certificate → List Vote → List Certificate
+newQuora _ _ _ [] = []
+newQuora boost quorum priorCerts (vote ∷ votes) =
   let
     sameCert cert = votingRound vote == round cert && blockHash vote == blockRef cert
     sameVote vote' = votingRound vote == votingRound vote' && blockHash vote == blockHash vote'
@@ -269,15 +267,15 @@ newQuora quorum priorCerts (vote ∷ votes) =
   in
     if not hasCertificate && hasQuorum
       then (
-        let newCert = MkCertificate (votingRound vote) (blockHash vote)
-        in newCert ∷ newQuora quorum (newCert ∷ priorCerts) remainder
+        let newCert = MkCertificate (votingRound vote) (blockHash vote) boost
+        in newCert ∷ newQuora boost quorum (newCert ∷ priorCerts) remainder
       )
-      else newQuora quorum priorCerts remainder
+      else newQuora boost quorum priorCerts remainder
 
 {-# COMPILE AGDA2HS newQuora #-}
 
 certsFromQuorum : NodeModel → List Certificate
-certsFromQuorum s = newQuora (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
+certsFromQuorum s = newQuora (fromNat (perasB (protocol s))) (fromNat (perasτ (protocol s))) (allSeenCerts s) (allVotes s)
 
 {-# COMPILE AGDA2HS certsFromQuorum #-}
 

@@ -18,15 +18,15 @@ import Data.Foldable (toList)
 import Data.Function (on)
 import Data.List (groupBy, maximumBy, nubBy, sortBy)
 import Data.Map (Map)
-import Data.Map as Map (fromList, keys, keysSet, union)
+import Data.Map as Map (findWithDefault, fromList, fromListWith, keys, keysSet, union)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
-import qualified Data.Set as Set (filter, fromList, intersection, map, notMember, size, toList, union)
+import qualified Data.Set as Set (filter, fromList, notMember, toList, union)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
-import qualified Peras.Block as Block (Block (creatorId, signature, slotNumber))
+import qualified Peras.Block as Block (Block (creatorId, signature, slotNumber), Certificate (weight))
 import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound))
 import qualified Peras.Chain as Vote (Vote (creatorId, votingRound))
-import Peras.Crypto (Hash, hash)
+import Peras.Crypto (hash)
 import Peras.Numbering (SlotNumber)
 import Peras.Prototype.Crypto (createSignedCertificate)
 import Peras.Prototype.Trace (PerasLog (..))
@@ -69,7 +69,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
         unequivocatedVotes = Set.filter (not . equivocatedVote) newVotes'
         votes' = votes `Set.union` unequivocatedVotes
         newQuora = findNewQuora (fromIntegral perasτ) (Map.keysSet certsOldAndReceived) votes'
-    certsCreated <- ExceptT $ sequence <$> mapM (createSignedCertificate party) newQuora
+    certsCreated <- ExceptT $ sequence <$> mapM (createSignedCertificate (fromIntegral perasB) party) newQuora
     let certs' = certsOldAndReceived `Map.union` Map.fromList ((,slot) <$> certsCreated)
     unless (null certsCreated) . lift $ traceWith tracer (NewCertificatesFromQuorum (pid party) certsCreated)
 
@@ -79,7 +79,7 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
     --  * The slot number
     --  * The creator Id of the block
     --  * The hash of the block
-    let chainPref' = maximumBy (compareChains perasB certs') chains'
+    let chainPref' = maximumBy (compareChains certs') chains'
     when (chainPref' /= chainPref) . lift $ traceWith tracer (NewChainPref (pid party) chainPref')
 
     -- 5. Set cert' to the certificate with the highest round number in Certs.
@@ -110,9 +110,9 @@ fetching tracer MkPerasParams{..} party stateVar slot newChains newVotes =
         , certStar = certStar'
         }
 
-compareChains :: Integer -> Map Certificate SlotNumber -> Chain -> Chain -> Ordering
-compareChains perasB certs' a b =
-  case (compare `on` chainWeight perasB (Map.keysSet certs')) a b of
+compareChains :: Map Certificate SlotNumber -> Chain -> Chain -> Ordering
+compareChains certs' a b =
+  case (compare `on` chainWeight (Map.keysSet certs')) a b of
     EQ ->
       let blocka = head a
           blockb = head b
@@ -133,17 +133,14 @@ extractNewCertificates certs =
 
 -- Each party P assigns a certain weight to every chain C, based on C’s length
 -- and all certificates that vote for blocks in C that P has seen so far.
-chainWeight :: Integer -> Set Certificate -> Chain -> Integer
-chainWeight boost certs blocks =
+chainWeight :: Set Certificate -> Chain -> Integer
+chainWeight certs blocks =
   let
-    -- Block hashes certified by any certificate.
-    certifiedBlocks = Set.map blockRef certs :: Set (Hash Block)
-    -- Block hashes on the chain.
-    chainBlocks = Set.fromList $ hash <$> blocks :: Set (Hash Block)
+    -- A block receives at most one boost, even across certification rounds.
+    certifiedWeights = Map.fromListWith max [(blockRef cert, Block.weight cert) | cert <- toList certs]
+    certificateBoost block = Map.findWithDefault 0 (hash block) certifiedWeights
    in
-    -- Length of the chain plus the boost times the count of certified blocks.
-    fromIntegral (length blocks)
-      + boost * fromIntegral (Set.size $ certifiedBlocks `Set.intersection` chainBlocks)
+    fromIntegral (length blocks) + sum (fromIntegral . certificateBoost <$> blocks)
 
 -- Find quora of votes that don't already have certificates.
 --

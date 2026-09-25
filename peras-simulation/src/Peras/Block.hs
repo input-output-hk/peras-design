@@ -9,6 +9,7 @@
 
 module Peras.Block where
 
+import Numeric.Natural (Natural)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), LeadershipProof, Signature (bytesS), VerificationKey, emptyBS)
 import Peras.Numbering (RoundNumber, SlotNumber)
 
@@ -47,13 +48,17 @@ data BlockBody = MkBlockBody
 data Certificate = MkCertificate
   { round :: RoundNumber
   , blockRef :: Hash Block
+  , weight :: Natural
   }
   deriving (Generic)
 
 type Payload = [Tx]
 
 instance Eq Certificate where
-  x == y = round x == round y && blockRef x == blockRef y
+  x == y =
+    round x == round y
+      && blockRef x == blockRef y
+      && weight x == weight y
 
 instance Eq Block where
   x == y =
