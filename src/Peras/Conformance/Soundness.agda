@@ -149,7 +149,7 @@ module _ ⦃ postulates : Postulates ⦄
         }
 
     NodeModelTree : SmallStep.TreeType NodeModel
-    NodeModelTree = record { is-TreeType = isTreeType ; certSeenAt = certificateFirstSeen }
+    NodeModelTree = record { is-TreeType = isTreeType ; arrivalSlotOfCert = certificateFirstSeen }
 
     txSelection : SlotNumber → PartyId → List Tx
     txSelection _ _ = []

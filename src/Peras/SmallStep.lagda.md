@@ -189,7 +189,7 @@ The block-tree type is defined as follows:
       certs : T → List Certificate
 
       -- Local first-seen time, preserved when a certificate is received again.
-      certSeenAt : T → Certificate → Maybe SlotNumber
+      arrivalSlotOfCert : T → Certificate → Maybe SlotNumber
 
       is-TreeType : IsTreeType
                       tree₀ addChain chains preferredChain
@@ -283,7 +283,7 @@ the first `Δ` slots of round `r−1` (including the deadline).
     VotingRule-1A r t =
       let cert = latestCertSeen t
       in r ≡ nextRound (round cert)
-         × SeenInCertificateRound U Δ cert (certSeenAt t cert)
+         × SeenInCertificateRound U Δ cert (arrivalSlotOfCert t cert)
 ```
 VR-1B: The  extends the block certified by `cert-r−1`,
 ```agda
