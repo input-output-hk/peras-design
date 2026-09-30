@@ -107,7 +107,7 @@ chainWeight : List Certificate -> Chain → Nat
 chainWeight certs = chainWeight' 0
   where
     certificateBoost : Block → Nat
-    certificateBoost block = foldr max 0 (map Certificate.weight (filter (λ cert → Hashable.hash hashBlock block == blockRef cert) certs))
+    certificateBoost block = sum (map Certificate.weight (filter (λ cert → Hashable.hash hashBlock block == blockRef cert) certs))
     chainWeight' : Nat → List Block → Nat
     chainWeight' accum [] = accum
     chainWeight' accum (block ∷ blocks) =

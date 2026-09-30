@@ -69,9 +69,7 @@ chainWeight certs = chainWeight' 0
  where
   certificateBoost :: Block -> Natural
   certificateBoost block =
-    foldr
-      max
-      0
+    sum
       ( map
           (\r -> weight r)
           (filter (\cert -> hash block == blockRef cert) certs)

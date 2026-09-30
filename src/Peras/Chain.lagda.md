@@ -200,21 +200,24 @@ module _ ⦃ _ : Hashable Block ⦄
   v-round : SlotNumber → RoundNumber
   v-round (MkSlotNumber s) = MkRoundNumber (rnd s)
 ```
+
 ### Chain weight
 
 Each block contributes one plus the largest weight of any certificate for that block.
+
 ```agda
   weight : Chain → List Certificate → Nat
   weight ch cts = chainWeight' 0 ch
     where
       certificateBoost : Block → Nat
-      certificateBoost block = foldr max 0 (map Certificate.weight (filter (λ cert → hash block == blockRef cert) cts))
+      certificateBoost block = sum (map Certificate.weight (filter (λ cert → hash block == blockRef cert) cts))
 
       chainWeight' : Nat → Chain → Nat
       chainWeight' accum [] = accum
       chainWeight' accum (block ∷ blocks) =
         chainWeight' (accum + 1 + certificateBoost block) blocks
 ```
+
 ### Chain validity
 
 ```agda
