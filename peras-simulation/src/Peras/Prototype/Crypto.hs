@@ -13,6 +13,7 @@ import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Serialize as Serialize (decode, encode)
 import Data.Set (Set)
 import qualified Data.Set as S (map, toList)
+import Numeric.Natural (Natural)
 import Peras.Block (Block (..), Certificate (..), Party (..), PartyId)
 import Peras.Chain (Vote (..))
 import Peras.Crypto (Hash (..), Hashable (..), LeadershipProof (MkLeadershipProof), MembershipProof (MkMembershipProof), Signature (MkSignature), VerificationKey (MkVerificationKey))
@@ -33,8 +34,8 @@ createSignedBlock MkParty{pid = creatorId} slotNumber parentBlock certificate le
  where
   signature = sign (creatorId, slotNumber, parentBlock, certificate, leadershipProof, bodyHash)
 
-createSignedCertificate :: Applicative m => Party -> Set Vote -> m (PerasResult Certificate)
-createSignedCertificate _ votes =
+createSignedCertificate :: Applicative m => Natural -> Party -> Set Vote -> m (PerasResult Certificate)
+createSignedCertificate weight _ votes =
   pure $
     case toList $ S.map (\MkVote{votingRound, blockHash} -> (votingRound, blockHash)) votes of
       [(round, blockRef)] -> pure MkCertificate{..}

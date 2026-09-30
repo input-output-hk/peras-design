@@ -162,6 +162,8 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
     Peras.Conformance.Model.Tick -> do
       rs@RunState{..} <- get
       modify $ \rs' -> rs'{unfetchedChains = mempty, unfetchedVotes = mempty}
+      -- Flush messages at their observation slot before advancing the SUT.
+      void . lift $ callSUT rs Fetching{newChains = unfetchedChains, newVotes = unfetchedVotes}
       let clock' = clock + 1
           (isSlotLeader', isCommitteeMember') = sortition net
       lift
@@ -170,8 +172,8 @@ instance Realized IO ([Chain], [Vote]) ~ ([Chain], [Vote]) => RunModel NetworkMo
             NewSlot
               { isSlotLeader = isSlotLeader' clock'
               , isCommitteeMember = isCommitteeMember' $ inRound clock' protocol
-              , newChains = unfetchedChains
-              , newVotes = unfetchedVotes
+              , newChains = mempty
+              , newVotes = mempty
               }
         )
         >>= \case

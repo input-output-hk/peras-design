@@ -34,9 +34,11 @@ parties:
       certPrime:
         blockRef: ''
         round: 0
+        weight: 0
       certStar:
         blockRef: ''
         round: 0
+        weight: 0
       certs: []
       chainPref: []
       chains:
@@ -62,9 +64,11 @@ parties:
       certPrime:
         blockRef: ''
         round: 0
+        weight: 0
       certStar:
         blockRef: ''
         round: 0
+        weight: 0
       certs: []
       chainPref: []
       chains:
@@ -88,9 +92,11 @@ parties:
       certPrime:
         blockRef: ''
         round: 0
+        weight: 0
       certStar:
         blockRef: ''
         round: 0
+        weight: 0
       certs: []
       chainPref: []
       chains:
@@ -112,9 +118,11 @@ parties:
       certPrime:
         blockRef: ''
         round: 0
+        weight: 0
       certStar:
         blockRef: ''
         round: 0
+        weight: 0
       certs: []
       chainPref: []
       chains:

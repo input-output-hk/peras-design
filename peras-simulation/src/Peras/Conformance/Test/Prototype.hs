@@ -101,7 +101,9 @@ instance (Realized m () ~ (), Realized m ([Chain], [Vote]) ~ ([Chain], [Vote]), 
         let clock' = clock + 1
             txs = []
             sut = modelSUT net
-        _ <- fetching tracer protocol sut stateVar clock' unfetchedChains unfetchedVotes
+        -- These messages were observed in the current slot; buffering them
+        -- until Tick must not move their certificate receipt times forward.
+        _ <- fetching tracer protocol sut stateVar clock unfetchedChains unfetchedVotes
         _ <- blockCreation tracer protocol sut stateVar clock' txs (diffuseChain diffuserVar)
         let roundNumber = inRound clock' protocol
             party = mkCommitteeMember sut protocol clock' (isCommitteeMember sut roundNumber)

@@ -123,7 +123,7 @@ project model@Prototype.MkNodeModel{..} =
         , prefix = 0 -- FIXME: Address this later. It should be the last common block of the chains tied for highest weight.
         , honest =
             MkChain
-              { weight = 1 + fromInteger (Prototype.chainWeight (Prototype.perasB protocol) certsSet chainPref)
+              { weight = 1 + fromInteger (Prototype.chainWeight certsSet chainPref)
               , certPrime = fromIntegral $ Prototype.round certPrime
               , certPrimeNext = certNext Prototype.certPrime
               , certUltimate = any ((== r) . Prototype.round) certsSet || r == 0

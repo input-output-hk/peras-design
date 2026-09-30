@@ -13,9 +13,9 @@ module Peras.Conformance.Model where
 
 import Control.Monad (guard)
 import Numeric.Natural (Natural)
-import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round), PartyId, tipHash)
-import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), certsFromChain, insertCert, lastSlot)
-import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasτ), defaultPerasParams)
+import Peras.Block (Block (MkBlock, bodyHash, certificate, creatorId, leadershipProof, parentBlock, signature, slotNumber), Certificate (MkCertificate, blockRef, round, weight), PartyId, tipHash)
+import Peras.Chain (Chain, Vote (MkVote, blockHash, votingRound), certsFromChain, insertCert, lastSlot, seenInCertificateRound)
+import Peras.Conformance.Params (PerasParams (MkPerasParams, perasA, perasB, perasK, perasL, perasR, perasU, perasΔ, perasτ), defaultPerasParams)
 import Peras.Crypto (Hash (MkHash), Hashable (hash), emptyBS)
 import Peras.Foreign (checkLeadershipProof, checkSignedBlock, checkSignedVote, createLeadershipProof, createMembershipProof, createSignedBlock, createSignedVote, mkParty)
 import Peras.Numbering (RoundNumber (getRoundNumber), SlotNumber (getSlotNumber), nextRound, nextSlot, slotInRound, slotToRound)
@@ -51,7 +51,7 @@ genesisChain :: Chain
 genesisChain = []
 
 genesisCert :: Certificate
-genesisCert = MkCertificate 0 genesisHash
+genesisCert = MkCertificate 0 genesisHash 0
 
 sutId :: PartyId
 sutId = 1
@@ -64,18 +64,20 @@ seenBeforeStartOfRound ::
 seenBeforeStartOfRound params r (c, s) =
   getSlotNumber s <= getRoundNumber r * perasU params
 
-chainWeight :: Natural -> [Certificate] -> Chain -> Natural
-chainWeight boost certs = chainWeight' 0
+chainWeight :: [Certificate] -> Chain -> Natural
+chainWeight certs = chainWeight' 0
  where
-  isCertified :: Block -> Bool
-  isCertified block =
-    any (\cert -> hash block == blockRef cert) certs
+  certificateBoost :: Block -> Natural
+  certificateBoost block =
+    sum
+      ( map
+          (\r -> weight r)
+          (filter (\cert -> hash block == blockRef cert) certs)
+      )
   chainWeight' :: Natural -> [Block] -> Natural
   chainWeight' accum [] = accum
   chainWeight' accum (block : blocks) =
-    if isCertified block
-      then chainWeight' (accum + 1 + boost) blocks
-      else chainWeight' (accum + 1) blocks
+    chainWeight' (accum + 1 + certificateBoost block) blocks
 
 compareTip :: Chain -> Chain -> Ordering
 compareTip [] [] = EQ
@@ -88,20 +90,15 @@ compareTip (block1 : blocks1) (block2 : blocks2) =
       y -> y
     x -> x
 
-compareChains ::
-  Natural -> [Certificate] -> Chain -> Chain -> Ordering
-compareChains boost certs chain1 chain2 =
-  case compare
-    (chainWeight boost certs chain1)
-    (chainWeight boost certs chain2) of
+compareChains :: [Certificate] -> Chain -> Chain -> Ordering
+compareChains certs chain1 chain2 =
+  case compare (chainWeight certs chain1) (chainWeight certs chain2) of
     EQ -> compareTip chain1 chain2
     x -> x
 
 preferredChain :: PerasParams -> [Certificate] -> [Chain] -> Chain
 preferredChain params certs =
-  maximumBy
-    genesisChain
-    (compareChains (fromIntegral (perasB params)) certs)
+  maximumBy genesisChain (compareChains certs)
 
 makeVote :: PerasParams -> SlotNumber -> Hash Block -> Vote
 makeVote params slot h =
@@ -121,6 +118,7 @@ data NodeModel = NodeModel
   , allChains :: [Chain]
   , allVotes :: [Vote]
   , allSeenCerts :: [Certificate]
+  , certSeenSlots :: [(Certificate, SlotNumber)]
   }
   deriving (Eq, Show)
 
@@ -144,6 +142,20 @@ certS s =
     (comparing (\r -> round r))
     (certsFromChain (pref s))
 
+certificateFirstSeen ::
+  NodeModel -> Certificate -> Maybe SlotNumber
+certificateFirstSeen s cert = lookup cert (certSeenSlots s)
+
+recordCertSeen ::
+  SlotNumber ->
+  Certificate ->
+  [(Certificate, SlotNumber)] ->
+  [(Certificate, SlotNumber)]
+recordCertSeen slot cert seen =
+  if any (\entry -> fst entry == cert) seen
+    then seen
+    else (cert, slot) : seen
+
 testParams :: PerasParams
 testParams =
   MkPerasParams
@@ -159,7 +171,13 @@ testParams =
 
 initialModelState :: NodeModel
 initialModelState =
-  NodeModel 1 testParams [genesisChain] [] [genesisCert]
+  NodeModel
+    1
+    testParams
+    [genesisChain]
+    []
+    [genesisCert]
+    [(genesisCert, 0)]
 
 chainExtends :: Hash Block -> Certificate -> Chain -> Bool
 chainExtends h c =
@@ -191,10 +209,16 @@ addChain' s c =
     (c : allChains s)
     (allVotes s)
     (foldr insertCert (allSeenCerts s) (certsFromChain c))
+    ( foldr
+        (recordCertSeen (clock s))
+        (certSeenSlots s)
+        (certsFromChain c)
+    )
 
-newQuora :: Natural -> [Certificate] -> [Vote] -> [Certificate]
-newQuora _ _ [] = []
-newQuora quorum priorCerts (vote : votes) =
+newQuora ::
+  Natural -> Natural -> [Certificate] -> [Vote] -> [Certificate]
+newQuora _ _ _ [] = []
+newQuora boost quorum priorCerts (vote : votes) =
   if not
     ( any
         ( \cert ->
@@ -215,10 +239,13 @@ newQuora quorum priorCerts (vote : votes) =
       )
       >= fromIntegral quorum
     then
-      MkCertificate (votingRound vote) (blockHash vote)
+      MkCertificate (votingRound vote) (blockHash vote) boost
         : newQuora
+          boost
           quorum
-          (MkCertificate (votingRound vote) (blockHash vote) : priorCerts)
+          ( MkCertificate (votingRound vote) (blockHash vote) boost
+              : priorCerts
+          )
           ( filter
               ( not
                   . \vote' ->
@@ -229,6 +256,7 @@ newQuora quorum priorCerts (vote : votes) =
           )
     else
       newQuora
+        boost
         quorum
         priorCerts
         ( filter
@@ -243,6 +271,7 @@ newQuora quorum priorCerts (vote : votes) =
 certsFromQuorum :: NodeModel -> [Certificate]
 certsFromQuorum s =
   newQuora
+    (fromIntegral (perasB (protocol s)))
     (fromIntegral (perasτ (protocol s)))
     (allSeenCerts s)
     (allVotes s)
@@ -264,6 +293,21 @@ addVote' s v =
                 (allChains s)
                 (v : allVotes s)
                 (allSeenCerts s)
+                (certSeenSlots s)
+            )
+        )
+    )
+    ( foldr
+        (recordCertSeen (clock s))
+        (certSeenSlots s)
+        ( certsFromQuorum
+            ( NodeModel
+                (clock s)
+                (protocol s)
+                (allChains s)
+                (v : allVotes s)
+                (allSeenCerts s)
+                (certSeenSlots s)
             )
         )
     )
@@ -276,7 +320,15 @@ hasVoted p r s =
 x === y = x == y
 
 vr1A :: NodeModel -> Bool
-vr1A s = rFromSlot s === nextRound (round (cert' s))
+vr1A s =
+  decP
+    (rFromSlot s === nextRound (round (cert' s)))
+    ( seenInCertificateRound
+        (fromIntegral (perasU (protocol s)))
+        (fromIntegral (perasΔ (protocol s)))
+        (cert' s)
+        (certificateFirstSeen s (cert' s))
+    )
 
 vr1B' :: NodeModel -> Bool
 vr1B' s = extends (votingBlockHash s) (cert' s) (allChains s)
@@ -426,6 +478,7 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
               (allChains s)
               (allVotes s)
               (allSeenCerts s)
+              (certSeenSlots s)
           )
       , votesInState
           sutIsVoter
@@ -435,6 +488,7 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
               (allChains s)
               (allVotes s)
               (allSeenCerts s)
+              (certSeenSlots s)
           )
       )
     , NodeModel
@@ -448,6 +502,7 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
                 (allChains s)
                 (allVotes s)
                 (allSeenCerts s)
+                (certSeenSlots s)
             )
             ++ allChains s
         )
@@ -459,6 +514,7 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
                 (allChains s)
                 (allVotes s)
                 (allSeenCerts s)
+                (certSeenSlots s)
             )
             ++ allVotes s
         )
@@ -477,6 +533,7 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
                             (allChains s)
                             (allVotes s)
                             (allSeenCerts s)
+                            (certSeenSlots s)
                         )
                         ++ allChains s
                     )
@@ -488,10 +545,48 @@ transition (sutIsSlotLeader, sutIsVoter) s Tick =
                             (allChains s)
                             (allVotes s)
                             (allSeenCerts s)
+                            (certSeenSlots s)
                         )
                         ++ allVotes s
                     )
                     (allSeenCerts s)
+                    (certSeenSlots s)
+                )
+            )
+        )
+        ( foldr
+            (recordCertSeen (nextSlot (clock s)))
+            (certSeenSlots s)
+            ( certsFromQuorum
+                ( NodeModel
+                    (nextSlot (clock s))
+                    (protocol s)
+                    ( chainsInState
+                        sutIsSlotLeader
+                        ( NodeModel
+                            (nextSlot (clock s))
+                            (protocol s)
+                            (allChains s)
+                            (allVotes s)
+                            (allSeenCerts s)
+                            (certSeenSlots s)
+                        )
+                        ++ allChains s
+                    )
+                    ( votesInState
+                        sutIsVoter
+                        ( NodeModel
+                            (nextSlot (clock s))
+                            (protocol s)
+                            (allChains s)
+                            (allVotes s)
+                            (allSeenCerts s)
+                            (certSeenSlots s)
+                        )
+                        ++ allVotes s
+                    )
+                    (allSeenCerts s)
+                    (certSeenSlots s)
                 )
             )
         )
@@ -518,9 +613,10 @@ transition _ s (NewChain (block : rest)) =
           (protocol s)
           ((block : rest) : allChains s)
           (allVotes s)
+          (foldr insertCert (allSeenCerts s) (certsFromChain (block : rest)))
           ( foldr
-              insertCert
-              (allSeenCerts s)
+              (recordCertSeen (clock s))
+              (certSeenSlots s)
               (certsFromChain (block : rest))
           )
       )

@@ -63,7 +63,7 @@ type DiffuseVote m = SlotNumber -> Vote -> m (PerasResult ())
 
 type CreateSignedBlock m = Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> m (PerasResult Block)
 
-type CreateSignedCertificate m = Party -> Set Vote -> m (PerasResult Certificate)
+type CreateSignedCertificate m = Natural -> Party -> Set Vote -> m (PerasResult Certificate)
 
 type CreateSignedVote m = Party -> RoundNumber -> Hash Block -> MembershipProof -> VotingWeight -> m (PerasResult Vote)
 
@@ -100,7 +100,7 @@ hashTip [] = genesisHash
 hashTip (block : _) = hash block
 
 genesisCert :: Certificate
-genesisCert = MkCertificate 0 genesisHash
+genesisCert = MkCertificate 0 genesisHash 0
 
 newRound :: (Integral a, Show a) => a -> PerasParams -> Bool
 newRound s params = slotInRound == 0

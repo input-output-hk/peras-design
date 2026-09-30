@@ -120,6 +120,7 @@ record Certificate where
   pattern
   field round : RoundNumber
         blockRef : Hash Block
+        weight : Nat
 
   roundNumber : Nat
   roundNumber = getRoundNumber round
@@ -166,13 +167,15 @@ open BlockBody public
 ```agda
 instance
   iCertificateEq : Eq Certificate
-  iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y
+  iCertificateEq ._==_ x y = round x == round y && blockRef x == blockRef y && weight x == weight y
 
 eqCertificate-sound : ∀ {c₁ c₂ : Certificate} → (c₁ == c₂) ≡ True → c₁ ≡ c₂
-eqCertificate-sound {MkCertificate round₁ blockRef₁} {MkCertificate round₂ blockRef₂} x
+eqCertificate-sound {MkCertificate round₁ blockRef₁ weight₁} {MkCertificate round₂ blockRef₂ weight₂} x
   = let l = &&-leftTrue (getRoundNumber round₁ == getRoundNumber round₂) _ x
-        r = &&-rightTrue _ (eqBS (hashBytes blockRef₁) (hashBytes blockRef₂)) x
-    in cong₂ MkCertificate (cong MkRoundNumber (eqℕ-sound l)) (MkHash-inj (lem-eqBS r))
+        rest = &&-rightTrue (getRoundNumber round₁ == getRoundNumber round₂) _ x
+        r = &&-leftTrue (eqBS (hashBytes blockRef₁) (hashBytes blockRef₂)) _ rest
+        w = &&-rightTrue (eqBS (hashBytes blockRef₁) (hashBytes blockRef₂)) _ rest
+    in cong₂ (λ f w → f w) (cong₂ MkCertificate (cong MkRoundNumber (eqℕ-sound l)) (MkHash-inj (lem-eqBS r))) (eqℕ-sound w)
   where
     eqℕ-sound : {n m : Nat} → (n == m) ≡ True → n ≡ m
     eqℕ-sound {zero}  {zero}   _  = refl

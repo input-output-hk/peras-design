@@ -15,7 +15,7 @@ import Data.Foldable (toList)
 import qualified Data.Map as Map (lookup)
 import qualified Data.Set as Set (insert, singleton)
 import Peras.Block (Block (..), Certificate (..), Party (pid))
-import Peras.Chain (Chain)
+import Peras.Chain (Chain, seenInCertificateRound)
 import Peras.Crypto (Hashable (..))
 import Peras.Numbering (SlotNumber)
 import Peras.Orphans ()
@@ -45,11 +45,15 @@ voting tracer params@MkPerasParams{perasR, perasK, perasU, perasΔ} party perasS
           -- 2. If party P is (voting) committee member in a round r,
           when (isCommitteeMember party roundNumber) $ do
             let
-              -- (VR-1A) round(cert') = r − 1 and cert' was received at least ∆ before the end of round r − 1, and
-              oldEnough s = fromIntegral s + perasΔ <= fromIntegral (roundNumber - 1) * perasU + perasU - 1
+              -- (VR-1A) The previous round's certificate was first seen by
+              -- the inclusive deadline (r - 1) * U + Δ, in that round.
               vr1a =
                 round certPrime + 1 == roundNumber
-                  && maybe True {- Only the genesis certificate is not in the map. -} oldEnough (Map.lookup certPrime certs)
+                  && seenInCertificateRound
+                    (fromIntegral perasU)
+                    (fromIntegral perasΔ)
+                    certPrime
+                    (Map.lookup certPrime certs)
               -- (VR-1B) B extends the block certified by cert', or
               vr1b = extends block certPrime $ toList chains
               -- (VR-2A) r >= round(cert') + R,

@@ -10,6 +10,7 @@ module Peras.Foreign where
 import Data.Functor.Identity (Identity (runIdentity))
 import qualified Data.Hashable as H (Hashable (..))
 import qualified Data.Set as Set (fromList)
+import Numeric.Natural (Natural)
 import Peras.Block (Block, Certificate, Party, PartyId, Payload)
 import Peras.Chain (Vote, VotingWeight)
 import Peras.Conformance.Params (PerasParams)
@@ -28,8 +29,8 @@ mkPure = either (error . show) id . runIdentity
 createSignedBlock :: Party -> SlotNumber -> Hash Block -> Maybe Certificate -> LeadershipProof -> Hash Payload -> Block
 createSignedBlock pa sn hb mc lp hp = mkPure $ C.createSignedBlock pa sn hb mc lp hp
 
-createSignedCertificate :: Party -> [Vote] -> Certificate
-createSignedCertificate pa vos = mkPure $ C.createSignedCertificate pa (Set.fromList vos)
+createSignedCertificate :: Natural -> Party -> [Vote] -> Certificate
+createSignedCertificate boost pa vos = mkPure $ C.createSignedCertificate boost pa (Set.fromList vos)
 
 createSignedVote :: Party -> RoundNumber -> Hash Block -> MembershipProof -> VotingWeight -> Vote
 createSignedVote pa rn hb mp vw = mkPure $ C.createSignedVote pa rn hb mp vw

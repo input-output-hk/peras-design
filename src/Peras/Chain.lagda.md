@@ -7,11 +7,11 @@ open import Haskell.Extra.Dec
 open import Haskell.Extra.Refinement
 open import Haskell.Law.Equality
 
-open import Data.Nat using (NonZero; _/_)
+open import Data.Nat using (NonZero; _/_; _≤_)
 open import Relation.Binary.PropositionalEquality using (_≢_)
 
 open import Peras.Crypto
-open import Peras.Block
+open import Peras.Block hiding (weight)
 open import Peras.Numbering
 open import Peras.Params
 open import Peras.Util
@@ -25,6 +25,7 @@ open import Peras.Util
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 import GHC.Generics (Generic)
+import Prelude hiding (round)
 #-}
 
 {-# FOREIGN GHC
@@ -118,6 +119,29 @@ certsFromChain = mapMaybe certificate
 
 {-# COMPILE AGDA2HS certsFromChain #-}
 ```
+### Certificate receipt window
+
+A certificate for round `r` must first be seen between slots `r * U` and
+`r * U + Δ`, inclusive. A missing receipt time does not satisfy the rule.
+
+```agda
+SeenInCertificateRound : Nat → Nat → Certificate → Maybe SlotNumber → Set
+SeenInCertificateRound u delta cert Nothing = ⊥
+SeenInCertificateRound u delta cert (Just seen) =
+  let start = getRoundNumber (round cert) * fromNat u
+      received = getSlotNumber seen
+  in start ≤ received × received ≤ start + fromNat delta
+
+seenInCertificateRound : (u delta : Nat) → (cert : Certificate) → (seen : Maybe SlotNumber)
+  → Dec (SeenInCertificateRound u delta cert seen)
+seenInCertificateRound u delta cert Nothing = False ⟨ (λ ()) ⟩
+seenInCertificateRound u delta cert (Just seen) =
+  let start = getRoundNumber (round cert) * fromNat u
+      received = getSlotNumber seen
+  in decP (ge received start) (ge (start + fromNat delta) received)
+
+{-# COMPILE AGDA2HS seenInCertificateRound #-}
+```
 ```agda
 insertCert : Certificate → List Certificate → List Certificate
 insertCert cert [] = cert ∷ []
@@ -145,7 +169,7 @@ module _ ⦃ _ : Hashable Block ⦄
   open Hashable ⦃...⦄
 
   cert₀ : Certificate
-  cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS)
+  cert₀ = MkCertificate (MkRoundNumber 0) (MkHash emptyBS) 0
 
   ChainExtends : Hash Block → Certificate → Chain → Set
   ChainExtends h c ch =
@@ -176,23 +200,24 @@ module _ ⦃ _ : Hashable Block ⦄
   v-round : SlotNumber → RoundNumber
   v-round (MkSlotNumber s) = MkRoundNumber (rnd s)
 ```
+
 ### Chain weight
 
-The weight of a chain is defined with respect of the Peras parameters
+Each block contributes one plus the largest weight of any certificate for that block.
+
 ```agda
   weight : Chain → List Certificate → Nat
   weight ch cts = chainWeight' 0 ch
     where
-      isCertified : Block → Bool
-      isCertified block = any (λ cert → hash block == blockRef cert) cts
+      certificateBoost : Block → Nat
+      certificateBoost block = sum (map Certificate.weight (filter (λ cert → hash block == blockRef cert) cts))
 
       chainWeight' : Nat → Chain → Nat
       chainWeight' accum [] = accum
       chainWeight' accum (block ∷ blocks) =
-        if isCertified block
-          then chainWeight' (accum + 1 + B) blocks
-          else chainWeight' (accum + 1) blocks
+        chainWeight' (accum + 1 + certificateBoost block) blocks
 ```
+
 ### Chain validity
 
 ```agda

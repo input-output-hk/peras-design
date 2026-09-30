@@ -21,7 +21,7 @@ open import Data.Product using () renaming (_,_ to _,ᵖ_)
 open import Haskell.Prelude hiding (_>_)
 open import Haskell.Extra.Dec
 
-open import Peras.Block
+open import Peras.Block hiding (weight)
 open import Peras.Chain
 open import Peras.Crypto
 open import Peras.Numbering
@@ -109,10 +109,10 @@ has to fulfil all the properties mentioned below:
 ```agda
   record IsTreeType {T : Set}
                     (tree₀ : T)
-                    (addChain : T → {c : Chain} → ValidChain c → T)
+                    (addChain : SlotNumber → T → {c : Chain} → ValidChain c → T)
                     (chains : T → List Chain) -- TODO: use Set instead of List
                     (preferredChain : T → Chain)
-                    (addVote : T → {v : Vote} → ValidVote v → T)
+                    (addVote : SlotNumber → T → {v : Vote} → ValidVote v → T)
                     (votes : T → List Vote) -- TODO: use Set instead of List
                     (certs : T → List Certificate) -- TODO: use Set instead of List
                     (cert₀ : Certificate)
@@ -131,11 +131,11 @@ Properties that must hold with respect to chains, certificates and votes.
       instantiated-votes :
         votes tree₀ ≡ []
 
-      extendable-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
-        → v ∈ votes (addVote t vv)
+      extendable-votes : ∀ (slot : SlotNumber) (t : T) {v : Vote} (vv : ValidVote v)
+        → v ∈ votes (addVote slot t vv)
 
-      extendable-chain : ∀ (t : T) {c : Chain} (vc : ValidChain c)
-        → certs (addChain t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
+      extendable-chain : ∀ (slot : SlotNumber) (t : T) {c : Chain} (vc : ValidChain c)
+        → certs (addChain slot t vc) ≡ foldr insertCert (certs t) (certsFromChain c)
 
       self-contained-certs : ∀ (t : T) {c : Chain}
         → c ∈ chains t
@@ -152,14 +152,14 @@ Properties that must hold with respect to chains, certificates and votes.
         → preferredChain t ∈ chains t
 {-
       -- TODO: use Set instead of List for votes
-      unique-votes : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      unique-votes : ∀ (slot : SlotNumber) (t : T) {v : Vote} (vv : ValidVote v)
         → v ∈ votes t
-        → votes t ≡ votes (addVote t vv)
+        → votes t ≡ votes (addVote slot t vv)
 
       -- TODO: use Set with `equivocation` as equivalence relation for votes
-      no-equivocations : ∀ (t : T) {v : Vote} (vv : ValidVote v)
+      no-equivocations : ∀ (slot : SlotNumber) (t : T) {v : Vote} (vv : ValidVote v)
         → Any (v ∻_) (votes t)
-        → votes t ≡ votes (addVote t vv)
+        → votes t ≡ votes (addVote slot t vv)
 -}
       quorum-cert : ∀ (t : T) (b : Block) (r : Nat)
         → L.length
@@ -179,14 +179,17 @@ The block-tree type is defined as follows:
     field
       tree₀ : T
 
-      addChain : T → {c : Chain} → ValidChain c → T
+      addChain : SlotNumber → T → {c : Chain} → ValidChain c → T
       chains : T → List Chain
       preferredChain : T → Chain
 
-      addVote : T → {v : Vote} → ValidVote v → T
+      addVote : SlotNumber → T → {v : Vote} → ValidVote v → T
       votes : T → List Vote
 
       certs : T → List Certificate
+
+      -- Local first-seen time, preserved when a certificate is received again.
+      arrivalSlotOfCert : T → Certificate → Maybe SlotNumber
 
       is-TreeType : IsTreeType
                       tree₀ addChain chains preferredChain
@@ -241,17 +244,19 @@ additionally:
 #### Block-tree update
 
 Updating the block-tree upon receiving a message for vote and chain messages.
+The receipt slot is supplied so implementations can record when new certificates
+are first seen, including certificates formed from a quorum of votes.
 
 ```agda
-    data _[_]→_ : T → Message → T → Set where
+    data _⊢_[_]→_ : SlotNumber → T → Message → T → Set where
 
-      VoteReceived : ∀ {v vv t} →
+      VoteReceived : ∀ {slot v vv t} →
           ────────────────────────────
-          t [ VoteMsg {v} vv ]→ addVote t vv
+          slot ⊢ t [ VoteMsg {v} vv ]→ addVote slot t vv
 
-      ChainReceived : ∀ {c vc t} →
+      ChainReceived : ∀ {slot c vc t} →
           ──────────────────────────────
-          t [ ChainMsg {c} vc ]→ addChain t vc
+          slot ⊢ t [ ChainMsg {c} vc ]→ addChain slot t vc
 ```
 #### Vote in round
 
@@ -271,10 +276,14 @@ Block selection is to decide on which block to vote for.
 ```
 #### Voting rules
 
-VR-1A: A party has seen a certificate `cert-r−1` for round `r−1`
+VR-1A: A party has seen a certificate `cert-r−1` for round `r−1` within
+the first `Δ` slots of round `r−1` (including the deadline).
 ```agda
     VotingRule-1A : RoundNumber → T → Set
-    VotingRule-1A r t = r ≡ nextRound (round (latestCertSeen t))
+    VotingRule-1A r t =
+      let cert = latestCertSeen t
+      in r ≡ nextRound (round cert)
+         × SeenInCertificateRound U Δ cert (arrivalSlotOfCert t cert)
 ```
 VR-1B: The  extends the block certified by `cert-r−1`,
 ```agda
@@ -406,7 +415,7 @@ the local state
       honest : ∀ {p} {t t′} {m} {N} → let open State N in
           blockTrees ⁉ p ≡ just t
         → (m∈ms : ⦅ p , Honest , m , 𝟘 ⦆ ∈ messages)
-        → t [ m ]→ t′
+        → clock ⊢ t [ m ]→ t′
           ---------------------------------------------
         → Honest {p} ⊢
           N [ m ]⇀ record N

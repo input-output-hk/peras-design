@@ -59,7 +59,7 @@ import Peras.Conformance.Model (
   votingBlockHash,
  )
 import Peras.Conformance.Model qualified as Model
-import Peras.Conformance.Params (PerasParams (perasU, perasτ))
+import Peras.Conformance.Params (PerasParams (perasB, perasU, perasτ))
 import Peras.Crypto (Hashable (hash))
 import Peras.Foreign qualified as Foreign
 import Peras.Numbering (
@@ -133,6 +133,7 @@ instance Pretty NetworkModel where
           , hang "allChains =" 2 $ vcat (map pPrint allChains)
           , hang "allVotes =" 2 $ pPrint allVotes
           , hang "allSeenCerts =" 2 $ vcat (map pPrint allSeenCerts)
+          , hang "certSeenSlots =" 2 $ text (show certSeenSlots)
           ]
 
 instance Pretty EnvAction where
@@ -161,7 +162,7 @@ instance Pretty Block where
 
 instance Pretty Certificate where
   pPrintPrec _ d MkCertificate{..} =
-    maybeParens (d > 0) $ "Cert" <+> pPrint (getRoundNumber round) <+> text (show blockRef)
+    maybeParens (d > 0) $ "Cert" <+> pPrint (getRoundNumber round) <+> text (show blockRef) <+> text (show weight)
 
 instance Pretty Vote where
   pPrintPrec _ d MkVote{..} =
@@ -345,7 +346,7 @@ monitorCerts :: Monad m => NetworkModel -> NetworkModel -> PostconditionM m ()
 monitorCerts NetworkModel{nodeModel = s} NetworkModel{nodeModel = s'} =
   do
     monitorPost $ tabulate "Certs found or created during fetching (max one per round)" [show $ on (-) (length . allSeenCerts) s' s]
-    unless (null $ newQuora (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')) $
+    unless (null $ newQuora (fromIntegral (perasB (protocol s))) (fromIntegral (perasτ (protocol s))) (allSeenCerts s) (allVotes s')) $
       monitorPost $
         tabulate "New quorum" [show (fromIntegral (perasτ (protocol s)) :: Integer)]
     monitorPost $ tabulate "Certs on preferred chain (cumulative)" [show $ length $ filter (isJust . certificate) $ pref s']
